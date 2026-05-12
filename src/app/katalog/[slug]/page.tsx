@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { createServerClient } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
@@ -200,12 +201,12 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <div key={product.id} className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              <Link key={product.id} href={`/produkt/${product.id}`} className="group overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-brand-200">
                 <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-50 text-zinc-300">
                   <Icon name="image" size={32} className="text-brand-200" />
                 </div>
                 <div className="p-5">
-                  <h3 className="font-semibold text-zinc-900">{product.title}</h3>
+                  <h3 className="font-semibold text-zinc-900 group-hover:text-brand-600 transition-colors">{product.title}</h3>
                   {product.description && (
                     <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-zinc-500">{product.description}</p>
                   )}
@@ -215,7 +216,7 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
                       : `${product.price_type === 'from' ? 'od ' : ''}${formatCurrency(product.price)}`}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
