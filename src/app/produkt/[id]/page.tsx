@@ -88,23 +88,23 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-zinc-400 mb-8">
-        <Link href="/katalog" className="hover:text-zinc-600 transition-colors">Katalog</Link>
+      <nav className="flex items-center gap-2 text-sm text-zinc-600 mb-8">
+        <Link href="/katalog" className="hover:text-zinc-400 transition-colors">Katalog</Link>
         <Icon name="arrowRight" size={12} />
-        <Link href={`/katalog/${maker.ico}`} className="hover:text-zinc-600 transition-colors">{maker.company_name}</Link>
+        <Link href={`/katalog/${maker.ico}`} className="hover:text-zinc-400 transition-colors">{maker.company_name}</Link>
         <Icon name="arrowRight" size={12} />
-        <span className="text-zinc-700">{product.title}</span>
+        <span className="text-zinc-400">{product.title}</span>
       </nav>
 
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
         {/* Left — image */}
-        <div className="flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-zinc-50 border border-zinc-100">
+        <div className="flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-800">
           {product.images.length > 0 ? (
             <img src={product.images[0]} alt={product.title} className="h-full w-full rounded-2xl object-cover" />
           ) : (
             <div className="text-center">
-              <Icon name="image" size={64} className="text-brand-200 mx-auto" />
-              <p className="mt-4 text-sm text-zinc-400">Fotka produktu</p>
+              <Icon name="image" size={64} className="text-zinc-700 mx-auto" />
+              <p className="mt-4 text-sm text-zinc-600">Fotka produktu</p>
             </div>
           )}
         </div>
@@ -113,28 +113,28 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         <div>
           {categoryName && <Badge variant="brand" className="mb-4">{categoryName}</Badge>}
 
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">{product.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">{product.title}</h1>
 
           {product.description && (
-            <p className="mt-4 text-lg leading-relaxed text-zinc-600">{product.description}</p>
+            <p className="mt-4 text-lg leading-relaxed text-zinc-400">{product.description}</p>
           )}
 
-          <div className="mt-6 rounded-2xl bg-zinc-50 border border-zinc-100 p-6">
-            <p className="text-3xl font-bold text-brand-600">{priceDisplay}</p>
+          <div className="mt-6 rounded-2xl bg-surface-card border border-zinc-800 p-6">
+            <p className="text-3xl font-bold text-brand-400">{priceDisplay}</p>
             {product.price_type === 'from' && (
               <p className="mt-1 text-sm text-zinc-500">Finální cena závisí na specifikaci</p>
             )}
           </div>
 
           {/* Maker info */}
-          <Link href={`/katalog/${maker.ico}`} className="mt-6 flex items-center gap-4 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:border-brand-200">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-lg font-bold text-white">
+          <Link href={`/katalog/${maker.ico}`} className="hover-glow mt-6 flex items-center gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-4 transition-all">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-lg font-bold text-white">
               {maker.company_name.charAt(0)}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-zinc-900">{maker.company_name}</span>
-                {maker.is_verified && <Icon name="verified" size={16} className="text-brand-500" />}
+                <span className="font-semibold text-zinc-200">{maker.company_name}</span>
+                {maker.is_verified && <Icon name="verified" size={16} className="text-brand-400" />}
               </div>
               <div className="flex items-center gap-3 text-sm text-zinc-500">
                 <span>{maker.city}</span>
@@ -146,14 +146,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 )}
               </div>
             </div>
-            <Icon name="arrowRight" size={18} className="text-zinc-400" />
+            <Icon name="arrowRight" size={18} className="text-zinc-600" />
           </Link>
 
           {/* CTA */}
           {product.price_type !== 'on_request' ? (
             <Link
               href={`/objednavka?produkt=${product.id}&maker=${maker.id}`}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-[1.02] glow-teal-sm"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
             >
               Objednat
               <Icon name="arrowRight" size={18} />
@@ -161,7 +161,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           ) : (
             <Link
               href={`/objednavka?produkt=${product.id}&maker=${maker.id}&custom=1`}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-brand-300 bg-brand-50 px-8 py-4 text-base font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-100"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 px-8 py-4 text-base font-semibold text-zinc-300 transition-all duration-200 hover:border-zinc-500 hover:text-white"
             >
               Poptat cenovou nabídku
               <Icon name="messageCircle" size={18} />

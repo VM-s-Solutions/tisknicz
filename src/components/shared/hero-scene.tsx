@@ -10,22 +10,22 @@ function TorusKnotMesh() {
 
   useFrame((state) => {
     if (!meshRef.current) return;
-    meshRef.current.rotation.y = state.clock.elapsedTime * 0.12;
-    meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.08) * 0.15;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.1;
+    meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.06) * 0.12;
   });
 
   return (
-    <Float speed={1.2} rotationIntensity={0.2} floatIntensity={0.6}>
+    <Float speed={1} rotationIntensity={0.15} floatIntensity={0.5}>
       <mesh ref={meshRef} scale={2.2} position={[0, 0.3, -1]}>
         <torusKnotGeometry args={[1, 0.32, 128, 32, 2, 3]} />
         <meshStandardMaterial
-          color="#2dd4bf"
-          emissive="#14b8a6"
-          emissiveIntensity={1.2}
+          color="#a1a1aa"
+          emissive="#71717a"
+          emissiveIntensity={0.8}
           metalness={0.95}
           roughness={0.05}
           transparent
-          opacity={0.35}
+          opacity={0.25}
           wireframe
         />
       </mesh>
@@ -38,22 +38,22 @@ function SolidTorusKnot() {
 
   useFrame((state) => {
     if (!meshRef.current) return;
-    meshRef.current.rotation.y = state.clock.elapsedTime * 0.12;
-    meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.08) * 0.15;
+    meshRef.current.rotation.y = state.clock.elapsedTime * 0.1;
+    meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.06) * 0.12;
   });
 
   return (
-    <Float speed={1.2} rotationIntensity={0.2} floatIntensity={0.6}>
+    <Float speed={1} rotationIntensity={0.15} floatIntensity={0.5}>
       <mesh ref={meshRef} scale={1.8} position={[0, 0.3, -1]}>
         <torusKnotGeometry args={[1, 0.32, 128, 32, 2, 3]} />
         <meshStandardMaterial
-          color="#0d9488"
-          emissive="#14b8a6"
-          emissiveIntensity={0.6}
+          color="#52525b"
+          emissive="#71717a"
+          emissiveIntensity={0.4}
           metalness={0.9}
           roughness={0.1}
           transparent
-          opacity={0.15}
+          opacity={0.1}
         />
       </mesh>
     </Float>
@@ -65,23 +65,23 @@ function PrintLayers() {
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    groupRef.current.rotation.y = state.clock.elapsedTime * 0.2;
+    groupRef.current.rotation.y = state.clock.elapsedTime * 0.18;
   });
 
   return (
-    <Float speed={1.5} rotationIntensity={0.15} floatIntensity={0.4}>
+    <Float speed={1.2} rotationIntensity={0.1} floatIntensity={0.3}>
       <group ref={groupRef} position={[4.5, -1, -2]} scale={0.8}>
         {Array.from({ length: 8 }, (_, i) => (
           <mesh key={i} position={[0, i * 0.18 - 0.5, 0]}>
             <boxGeometry args={[1.2 - i * 0.04, 0.12, 1.2 - i * 0.04]} />
             <meshStandardMaterial
-              color={`hsl(${168 + i * 5}, 80%, ${40 + i * 4}%)`}
-              emissive={`hsl(${168 + i * 5}, 70%, 25%)`}
-              emissiveIntensity={1}
-              metalness={0.6}
-              roughness={0.3}
+              color={`hsl(0, 0%, ${38 + i * 5}%)`}
+              emissive={`hsl(0, 0%, ${25 + i * 3}%)`}
+              emissiveIntensity={0.6}
+              metalness={0.7}
+              roughness={0.25}
               transparent
-              opacity={0.7}
+              opacity={0.5}
             />
           </mesh>
         ))}
@@ -124,21 +124,21 @@ function GearMesh() {
 
   useFrame((state) => {
     if (!meshRef.current) return;
-    meshRef.current.rotation.z = state.clock.elapsedTime * 0.25;
+    meshRef.current.rotation.z = state.clock.elapsedTime * 0.2;
   });
 
   return (
-    <Float speed={1} rotationIntensity={0.1} floatIntensity={0.3}>
+    <Float speed={0.8} rotationIntensity={0.08} floatIntensity={0.25}>
       <mesh ref={meshRef} position={[-4, -0.5, -1.5]} scale={1.8}>
         <extrudeGeometry args={[gearShape, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 2 }]} />
         <meshStandardMaterial
-          color="#14b8a6"
-          emissive="#0d9488"
-          emissiveIntensity={1}
-          metalness={0.8}
-          roughness={0.15}
+          color="#a1a1aa"
+          emissive="#71717a"
+          emissiveIntensity={0.6}
+          metalness={0.85}
+          roughness={0.12}
           transparent
-          opacity={0.5}
+          opacity={0.35}
         />
       </mesh>
     </Float>
@@ -155,17 +155,17 @@ function FloatingRing({ position, scale, speed }: { position: [number, number, n
   });
 
   return (
-    <Float speed={1.5} rotationIntensity={0.4} floatIntensity={0.5}>
+    <Float speed={1.2} rotationIntensity={0.3} floatIntensity={0.4}>
       <mesh ref={meshRef} position={position} scale={scale}>
         <torusGeometry args={[1, 0.06, 16, 48]} />
         <meshStandardMaterial
-          color="#5eead4"
-          emissive="#2dd4bf"
-          emissiveIntensity={1.5}
-          metalness={0.5}
+          color="#d4d4d8"
+          emissive="#a1a1aa"
+          emissiveIntensity={1}
+          metalness={0.6}
           roughness={0.2}
           transparent
-          opacity={0.4}
+          opacity={0.3}
         />
       </mesh>
     </Float>
@@ -176,7 +176,7 @@ function Particles() {
   const pointsRef = useRef<THREE.Points>(null);
 
   const positions = useMemo(() => {
-    const count = 150;
+    const count = 120;
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 16;
@@ -188,7 +188,7 @@ function Particles() {
 
   useFrame((state) => {
     if (!pointsRef.current) return;
-    pointsRef.current.rotation.y = state.clock.elapsedTime * 0.015;
+    pointsRef.current.rotation.y = state.clock.elapsedTime * 0.012;
   });
 
   return (
@@ -197,10 +197,10 @@ function Particles() {
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.06}
-        color="#5eead4"
+        size={0.05}
+        color="#d4d4d8"
         transparent
-        opacity={0.6}
+        opacity={0.4}
         sizeAttenuation
       />
     </points>
@@ -216,18 +216,18 @@ export function HeroScene() {
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.15} />
-        <pointLight position={[-5, 4, 4]} intensity={2} color="#2dd4bf" distance={20} />
-        <pointLight position={[5, -3, 3]} intensity={1.5} color="#14b8a6" distance={18} />
-        <pointLight position={[0, 2, 6]} intensity={0.8} color="#99f6e4" distance={15} />
+        <ambientLight intensity={0.1} />
+        <pointLight position={[-5, 4, 4]} intensity={1.5} color="#d4d4d8" distance={20} />
+        <pointLight position={[5, -3, 3]} intensity={1} color="#a1a1aa" distance={18} />
+        <pointLight position={[0, 2, 6]} intensity={0.6} color="#e4e4e7" distance={15} />
 
         <TorusKnotMesh />
         <SolidTorusKnot />
         <PrintLayers />
         <GearMesh />
-        <FloatingRing position={[-2, 2, -3]} scale={1} speed={0.15} />
-        <FloatingRing position={[3, 1.5, -2.5]} scale={0.7} speed={0.25} />
-        <FloatingRing position={[0, -2, -4]} scale={1.3} speed={0.1} />
+        <FloatingRing position={[-2, 2, -3]} scale={1} speed={0.12} />
+        <FloatingRing position={[3, 1.5, -2.5]} scale={0.7} speed={0.2} />
+        <FloatingRing position={[0, -2, -4]} scale={1.3} speed={0.08} />
         <Particles />
       </Canvas>
     </div>

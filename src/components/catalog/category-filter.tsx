@@ -29,8 +29,8 @@ export function CategoryFilter({ categories }: CategoryFilterProps) {
         onClick={() => handleSelect(null)}
         className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
           !activeCategory
-            ? 'bg-brand-600 text-white shadow-md'
-            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
+            ? 'border border-brand-400 bg-brand-400/10 text-brand-400'
+            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
         }`}
       >
         Vše
@@ -41,8 +41,8 @@ export function CategoryFilter({ categories }: CategoryFilterProps) {
           onClick={() => handleSelect(cat.slug)}
           className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ${
             activeCategory === cat.slug
-              ? 'bg-brand-600 text-white shadow-md'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
+              ? 'border border-brand-400 bg-brand-400/10 text-brand-400'
+              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
           }`}
         >
           {cat.name}

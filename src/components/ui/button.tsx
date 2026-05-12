@@ -9,11 +9,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
-  primary: 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]',
-  secondary: 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300 hover:scale-[1.02] active:scale-[0.98]',
-  outline: 'border border-zinc-300 text-zinc-700 hover:bg-zinc-50 hover:border-zinc-400 active:bg-zinc-100',
-  ghost: 'text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200',
-  danger: 'bg-error text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]',
+  primary: 'border border-brand-400 bg-brand-400/10 text-brand-400 hover:bg-brand-400/20 active:bg-brand-400/25',
+  secondary: 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
+  outline: 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600 active:bg-zinc-700',
+  ghost: 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-700',
+  danger: 'bg-red-950/50 border border-red-900/50 text-red-400 hover:bg-red-950 active:bg-red-900/50',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -33,7 +33,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >

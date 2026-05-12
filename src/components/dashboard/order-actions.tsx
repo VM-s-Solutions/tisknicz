@@ -45,10 +45,10 @@ export function OrderActions({ orderId, status, role }: OrderActionsProps) {
         <button
           onClick={() => performAction('accept')}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20 disabled:opacity-50"
         >
           {loading ? (
-            <Spinner />
+            <ActionSpinner />
           ) : (
             <Icon name="check" size={16} />
           )}
@@ -60,10 +60,10 @@ export function OrderActions({ orderId, status, role }: OrderActionsProps) {
         <button
           onClick={() => performAction('ship')}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20 disabled:opacity-50"
         >
           {loading ? (
-            <Spinner />
+            <ActionSpinner />
           ) : (
             <Icon name="truck" size={16} />
           )}
@@ -75,10 +75,10 @@ export function OrderActions({ orderId, status, role }: OrderActionsProps) {
         <button
           onClick={() => performAction('deliver')}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20 disabled:opacity-50"
         >
           {loading ? (
-            <Spinner />
+            <ActionSpinner />
           ) : (
             <Icon name="checkCircle" size={16} />
           )}
@@ -87,7 +87,7 @@ export function OrderActions({ orderId, status, role }: OrderActionsProps) {
       )}
 
       {error && (
-        <p className="text-sm text-red-600 flex items-center gap-1">
+        <p className="text-sm text-red-400 flex items-center gap-1">
           <Icon name="xCircle" size={14} />
           {error}
         </p>
@@ -96,7 +96,7 @@ export function OrderActions({ orderId, status, role }: OrderActionsProps) {
   );
 }
 
-function Spinner() {
+function ActionSpinner() {
   return (
     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

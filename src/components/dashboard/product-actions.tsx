@@ -35,14 +35,14 @@ export function ProductActions({ categories, productId, isEdit }: ProductActions
   if (showForm) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+        <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-xl">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-zinc-900">
+            <h2 className="text-lg font-semibold text-white">
               {isEdit ? 'Upravit produkt' : 'Nový produkt'}
             </h2>
             <button
               onClick={() => setShowForm(false)}
-              className="text-zinc-400 hover:text-zinc-600 transition-colors"
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
             >
               &times;
             </button>

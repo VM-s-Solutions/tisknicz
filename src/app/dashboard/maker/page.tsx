@@ -36,8 +36,8 @@ export default async function MakerDashboardPage() {
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">Dashboard</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-900">{maker.company_name}</h1>
+          <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Dashboard</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">{maker.company_name}</h1>
           <div className="mt-2 flex items-center gap-3">
             {maker.is_verified && <Badge variant="success">Ověřeno</Badge>}
             <span className="text-sm text-zinc-500">
@@ -82,12 +82,12 @@ export default async function MakerDashboardPage() {
 
 function StatCard({ icon, label, value }: { icon: 'shoppingBag' | 'creditCard' | 'star' | 'package'; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+    <div className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-brand-400">
         <Icon name={icon} size={20} />
       </div>
       <p className="mt-4 text-sm text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">{value}</p>
+      <p className="mt-1 text-2xl font-bold tracking-tight text-white">{value}</p>
     </div>
   );
 }
@@ -95,11 +95,11 @@ function StatCard({ icon, label, value }: { icon: 'shoppingBag' | 'creditCard' |
 function QuickLink({ href, icon, title, description }: { href: string; icon: 'package' | 'shoppingBag' | 'creditCard'; title: string; description: string }) {
   return (
     <Link href={href} className="group">
-      <div className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:border-brand-200">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-100">
+      <div className="hover-glow rounded-2xl border border-zinc-800 bg-surface-card p-6 transition-all duration-300 group-hover:-translate-y-1">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-brand-400 transition-colors group-hover:bg-brand-400/10">
           <Icon name={icon} size={20} />
         </div>
-        <h3 className="mt-4 font-semibold text-zinc-900">{title}</h3>
+        <h3 className="mt-4 font-semibold text-zinc-200">{title}</h3>
         <p className="mt-1 text-sm text-zinc-500">{description}</p>
       </div>
     </Link>

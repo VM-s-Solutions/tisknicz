@@ -125,9 +125,9 @@ function KatalogShell({
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">Katalog</p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight text-zinc-900">Najděte svého makera</h1>
-        <p className="mt-3 text-lg text-zinc-500">Prohlédněte si tiskaře a makery ve vašem okolí</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Katalog</p>
+        <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">Najděte svého makera</h1>
+        <p className="mt-3 text-lg text-zinc-500">Prohlédněte si makery ve vašem okolí</p>
       </div>
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -142,9 +142,9 @@ function KatalogShell({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100">
-        <Icon name="users" size={28} className="text-zinc-400" />
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-700 py-16">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800">
+        <Icon name="users" size={28} className="text-zinc-500" />
       </div>
       <p className="mt-4 text-sm text-zinc-500">{message}</p>
     </div>

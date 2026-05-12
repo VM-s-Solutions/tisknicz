@@ -31,15 +31,15 @@ export default function OrderPage() {
 function OrderPageSkeleton() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="h-6 w-48 animate-pulse rounded bg-zinc-200" />
-      <div className="mt-4 h-10 w-80 animate-pulse rounded bg-zinc-200" />
+      <div className="h-6 w-48 animate-pulse rounded bg-zinc-800" />
+      <div className="mt-4 h-10 w-80 animate-pulse rounded bg-zinc-800" />
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-8">
-          <div className="h-64 animate-pulse rounded-2xl bg-zinc-100" />
-          <div className="h-48 animate-pulse rounded-2xl bg-zinc-100" />
+          <div className="h-64 animate-pulse rounded-2xl bg-zinc-800" />
+          <div className="h-48 animate-pulse rounded-2xl bg-zinc-800" />
         </div>
         <div className="lg:col-span-2">
-          <div className="h-72 animate-pulse rounded-2xl bg-zinc-100" />
+          <div className="h-72 animate-pulse rounded-2xl bg-zinc-800" />
         </div>
       </div>
     </div>
@@ -170,10 +170,10 @@ function OrderPageContent() {
   if (!product || !maker) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-        <Icon name="alertCircle" size={48} className="mx-auto text-zinc-300" />
-        <h1 className="mt-4 text-xl font-bold text-zinc-900">Produkt nenalezen</h1>
+        <Icon name="alertCircle" size={48} className="mx-auto text-zinc-600" />
+        <h1 className="mt-4 text-xl font-bold text-white">Produkt nenalezen</h1>
         <p className="mt-2 text-zinc-500">Tento produkt nebo maker neexistuje.</p>
-        <Link href="/katalog" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700">
+        <Link href="/katalog" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-400 hover:text-brand-300">
           <Icon name="arrowLeft" size={16} />
           Zpět do katalogu
         </Link>
@@ -184,15 +184,15 @@ function OrderPageContent() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-zinc-400 mb-8">
-        <Link href="/katalog" className="hover:text-zinc-600 transition-colors">Katalog</Link>
+      <nav className="flex items-center gap-2 text-sm text-zinc-600 mb-8">
+        <Link href="/katalog" className="hover:text-zinc-400 transition-colors">Katalog</Link>
         <Icon name="arrowRight" size={12} />
-        <Link href={`/produkt/${product.id}`} className="hover:text-zinc-600 transition-colors">{product.title}</Link>
+        <Link href={`/produkt/${product.id}`} className="hover:text-zinc-400 transition-colors">{product.title}</Link>
         <Icon name="arrowRight" size={12} />
-        <span className="text-zinc-700">{isCustomQuote ? 'Poptávka' : 'Objednávka'}</span>
+        <span className="text-zinc-400">{isCustomQuote ? 'Poptávka' : 'Objednávka'}</span>
       </nav>
 
-      <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+      <h1 className="text-3xl font-bold tracking-tight text-white">
         {isCustomQuote ? 'Poptat cenovou nabídku' : 'Vytvořit objednávku'}
       </h1>
       <p className="mt-2 text-zinc-500">
@@ -203,45 +203,45 @@ function OrderPageContent() {
         {/* Left — form fields */}
         <div className="lg:col-span-3 space-y-8">
           {/* Contact info */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="users" size={20} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Icon name="users" size={20} className="text-brand-400" />
               Kontaktní údaje
             </h2>
             <div className="mt-4 space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-zinc-700">Jméno a příjmení</label>
+                <label htmlFor="name" className="block text-sm font-medium text-zinc-400">Jméno a příjmení</label>
                 <input
                   id="name"
                   type="text"
                   value={form.customer_name}
                   onChange={(e) => updateField('customer_name', e.target.value)}
-                  className="mt-1 block w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-900 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  className="mt-1 block w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-zinc-100 transition-colors focus:border-brand-400 focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-400/20 placeholder:text-zinc-600"
                   placeholder="Jan Novák"
                   required
                 />
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-zinc-700">E-mail</label>
+                  <label htmlFor="email" className="block text-sm font-medium text-zinc-400">E-mail</label>
                   <input
                     id="email"
                     type="email"
                     value={form.customer_email}
                     onChange={(e) => updateField('customer_email', e.target.value)}
-                    className="mt-1 block w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-900 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+                    className="mt-1 block w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-zinc-100 transition-colors focus:border-brand-400 focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-400/20 placeholder:text-zinc-600"
                     placeholder="jan@email.cz"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-zinc-700">Telefon</label>
+                  <label htmlFor="phone" className="block text-sm font-medium text-zinc-400">Telefon</label>
                   <input
                     id="phone"
                     type="tel"
                     value={form.customer_phone}
                     onChange={(e) => updateField('customer_phone', e.target.value)}
-                    className="mt-1 block w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-900 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+                    className="mt-1 block w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-zinc-100 transition-colors focus:border-brand-400 focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-400/20 placeholder:text-zinc-600"
                     placeholder="+420 123 456 789"
                     required
                   />
@@ -251,15 +251,15 @@ function OrderPageContent() {
           </section>
 
           {/* Order details */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="file" size={20} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Icon name="file" size={20} className="text-brand-400" />
               Detail objednávky
             </h2>
             <div className="mt-4 space-y-4">
               {!isCustomQuote && (
                 <div>
-                  <label htmlFor="quantity" className="block text-sm font-medium text-zinc-700">Množství</label>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-zinc-400">Množství</label>
                   <input
                     id="quantity"
                     type="number"
@@ -267,12 +267,12 @@ function OrderPageContent() {
                     max={1000}
                     value={form.quantity}
                     onChange={(e) => updateField('quantity', Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="mt-1 block w-24 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-900 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+                    className="mt-1 block w-24 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-zinc-100 transition-colors focus:border-brand-400 focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-400/20"
                   />
                 </div>
               )}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-zinc-700">
+                <label htmlFor="description" className="block text-sm font-medium text-zinc-400">
                   {isCustomQuote ? 'Popište svůj požadavek' : 'Poznámka k objednávce (volitelné)'}
                 </label>
                 <textarea
@@ -280,7 +280,7 @@ function OrderPageContent() {
                   rows={4}
                   value={form.description}
                   onChange={(e) => updateField('description', e.target.value)}
-                  className="mt-1 block w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-900 transition-colors focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 resize-none"
+                  className="mt-1 block w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-zinc-100 transition-colors focus:border-brand-400 focus:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-400/20 resize-none placeholder:text-zinc-600"
                   placeholder={isCustomQuote ? 'Popište co potřebujete, rozměry, materiály, množství...' : 'Speciální požadavky, barva, materiál...'}
                 />
               </div>
@@ -289,23 +289,23 @@ function OrderPageContent() {
 
           {/* Shipping */}
           {!isCustomQuote && (
-            <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-              <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
-                <Icon name="truck" size={20} className="text-brand-500" />
+            <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Icon name="truck" size={20} className="text-brand-400" />
                 Doručení
               </h2>
               <div className="mt-4 space-y-3">
-                <label className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all ${form.shipping_method === 'zasilkovna' ? 'border-brand-400 bg-brand-50' : 'border-zinc-200 hover:border-zinc-300'}`}>
+                <label className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all ${form.shipping_method === 'zasilkovna' ? 'border-brand-400/50 bg-brand-400/5' : 'border-zinc-700 hover:border-zinc-600'}`}>
                   <input
                     type="radio"
                     name="shipping"
                     value="zasilkovna"
                     checked={form.shipping_method === 'zasilkovna'}
                     onChange={() => updateField('shipping_method', 'zasilkovna')}
-                    className="mt-1 h-4 w-4 text-brand-600 focus:ring-brand-500"
+                    className="mt-1 h-4 w-4 text-brand-400 focus:ring-brand-400 bg-zinc-800 border-zinc-600"
                   />
                   <div className="flex-1">
-                    <span className="font-medium text-zinc-900">Zásilkovna</span>
+                    <span className="font-medium text-zinc-200">Zásilkovna</span>
                     <p className="text-sm text-zinc-500">Výdejní místo — {formatCurrency(SHIPPING_PRICE)}</p>
                   </div>
                 </label>
@@ -313,16 +313,16 @@ function OrderPageContent() {
                 {form.shipping_method === 'zasilkovna' && (
                   <div className="ml-8">
                     {form.zasilkovna_branch_name ? (
-                      <div className="flex items-center gap-3 rounded-xl bg-brand-50 border border-brand-200 px-4 py-3">
-                        <Icon name="checkCircle" size={18} className="text-brand-600 shrink-0" />
+                      <div className="flex items-center gap-3 rounded-xl bg-brand-400/5 border border-brand-400/20 px-4 py-3">
+                        <Icon name="checkCircle" size={18} className="text-brand-400 shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-zinc-900">{form.zasilkovna_branch_name}</p>
+                          <p className="text-sm font-medium text-zinc-200">{form.zasilkovna_branch_name}</p>
                           <p className="text-xs text-zinc-500">ID: {form.zasilkovna_branch_id}</p>
                         </div>
                         <button
                           type="button"
                           onClick={openPacketaWidget}
-                          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                          className="text-sm font-medium text-brand-400 hover:text-brand-300"
                         >
                           Změnit
                         </button>
@@ -331,7 +331,7 @@ function OrderPageContent() {
                       <button
                         type="button"
                         onClick={openPacketaWidget}
-                        className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:border-brand-400 hover:text-brand-600"
+                        className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-600 px-4 py-3 text-sm font-medium text-zinc-400 transition-colors hover:border-brand-400/50 hover:text-brand-400"
                       >
                         <Icon name="mapPin" size={16} />
                         Vybrat výdejní místo
@@ -340,17 +340,17 @@ function OrderPageContent() {
                   </div>
                 )}
 
-                <label className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all ${form.shipping_method === 'personal_pickup' ? 'border-brand-400 bg-brand-50' : 'border-zinc-200 hover:border-zinc-300'}`}>
+                <label className={`flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all ${form.shipping_method === 'personal_pickup' ? 'border-brand-400/50 bg-brand-400/5' : 'border-zinc-700 hover:border-zinc-600'}`}>
                   <input
                     type="radio"
                     name="shipping"
                     value="personal_pickup"
                     checked={form.shipping_method === 'personal_pickup'}
                     onChange={() => updateField('shipping_method', 'personal_pickup')}
-                    className="mt-1 h-4 w-4 text-brand-600 focus:ring-brand-500"
+                    className="mt-1 h-4 w-4 text-brand-400 focus:ring-brand-400 bg-zinc-800 border-zinc-600"
                   />
                   <div className="flex-1">
-                    <span className="font-medium text-zinc-900">Osobní odběr</span>
+                    <span className="font-medium text-zinc-200">Osobní odběr</span>
                     <p className="text-sm text-zinc-500">Vyzvednete přímo u makera — zdarma</p>
                   </div>
                 </label>
@@ -361,26 +361,26 @@ function OrderPageContent() {
 
         {/* Right — summary */}
         <div className="lg:col-span-2">
-          <div className="sticky top-24 rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="text-lg font-semibold text-zinc-900">Shrnutí</h2>
+          <div className="sticky top-24 rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="text-lg font-semibold text-white">Shrnutí</h2>
 
             <div className="mt-4 space-y-1">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-sm font-bold text-white">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-sm font-bold text-white">
                   {maker.company_name.charAt(0)}
                 </div>
                 <div>
-                  <p className="font-medium text-zinc-900">{product.title}</p>
+                  <p className="font-medium text-zinc-200">{product.title}</p>
                   <p className="text-sm text-zinc-500">{maker.company_name}</p>
                 </div>
               </div>
             </div>
 
             {!isCustomQuote && (
-              <div className="mt-6 space-y-3 border-t border-zinc-100 pt-4">
+              <div className="mt-6 space-y-3 border-t border-zinc-800 pt-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-500">Cena produktu</span>
-                  <span className="text-zinc-900">
+                  <span className="text-zinc-300">
                     {form.quantity > 1 ? `${form.quantity} × ` : ''}
                     {formatCurrency(product.price)}
                   </span>
@@ -388,41 +388,41 @@ function OrderPageContent() {
                 {form.quantity > 1 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-500">Mezisoučet</span>
-                    <span className="text-zinc-900">{formatCurrency(productPrice)}</span>
+                    <span className="text-zinc-300">{formatCurrency(productPrice)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-500">Doprava</span>
-                  <span className="text-zinc-900">
+                  <span className="text-zinc-300">
                     {shippingPrice > 0 ? formatCurrency(shippingPrice) : 'Zdarma'}
                   </span>
                 </div>
-                <div className="flex justify-between border-t border-zinc-100 pt-3 text-base font-semibold">
-                  <span className="text-zinc-900">Celkem</span>
-                  <span className="text-brand-600">{formatCurrency(pricing.total_price)}</span>
+                <div className="flex justify-between border-t border-zinc-800 pt-3 text-base font-semibold">
+                  <span className="text-white">Celkem</span>
+                  <span className="text-brand-400">{formatCurrency(pricing.total_price)}</span>
                 </div>
               </div>
             )}
 
             {isCustomQuote && (
-              <div className="mt-6 rounded-xl bg-zinc-50 border border-zinc-100 p-4">
-                <p className="text-sm text-zinc-600">
+              <div className="mt-6 rounded-xl bg-zinc-900 border border-zinc-800 p-4">
+                <p className="text-sm text-zinc-400">
                   Maker vám po obdržení poptávky pošle cenovou nabídku.
                 </p>
               </div>
             )}
 
             {error && (
-              <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2">
-                <Icon name="xCircle" size={16} className="text-red-500 mt-0.5 shrink-0" />
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="mt-4 rounded-xl bg-red-950/50 border border-red-900/50 px-4 py-3 flex items-start gap-2">
+                <Icon name="xCircle" size={16} className="text-red-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-red-300">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-6 py-3.5 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -445,7 +445,7 @@ function OrderPageContent() {
               )}
             </button>
 
-            <p className="mt-3 text-center text-xs text-zinc-400">
+            <p className="mt-3 text-center text-xs text-zinc-600">
               {isCustomQuote
                 ? 'Poptávka je nezávazná.'
                 : 'Po objednání budete přesměrováni na platbu.'}

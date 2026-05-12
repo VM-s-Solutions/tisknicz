@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Teal primary */
+  /* Teal accent — refined for dark surfaces */
   --color-brand-50: #f0fdfa;
   --color-brand-100: #ccfbf1;
   --color-brand-200: #99f6e4;
@@ -13,11 +13,17 @@
   --color-brand-800: #115e59;
   --color-brand-900: #134e4a;
 
-  /* Amber accent */
+  /* Amber accent (stars, warnings) */
   --color-accent-300: #fcd34d;
   --color-accent-400: #fbbf24;
   --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
+
+  /* Dark surfaces */
+  --color-surface-primary: #09090b;
+  --color-surface-secondary: #18181b;
+  --color-surface-card: #1c1c1e;
+  --color-surface-elevated: #27272a;
 
   /* Semantic */
   --color-success: #22c55e;
@@ -28,10 +34,11 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Animations */
-  --animate-fade-in: fade-in 0.5s ease-out;
-  --animate-slide-up: slide-up 0.5s ease-out;
+  --animate-fade-in: fade-in 0.6s ease-out;
+  --animate-slide-up: slide-up 0.6s ease-out;
   --animate-float: float 6s ease-in-out infinite;
-  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-glow: glow 3s ease-in-out infinite alternate;
+  --animate-shimmer: shimmer 2s ease-in-out infinite;
 }
 
 @keyframes fade-in {
@@ -51,43 +58,93 @@
 
 @keyframes glow {
   from { opacity: 0.4; }
-  to { opacity: 0.7; }
+  to { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 body {
   font-family: var(--font-sans);
-  color: #18181b;
-  background: #ffffff;
+  color: #fafafa;
+  background: #09090b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dot grid pattern */
+/* Subtle noise grain overlay */
+.bg-noise {
+  position: relative;
+}
+.bg-noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Dot grid pattern — silver on dark */
 .bg-dot-pattern {
-  background-image: radial-gradient(circle, rgba(20, 184, 166, 0.15) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(161, 161, 170, 0.12) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Gradient text */
+/* Gradient text — teal to cyan */
 .text-gradient {
-  background: linear-gradient(135deg, #2dd4bf, #14b8a6, #0d9488);
+  background: linear-gradient(135deg, #2dd4bf, #22d3ee, #67e8f9);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-light {
-  background: linear-gradient(135deg, #5eead4, #2dd4bf, #99f6e4);
+  background: linear-gradient(135deg, #5eead4, #2dd4bf, #67e8f9);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Glow effects */
+/* Glow effects — teal on dark */
 .glow-teal {
-  box-shadow: 0 0 40px rgba(20, 184, 166, 0.3), 0 0 80px rgba(20, 184, 166, 0.1);
+  box-shadow: 0 0 40px rgba(45, 212, 191, 0.15), 0 0 80px rgba(45, 212, 191, 0.05);
 }
 
 .glow-teal-sm {
-  box-shadow: 0 0 20px rgba(20, 184, 166, 0.2);
+  box-shadow: 0 0 20px rgba(45, 212, 191, 0.12);
+}
+
+/* Subtle border glow on hover */
+.hover-glow {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.3);
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(24, 24, 27, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }

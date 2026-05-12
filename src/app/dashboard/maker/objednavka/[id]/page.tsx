@@ -71,7 +71,7 @@ export default async function MakerOrderDetailPage({ params }: MakerOrderPagePro
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      <Link href="/dashboard/maker/objednavky" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-600 transition-colors mb-6">
+      <Link href="/dashboard/maker/objednavky" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6">
         <Icon name="arrowLeft" size={14} />
         Zpět na objednávky
       </Link>
@@ -79,7 +79,7 @@ export default async function MakerOrderDetailPage({ params }: MakerOrderPagePro
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{order.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white">{order.title}</h1>
             <Badge variant={statusVariant(order.status)}>
               {ORDER_STATUSES[order.status as OrderStatus] ?? order.status}
             </Badge>
@@ -98,60 +98,60 @@ export default async function MakerOrderDetailPage({ params }: MakerOrderPagePro
         {/* Main info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Order details */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="file" size={18} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Icon name="file" size={18} className="text-brand-400" />
               Detail objednávky
             </h2>
             {order.description && (
-              <p className="mt-3 text-sm text-zinc-600 leading-relaxed">{order.description}</p>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{order.description}</p>
             )}
             <dl className="mt-4 grid grid-cols-2 gap-4">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Množství</dt>
-                <dd className="mt-1 text-sm font-semibold text-zinc-900">{order.quantity} ks</dd>
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Množství</dt>
+                <dd className="mt-1 text-sm font-semibold text-zinc-200">{order.quantity} ks</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Doručení</dt>
-                <dd className="mt-1 text-sm font-semibold text-zinc-900">
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Doručení</dt>
+                <dd className="mt-1 text-sm font-semibold text-zinc-200">
                   {order.shipping_method === 'zasilkovna' ? 'Zásilkovna' : 'Osobní odběr'}
                 </dd>
               </div>
               {order.zasilkovna_branch_name && (
                 <div className="col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Výdejní místo</dt>
-                  <dd className="mt-1 text-sm text-zinc-900">{order.zasilkovna_branch_name}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Výdejní místo</dt>
+                  <dd className="mt-1 text-sm text-zinc-200">{order.zasilkovna_branch_name}</dd>
                 </div>
               )}
             </dl>
           </section>
 
           {/* Customer info */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="users" size={18} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Icon name="users" size={18} className="text-brand-400" />
               Zákazník
             </h2>
             <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Jméno</dt>
-                <dd className="mt-1 text-sm text-zinc-900">{order.customer_name}</dd>
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Jméno</dt>
+                <dd className="mt-1 text-sm text-zinc-200">{order.customer_name}</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">E-mail</dt>
-                <dd className="mt-1 text-sm text-zinc-900">{order.customer_email}</dd>
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">E-mail</dt>
+                <dd className="mt-1 text-sm text-zinc-200">{order.customer_email}</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Telefon</dt>
-                <dd className="mt-1 text-sm text-zinc-900">{order.customer_phone}</dd>
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Telefon</dt>
+                <dd className="mt-1 text-sm text-zinc-200">{order.customer_phone}</dd>
               </div>
             </dl>
           </section>
 
           {/* Timeline */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="clock" size={18} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Icon name="clock" size={18} className="text-brand-400" />
               Průběh
             </h2>
             <ol className="mt-4 space-y-3">
@@ -188,28 +188,28 @@ export default async function MakerOrderDetailPage({ params }: MakerOrderPagePro
 
         {/* Sidebar — pricing */}
         <div>
-          <div className="sticky top-24 rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900">Finanční přehled</h2>
+          <div className="sticky top-24 rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white">Finanční přehled</h2>
             <div className="mt-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Cena produktu</span>
-                <span className="text-zinc-900">{formatCurrency(order.product_price)}</span>
+                <span className="text-zinc-300">{formatCurrency(order.product_price)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Doprava</span>
-                <span className="text-zinc-900">{formatCurrency(order.shipping_price)}</span>
+                <span className="text-zinc-300">{formatCurrency(order.shipping_price)}</span>
               </div>
-              <div className="border-t border-zinc-100 pt-3 flex justify-between text-sm">
+              <div className="border-t border-zinc-800 pt-3 flex justify-between text-sm">
                 <span className="text-zinc-500">Celkem zákazník</span>
-                <span className="font-semibold text-zinc-900">{formatCurrency(order.total_price)}</span>
+                <span className="font-semibold text-zinc-200">{formatCurrency(order.total_price)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Poplatek platformy</span>
-                <span className="text-red-500">-{formatCurrency(order.platform_fee)}</span>
+                <span className="text-red-400">-{formatCurrency(order.platform_fee)}</span>
               </div>
-              <div className="border-t border-zinc-100 pt-3 flex justify-between">
-                <span className="font-semibold text-zinc-900">Vaše výplata</span>
-                <span className="text-lg font-bold text-brand-600">{formatCurrency(order.maker_payout)}</span>
+              <div className="border-t border-zinc-800 pt-3 flex justify-between">
+                <span className="font-semibold text-white">Vaše výplata</span>
+                <span className="text-lg font-bold text-brand-400">{formatCurrency(order.maker_payout)}</span>
               </div>
             </div>
           </div>
@@ -222,18 +222,18 @@ export default async function MakerOrderDetailPage({ params }: MakerOrderPagePro
 function TimelineItem({ label, date, active }: { label: string; date: string | null; active: boolean }) {
   return (
     <li className="flex items-center gap-3">
-      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${active ? 'bg-brand-100' : 'bg-zinc-100'}`}>
+      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${active ? 'bg-brand-400/10' : 'bg-zinc-800'}`}>
         {active ? (
-          <Icon name="check" size={12} className="text-brand-600" />
+          <Icon name="check" size={12} className="text-brand-400" />
         ) : (
-          <div className="h-2 w-2 rounded-full bg-zinc-300" />
+          <div className="h-2 w-2 rounded-full bg-zinc-600" />
         )}
       </div>
       <div className="flex-1">
-        <span className={`text-sm ${active ? 'font-medium text-zinc-900' : 'text-zinc-400'}`}>{label}</span>
+        <span className={`text-sm ${active ? 'font-medium text-zinc-200' : 'text-zinc-600'}`}>{label}</span>
       </div>
       {date && (
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-zinc-500">
           {new Date(date).toLocaleDateString('cs-CZ')} {new Date(date).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
         </span>
       )}

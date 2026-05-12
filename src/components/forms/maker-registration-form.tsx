@@ -231,8 +231,8 @@ export function MakerRegistrationForm({ categories }: MakerRegistrationFormProps
                   onClick={() => toggleCategory(cat.id)}
                   className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm font-medium transition-all duration-200 ${
                     selectedCategories.includes(cat.id)
-                      ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
-                      : 'border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50'
+                      ? 'border-brand-400/50 bg-brand-400/10 text-brand-400'
+                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800'
                   }`}
                 >
                   <span>{cat.name}</span>
@@ -244,24 +244,24 @@ export function MakerRegistrationForm({ categories }: MakerRegistrationFormProps
           {/* Doručení */}
           <SectionCard step={5} title="Nastavení">
             <div className="mt-4 flex flex-col gap-4">
-              <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 p-4 transition-all hover:border-brand-300 hover:bg-brand-50/50">
+              <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-700 p-4 transition-all hover:border-brand-400/50 hover:bg-zinc-800">
                 <input
                   type="checkbox"
                   checked={acceptsCustomOrders}
                   onChange={(e) => setAcceptsCustomOrders(e.target.checked)}
-                  className="h-5 w-5 rounded-md border-zinc-300 text-brand-600 focus:ring-brand-500"
+                  className="h-5 w-5 rounded-md border-zinc-600 bg-zinc-800 text-brand-400 focus:ring-brand-400"
                 />
-                <span className="text-sm font-medium text-zinc-700">Přijímám zakázkovou výrobu na míru</span>
+                <span className="text-sm font-medium text-zinc-300">Přijímám zakázkovou výrobu na míru</span>
               </label>
 
-              <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 p-4 transition-all hover:border-brand-300 hover:bg-brand-50/50">
+              <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-700 p-4 transition-all hover:border-brand-400/50 hover:bg-zinc-800">
                 <input
                   type="checkbox"
                   checked={personalPickup}
                   onChange={(e) => setPersonalPickup(e.target.checked)}
-                  className="h-5 w-5 rounded-md border-zinc-300 text-brand-600 focus:ring-brand-500"
+                  className="h-5 w-5 rounded-md border-zinc-600 bg-zinc-800 text-brand-400 focus:ring-brand-400"
                 />
-                <span className="text-sm font-medium text-zinc-700">Nabízím osobní odběr</span>
+                <span className="text-sm font-medium text-zinc-300">Nabízím osobní odběr</span>
               </label>
 
               {personalPickup && (
@@ -307,12 +307,12 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md sm:p-8">
+    <div className="rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:p-8">
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-400/10 text-sm font-bold text-brand-400">
           {step}
         </div>
-        <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
+        <h2 className="text-lg font-semibold text-white">{title}</h2>
       </div>
       {description && <p className="mt-2 text-sm text-zinc-500">{description}</p>}
       {children}

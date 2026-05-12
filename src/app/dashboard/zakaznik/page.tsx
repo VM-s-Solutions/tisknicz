@@ -51,24 +51,24 @@ export default async function CustomerDashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">Dashboard</p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-900">
+      <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Dashboard</p>
+      <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">
         Vítejte, {profile?.full_name ?? 'zákazníku'}
       </h1>
 
       <div className="mt-10">
         {orderList.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-white py-16">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100">
-              <Icon name="shoppingBag" size={28} className="text-zinc-400" />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-700 py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800">
+              <Icon name="shoppingBag" size={28} className="text-zinc-500" />
             </div>
-            <h2 className="mt-4 font-semibold text-zinc-900">Moje objednávky</h2>
+            <h2 className="mt-4 font-semibold text-white">Moje objednávky</h2>
             <p className="mt-2 text-sm text-zinc-500">
               Zatím nemáte žádné objednávky.
             </p>
             <Link
               href="/katalog"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-6 py-3 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
             >
               Prohlédnout katalog
               <Icon name="arrowRight" size={16} />
@@ -76,15 +76,15 @@ export default async function CustomerDashboardPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <h2 className="font-semibold text-zinc-900">Moje objednávky</h2>
+            <h2 className="font-semibold text-white">Moje objednávky</h2>
             {orderList.map((order) => (
               <Link
                 key={order.id}
                 href={`/dashboard/zakaznik/objednavka/${order.id}`}
-                className="flex items-center gap-4 rounded-2xl border border-zinc-100 bg-white p-5 shadow-md transition-all duration-200 hover:shadow-lg hover:border-brand-200 hover:-translate-y-0.5"
+                className="hover-glow flex items-center gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-5 transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-zinc-900 truncate">{order.title}</p>
+                  <p className="font-medium text-zinc-200 truncate">{order.title}</p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-zinc-500">
                     <span className="font-mono text-xs">{order.order_number}</span>
                     <span>&middot;</span>
@@ -95,8 +95,8 @@ export default async function CustomerDashboardPage() {
                   <Badge variant={statusVariant(order.status)}>
                     {ORDER_STATUSES[order.status as OrderStatus] ?? order.status}
                   </Badge>
-                  <span className="text-sm font-semibold text-zinc-900">{formatCurrency(order.total_price)}</span>
-                  <Icon name="arrowRight" size={16} className="text-zinc-400" />
+                  <span className="text-sm font-semibold text-white">{formatCurrency(order.total_price)}</span>
+                  <Icon name="arrowRight" size={16} className="text-zinc-600" />
                 </div>
               </Link>
             ))}

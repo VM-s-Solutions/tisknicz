@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: MakerPageProps): Promise<Meta
   if (demoMaker) {
     return {
       title: demoMaker.company_name,
-      description: demoMaker.bio ?? `${demoMaker.company_name} — tiskař v ${demoMaker.city}`,
+      description: demoMaker.bio ?? `${demoMaker.company_name} — maker v ${demoMaker.city}`,
     };
   }
 
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: MakerPageProps): Promise<Meta
 
     return {
       title: maker.company_name,
-      description: maker.bio ?? `${maker.company_name} — tiskař v ${maker.city}`,
+      description: maker.bio ?? `${maker.company_name} — maker v ${maker.city}`,
     };
   } catch {
     return { title: 'Maker' };
@@ -114,21 +114,21 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Maker header */}
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-500 text-3xl font-bold text-white shadow-lg">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-3xl font-bold text-white shadow-lg">
           {maker.company_name.charAt(0)}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">{maker.company_name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white">{maker.company_name}</h1>
             {maker.is_verified && (
-              <Icon name="verified" size={22} className="text-brand-500" />
+              <Icon name="verified" size={22} className="text-brand-400" />
             )}
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-zinc-500">
             <Icon name="mapPin" size={16} />
             <span>{maker.city}</span>
           </div>
-          {maker.bio && <p className="mt-4 leading-relaxed text-zinc-600">{maker.bio}</p>}
+          {maker.bio && <p className="mt-4 leading-relaxed text-zinc-400">{maker.bio}</p>}
 
           {makerCategoryNames.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -147,11 +147,11 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
                       key={i}
                       name="star"
                       size={14}
-                      className={i < Math.round(maker!.rating_avg) ? 'text-accent-400' : 'text-zinc-200'}
+                      className={i < Math.round(maker!.rating_avg) ? 'text-accent-400' : 'text-zinc-700'}
                     />
                   ))}
                 </div>
-                <span className="font-medium">{maker.rating_avg}</span>
+                <span className="font-medium text-zinc-400">{maker.rating_avg}</span>
                 <span>({maker.rating_count})</span>
               </div>
             )}
@@ -161,7 +161,7 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
             </div>
             {maker.accepts_custom_orders && (
               <div className="flex items-center gap-1.5">
-                <Icon name="check" size={14} className="text-brand-500" />
+                <Icon name="check" size={14} className="text-brand-400" />
                 <span>Zakázky na míru</span>
               </div>
             )}
@@ -169,7 +169,7 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
 
           {maker.personal_pickup && maker.pickup_address && (
             <p className="mt-3 text-sm text-zinc-500">
-              <span className="font-medium text-zinc-700">Osobní odběr:</span> {maker.pickup_address}
+              <span className="font-medium text-zinc-300">Osobní odběr:</span> {maker.pickup_address}
               {maker.pickup_note && ` (${maker.pickup_note})`}
             </p>
           )}
@@ -179,7 +179,7 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
               href={maker.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 transition-colors hover:text-brand-700"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
             >
               {maker.website}
               <Icon name="arrowRight" size={14} />
@@ -190,27 +190,27 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
 
       {/* Produkty */}
       <div className="mt-16">
-        <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Produkty a služby</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-white">Produkty a služby</h2>
         {products.length === 0 ? (
-          <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100">
-              <Icon name="package" size={28} className="text-zinc-400" />
+          <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-700 py-16">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800">
+              <Icon name="package" size={28} className="text-zinc-500" />
             </div>
             <p className="mt-4 text-sm text-zinc-500">Tento maker zatím nemá žádné produkty.</p>
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <Link key={product.id} href={`/produkt/${product.id}`} className="group overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-brand-200">
-                <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-brand-50 to-zinc-50 text-zinc-300">
-                  <Icon name="image" size={32} className="text-brand-200" />
+              <Link key={product.id} href={`/produkt/${product.id}`} className="hover-glow group overflow-hidden rounded-2xl border border-zinc-800 bg-surface-card transition-all duration-300 hover:-translate-y-1">
+                <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 text-zinc-600">
+                  <Icon name="image" size={32} className="text-zinc-700" />
                 </div>
                 <div className="p-5">
-                  <h3 className="font-semibold text-zinc-900 group-hover:text-brand-600 transition-colors">{product.title}</h3>
+                  <h3 className="font-semibold text-zinc-200 group-hover:text-brand-400 transition-colors">{product.title}</h3>
                   {product.description && (
                     <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-zinc-500">{product.description}</p>
                   )}
-                  <p className="mt-3 text-lg font-bold text-brand-600">
+                  <p className="mt-3 text-lg font-bold text-brand-400">
                     {product.price_type === 'on_request'
                       ? PRICE_TYPES.on_request
                       : `${product.price_type === 'from' ? 'od ' : ''}${formatCurrency(product.price)}`}

@@ -47,51 +47,49 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
+    <div className="flex min-h-[calc(100vh-64px)] w-full">
       {/* Left — branding panel */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 lg:flex lg:flex-col lg:items-center lg:justify-center">
-        <div className="absolute inset-0 bg-dot-pattern opacity-10" />
-        <div className="absolute -top-20 -left-20 h-80 w-80 rounded-full bg-brand-400/20 blur-3xl" />
-        <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-brand-300/15 blur-3xl" />
+      <div className="relative hidden w-1/2 overflow-hidden border-r border-zinc-800/50 bg-surface-secondary lg:flex lg:flex-col lg:items-center lg:justify-center">
+        <div className="absolute inset-0 bg-dot-pattern opacity-5" />
+        <div className="absolute -top-20 -left-20 h-80 w-80 rounded-full bg-brand-400/5 blur-3xl" />
+        <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-brand-400/5 blur-3xl" />
 
         <div className="relative z-10 px-12 text-center">
-          <Link href="/" className="text-4xl font-extrabold tracking-tight">
-            <span className="text-gradient-light">Tiskni</span>
-            <span className="text-white">.cz</span>
+          <Link href="/" className="text-4xl font-bold tracking-tight text-white">
+            Makables
           </Link>
-          <p className="mt-6 text-lg leading-relaxed text-brand-100">
-            Marketplace pro tiskaře a makery v České republice.
+          <p className="mt-4 text-xl font-light tracking-wide text-zinc-400">
+            Where Ideas Take Shape.
           </p>
 
           <div className="mt-12 flex justify-center gap-8">
             <div className="text-center">
               <p className="text-3xl font-bold text-white">250+</p>
-              <p className="mt-1 text-sm text-brand-200">Makerů</p>
+              <p className="mt-1 text-sm text-zinc-500">Makerů</p>
             </div>
-            <div className="h-12 w-px bg-white/20" />
+            <div className="h-12 w-px bg-zinc-800" />
             <div className="text-center">
               <p className="text-3xl font-bold text-white">6</p>
-              <p className="mt-1 text-sm text-brand-200">Kategorií</p>
+              <p className="mt-1 text-sm text-zinc-500">Kategorií</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right — login form */}
-      <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
+      <div className="flex w-full items-center justify-center bg-surface-primary px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="mb-8 lg:hidden">
-            <Link href="/" className="text-2xl font-extrabold tracking-tight">
-              <span className="text-gradient">Tiskni</span>
-              <span className="text-zinc-900">.cz</span>
+            <Link href="/" className="text-2xl font-bold tracking-tight text-white">
+              Makables
             </Link>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Přihlášení</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Přihlášení</h1>
           <p className="mt-2 text-sm text-zinc-500">
             Nemáte účet?{' '}
-            <Link href="/auth/register" className="font-medium text-brand-600 transition-colors hover:text-brand-700">
+            <Link href="/auth/register" className="font-medium text-brand-400 transition-colors hover:text-brand-300">
               Zaregistrujte se
             </Link>
           </p>

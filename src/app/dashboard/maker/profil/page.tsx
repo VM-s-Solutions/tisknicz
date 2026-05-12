@@ -31,10 +31,10 @@ export default async function MakerProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-      <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">Registrace</p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900">Dokončení profilu makera</h1>
+      <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Registrace</p>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">Dokončení profilu makera</h1>
       <p className="mt-3 text-zinc-500">
-        Zadejte IČO a vyplňte údaje pro váš profil na Tiskni.cz.
+        Zadejte IČO a vyplňte údaje pro váš profil na Makables.
       </p>
 
       <div className="mt-10">

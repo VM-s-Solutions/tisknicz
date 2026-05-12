@@ -1,6 +1,6 @@
 export const PLATFORM_FEE_RATE = 0.15;
 
-export const PLATFORM_NAME = 'Tiskni.cz';
+export const PLATFORM_NAME = 'Makables';
 
 export const ORDER_STATUSES = {
   pending_payment: 'Čeká na platbu',

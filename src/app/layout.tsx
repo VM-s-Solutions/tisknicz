@@ -11,10 +11,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Tiskni.cz — Marketplace pro tiskaře a makery',
-    template: '%s | Tiskni.cz',
+    default: 'Makables — Where Ideas Take Shape',
+    template: '%s | Makables',
   },
-  description: 'Najdi lokálního tiskaře nebo makera, objednej 3D tisk, potisk textilu, gravírování a další. Jednoduše online.',
+  description: 'Marketplace pro makery a tiskaře v ČR. Najdi tvůrce, objednej, nech si doručit.',
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="cs" className={`${inter.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">
+      <body className="flex min-h-full flex-col bg-surface-primary font-sans">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

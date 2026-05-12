@@ -5,11 +5,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<NonNullable<BadgeProps['variant']>, string> = {
-  default: 'bg-zinc-100 text-zinc-700',
-  success: 'bg-emerald-100 text-emerald-800',
-  warning: 'bg-amber-100 text-amber-800',
-  error: 'bg-red-100 text-red-800',
-  brand: 'bg-brand-100 text-brand-800',
+  default: 'bg-zinc-800 text-zinc-300',
+  success: 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50',
+  warning: 'bg-amber-950/50 text-amber-400 border border-amber-900/50',
+  error: 'bg-red-950/50 text-red-400 border border-red-900/50',
+  brand: 'bg-brand-400/10 text-brand-400 border border-brand-400/20',
 };
 
 export function Badge({ variant = 'default', className = '', children, ...props }: BadgeProps) {

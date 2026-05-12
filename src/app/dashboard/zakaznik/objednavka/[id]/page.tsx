@@ -94,7 +94,7 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      <Link href="/dashboard/zakaznik" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-600 transition-colors mb-6">
+      <Link href="/dashboard/zakaznik" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6">
         <Icon name="arrowLeft" size={14} />
         Moje objednávky
       </Link>
@@ -102,7 +102,7 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{order.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">{order.title}</h1>
           <div className="mt-2 flex items-center gap-3">
             <span className="text-sm text-zinc-500 font-mono">{order.order_number}</span>
             <Badge variant={statusVariant(order.status)}>
@@ -119,7 +119,7 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
       </div>
 
       {/* Progress bar */}
-      <div className="mt-8 rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
+      <div className="mt-8 rounded-2xl border border-zinc-800 bg-surface-card p-6">
         <div className="flex items-center justify-between">
           {steps.map((step, i) => {
             const isActive = statusOrder.indexOf(step.key) <= currentIndex;
@@ -129,22 +129,22 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
                 <div className="flex flex-col items-center">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
                     isCurrent
-                      ? 'bg-brand-600 text-white shadow-md'
+                      ? 'bg-brand-400/20 text-brand-400 ring-2 ring-brand-400/50'
                       : isActive
-                        ? 'bg-brand-100 text-brand-600'
-                        : 'bg-zinc-100 text-zinc-400'
+                        ? 'bg-brand-400/10 text-brand-400'
+                        : 'bg-zinc-800 text-zinc-600'
                   }`}>
                     <Icon name={step.icon} size={18} />
                   </div>
                   <span className={`mt-2 text-xs font-medium ${
-                    isCurrent ? 'text-brand-600' : isActive ? 'text-zinc-700' : 'text-zinc-400'
+                    isCurrent ? 'text-brand-400' : isActive ? 'text-zinc-400' : 'text-zinc-600'
                   }`}>
                     {step.label}
                   </span>
                 </div>
                 {i < steps.length - 1 && (
                   <div className={`mx-2 h-0.5 flex-1 rounded-full ${
-                    statusOrder.indexOf(step.key) < currentIndex ? 'bg-brand-400' : 'bg-zinc-200'
+                    statusOrder.indexOf(step.key) < currentIndex ? 'bg-brand-400/50' : 'bg-zinc-800'
                   }`} />
                 )}
               </div>
@@ -157,34 +157,34 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
         {/* Main content */}
         <div className="lg:col-span-3 space-y-6">
           {/* Order details */}
-          <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
-              <Icon name="file" size={18} className="text-brand-500" />
+          <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Icon name="file" size={18} className="text-brand-400" />
               Detail objednávky
             </h2>
             {order.description && (
-              <p className="mt-3 text-sm text-zinc-600 leading-relaxed">{order.description}</p>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{order.description}</p>
             )}
             <dl className="mt-4 grid grid-cols-2 gap-4">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Množství</dt>
-                <dd className="mt-1 text-sm font-semibold text-zinc-900">{order.quantity} ks</dd>
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Množství</dt>
+                <dd className="mt-1 text-sm font-semibold text-zinc-200">{order.quantity} ks</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Doručení</dt>
-                <dd className="mt-1 text-sm font-semibold text-zinc-900">
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Doručení</dt>
+                <dd className="mt-1 text-sm font-semibold text-zinc-200">
                   {order.shipping_method === 'zasilkovna' ? 'Zásilkovna' : 'Osobní odběr'}
                 </dd>
               </div>
               {order.zasilkovna_branch_name && (
                 <div className="col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Výdejní místo</dt>
-                  <dd className="mt-1 text-sm text-zinc-900">{order.zasilkovna_branch_name}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Výdejní místo</dt>
+                  <dd className="mt-1 text-sm text-zinc-200">{order.zasilkovna_branch_name}</dd>
                 </div>
               )}
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-400">Vytvořeno</dt>
-                <dd className="mt-1 text-sm text-zinc-900">
+                <dt className="text-xs font-medium uppercase tracking-wider text-zinc-600">Vytvořeno</dt>
+                <dd className="mt-1 text-sm text-zinc-200">
                   {new Date(order.created_at).toLocaleDateString('cs-CZ')}
                 </dd>
               </div>
@@ -193,19 +193,19 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
 
           {/* Maker card */}
           {maker && (
-            <section className="rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-              <h2 className="font-semibold text-zinc-900 flex items-center gap-2">
-                <Icon name="users" size={18} className="text-brand-500" />
+            <section className="rounded-2xl border border-zinc-800 bg-surface-card p-6">
+              <h2 className="font-semibold text-white flex items-center gap-2">
+                <Icon name="users" size={18} className="text-brand-400" />
                 Maker
               </h2>
               <div className="mt-4 flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-lg font-bold text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 text-lg font-bold text-white">
                   {maker.company_name.charAt(0)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-900">{maker.company_name}</span>
-                    {maker.is_verified && <Icon name="verified" size={16} className="text-brand-500" />}
+                    <span className="font-semibold text-zinc-200">{maker.company_name}</span>
+                    {maker.is_verified && <Icon name="verified" size={16} className="text-brand-400" />}
                   </div>
                   <p className="text-sm text-zinc-500">{maker.city}</p>
                 </div>
@@ -223,32 +223,32 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
 
         {/* Sidebar — pricing */}
         <div className="lg:col-span-2">
-          <div className="sticky top-24 rounded-2xl border border-zinc-100 bg-white p-6 shadow-md">
-            <h2 className="font-semibold text-zinc-900">Platba</h2>
+          <div className="sticky top-24 rounded-2xl border border-zinc-800 bg-surface-card p-6">
+            <h2 className="font-semibold text-white">Platba</h2>
             <div className="mt-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Cena produktu</span>
-                <span className="text-zinc-900">{formatCurrency(order.product_price)}</span>
+                <span className="text-zinc-300">{formatCurrency(order.product_price)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Doprava</span>
-                <span className="text-zinc-900">
+                <span className="text-zinc-300">
                   {order.shipping_price > 0 ? formatCurrency(order.shipping_price) : 'Zdarma'}
                 </span>
               </div>
-              <div className="border-t border-zinc-100 pt-3 flex justify-between text-base font-semibold">
-                <span className="text-zinc-900">Celkem</span>
-                <span className="text-brand-600">{formatCurrency(order.total_price)}</span>
+              <div className="border-t border-zinc-800 pt-3 flex justify-between text-base font-semibold">
+                <span className="text-white">Celkem</span>
+                <span className="text-brand-400">{formatCurrency(order.total_price)}</span>
               </div>
             </div>
 
             {order.status === 'pending_payment' && (
-              <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
+              <div className="mt-6 rounded-xl bg-amber-950/50 border border-amber-900/50 p-4">
                 <div className="flex items-start gap-2">
-                  <Icon name="clock" size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                  <Icon name="clock" size={16} className="text-amber-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-amber-800">Čeká na platbu</p>
-                    <p className="mt-1 text-xs text-amber-600">
+                    <p className="text-sm font-medium text-amber-300">Čeká na platbu</p>
+                    <p className="mt-1 text-xs text-amber-400/70">
                       Po zaplacení maker obdrží objednávku a začne s výrobou.
                     </p>
                   </div>
@@ -257,12 +257,12 @@ export default async function CustomerOrderDetailPage({ params }: CustomerOrderP
             )}
 
             {order.status === 'shipped' && (
-              <div className="mt-6 rounded-xl bg-brand-50 border border-brand-200 p-4">
+              <div className="mt-6 rounded-xl bg-brand-400/5 border border-brand-400/20 p-4">
                 <div className="flex items-start gap-2">
-                  <Icon name="truck" size={16} className="text-brand-500 mt-0.5 shrink-0" />
+                  <Icon name="truck" size={16} className="text-brand-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-brand-800">Zásilka na cestě</p>
-                    <p className="mt-1 text-xs text-brand-600">
+                    <p className="text-sm font-medium text-brand-300">Zásilka na cestě</p>
+                    <p className="mt-1 text-xs text-brand-400/70">
                       Po obdržení zásilky potvrďte doručení tlačítkem nahoře.
                     </p>
                   </div>
