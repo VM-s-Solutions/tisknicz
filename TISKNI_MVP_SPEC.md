@@ -1,6 +1,6 @@
-# TISKNI.CZ — MVP Specifikace pro Claude Code
+# MAKABLES (formerly Tiskni.cz) — MVP Specifikace pro Claude Code
 
-Prodejní marketplace portál pro tiskaře a makery v ČR. Zákazník najde lokálního tiskaře, objedná, zaplatí. Tiskař vyrobí, odešle přes Zásilkovnu. Platforma běží téměř autonomně — escrow platby, automatická fakturace, provize.
+Prodejní marketplace portál pro makery v ČR — **Makables** ("Where Ideas Take Shape."). Zákazník najde lokálního makera, objedná, zaplatí. Maker vyrobí, odešle přes Zásilkovnu. Platforma běží téměř autonomně — escrow platby, automatická fakturace, provize. Domain: **makables.cz**, provozovatel: JVM YORE s.r.o.
 
 ---
 

@@ -1,4 +1,8 @@
-# Tiskni.cz — Project Instructions for Claude Code
+# Makables — Project Instructions for Claude Code
+
+**Brand:** Makables — "Where Ideas Take Shape."  
+**Domain:** makables.cz  
+**Company:** JVM YORE s.r.o.
 
 **Project context** (DB schema, API routes, integrations, flows): see [TISKNI\_MVP\_SPEC.md](http://TISKNI_MVP_SPEC.md) — read it at the start of every session before touching any code.
 
