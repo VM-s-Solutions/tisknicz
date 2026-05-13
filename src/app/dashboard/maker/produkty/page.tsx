@@ -30,7 +30,7 @@ export default async function MakerProductsPage() {
 
   const { data: products } = await supabase
     .from('products')
-    .select('id, title, description, price, price_type, images, is_active, created_at, category_id')
+    .select('id, maker_id, title, description, price, price_type, images, is_active, created_at, category_id, weight_grams')
     .eq('maker_id', maker.id)
     .order('created_at', { ascending: false });
 
@@ -81,6 +81,7 @@ export default async function MakerProductsPage() {
                 </div>
                 <ProductActions
                   productId={product.id}
+                  product={product as import('@/types').Product}
                   categories={categories ?? []}
                   isEdit
                 />

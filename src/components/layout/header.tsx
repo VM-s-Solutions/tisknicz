@@ -32,7 +32,7 @@ export async function Header() {
           <nav className="hidden items-center gap-1 md:flex">
             <NavLink href="/katalog">Katalog</NavLink>
             <NavLink href="/jak-to-funguje">Jak to funguje</NavLink>
-            <NavLink href="/pro-tiskare">Pro makery</NavLink>
+            <NavLink href="/pro-makery">Pro makery</NavLink>
           </nav>
         </div>
 

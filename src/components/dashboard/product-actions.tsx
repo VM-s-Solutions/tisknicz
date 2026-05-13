@@ -4,15 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ProductForm } from '@/components/forms/product-form';
-import type { Category } from '@/types';
+import type { Category, Product } from '@/types';
 
 interface ProductActionsProps {
   categories: Category[];
   productId?: string;
+  product?: Product;
   isEdit?: boolean;
 }
 
-export function ProductActions({ categories, productId, isEdit }: ProductActionsProps) {
+export function ProductActions({ categories, productId, product, isEdit }: ProductActionsProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -47,7 +48,7 @@ export function ProductActions({ categories, productId, isEdit }: ProductActions
               &times;
             </button>
           </div>
-          <ProductForm categories={categories} />
+          <ProductForm categories={categories} product={product} />
         </div>
       </div>
     );

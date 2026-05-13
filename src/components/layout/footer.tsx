@@ -33,7 +33,7 @@ export function Footer() {
             <h4 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Pro makery</h4>
             <ul className="mt-4 space-y-3">
               <li>
-                <Link href="/pro-tiskare" className="text-sm text-zinc-500 transition-colors hover:text-brand-400">Začít prodávat</Link>
+                <Link href="/pro-makery" className="text-sm text-zinc-500 transition-colors hover:text-brand-400">Začít prodávat</Link>
               </li>
               <li>
                 <Link href="/auth/register" className="text-sm text-zinc-500 transition-colors hover:text-brand-400">Registrace</Link>

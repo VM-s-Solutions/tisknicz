@@ -46,7 +46,7 @@ export default function HomePage() {
                 <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
-                href="/pro-tiskare"
+                href="/pro-makery"
                 className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-8 py-4 text-base font-semibold text-zinc-400 transition-all duration-200 hover:border-zinc-500 hover:text-white"
               >
                 Začít prodávat
@@ -156,7 +156,7 @@ export default function HomePage() {
               <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
-              href="/pro-tiskare"
+              href="/pro-makery"
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-8 py-4 text-base font-semibold text-zinc-400 transition-all duration-200 hover:border-zinc-500 hover:text-white"
             >
               Zjistit více
