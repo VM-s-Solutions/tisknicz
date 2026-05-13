@@ -16,8 +16,22 @@ interface KatalogPageProps {
 export default async function KatalogPage({ searchParams }: KatalogPageProps) {
   const params = await searchParams;
 
+  type MakerRow = {
+    id: string;
+    company_name: string;
+    city: string;
+    bio: string;
+    rating_avg: number;
+    rating_count: number;
+    total_orders: number;
+    is_verified: boolean;
+    ico: string;
+    created_at: string;
+    category_ids?: string[];
+  };
+
   let categories = DEMO_CATEGORIES;
-  let makers = DEMO_MAKERS;
+  let makers: MakerRow[] = DEMO_MAKERS;
   let usedDemo = true;
 
   try {
@@ -86,6 +100,16 @@ export default async function KatalogPage({ searchParams }: KatalogPageProps) {
 
   if (usedDemo) {
     let filteredMakers = makers;
+    if (params.kategorie) {
+      const matchedCategory = DEMO_CATEGORIES.find(
+        (c) => c.slug === params.kategorie
+      );
+      if (matchedCategory) {
+        filteredMakers = filteredMakers.filter((m) =>
+          m.category_ids?.includes(matchedCategory.id) ?? false
+        );
+      }
+    }
     if (params.mesto) {
       filteredMakers = filteredMakers.filter((m) =>
         m.city.toLowerCase().includes(params.mesto!.toLowerCase())

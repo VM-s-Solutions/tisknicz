@@ -46,7 +46,18 @@ export async function generateMetadata({ params }: MakerPageProps): Promise<Meta
 export default async function MakerDetailPage({ params }: MakerPageProps) {
   const { slug } = await params;
 
-  let maker: typeof DEMO_MAKERS[0] & {
+  type MakerDetail = {
+    id: string;
+    company_name: string;
+    city: string;
+    bio: string;
+    rating_avg: number;
+    rating_count: number;
+    total_orders: number;
+    is_verified: boolean;
+    ico: string;
+    created_at: string;
+    category_ids?: string[];
     street?: string;
     zip?: string;
     website?: string | null;
@@ -54,7 +65,9 @@ export default async function MakerDetailPage({ params }: MakerPageProps) {
     personal_pickup?: boolean;
     pickup_address?: string | null;
     pickup_note?: string | null;
-  } | null = null;
+  };
+
+  let maker: MakerDetail | null = null;
   let products: typeof DEMO_PRODUCTS = [];
   let makerCategoryNames: string[] = [];
 

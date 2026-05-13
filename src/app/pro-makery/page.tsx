@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Icon } from '@/components/ui/icon';
+import { MakerSignupForm } from '@/components/forms/maker-signup-form';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -24,13 +25,13 @@ export default function ProMakeryPage() {
             Zaregistrujte se, vytvořte si profil a začněte přijímat objednávky. Vše potřebné máme připravené — od plateb po doručení.
           </p>
           <div className="mt-10">
-            <Link
-              href="/auth/register?role=maker"
+            <a
+              href="#registrace"
               className="group inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
             >
               Registrovat se jako maker
               <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -133,27 +134,31 @@ export default function ProMakeryPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="relative overflow-hidden py-20">
+      {/* Registrační formulář */}
+      <section id="registrace" className="relative overflow-hidden py-20 sm:py-28">
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950" />
         <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-brand-400/5 blur-3xl" />
+        <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-brand-400/5 blur-3xl" />
 
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Připraveni začít?
-          </h2>
-          <p className="mt-4 text-lg text-zinc-400">
-            Registrace trvá méně než 5 minut. Stačí IČO a pár kliknutí.
-          </p>
-          <div className="mt-8">
-            <Link
-              href="/auth/register?role=maker"
-              className="group inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
-            >
-              Zaregistrovat se zdarma
-              <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
-            </Link>
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Registrace</p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Připraveni začít?
+            </h2>
+            <p className="mt-4 text-lg text-zinc-400">
+              Registrace trvá méně než 5 minut. Stačí IČO a pár kliknutí.
+            </p>
           </div>
+
+          <MakerSignupForm />
+
+          <p className="mt-6 text-center text-sm text-zinc-600">
+            Už máte účet?{' '}
+            <Link href="/auth/login" className="text-brand-400 transition-colors hover:text-brand-300 hover:underline">
+              Přihlaste se
+            </Link>
+          </p>
         </div>
       </section>
     </div>

@@ -82,9 +82,9 @@ function RegisterForm() {
           </p>
 
           <div className="mt-12 space-y-4">
-            <FeatureItem icon="check" text="Vlastní profil a portfolio" />
-            <FeatureItem icon="check" text="Zásilkovna integrace" />
-            <FeatureItem icon="check" text="Bezpečné online platby" />
+            <FeatureItem icon="check" text="Najděte lokální makery a tiskaře" />
+            <FeatureItem icon="check" text="Bezpečné platby kartou" />
+            <FeatureItem icon="check" text="Sledování objednávek v reálném čase" />
           </div>
         </div>
       </div>
@@ -147,7 +147,12 @@ function RegisterForm() {
               />
               <div>
                 <span className="text-sm font-semibold text-zinc-200">Chci prodávat jako maker</span>
-                <p className="text-xs text-zinc-500">Po registraci vyplníte profil a IČO</p>
+                <p className="text-xs text-zinc-500">
+                  Jste maker?{' '}
+                  <Link href="/pro-makery" className="text-brand-400 hover:text-brand-300 hover:underline">
+                    Registrujte se na stránce Pro makery
+                  </Link>
+                </p>
               </div>
             </label>
 
