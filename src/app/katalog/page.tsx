@@ -37,10 +37,15 @@ export default async function KatalogPage({ searchParams }: KatalogPageProps) {
   try {
     const supabase = await createServerClient();
 
-    const { data: dbCategories } = await supabase
-      .from('categories')
-      .select('id, name, slug, icon, description, sort_order')
-      .order('sort_order');
+    const { data: dbCategories } = await Promise.race([
+      supabase
+        .from('categories')
+        .select('id, name, slug, icon, description, sort_order')
+        .order('sort_order'),
+      new Promise<{ data: null; error: null }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: null }), 3000)
+      ),
+    ]);
 
     if (dbCategories && dbCategories.length > 0) {
       categories = dbCategories;

@@ -7,7 +7,12 @@ export async function Header() {
 
   try {
     const supabase = await createServerClient();
-    const { data } = await supabase.auth.getUser();
+    const { data } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<{ data: { user: null } }>((resolve) =>
+        setTimeout(() => resolve({ data: { user: null } }), 2000)
+      ),
+    ]);
     user = data.user;
 
     if (user) {
