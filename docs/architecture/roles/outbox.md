@@ -1,0 +1,56 @@
+---
+role: Outbox
+kind: domain-service
+status: accepted
+---
+
+# Outbox
+
+## Responsibility
+
+Be the system-of-record for "something needs to happen off the request path." Events written to the outbox are guaranteed to be processed at-least-once, with retry classification and stalled-event surfacing.
+
+## Collaborators
+
+- **Order**, **Invoice**, **PayoutBatch**, **User**, etc. (any aggregate can produce outbox events)
+- **`ProcessOutboxFunction`** (reads + writes: claims rows, marks `processed_at`)
+- **EmailProvider**, **InvoiceService**, **ShippingCarrier**, etc. (the side-effect targets that the function dispatches to)
+
+## Knows
+
+- The event types it routes (see ADR 0020 table)
+- The retry schedule (per ADR §A.14 + ADR 0014)
+- Sensitive-payload redaction at write time
+
+## Does NOT know
+
+- Why the event was raised (the producing handler decides)
+- How a specific event is processed (`ProcessOutboxFunction` routes to commands)
+
+## Operations
+
+```csharp
+// Producers (inside handlers, before commit):
+void Enqueue(string eventType, string aggregateId, object payload)
+
+// Consumer (Function):
+Task<int> DrainAsync(int maxRows, CancellationToken ct)
+Task RetryStalledAsync(CancellationToken ct)
+```
+
+## Invariants
+
+- Outbox writes happen inside the producing handler's transaction. They commit or roll back atomically.
+- An unprocessed event has `processed_at IS NULL`; processing claims it via `UPDATE ... WHERE processed_at IS NULL RETURNING ...` to prevent double-processing.
+- A successfully-processed event has `processed_at IS NOT NULL`.
+- An event with `last_error_type = Permanent | Configuration` is never retried; admin must intervene.
+- `retry_count` is monotonically non-decreasing.
+
+## Implementation pointer
+
+Table: `outbox_event` (defined in ADR 0016). Function: `backend/src/Makables.Functions/ProcessOutboxFunction.cs`. Producer helper: `backend/src/Makables.Core.AppServices/Outbox/IOutbox.cs` + `OutboxRepository`.
+
+## Related
+
+- ADRs: 0014 (retry classification), 0016 (origin), 0019 (emails via outbox), 0020 (Functions pipeline)
+- Roles: `email-provider`, `invoice`, `shipping-carrier` (the consumers)

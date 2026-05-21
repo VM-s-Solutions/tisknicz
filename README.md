@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Makables
 
-## Getting Started
+**Where Ideas Take Shape.** — a marketplace for Czech makers (3D print, classic print, textile, laser/CNC, large format, handmade).
 
-First, run the development server:
+- Domain: [makables.cz](https://makables.cz) *(pre-launch)*
+- Operator: JVM YORE s.r.o.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Repository layout
+
+```
+makables/
+├── backend/             # .NET 10, Clean Architecture, CQRS, EF Core, Postgres
+├── frontend/            # Next.js 16 App Router, pure presentation layer
+├── docs/                # ADRs, user stories, tickets, architecture, process
+├── .claude/agents/      # Sub-agent charters (PM, BA, Architect, devs, QA, Reviewer, SecOps, L10n)
+├── CLAUDE.md            # Project guardrails for AI agents
+├── TISKNI_MVP_SPEC.md   # Original MVP spec (legacy domain reference)
+└── PROJEKT-VIZE.md      # Vision document
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The repo is a **dual-stack monorepo**:
+- The .NET backend is the system of record. Business logic, money math, state transitions, validation, invoicing, payouts.
+- The Next.js frontend is a **pure presentation layer**. It calls the backend through an NSwag-generated TypeScript client. No server-side database access.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The pivot from a Next.js + Supabase monolith to this dual-stack arrangement is recorded in [ADR 0007](./docs/adr/0007-stack-pivot-dotnet-backend.md).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Documentation entry points
 
-## Learn More
+- [`docs/README.md`](./docs/README.md) — index of process, ADRs, user stories, tickets
+- [`docs/architecture/patterns.md`](./docs/architecture/patterns.md) — canonical patterns (backend C# + frontend TypeScript)
+- [`docs/architecture/overview.md`](./docs/architecture/overview.md) — system shape
+- [`docs/adr/`](./docs/adr/) — every architectural decision, numbered and dated
+- [`CLAUDE.md`](./CLAUDE.md) — guardrails for AI agents working on this codebase
 
-To learn more about Next.js, take a look at the following resources:
+## Status
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Phase 0.5 — pivot bookkeeping. The backend solution is not yet scaffolded. The frontend is moved under `/frontend/` but **does not run** until the backend exposes the API endpoints the pages expect. This is intentional (option 1 in pivot planning): nothing is mocked, so missing pieces are loudly visible.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Sprint status: [`docs/status/sprint-0.md`](./docs/status/sprint-0.md).
 
-## Deploy on Vercel
+## How agents collaborate
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Discovery → ADRs → backlog → autonomous build. See [`docs/process/discovery.md`](./docs/process/discovery.md). Each agent has a charter in [`.claude/agents/`](./.claude/agents/).

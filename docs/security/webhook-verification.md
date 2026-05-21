@@ -1,0 +1,23 @@
+# Webhook verification
+
+Every webhook endpoint must verify the caller before processing.
+
+## Comgate
+- Verify source IP is in Comgate's allowlist (documented in their portal)
+- Re-fetch payment status via Comgate API (`GET /v1.0/status`) — never trust the body alone
+- Idempotency: if order is already `paid`, return 200 without re-running side effects
+
+## Zásilkovna / Packeta
+- Verify source IP if applicable
+- Verify signature if provided
+- Re-fetch packet status via API on any suspicious payload
+
+## Vercel Cron
+- Verify `Authorization: Bearer ${CRON_SECRET}` header
+- Reject all other callers with 401
+
+## General rules
+- Never log secrets
+- Return 2xx only after successful side effects (Comgate retries on non-2xx)
+- Log every incoming webhook with request id for audit
+- Rate-limit unauthenticated callers
