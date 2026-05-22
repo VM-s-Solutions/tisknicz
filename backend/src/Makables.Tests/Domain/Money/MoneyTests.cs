@@ -161,4 +161,21 @@ public class MoneyTests
         Money.Zero("CZK").AmountMinor.Should().Be(0);
         Money.Zero("CZK").Currency.Should().Be("CZK");
     }
+
+    [Fact]
+    public void Direct_Constructor_Normalizes_Currency()
+    {
+        // T-0006 reviewer MINOR #3: `new Money(100, "czk")` used to bypass
+        // `Of()`'s normalization, breaking record equality with `Money.CZK(100)`.
+        // The fix routes both paths through the same validated ctor.
+        new Money(100, "czk").Should().Be(Money.CZK(100));
+        new Money(100, "czk").Currency.Should().Be("CZK");
+    }
+
+    [Fact]
+    public void Direct_Constructor_Rejects_Wrong_Length()
+    {
+        var act = () => new Money(100, "CZ");
+        act.Should().Throw<ArgumentException>();
+    }
 }

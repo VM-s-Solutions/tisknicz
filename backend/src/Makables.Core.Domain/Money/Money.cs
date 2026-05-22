@@ -12,9 +12,15 @@ namespace Makables.Core.Domain.Money;
 /// on currency mismatch. Mixing currencies is a programmer error, not an
 /// expected failure.
 /// </summary>
-public readonly record struct Money(long AmountMinor, string Currency)
+public readonly record struct Money
 {
-    public static Money Of(long amountMinor, string currency)
+    public long AmountMinor { get; }
+    public string Currency { get; }
+
+    // Primary ctor validates + normalizes. Public so `new Money(100, "czk")`
+    // is safe and consistent with `Money.Of(100, "czk")` (both uppercase,
+    // both reject length != 3).
+    public Money(long amountMinor, string currency)
     {
         if (string.IsNullOrWhiteSpace(currency))
         {
@@ -28,8 +34,12 @@ public readonly record struct Money(long AmountMinor, string Currency)
                 nameof(currency));
         }
 
-        return new Money(amountMinor, currency.ToUpperInvariant());
+        AmountMinor = amountMinor;
+        Currency = currency.ToUpperInvariant();
     }
+
+    public static Money Of(long amountMinor, string currency) =>
+        new(amountMinor, currency);
 
     public static Money CZK(long minor) => new(minor, "CZK");
 

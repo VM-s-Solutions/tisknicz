@@ -65,7 +65,7 @@ public class AuditableTests
     }
 
     [Fact]
-    public void MarkDeactivated_Is_Idempotent_Stamp_Wise()
+    public void MarkDeactivated_Called_Twice_Last_Call_Wins()
     {
         var e = new TestEntity("01HZ", "CZ");
         var firstAt = DateTimeOffset.Parse("2026-05-22T12:00:00Z");

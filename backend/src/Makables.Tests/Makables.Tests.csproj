@@ -12,6 +12,7 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +24,7 @@
     <ProjectReference Include="..\Makables.Core.AppServices\Makables.Core.AppServices.csproj" />
     <ProjectReference Include="..\Makables.TestUtilities\Makables.TestUtilities.csproj" />
     <ProjectReference Include="..\Makables.Infra.Common\Makables.Infra.Common.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Database\Makables.Infra.Database.csproj" />
   </ItemGroup>
 
 </Project>
