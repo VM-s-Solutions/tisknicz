@@ -19,7 +19,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
 |---|---|---|---|---|---|---|---|
-| T-0001 | Scaffold .NET solution skeleton — Core.Domain, Core.AppServices, Config, Infra.*, Web.*, Functions, Tests | 1 | M | draft | — | — | 0001, 0007 |
+| T-0001 | Scaffold .NET solution skeleton — Core.Domain, Core.AppServices, Config, Infra.*, Web.*, Functions, Tests | 1 | M | **done** | — | — | 0001, 0007, 0008 |
 | T-0002 | EF Core: MakablesDbContext, audit interceptor, global query filter for soft-delete | 1 | M | draft | T-0001 | — | 0001, 0008, 0011, 0013 |
 | T-0003 | Wire MediatR + FluentValidation + pipeline behaviors (Validation + UnitOfWork) | 1 | S | draft | T-0001 | — | 0002 |
 | T-0004 | Shared types: BusinessResult, Error, ErrorType, BusinessErrorMessage; ICommand / IQuery markers; MakablesApiController base | 1 | S | draft | T-0001 | — | 0002 |

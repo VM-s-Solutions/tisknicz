@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AzureFunctionsVersion>V4</AzureFunctionsVersion>
+    <OutputType>Exe</OutputType>
+    <_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" />
+    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Makables.Config\Makables.Config.csproj" />
+    <ProjectReference Include="..\Makables.Core.AppServices\Makables.Core.AppServices.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Common\Makables.Infra.Common.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Database\Makables.Infra.Database.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Clients\Makables.Infra.Clients.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Azure.Storage.Blobs\Makables.Infra.Azure.Storage.Blobs.csproj" />
+  </ItemGroup>
+
+</Project>

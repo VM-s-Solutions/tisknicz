@@ -1,0 +1,17 @@
+<Solution>
+  <Project Path="Makables.Config/Makables.Config.csproj" />
+  <Project Path="Makables.Core.AppServices/Makables.Core.AppServices.csproj" />
+  <Project Path="Makables.Core.Domain/Makables.Core.Domain.csproj" />
+  <Project Path="Makables.Functions/Makables.Functions.csproj" />
+  <Project Path="Makables.Infra.Azure.Storage.Blobs/Makables.Infra.Azure.Storage.Blobs.csproj" />
+  <Project Path="Makables.Infra.Clients/Makables.Infra.Clients.csproj" />
+  <Project Path="Makables.Infra.Common/Makables.Infra.Common.csproj" />
+  <Project Path="Makables.Infra.Database/Makables.Infra.Database.csproj" />
+  <Project Path="Makables.IntegrationTests/Makables.IntegrationTests.csproj" />
+  <Project Path="Makables.Tests/Makables.Tests.csproj" />
+  <Project Path="Makables.TestUtilities/Makables.TestUtilities.csproj" />
+  <Project Path="Makables.Web.Admin/Makables.Web.Admin.csproj" />
+  <Project Path="Makables.Web.Customer/Makables.Web.Customer.csproj" />
+  <Project Path="Makables.Web.Maker/Makables.Web.Maker.csproj" />
+  <Project Path="Makables.Web.Public/Makables.Web.Public.csproj" />
+</Solution>

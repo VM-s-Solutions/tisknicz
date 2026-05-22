@@ -44,6 +44,8 @@ backend/**/*.pdb
 backend/**/launchSettings.local.json
 backend/**/appsettings.Local.json
 backend/**/appsettings.Development.local.json
+backend/**/local.settings.json
+backend/**/*.dll.config
 
 # === IDE ===
 .idea/
