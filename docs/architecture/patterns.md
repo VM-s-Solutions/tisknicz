@@ -555,8 +555,8 @@ public record OrderListItem(
     string CustomerName,
     long TotalPriceMinor,
     string Currency,
-    DateTimeOffset CreatedOn,
-    DateTimeOffset? UpdatedOn
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? UpdatedAt
 );
 ```
 
@@ -568,7 +568,7 @@ public static class OrderMappers
 {
     public static OrderListItem MapToListItem(this Order order) =>
         new(order.Id, order.OrderNumber, order.Status, order.CustomerName,
-            order.TotalPriceMinor, order.Currency, order.CreatedOn, order.UpdatedOn);
+            order.TotalPriceMinor, order.Currency, order.CreatedAt, order.UpdatedAt);
 
     public static OrderDetail MapToDetail(this Order order) => /* ... */;
 }
@@ -598,15 +598,15 @@ public abstract class Auditable : BaseEntity
 {
     public string CountryCode { get; protected set; } = default!;  // ISO 3166-1 alpha-2
     public string CreatedBy { get; private set; } = default!;
-    public DateTimeOffset CreatedOn { get; private set; } = DateTimeOffset.UtcNow;
-    public string? UpdatedBy { get; private set; }
-    public DateTimeOffset? UpdatedOn { get; private set; }
-    public string? DeactivatedBy { get; private set; }
-    public DateTimeOffset? DeactivatedOn { get; private set; }
+    public DateTimeOffset CreatedAt { get; protected internal set; } = DateTimeOffset.UtcNow;
+    public string? UpdatedBy { get; protected internal set; }
+    public DateTimeOffset? UpdatedAt { get; protected internal set; }
+    public string? DeactivatedBy { get; protected internal set; }
+    public DateTimeOffset? DeactivatedAt { get; protected internal set; }
 
-    public Auditable Created(string createdBy, DateTimeOffset createdOn) { CreatedBy = createdBy; CreatedOn = createdOn; return this; }
-    public Auditable Updated(string updatedBy, DateTimeOffset updatedOn) { UpdatedBy = updatedBy; UpdatedOn = updatedOn; return this; }
-    public Auditable Deactivated(string by, DateTimeOffset on) { DeactivatedBy = by; DeactivatedOn = on; IsActive = false; return this; }
+    public Auditable MarkCreated(string createdBy, DateTimeOffset createdAt) { CreatedBy = createdBy; CreatedAt = createdAt; return this; }
+    public Auditable MarkUpdated(string updatedBy, DateTimeOffset updatedAt) { UpdatedBy = updatedBy; UpdatedAt = updatedAt; return this; }
+    public Auditable MarkDeactivated(string by, DateTimeOffset at) { DeactivatedBy = by; DeactivatedAt = at; IsActive = false; return this; }
 }
 ```
 

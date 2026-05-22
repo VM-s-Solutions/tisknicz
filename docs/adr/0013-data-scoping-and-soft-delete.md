@@ -36,7 +36,7 @@ foreach (var entityType in modelBuilder.Model.GetEntityTypes())
 }
 ```
 
-A "deletion" calls the entity's `Deactivated(by, on)` method (sets `IsActive=false`, populates `DeactivatedBy/On`). Hard delete is reserved for GDPR "right to erasure" requests, executed by a dedicated admin command that bypasses query filters explicitly.
+A "deletion" calls the entity's `MarkDeactivated(by, at)` method (sets `IsActive=false`, populates `DeactivatedBy/At`). Hard delete is reserved for GDPR "right to erasure" requests, executed by a dedicated admin command that bypasses query filters explicitly.
 
 ### Country and ownership scoping at the application layer
 

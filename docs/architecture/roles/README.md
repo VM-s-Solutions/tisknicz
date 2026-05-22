@@ -35,12 +35,15 @@ See [ADR 0015 — Responsibility-Driven Design](../../adr/0015-responsibility-dr
 | OrderNumbering | [order-numbering.md](./order-numbering.md) | Hand out next order number per country/year |
 | InvoiceNumbering | [invoice-numbering.md](./invoice-numbering.md) | Hand out next gap-free invoice number per country/year |
 | Outbox | [outbox.md](./outbox.md) | System-of-record for off-request-path work |
+| Clock | [clock.md](./clock.md) | Testable "now" provider |
+| IdGenerator | [id-generator.md](./id-generator.md) | Hand out fresh entity ids (ULID) |
 
 ## Application services
 
 | Role | File | Responsibility |
 |---|---|---|
 | AuthService | [auth-service.md](./auth-service.md) | Orchestrate registration, login, refresh, OAuth, magic link, reset |
+| UserSessionProvider | [user-session-provider.md](./user-session-provider.md) | Read-side wrapper over the current authenticated user's claims |
 
 ## Adapters
 
