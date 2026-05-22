@@ -22,7 +22,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0001 | Scaffold .NET solution skeleton — Core.Domain, Core.AppServices, Config, Infra.*, Web.*, Functions, Tests | 1 | M | **done** | — | — | 0001, 0007, 0008 |
 | T-0002 | EF Core: MakablesDbContext, audit interceptor, global query filter for soft-delete | 1 | M | draft | T-0001 | — | 0001, 0008, 0011, 0013 |
 | T-0003 | Wire MediatR + FluentValidation + pipeline behaviors (Validation + UnitOfWork) | 1 | S | draft | T-0001 | — | 0002 |
-| T-0004 | Shared types: BusinessResult, Error, ErrorType, BusinessErrorMessage; ICommand / IQuery markers; MakablesApiController base | 1 | S | draft | T-0001 | — | 0002 |
+| T-0004 | Shared types: BusinessResult, Error, ErrorType, BusinessErrorMessage; ICommand / IQuery markers; MakablesApiController base | 1 | S | **done** | T-0001 | — | 0002 |
 | T-0005 | Money value object + MoneyFormatter + tests | 1 | S | draft | T-0001 | — | 0003 |
 | T-0006 | Auditable base entity + audit interceptor populating CreatedBy/On + UpdatedBy/On from IUserSessionProvider | 1 | S | draft | T-0001, T-0002 | — | 0011 |
 | T-0007 | NumberingSequence table + IOrderNumberGenerator / IInvoiceNumberGenerator / IPayoutBatchNumberGenerator with FOR UPDATE lock | 1 | M | draft | T-0002 | — | 0009 |
