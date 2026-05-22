@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Makables.Core.Domain\Makables.Core.Domain.csproj" />
     <ProjectReference Include="..\Makables.Core.AppServices\Makables.Core.AppServices.csproj" />
     <ProjectReference Include="..\Makables.TestUtilities\Makables.TestUtilities.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Common\Makables.Infra.Common.csproj" />
   </ItemGroup>
 
 </Project>

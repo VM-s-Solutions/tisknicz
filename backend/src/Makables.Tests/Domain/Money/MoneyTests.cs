@@ -115,4 +115,50 @@ public class MoneyTests
         var act = () => Money.CZK(long.MaxValue).Add(Money.CZK(1));
         act.Should().Throw<OverflowException>();
     }
+
+    // === Reviewer T-0005 follow-up: gaps flagged on the merged commit ===
+
+    [Fact]
+    public void Subtract_Different_Currency_Throws()
+    {
+        // MAJOR finding #3 from T-0005 review: Subtract had no currency-mismatch test.
+        var act = () => Money.CZK(100).Subtract(Money.Of(100, "EUR"));
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Currency mismatch*");
+    }
+
+    [Fact]
+    public void Subtract_Underflow_Throws()
+    {
+        // MAJOR finding #1 from T-0005 review: Subtract overflow on the negative side.
+        var act = () => Money.CZK(long.MinValue).Subtract(Money.CZK(1));
+        act.Should().Throw<OverflowException>();
+    }
+
+    [Fact]
+    public void PercentOfBp_Overflow_Throws()
+    {
+        // MAJOR finding #2 from T-0005 review: PercentOfBp overflow protection.
+        // 200% of long.MaxValue overflows long when cast back from decimal.
+        var act = () => Money.CZK(long.MaxValue).PercentOfBp(20_000);
+        act.Should().Throw<OverflowException>();
+    }
+
+    [Fact]
+    public void PercentOfBp_On_Negative_Rounds_Away_From_Zero()
+    {
+        // MINOR finding #5 from T-0005 review: lock the half-up semantics on
+        // negatives. AwayFromZero means -0.5 → -1, not -0 / 0.
+        // 50% of -1 minor = -0.5 → rounds to -1 (away from zero).
+        Money.CZK(-1).PercentOfBp(5000).Should().Be(Money.CZK(-1));
+    }
+
+    [Fact]
+    public void Zero_Equals_CZK_Zero()
+    {
+        // MINOR finding #6 from T-0005 review: Money.Zero factory had no test.
+        Money.Zero("CZK").Should().Be(Money.CZK(0));
+        Money.Zero("CZK").AmountMinor.Should().Be(0);
+        Money.Zero("CZK").Currency.Should().Be("CZK");
+    }
 }
