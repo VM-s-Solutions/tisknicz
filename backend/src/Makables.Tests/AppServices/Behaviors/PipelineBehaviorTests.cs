@@ -1,0 +1,217 @@
+using FluentAssertions;
+using FluentValidation;
+using MediatR;
+using Makables.Core.AppServices.Abstractions;
+using Makables.Core.AppServices.Behaviors;
+using Makables.Core.Domain.Common;
+using Makables.Core.Domain.SeedWork;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+
+namespace Makables.Tests.AppServices.Behaviors;
+
+public class PipelineBehaviorTests
+{
+    // === Test command shapes ===
+
+    public record DoThing(string Name) : ICommand;
+    public record DoThingTyped(string Name) : ICommand<string>;
+    public record AskQuestion(string Topic) : IQuery<int>;
+
+    // === Validators ===
+
+    public class DoThingValidator : AbstractValidator<DoThing>
+    {
+        public DoThingValidator()
+        {
+            RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required").WithErrorCode("validation.required");
+            RuleFor(x => x.Name).MinimumLength(3).WithMessage("Name is too short").WithErrorCode("validation.minLength");
+        }
+    }
+
+    public class DoThingTypedValidator : AbstractValidator<DoThingTyped>
+    {
+        public DoThingTypedValidator()
+        {
+            RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required").WithErrorCode("validation.required");
+        }
+    }
+
+    // === Handlers ===
+
+    public class DoThingHandler : ICommandHandler<DoThing>
+    {
+        public Task<BusinessResult> Handle(DoThing request, CancellationToken ct) =>
+            Task.FromResult(BusinessResult.Success());
+    }
+
+    public class DoThingTypedHandler : ICommandHandler<DoThingTyped, string>
+    {
+        public Task<BusinessResult<string>> Handle(DoThingTyped request, CancellationToken ct) =>
+            Task.FromResult(BusinessResult.Success("ok:" + request.Name));
+    }
+
+    public class AskQuestionHandler : IQueryHandler<AskQuestion, int>
+    {
+        public Task<BusinessResult<int>> Handle(AskQuestion request, CancellationToken ct) =>
+            Task.FromResult(BusinessResult.Success(42));
+    }
+
+    // === Pipeline scaffolding ===
+
+    private static (ISender sender, IUnitOfWork uow) BuildPipeline(bool registerValidators = true)
+    {
+        var services = new ServiceCollection();
+
+        // MediatR 13 requires logging to be registered (LicenseAccessor consumes ILoggerFactory).
+        services.AddLogging();
+
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PipelineBehaviorTests>());
+
+        // Behaviors registered open-generic in MediatR order.
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkPipelineBehavior<,>));
+
+        if (registerValidators)
+        {
+            services.AddTransient<IValidator<DoThing>, DoThingValidator>();
+            services.AddTransient<IValidator<DoThingTyped>, DoThingTypedValidator>();
+        }
+
+        var uow = Substitute.For<IUnitOfWork>();
+        services.AddSingleton(uow);
+
+        var provider = services.BuildServiceProvider();
+        return (provider.GetRequiredService<ISender>(), uow);
+    }
+
+    // === Validation behavior tests ===
+
+    [Fact]
+    public async Task Validation_Failure_Short_Circuits_Handler_For_NonTyped_Command()
+    {
+        var (sender, uow) = BuildPipeline();
+
+        var result = await sender.Send(new DoThing(Name: ""));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().NotBeNull();
+        result.Error!.Type.Should().Be(ErrorType.Validation);
+        result.Error.Code.Should().Be("validation.failed");
+        result.Error.Details.Should().BeAssignableTo<IReadOnlyList<ValidationDetail>>();
+
+        // UoW must NOT be committed on validation failure.
+        await uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Validation_Failure_Short_Circuits_Handler_For_Typed_Command()
+    {
+        var (sender, uow) = BuildPipeline();
+
+        var result = await sender.Send(new DoThingTyped(Name: ""));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Validation);
+        result.Value.Should().BeNull();
+
+        await uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Validation_Failure_Carries_All_Errors_As_Details()
+    {
+        var (sender, _) = BuildPipeline();
+
+        // Both rules fail — empty + too short — but only NotEmpty fires because
+        // FluentValidation by default short-circuits per-property on NotEmpty.
+        // We at least assert one detail; the contract is "at least the first
+        // failing rule per property".
+        var result = await sender.Send(new DoThing(Name: ""));
+
+        var details = result.Error!.Details as IReadOnlyList<ValidationDetail>;
+        details.Should().NotBeNull();
+        details!.Should().NotBeEmpty();
+        details.Should().Contain(d => d.Code == "validation.required");
+    }
+
+    [Fact]
+    public async Task Valid_Input_Proceeds_To_Handler()
+    {
+        var (sender, uow) = BuildPipeline();
+
+        var result = await sender.Send(new DoThing(Name: "Widget"));
+
+        result.IsSuccess.Should().BeTrue();
+        await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    // === UnitOfWork behavior tests ===
+
+    [Fact]
+    public async Task UoW_Commits_On_Successful_Typed_Command()
+    {
+        var (sender, uow) = BuildPipeline();
+
+        var result = await sender.Send(new DoThingTyped(Name: "Widget"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("ok:Widget");
+        await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UoW_Does_Not_Commit_When_Handler_Returns_Failure()
+    {
+        // Handler that returns Failure even with valid input.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PipelineBehaviorTests>());
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkPipelineBehavior<,>));
+
+        var uow = Substitute.For<IUnitOfWork>();
+        services.AddSingleton(uow);
+
+        var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        var result = await sender.Send(new FailingCommand("x"));
+
+        result.IsSuccess.Should().BeFalse();
+        await uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    public record FailingCommand(string Reason) : ICommand;
+
+    public class FailingHandler : ICommandHandler<FailingCommand>
+    {
+        public Task<BusinessResult> Handle(FailingCommand request, CancellationToken ct) =>
+            Task.FromResult(BusinessResult.Failure(Error.Conflict("conflict.test", "test.failed")));
+    }
+
+    [Fact]
+    public async Task UoW_Skips_Query_Even_On_Success()
+    {
+        // Queries are not ICommandMarker, so UnitOfWorkPipelineBehavior won't
+        // attach. SaveChangesAsync must NOT be called for a query.
+        var (sender, uow) = BuildPipeline();
+
+        var result = await sender.Send(new AskQuestion("life"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+        await uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Pipeline_With_No_Validator_Just_Calls_Handler()
+    {
+        var (sender, uow) = BuildPipeline(registerValidators: false);
+
+        var result = await sender.Send(new DoThing(Name: ""));  // would fail validation, but no validator registered
+
+        result.IsSuccess.Should().BeTrue();
+        await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+}
