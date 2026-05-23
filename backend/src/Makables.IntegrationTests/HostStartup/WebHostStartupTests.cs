@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Makables.IntegrationTests.HostStartup;
@@ -50,6 +51,18 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
         return new WebApplicationFactory<TProgram>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("IntegrationTest");
+
+            // AddMakablesInfrastructure throws on empty Postgres connection
+            // string (reviewer T-0009 MAJOR #1 fix). Supply a placeholder so
+            // the host starts; ConfigureServices below swaps the registration
+            // for SQLite before any DbContext is actually constructed.
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
+                });
+            });
 
             builder.ConfigureServices(services =>
             {
@@ -101,5 +114,57 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
         sp.GetService<IPayoutBatchNumberGenerator>().Should().NotBeNull();
 
         sp.GetService<ISender>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Host_Cors_Middleware_Is_Active()
+    {
+        // Reviewer T-0009 MAJOR #2: smoke tests didn't exercise middleware.
+        // A CORS preflight (OPTIONS with Origin) is the cheapest way to
+        // prove UseCors is wired in the pipeline. The dev fallback in
+        // AddMakablesCors allows http://localhost:3000.
+        using var factory = BuildFactory();
+        using var client = factory.CreateClient();
+
+        var request = new HttpRequestMessage(HttpMethod.Options, "/");
+        request.Headers.Add("Origin", "http://localhost:3000");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        // The CORS middleware should set Access-Control-Allow-Origin in
+        // response to a valid preflight; if UseCors weren't wired, no such
+        // header would appear.
+        response.Headers.Contains("Access-Control-Allow-Origin").Should().BeTrue(
+            "UseCors must be wired in UseMakablesPipeline; a CORS preflight should produce Access-Control-Allow-Origin");
+    }
+
+    [Fact]
+    public void Host_RateLimiter_Options_Are_Registered()
+    {
+        // Reviewer T-0009 MAJOR #2 (part 2): prove AddRateLimiter was invoked.
+        // The framework registers RateLimiterOptions via IOptions<T>; resolving
+        // it confirms AddMakablesRateLimiting wired the policy.
+        using var factory = BuildFactory();
+        using var scope = factory.Services.CreateScope();
+        var sp = scope.ServiceProvider;
+
+        var options = sp.GetService<Microsoft.Extensions.Options.IOptions<
+            Microsoft.AspNetCore.RateLimiting.RateLimiterOptions>>();
+        options.Should().NotBeNull(
+            "AddMakablesRateLimiting must register IOptions<RateLimiterOptions>");
+    }
+
+    [Fact]
+    public void Host_Authentication_Services_Are_Registered()
+    {
+        // Reviewer T-0009 MAJOR #2 (part 3): prove AddAuthentication was invoked
+        // via AddMakablesAuth.
+        using var factory = BuildFactory();
+        using var scope = factory.Services.CreateScope();
+        var sp = scope.ServiceProvider;
+
+        sp.GetService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>()
+            .Should().NotBeNull("AddMakablesAuth must register the authentication scheme provider");
     }
 }

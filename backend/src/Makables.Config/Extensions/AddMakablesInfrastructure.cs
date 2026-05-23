@@ -1,4 +1,5 @@
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Identifiers;
@@ -6,6 +7,7 @@ using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Numbering;
+using Makables.Infra.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,11 +36,17 @@ public static class MakablesInfrastructureExtensions
 
         services.AddDbContext<MakablesDbContext>((sp, options) =>
         {
-            var connectionString =
-                configuration.GetConnectionString("Postgres")
-                ?? throw new InvalidOperationException(
+            var connectionString = configuration.GetConnectionString("Postgres");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                // Reviewer T-0009 MAJOR #1: production appsettings.json ships
+                // an empty string for ConnectionStrings:Postgres, which is
+                // non-null and would have slipped past a `?? throw` guard.
+                // IsNullOrWhiteSpace catches both missing and empty.
+                throw new InvalidOperationException(
                     "Connection string 'Postgres' is not configured. " +
                     "Set ConnectionStrings:Postgres in appsettings or environment.");
+            }
 
             options.UseNpgsql(connectionString);
             options.AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>());
@@ -51,7 +59,8 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
         services.AddSingleton<IPayoutBatchNumberGenerator, PayoutBatchNumberGenerator>();
 
-        // Repositories land here as Phase 2+ adds aggregates.
+        // === Repositories (Phase 2+ adds more) ===
+        services.AddScoped<ICountryConfigurationRepository, CountryConfigurationRepository>();
 
         return services;
     }
