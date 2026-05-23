@@ -27,7 +27,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0006 | Auditable base entity + IClock + IIdGenerator + IUserSessionProvider (interceptor wiring moved to T-0002) | 1 | S | **done** | T-0001, T-0004 | — | 0011, 0013, 0014 |
 | T-0007 | NumberingSequence table + IOrderNumberGenerator / IInvoiceNumberGenerator / IPayoutBatchNumberGenerator with FOR UPDATE lock | 1 | M | **done** | T-0001, T-0002, T-0006 | — | 0009 |
 | T-0008 | DI wiring: AddMakablesInfrastructure / AddMakablesAuth / AddMakablesCors / AddMakablesMediator / AddMakablesClients / AddMakablesRateLimiting | 1 | M | **done** | T-0001, T-0002, T-0003, T-0006, T-0007 | — | 0008 |
-| T-0009 | Four Web hosts (Customer / Maker / Admin / Public) sharing Config; per-host Program.cs; per-host CORS + rate limit | 1 | M | draft | T-0008 | — | 0005 |
+| T-0009 | Four Web hosts (Customer / Maker / Admin / Public) sharing Config; per-host Program.cs; per-host CORS + rate limit | 1 | M | **done** | T-0008 | — | 0005, 0008 |
 | T-0010 | Country + CountryConfiguration entity + seed migration (CZ row); ICountryConfigurationRepository | 1 | M | draft | T-0002, T-0006 | — | 0004 |
 | T-0011 | Outbox table + IOutbox producer helper + OutboxRepository; AdminAuditLogEntry table + AdminAuditPipelineBehavior | 1 | M | draft | T-0002, T-0006 | — | 0014, 0020 |
 | T-0012 | API versioning wiring (Asp.Versioning.Mvc); URL-path versioning; openapi/v1.json per host | 1 | S | draft | T-0009 | — | 0021 |
