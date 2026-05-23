@@ -1,12 +1,16 @@
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Numbering;
+using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Identifiers;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
+using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Numbering;
+using Makables.Infra.Database.Outbox;
 using Makables.Infra.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -61,6 +65,10 @@ public static class MakablesInfrastructureExtensions
 
         // === Repositories (Phase 2+ adds more) ===
         services.AddScoped<ICountryConfigurationRepository, CountryConfigurationRepository>();
+
+        // === Outbox + Admin audit log ===
+        services.AddScoped<IOutbox, OutboxWriter>();
+        services.AddScoped<IAdminAuditLogWriter, AdminAuditLogWriter>();
 
         return services;
     }

@@ -25,9 +25,13 @@ public static class MakablesMediatorExtensions
         // Pipeline behaviors run in registration order:
         //   ValidationPipelineBehavior — runs first, short-circuits on
         //     invalid input before the handler.
-        //   UnitOfWorkPipelineBehavior — runs second, commits the UoW
-        //     after the handler returns successfully (commands only).
+        //   AdminAuditPipelineBehavior — for IAdminAuditableCommand only;
+        //     captures before-snapshot, runs handler, captures after-snapshot,
+        //     appends to admin_audit_log within the same UoW transaction.
+        //   UnitOfWorkPipelineBehavior — runs last, commits the UoW after
+        //     the handler (and any audit-log write) returns successfully.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AdminAuditPipelineBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkPipelineBehavior<,>));
 
         // FluentValidation validators in Core.AppServices.

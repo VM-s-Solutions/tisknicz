@@ -29,7 +29,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0008 | DI wiring: AddMakablesInfrastructure / AddMakablesAuth / AddMakablesCors / AddMakablesMediator / AddMakablesClients / AddMakablesRateLimiting | 1 | M | **done** | T-0001, T-0002, T-0003, T-0006, T-0007 | — | 0008 |
 | T-0009 | Four Web hosts (Customer / Maker / Admin / Public) sharing Config; per-host Program.cs; per-host CORS + rate limit | 1 | M | **done** | T-0008 | — | 0005, 0008 |
 | T-0010 | Country + CountryConfiguration entity + seed migration (CZ row); ICountryConfigurationRepository | 1 | M | **done** | T-0002, T-0006, T-0007, T-0008, T-0009 | — | 0004, 0013 |
-| T-0011 | Outbox table + IOutbox producer helper + OutboxRepository; AdminAuditLogEntry table + AdminAuditPipelineBehavior | 1 | M | draft | T-0002, T-0006 | — | 0014, 0020 |
+| T-0011 | Outbox table + IOutbox producer helper + OutboxRepository; AdminAuditLogEntry table + AdminAuditPipelineBehavior | 1 | M | **done** | T-0002, T-0003, T-0006, T-0008, T-0010 | — | 0014, 0020 |
 | T-0012 | API versioning wiring (Asp.Versioning.Mvc); URL-path versioning; openapi/v1.json per host | 1 | S | draft | T-0009 | — | 0021 |
 | T-0013 | NSwag pipeline: nswag/config.json; npm run generate:api; CI spec-hash parity check; pre-commit hook blocking manual edits to api-client/ | 1 | M | draft | T-0009, T-0012 | — | 0022 |
 | T-0014 | Structured logging (Serilog), OpenTelemetry traces + metrics via .AddServiceDefaults() (Aspire); Application Insights wiring | 1 | M | draft | T-0009 | — | 0023 |
