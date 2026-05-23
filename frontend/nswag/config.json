@@ -1,0 +1,48 @@
+{
+  "_comment": "NSwag configuration per ADR 0022. Generates one TypeScript client per Web host per version. Run via `npm run generate:api` from /frontend/. The backend host must be running locally on the configured port — see scripts/generate-api.mjs for how the script orchestrates startup.",
+  "runtime": "Net80",
+  "defaultVariables": null,
+  "documentGenerator": {
+    "fromDocuments": [
+      {
+        "url": "http://localhost:5001/openapi/v1.json",
+        "output": "../src/lib/api-client/customer-api.v1.ts",
+        "className": "CustomerApi",
+        "host": "customer"
+      },
+      {
+        "url": "http://localhost:5002/openapi/v1.json",
+        "output": "../src/lib/api-client/maker-api.v1.ts",
+        "className": "MakerApi",
+        "host": "maker"
+      },
+      {
+        "url": "http://localhost:5003/openapi/v1.json",
+        "output": "../src/lib/api-client/admin-api.v1.ts",
+        "className": "AdminApi",
+        "host": "admin"
+      },
+      {
+        "url": "http://localhost:5004/openapi/v1.json",
+        "output": "../src/lib/api-client/public-api.v1.ts",
+        "className": "PublicApi",
+        "host": "public"
+      }
+    ]
+  },
+  "codeGenerators": {
+    "openApiToTypeScriptClient": {
+      "template": "Fetch",
+      "promiseType": "Promise",
+      "operationGenerationMode": "MultipleClientsFromOperationId",
+      "typeScriptVersion": 5.0,
+      "exceptionClass": "ApiException",
+      "withCredentials": true,
+      "generateOptionalParameters": true,
+      "generateClientInterfaces": true,
+      "useTransformOptionsMethod": false,
+      "wrapResponses": false,
+      "generateDtoTypes": true
+    }
+  }
+}

@@ -22,17 +22,19 @@ public static class MakablesMediatorExtensions
             cfg.RegisterServicesFromAssembly(appServicesAssembly);
         });
 
-        // Pipeline behaviors run in registration order:
-        //   ValidationPipelineBehavior — runs first, short-circuits on
-        //     invalid input before the handler.
-        //   AdminAuditPipelineBehavior — for IAdminAuditableCommand only;
-        //     captures before-snapshot, runs handler, captures after-snapshot,
-        //     appends to admin_audit_log within the same UoW transaction.
-        //   UnitOfWorkPipelineBehavior — runs last, commits the UoW after
-        //     the handler (and any audit-log write) returns successfully.
+        // Pipeline behaviors. MediatR runs behaviors in registration order:
+        // first-registered is OUTERMOST. The chain unwinds as
+        // Validation → UnitOfWork → AdminAudit → Handler → (return)
+        // AdminAudit (after-snapshot + Add audit row) →
+        // UnitOfWork.SaveChangesAsync (commits handler state + audit row
+        // atomically) → Validation (after).
+        //
+        // The UoW MUST wrap AdminAudit (not the other way around) so the
+        // audit row added by AdminAudit lands in the same SaveChanges call
+        // as the handler's state changes. Reviewer T-0011 BLOCKER fix.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AdminAuditPipelineBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkPipelineBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AdminAuditPipelineBehavior<,>));
 
         // FluentValidation validators in Core.AppServices.
         services.AddValidatorsFromAssembly(appServicesAssembly);
