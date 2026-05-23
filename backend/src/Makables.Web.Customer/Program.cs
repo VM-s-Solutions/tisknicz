@@ -9,6 +9,7 @@ const string Audience = "customer";
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddMakablesObservability("makables-customer-api");
 builder.Services.AddMakablesInfrastructure(builder.Configuration);
 builder.Services.AddMakablesMediator();
 builder.Services.AddMakablesAuth(builder.Configuration, Audience);

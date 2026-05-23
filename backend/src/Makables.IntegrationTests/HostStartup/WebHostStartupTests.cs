@@ -169,6 +169,20 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
     }
 
     [Fact]
+    public void Host_Uses_Serilog_As_Logger_Provider()
+    {
+        // T-0014: AddMakablesObservability calls UseSerilog, which registers
+        // Serilog's ILogger in the container. Resolving it confirms the
+        // observability extension ran during host configuration.
+        using var factory = BuildFactory();
+        using var scope = factory.Services.CreateScope();
+
+        var serilogLogger = scope.ServiceProvider.GetService<Serilog.ILogger>();
+        serilogLogger.Should().NotBeNull(
+            "AddMakablesObservability must register Serilog.ILogger via UseSerilog");
+    }
+
+    [Fact]
     public async Task Host_OpenApi_Document_Is_Served()
     {
         // T-0012: each host exposes /openapi/v1.json so NSwag (T-0013) can

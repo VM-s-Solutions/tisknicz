@@ -1,5 +1,7 @@
 using Makables.Config.Extensions;
+using Makables.Config.Middleware;
 using Microsoft.AspNetCore.Builder;
+using Serilog;
 
 namespace Makables.Config;
 
@@ -12,6 +14,13 @@ public static class UseMakablesPipelineExtensions
 {
     public static WebApplication UseMakablesPipeline(this WebApplication app)
     {
+        // Serilog request logging first so every request gets a structured
+        // completion record (method, path, status, elapsed). Then our enrichment
+        // middleware pushes request_id / correlation_id / user_id / country_code
+        // onto LogContext for all downstream logs.
+        app.UseSerilogRequestLogging();
+        app.UseMiddleware<RequestEnrichmentMiddleware>();
+
         // Order matters: CORS → AuthN → AuthZ → RateLimiter → endpoints.
         app.UseCors(MakablesCorsExtensions.PolicyName);
         app.UseAuthentication();
