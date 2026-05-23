@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Icon } from '@/components/ui/icon';
-import { MakerSignupForm } from '@/components/forms/maker-signup-form';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -151,7 +150,9 @@ export default function ProMakeryPage() {
             </p>
           </div>
 
-          <MakerSignupForm />
+          <p className="text-center text-sm text-zinc-500">
+            Registrační formulář je v přípravě.
+          </p>
 
           <p className="mt-6 text-center text-sm text-zinc-600">
             Už máte účet?{' '}
