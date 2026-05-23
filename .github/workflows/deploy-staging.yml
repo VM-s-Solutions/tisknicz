@@ -1,0 +1,108 @@
+name: Deploy → staging
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  bicep:
+    name: Bicep infrastructure
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep
+        uses: azure/cli@v2
+        env:
+          POSTGRES_ADMIN_USER: ${{ secrets.POSTGRES_ADMIN_USER }}
+          POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az deployment group create \
+              --resource-group makables-stg \
+              --template-file infra/bicep/main.bicep \
+              --parameters infra/bicep/envs/staging.bicepparam
+
+  backend:
+    name: Backend (.NET) → App Services
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [bicep]
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        host:
+          - { project: 'Makables.Web.Customer', app: 'makables-stg-customer' }
+          - { project: 'Makables.Web.Maker',    app: 'makables-stg-maker'    }
+          - { project: 'Makables.Web.Admin',    app: 'makables-stg-admin'    }
+          - { project: 'Makables.Web.Public',   app: 'makables-stg-public'   }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: |
+          dotnet publish backend/src/${{ matrix.host.project }}/${{ matrix.host.project }}.csproj \
+            --configuration Release \
+            --output ${{ runner.temp }}/publish
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ matrix.host.app }}
+          package: ${{ runner.temp }}/publish
+
+  frontend:
+    name: Frontend (Next.js) → Vercel
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [bicep]
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx next build
+      - name: Deploy to Vercel (preview)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm i -g vercel
+          vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          vercel build --token=$VERCEL_TOKEN
+          vercel deploy --prebuilt --token=$VERCEL_TOKEN

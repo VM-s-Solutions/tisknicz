@@ -22,9 +22,19 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
   readonly body?: BodyInit;
   /** Extra request headers. `Content-Type` is set automatically for `json`. */
   readonly headers?: Record<string, string>;
-  /** Bearer token to send. When omitted the wrapper looks for `makables_jwt` cookie. */
+  /**
+   * Bearer token to send. Phase-1 contract: callers pass this explicitly
+   * after reading the audience-scoped access cookie themselves (see
+   * `lib/auth/accessCookieName(audience)`). T-0027 will move the cookie →
+   * Bearer bridge into this wrapper once real JWT refresh exists; until
+   * then a missing token simply means the request goes unauthenticated.
+   */
   readonly accessToken?: string;
-  /** Provide your own AbortSignal; otherwise the wrapper applies an 8s timeout. */
+  /**
+   * Provide your own AbortSignal. The wrapper composes it with an 8 s
+   * timeout via `AbortSignal.any`, so the request aborts on whichever
+   * fires first.
+   */
   readonly signal?: AbortSignal;
 }
 
@@ -67,19 +77,18 @@ export async function apiFetch<TValue>(
     headers['Authorization'] = `Bearer ${options.accessToken}`;
   }
 
-  const controller = new AbortController();
-  const timeoutId = options.signal
-    ? undefined
-    : setTimeout(() => controller.abort(), 8000);
-  const signal = options.signal ?? controller.signal;
+  // Compose any caller-supplied signal with our 8 s timeout so the request
+  // aborts on whichever fires first (T-0015 reviewer M1).
+  const timeoutSignal = AbortSignal.timeout(8000);
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, timeoutSignal])
+    : timeoutSignal;
 
   let response: Response;
   try {
     response = await fetch(url, { ...options, body, headers, signal });
   } catch (cause) {
-    return err(transientError(cause, url));
-  } finally {
-    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    return err(transientError(cause));
   }
 
   const correlationId = response.headers.get('x-correlation-id') ?? undefined;
@@ -107,6 +116,11 @@ async function parseErrorResponse(
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
     try {
+      // The wrapper accepts both Makables-native `BusinessResult` (code +
+      // message + type + fields) and RFC 7807 ProblemDetails (title +
+      // detail). The native shape always wins when present; ProblemDetails
+      // covers ASP.NET framework errors (model-binding, 404, etc.) that
+      // bypass our pipeline.
       const payload = (await response.json()) as Partial<{
         code: string;
         message: string;
@@ -136,7 +150,7 @@ async function parseErrorResponse(
   };
 }
 
-function transientError(cause: unknown, url: string): ApiError {
+function transientError(cause: unknown): ApiError {
   const isAbort = cause instanceof DOMException && cause.name === 'AbortError';
   return {
     code: isAbort ? 'network.timeout' : 'network.unreachable',
@@ -144,12 +158,7 @@ function transientError(cause: unknown, url: string): ApiError {
       ? 'Server neodpověděl včas. Zkuste to prosím znovu.'
       : 'Server je momentálně nedostupný. Zkuste to prosím znovu.',
     type: 'Transient',
-    fields: undefined,
-    correlationId: undefined,
-    // url is intentionally not included in the message to avoid leaking host
-    // internals to the user; the original URL is reachable via DevTools.
-    ...((process.env.NODE_ENV !== 'production') ? { _debugUrl: url } : {}),
-  } as ApiError;
+  };
 }
 
 function mapStatusToErrorType(status: number): ErrorType {

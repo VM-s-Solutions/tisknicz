@@ -82,33 +82,23 @@ If a developer needs to add helper methods (e.g. a wrapper around the generated 
 
 ### Apifetch wrapper
 
-The generated NSwag clients are *low-level*: they make raw HTTP calls and throw on non-2xx. The frontend's `lib/runtime/api-fetch.ts` wraps every call:
+The frontend's `lib/runtime/api-fetch.ts` is the single boundary every backend call passes through. It takes the audience host and the URL path directly (because the generated client is regenerated against `/openapi/v1.json` on every controller change — wrapping its dynamically-shaped methods would be a continual maintenance cost):
 
 ```ts
-export async function apiFetch<T>(
-  call: () => Promise<T>
-): Promise<Result<T, ApiError>> {
-  try {
-    const value = await call();
-    return Ok(value);
-  } catch (e) {
-    if (e instanceof ApiException) {
-      const error = parseBackendError(e);
-      if (error.kind === 'Unauthorized') {
-        const refreshed = await tryRefresh();
-        if (refreshed) {
-          const retried = await call();
-          return Ok(retried);
-        }
-      }
-      return Err(error);
-    }
-    return Err(networkError());
-  }
-}
+export async function apiFetch<TValue>(
+  host: ApiHost,                   // 'customer' | 'maker' | 'admin' | 'public'
+  path: string,                    // e.g. '/api/v1/customer/orders'
+  options?: ApiFetchOptions,       // json body, headers, accessToken, signal
+): Promise<Result<TValue, ApiError>>;
 ```
 
-This turns the generated client's exceptions into the `Result<T, ApiError>` discriminated union that mirrors the backend's `BusinessResult<T>`. All frontend code calls APIs through this wrapper.
+The wrapper resolves the host's base URL from `NEXT_PUBLIC_API_<HOST>_BASE_URL`, attaches the `Authorization: Bearer` header when an `accessToken` is supplied, applies an 8 s timeout composed with any caller-supplied `AbortSignal` via `AbortSignal.any`, and translates the response into `Result<TValue, ApiError>`. Both Makables-native error payloads (`code` + `message` + `type` + `fields`) and ASP.NET-framework `ProblemDetails` (`title` + `detail`) are accepted on error paths.
+
+**Refresh-on-401**: deferred to T-0027. Phase-1 `apiFetch` returns the `Unauthorized` `ApiError` and callers redirect to `/auth/login`; T-0027 introduces the single-flight refresh inside this wrapper.
+
+**Consumer wrappers**: `lib/api-client-helpers/<feature>-client.ts` files own per-feature helpers. They may call the generated NSwag client and feed its result through a thin `try` block, or they may use `apiFetch` directly when the call doesn't benefit from the strongly-typed client (e.g. multipart upload, query-only endpoints). The generated client stays the contract source of truth; helpers stay the call-site source of truth.
+
+This contract supersedes the earlier `(call: () => Promise<T>)` signature recorded in the v1 draft of this ADR — the raw-path shape proved simpler in T-0015 and avoids forcing every caller to materialize a generated-client method reference.
 
 ### Local development workflow
 

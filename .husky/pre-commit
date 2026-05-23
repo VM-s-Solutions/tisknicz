@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Makables pre-commit hooks. Per ADR 0022.
+#
+# Runs from the repo root. Each check exits non-zero on violation, which
+# aborts the commit. Add new gates here (e.g. dotnet format) as they
+# stabilize.
+
+set -e
+
+# 1. Block manual edits to the generated NSwag client without a matching
+#    .spec-hashes.json update (ADR 0022).
+node frontend/scripts/check-api-client-manual-edits.mjs

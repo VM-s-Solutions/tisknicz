@@ -10,7 +10,8 @@
     "lint": "eslint",
     "generate:api": "node scripts/generate-api.mjs",
     "check:api": "node scripts/check-api-parity.mjs",
-    "check:api-client": "node scripts/check-api-client-manual-edits.mjs"
+    "check:api-client": "node scripts/check-api-client-manual-edits.mjs",
+    "prepare": "cd .. && husky .husky"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "husky": "^9.1.7",
     "nswag": "^14.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"

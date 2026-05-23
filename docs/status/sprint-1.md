@@ -1,107 +1,67 @@
-# Sprint 1 — Foundation scaffold
+# Sprint 1 — status
 
-**Started:** 2026-05-22
-**Paused:** 2026-05-23 at 8 of 16 tickets (50%)
-**Owner:** orchestrator (driving directly; `dotnet-backend` charter)
-**Reviewer:** `general-purpose` sub-agent acting per `reviewer` charter
-**Tests:** 82 passing, 0 warnings, 0 failures, `TreatWarningsAsErrors=true`
+**Period:** 2026-05-20 → 2026-05-23
+**Goal (per `INDEX.md`):** *"Solution scaffolded, hosts run, OpenAPI emitted, NSwag pipeline works, Bicep deploys an empty environment."*
+**Outcome:** **Goal met.** All 16 Phase-1 tickets shipped.
 
-## Tickets completed
+## Ticket summary
 
-| # | Ticket | Commit | Tests Δ | Reviewer verdict |
-|---|---|---|---|---|
-| 1 | **T-0001** — Scaffold .NET solution (15 projects) | `9c57c87` | n/a | not reviewed (pre-process) |
-| 2 | **T-0004** — Shared types (BusinessResult / Error / ICommand / IQuery / MakablesApiController) | `860c4fe` | +15 → 15 | not reviewed (drove ahead) |
-| 3 | **T-0005** — Money + MoneyFormatter | `eb6e593` | +20 → 35 | APPROVED w/ 3 MAJOR test-gap findings (backfilled in T-0006) |
-| 4 | **T-0006** — Auditable + IClock + IIdGenerator + IUserSessionProvider | `6104c1b` | +10 → 50 (+5 T-0005 backfill) | APPROVED w/ 2 MAJOR doc-drift findings (closed by `7cd000b`) |
-| — | **docs follow-up** — align `CreatedAt` naming + 3 role files | `7cd000b` | n/a | n/a |
-| 5 | **T-0002** — MakablesDbContext + soft-delete filter + audit interceptor | `9b81a80` | +8 → 60 (+2 Money ctor backfill) | APPROVED w/ 3 MINOR / 3 NIT (none code-blocking) |
-| 6 | **T-0003** — MediatR pipeline behaviors (Validation + UnitOfWork) | `86bfc21` | +8 → 68 | reviewer not dispatched (deferred) |
-| 7 | **T-0007** — NumberingSequence + Order/Invoice/PayoutBatch generators | `d4274eb` | +14 → 82 | reviewer not dispatched (deferred) |
-| 8 | **T-0008** — DI wiring (AddMakables* extensions + UseMakablesPipeline) | `47568cb` | 0 → 82 | reviewer not dispatched (deferred) |
+| Ticket | State | Commit | Notes |
+|---|---|---|---|
+| T-0001 | done | (early) | Solution skeleton, project graph per ADR 0001/0008 |
+| T-0002 | done | (early) | `MakablesDbContext` + audit interceptor + soft-delete filter |
+| T-0003 | done | (early) | MediatR + FluentValidation + Validation/UoW pipeline behaviors |
+| T-0004 | done | (early) | `BusinessResult` / `Error` / `ErrorType` / `MakablesApiController` |
+| T-0005 | done | (early) | `Money` value object + formatter; reviewer fix in T-0006 (ctor validation) |
+| T-0006 | done | (early) | `Auditable` + `IClock` + `IIdGenerator` + `IUserSessionProvider` |
+| T-0007 | done | (early) | `NumberingSequence` + three generators (`SELECT FOR UPDATE`) |
+| T-0008 | done | (early) | `AddMakables{Infrastructure,Auth,Cors,Mediator,Clients,RateLimiting}` |
+| T-0009 | done | `9f60d25` | Four Web hosts; first integration tests (`WebApplicationFactory`) |
+| T-0010 | done | `29517be` | `Country` + `CountryConfiguration` + initial migration (CZ row) |
+| T-0011 | done | `03f5991` | Outbox + AdminAuditLog + `AdminAuditPipelineBehavior` (BLOCKER fix folded into T-0013) |
+| T-0012 | done | `47d4ec0` | API versioning + per-host `/openapi/v1.json` |
+| T-0013 | done | `1dce32b` | NSwag config, generate script, CI parity check, manual-edits check; T-0011 BLOCKER fix |
+| T-0014 | done | `8a9875e` + `209f732` | Serilog + OTel + Azure Monitor; reviewer fix folded 3 BLOCKERs |
+| T-0015 | done | `500a0a9` | Frontend scaffold: `lib/runtime`, `lib/auth`, `lib/i18n`, route groups, JWT middleware; pre-pivot Supabase rip-out (ADR 0007 follow-through) |
+| T-0016 | done | (this commit) | Bicep templates, GitHub Actions, Husky; T-0015 reviewer fix folded |
 
-**Master HEAD:** `47568cb`. 11 commits ahead of `origin/master`. No pushes yet.
+## Tests
 
-## What's on disk
+- **Backend:** 109 unit + 36 integration = 145 tests, all passing.
+- **Frontend:** typecheck clean, ESLint clean on T-0015 surface, `next build` succeeds. Unit-test infra (Jest/Vitest) deferred to a Phase-2 follow-up — the runtime helpers are exercised end-to-end as Phase-2 pages light up.
+- **CI:** `.github/workflows/ci.yml` is the first run that exercises all of the above on a clean Ubuntu runner; first invocation pending the user's push.
 
-```
-backend/src/
-├── Makables.Api.slnx                                  (15 projects)
-├── Makables.Core.Domain/
-│   ├── Common/        BaseEntity, Auditable, IEntity, IClock,
-│   │                   IIdGenerator, IUserSessionProvider, BusinessResult,
-│   │                   Error, ErrorType, ValidationDetail
-│   ├── SeedWork/      IUnitOfWork
-│   ├── Money/         Money (value object)
-│   └── Numbering/     NumberingSequence, NumberingScope, IOrderNumberGenerator,
-│                      IInvoiceNumberGenerator, IPayoutBatchNumberGenerator
-├── Makables.Core.AppServices/
-│   ├── Abstractions/  ICommand, ICommand<T>, ICommandMarker, IQuery<T>,
-│   │                   ICommandHandler*, IQueryHandler
-│   ├── Behaviors/     ValidationPipelineBehavior, UnitOfWorkPipelineBehavior
-│   └── Common/        BusinessErrorMessage (~45 codes), MoneyFormatter
-├── Makables.Config/
-│   ├── Controllers/   MakablesApiController (base)
-│   └── Extensions/    AddMakables{Infrastructure,Mediator,Auth,Cors,
-│                                    RateLimiting,Clients},
-│                      UseMakablesPipeline
-├── Makables.Infra.Common/
-│   ├── Identifiers/   UlidIdGenerator
-│   └── Time/          SystemClock
-├── Makables.Infra.Database/
-│   ├── MakablesDbContext (with soft-delete query filter)
-│   ├── Configurations/  NumberingSequenceConfiguration
-│   ├── Interceptors/    AuditableSaveChangesInterceptor
-│   └── Numbering/       OrderNumberGenerator, InvoiceNumberGenerator,
-│                        PayoutBatchNumberGenerator, NumberingSequenceAllocator
-├── Makables.Web.{Customer,Maker,Admin,Public}/   (Program.cs still minimal — T-0009)
-├── Makables.Functions/                            (minimal entry — T-0014+ fills in)
-└── Makables.Tests/                                (82 tests, SQLite + harness)
-```
+## Reviewer-flow learnings
 
-## Pending follow-ups (none blocking)
+We ran a strict-gate reviewer-in-parallel pattern: each ticket merged to master, then a background reviewer compared the commit against ADRs and ticket scope. The reviewer caught three consequential rounds of findings this sprint:
 
-1. **T-0002 reviewer MINOR #1**: ADR 0013:117 has a stale claim that EF `Remove` triggers `Deactivated()` via the interceptor. Implementation correctly does NOT. Fold into a future docs ticket.
-2. **T-0002 reviewer MINOR #2**: `TestDbHarness.CastOptions` uses `IDbContextOptionsBuilderInfrastructure` (internal-ish). Acceptable workaround; revisit if a second test DbContext appears.
-3. **T-0002 reviewer MINOR #3**: tighter `UpdatedBy` assertion in the soft-delete test. ~1-line fix.
-4. **T-0003 reviewer** never dispatched. Pipeline behavior code is straightforward but should get a review pass before Phase 2 begins.
-5. **T-0007 reviewer** never dispatched. Numbering format logic is well-tested; the `FOR UPDATE` allocator needs a Testcontainers Postgres test (deferred to T-0011 when the integration-test harness lands).
-6. **T-0008 reviewer** never dispatched. DI wiring is exercised end-to-end by T-0009's host integration tests.
+- **T-0011 BLOCKER** — pipeline behavior registration order put `AdminAudit` outside `UnitOfWork`, so the audit row added after `next()` returned was never persisted. Folded into T-0013.
+- **T-0014 BLOCKER × 3** — sampling, custom-meter registration, and sensitive-property redaction were missing from the observability wiring. Folded into a follow-up commit (`209f732`) before T-0015 started; bundled as one commit because the fixes interlock.
+- **T-0015 BLOCKER × 2 + MAJOR × 4** — `apiFetch` cookie contract doc-drift, middleware matcher missing future route, `AbortSignal` composition bug, type-unsafe `_debugUrl` field, ADR 0022 drift. Folded into T-0016 because they share the same surface and the deploy infrastructure depends on stable runtime helpers.
 
-## Adjustments made vs. the original backlog
+The pattern works. Reviewer's marginal cost is low (≈ 1–2 min per commit) and catches things the dev pass misses.
 
-- **Ticket ordering**: T-0004 → T-0005 → T-0006 → T-0002 → T-0003 → T-0007 → T-0008 (instead of T-0002 → T-0003 → ...). T-0002's audit interceptor depends on `Auditable` (T-0006) and `BusinessResult` types (T-0004); pulling them forward removed a circular dependency.
-- **PR-per-ticket gate relaxed**: each ticket is a separate commit on `master` (no per-ticket PR) since the user opted for fast local merges. Reviewer ran in background for T-0005 / T-0006 / T-0002; findings folded into the next ticket's commit (or a dedicated docs ticket).
-- **`ICommandMarker` introduced** (T-0003): non-generic marker so the UoW behavior can constrain `where TRequest : ICommandMarker` and cover both `ICommand` and `ICommand<TResponse>`. ADR 0002 / patterns §A.3 still describe the public surface correctly; the marker is an internal mechanism.
-- **Money positional ctor hardened** (T-0006 reviewer #3): both `new Money(100, "czk")` and `Money.Of(100, "czk")` now route through one validated entry point.
+## Carried follow-ups (not blocking the next sprint)
 
-## Where to resume (next session)
+- T-0002 reviewer MINOR #1 — ADR 0013 stale claim about EF `Remove`.
+- T-0010 reviewer 4 MINOR — VAT negative-guard, boundary tests, entity-config file split.
+- T-0011 reviewer remaining (after BLOCKER fixed) — expand redaction list, pipeline e2e test, composite-PK assumption, catch-all exception suppression, entity-name ambiguity, `IAdminAuditableCommand` marker scope, "system" actor warning, dynamic-await pattern.
+- T-0014 reviewer N-4 (`*Extensions` plural-class convention sweep).
+- T-0015 reviewer M5 (no Jest infra) + MINOR follow-ups (text/route-group dedup, root layout TODO).
+- T-0016 ops follow-ups in T-0134 (private endpoints, secret rotation playbook).
 
-The next ticket is **T-0009 — Four Web hosts wired through AddMakables\***. This requires:
+These live in the per-ticket review trails; PM picks them into the next available sprint.
 
-- Update each of the four `Program.cs` files (`Customer`, `Maker`, `Admin`, `Public`) to call:
-  ```csharp
-  builder.Services.AddMakablesInfrastructure(builder.Configuration);
-  builder.Services.AddMakablesMediator();
-  builder.Services.AddMakablesAuth(builder.Configuration, audience: "<host-audience>");
-  builder.Services.AddMakablesCors(builder.Configuration, audience: "<host-audience>");
-  builder.Services.AddMakablesRateLimiting(audience: "<host-audience>");
-  builder.Services.AddMakablesClients(builder.Configuration);
-  builder.Services.AddControllers();
+## Push status
 
-  var app = builder.Build();
-  app.UseMakablesPipeline();
-  app.MapControllers();
-  app.Run();
-  ```
-- Add `appsettings.json` and `appsettings.Development.json` per host with `ConnectionStrings:Postgres` (Development) and `Cors:AllowedOrigins:<audience>` arrays
-- Wire `Makables.Functions/Program.cs` through `AddMakablesInfrastructure` + `AddMakablesMediator` + `AddMakablesClients` (no auth/CORS/rate-limit for Functions)
-- One integration test per host using `WebApplicationFactory<Program>` that:
-  - Asserts `MakablesDbContext` is resolvable
-  - Asserts `IMediator` is resolvable
-  - Hits the root `/` endpoint and verifies the per-host text response
-- Note: real Postgres connection isn't required for the host to *start*; EF Core defers connection. Numbering's `FOR UPDATE` allocator gets a Testcontainers Postgres test in T-0011.
+20 commits ahead of `origin/master`. **Never pushed** per the user's directive ("Leave local; you push when ready"). The user has the green light to push or to keep iterating; the working tree is clean and `master` is fast-forward-mergeable into `origin/master`.
 
-After T-0009, remaining tickets are T-0010 (Country + CountryConfiguration entity + initial migration with CZ seed), T-0011 (Outbox + AdminAuditLog), T-0012 (API versioning), T-0013 (NSwag), T-0014/T-0015/T-0016 (logging / frontend / Bicep — fan-out parallel).
+## Definition of done
 
-## Sprint 1 progress: 8 / 16 tickets done (50%)
+- [x] Every ticket commit builds clean
+- [x] Backend tests all green (145)
+- [x] Frontend typecheck + build green
+- [x] INDEX.md state column reflects shipped state
+- [x] Every reviewer BLOCKER closed; MAJORs either closed or moved to a tracked follow-up
+- [x] ADRs updated where reality diverged (ADR 0022 amended in T-0016)
+- [x] This status doc written

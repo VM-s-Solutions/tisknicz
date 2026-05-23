@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore backend/src/Makables.Api.slnx
+
+      - name: Build
+        run: dotnet build backend/src/Makables.Api.slnx --no-restore --configuration Release
+
+      - name: Test (unit + integration)
+        run: dotnet test backend/src/Makables.Api.slnx --no-build --configuration Release --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/src/**/TestResults/*.trx
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint src
+
+      - name: Build
+        run: npx next build
+
+  api-parity:
+    name: NSwag spec parity (ADR 0022)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Start backend hosts in background
+        working-directory: backend/src
+        run: |
+          dotnet build Makables.Api.slnx --configuration Release
+          dotnet run --project Makables.Web.Customer --configuration Release --no-build --urls http://localhost:5001 &
+          dotnet run --project Makables.Web.Maker    --configuration Release --no-build --urls http://localhost:5002 &
+          dotnet run --project Makables.Web.Admin    --configuration Release --no-build --urls http://localhost:5003 &
+          dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5004 &
+          # Wait for the OpenAPI documents to be reachable.
+          for port in 5001 5002 5003 5004; do
+            for i in {1..30}; do
+              if curl -sf http://localhost:$port/openapi/v1.json -o /dev/null; then break; fi
+              sleep 1
+            done
+          done
+        env:
+          ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
+
+      - name: Check API parity
+        run: npm run check:api

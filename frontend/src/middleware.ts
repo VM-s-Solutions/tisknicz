@@ -37,6 +37,11 @@ function inferAudience(pathname: string): Audience | undefined {
 }
 
 export const config = {
+  // /objednavka/* is part of the (customer) route group per ADR 0005 but
+  // the matcher omits it for Phase 1: the post-payment confirmation
+  // (/objednavka/potvrzeni) needs to be reachable unauthenticated for
+  // customers returning from Comgate's redirect. T-0084 reintroduces the
+  // real /objednavka/* pages and revisits middleware coverage then.
   matcher: [
     '/dashboard/zakaznik/:path*',
     '/dashboard/maker/:path*',

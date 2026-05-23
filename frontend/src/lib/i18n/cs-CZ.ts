@@ -39,7 +39,7 @@ export const messages = {
   'auth.login.email': 'E-mail',
   'auth.login.password': 'Heslo',
   'auth.login.submit': 'Přihlásit se',
-  'auth.login.forgot_password': 'Zapomenuté heslo',
+  'auth.login.forgot_password': 'Zapomněli jste heslo?',
   'auth.login.magic_link': 'Přihlásit se odkazem v e-mailu',
   'auth.register.title': 'Vytvořit účet',
 

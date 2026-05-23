@@ -9,8 +9,19 @@
  * token can't accidentally be sent to the maker host.
  */
 
+/**
+ * JWT `aud` claim — which API host the token can be presented to.
+ * Per ADR 0005 + ADR 0012.
+ */
 export type Audience = 'customer' | 'maker' | 'admin';
 
+/**
+ * User attribute — what role the authenticated principal plays. Today
+ * `Role` and {@link Audience} are structurally identical, but they will
+ * diverge once admins can impersonate makers (T-0034 reviewer trail) and
+ * once OAuth provides per-provider role mapping. Keep them as separate
+ * brands so consumers don't accidentally substitute one for the other.
+ */
 export type Role = 'customer' | 'maker' | 'admin';
 
 export interface Session {
