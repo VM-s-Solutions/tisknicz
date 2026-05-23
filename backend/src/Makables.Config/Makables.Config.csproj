@@ -6,12 +6,19 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Makables.Core.AppServices\Makables.Core.AppServices.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Common\Makables.Infra.Common.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Database\Makables.Infra.Database.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Clients\Makables.Infra.Clients.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Azure.Storage.Blobs\Makables.Infra.Azure.Storage.Blobs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
   </ItemGroup>
 
 </Project>
