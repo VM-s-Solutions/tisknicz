@@ -66,5 +66,5 @@ internal sealed class HttpContextUserSessionProvider(IHttpContextAccessor access
         accessor.HttpContext?.User.FindFirstValue(ClaimTypes.Email);
 
     public string? GetUserCountryCode() =>
-        accessor.HttpContext?.User.FindFirstValue("country_code");
+        accessor.HttpContext?.User.FindFirstValue(MakablesClaimTypes.CountryCode);
 }

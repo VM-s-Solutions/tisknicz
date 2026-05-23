@@ -38,6 +38,10 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <!-- EF Core OTel instrumentation is still beta as of OTel 1.15. We accept
+         the pre-release pin because EF Core span coverage is required by
+         ADR 0023 §4, and the API surface used here (AddEntityFrameworkCoreInstrumentation
+         with default options) is stable. Swap to a stable release when one ships. -->
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.12.0-beta.1" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.3.0" />
 

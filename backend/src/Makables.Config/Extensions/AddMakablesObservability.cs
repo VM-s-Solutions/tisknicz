@@ -1,4 +1,5 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Makables.Config.Observability;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,59 +8,75 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Formatting.Compact;
 
 namespace Makables.Config.Extensions;
 
 /// <summary>
-/// Wires the observability stack per ADR 0023 (NFRs):
-///   - Serilog as the logger provider (structured JSON in non-Development).
-///   - OpenTelemetry traces + metrics with ASP.NET Core / HttpClient / EF Core
-///     instrumentation.
+/// Wires the observability stack per ADR 0023 §4:
+///   - Serilog as the logger provider; <see cref="SensitivePropertyMasker"/>
+///     redacts password/token/secret/signing-key properties at the sink so
+///     they never reach App Insights.
+///   - OpenTelemetry traces with the ADR's sampling policy (100% webhooks,
+///     10% other successes; see <see cref="MakablesTraceSampler"/>) and
+///     ASP.NET Core / HttpClient / EF Core instrumentation.
+///   - OpenTelemetry metrics with the ASP.NET / HttpClient instrumentations
+///     plus every meter listed in <see cref="MakablesMeters.All"/> — the
+///     six required custom signals (outbox_lag, outbox_stalled,
+///     payment_create_failures, webhook_received, auto_deliver, payout_batch)
+///     are added to these meters in their owning modules in later tickets.
 ///   - Azure Monitor exporter for both, gated on a non-empty App Insights
-///     connection string. Without the connection string the host still emits
-///     structured logs to console — useful in tests and local runs.
+///     connection string. Without the connection string the host still
+///     emits structured logs to console — useful in tests and local runs.
 /// </summary>
 public static class AddMakablesObservabilityExtensions
 {
+    private const double SuccessTraceSamplingRatio = 0.1;
+
     public static WebApplicationBuilder AddMakablesObservability(
         this WebApplicationBuilder builder,
         string serviceName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
 
-        // Serilog reads configuration from appsettings + env, with sensible defaults.
         builder.Host.UseSerilog((context, services, configuration) =>
         {
             configuration
                 .ReadFrom.Configuration(context.Configuration)
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext()
-                .Enrich.WithProperty("service", serviceName);
+                .Enrich.WithProperty("service", serviceName)
+                .Enrich.With<SensitivePropertyMasker>();
 
-            // Default sink: console. Structured JSON outside Development so the
-            // log shipper can parse it; pretty text in Development for humans.
             if (context.HostingEnvironment.IsDevelopment())
             {
                 configuration.WriteTo.Console();
             }
             else
             {
-                configuration.WriteTo.Console(new Serilog.Formatting.Compact.RenderedCompactJsonFormatter());
+                configuration.WriteTo.Console(new RenderedCompactJsonFormatter());
             }
         });
 
         var otel = builder.Services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(serviceName))
-            .WithTracing(t => t
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddEntityFrameworkCoreInstrumentation())
-            .WithMetrics(m => m
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation());
+            .WithTracing(t =>
+            {
+                t.SetSampler(new MakablesTraceSampler(SuccessTraceSamplingRatio));
+                t.AddAspNetCoreInstrumentation(o => o.RecordException = true);
+                t.AddHttpClientInstrumentation(o => o.RecordException = true);
+                t.AddEntityFrameworkCoreInstrumentation();
+            })
+            .WithMetrics(m =>
+            {
+                m.AddAspNetCoreInstrumentation();
+                m.AddHttpClientInstrumentation();
+                foreach (var meter in MakablesMeters.All)
+                {
+                    m.AddMeter(meter);
+                }
+            });
 
-        // App Insights export only when a connection string is provided. Tests and
-        // local development run without it and rely on console output instead.
         var appInsights = builder.Configuration["AzureMonitor:ConnectionString"]
             ?? builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
         if (!string.IsNullOrWhiteSpace(appInsights))

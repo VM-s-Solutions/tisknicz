@@ -14,16 +14,15 @@ public static class UseMakablesPipelineExtensions
 {
     public static WebApplication UseMakablesPipeline(this WebApplication app)
     {
-        // Serilog request logging first so every request gets a structured
-        // completion record (method, path, status, elapsed). Then our enrichment
-        // middleware pushes request_id / correlation_id / user_id / country_code
-        // onto LogContext for all downstream logs.
-        app.UseSerilogRequestLogging();
-        app.UseMiddleware<RequestEnrichmentMiddleware>();
-
-        // Order matters: CORS → AuthN → AuthZ → RateLimiter → endpoints.
+        // Order matters: CORS → AuthN → enrichment → request log → AuthZ → RateLimiter.
+        // Enrichment runs AFTER UseAuthentication so HttpContext.User is populated
+        // (T-0014 reviewer M-4 — earlier wiring made user_id always anonymous).
+        // Serilog request logging runs INSIDE the enrichment scope so the request
+        // completion record carries the correlation/user/country fields too.
         app.UseCors(MakablesCorsExtensions.PolicyName);
         app.UseAuthentication();
+        app.UseMiddleware<RequestEnrichmentMiddleware>();
+        app.UseSerilogRequestLogging();
         app.UseAuthorization();
         app.UseRateLimiter();
 

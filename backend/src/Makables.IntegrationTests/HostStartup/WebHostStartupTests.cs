@@ -183,6 +183,46 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
     }
 
     [Fact]
+    public async Task Host_Echoes_CorrelationId_When_Traceparent_Header_Is_Supplied()
+    {
+        // T-0014 reviewer M-1: prove RequestEnrichmentMiddleware is wired in
+        // the pipeline. The middleware writes the extracted traceparent's
+        // trace-id back as x-correlation-id; if it weren't running, no such
+        // header would appear on the response.
+        using var factory = BuildFactory();
+        using var client = factory.CreateClient();
+
+        var traceId = "0af7651916cd43dd8448eb211c80319c";
+        var traceParent = $"00-{traceId}-b7ad6b7169203331-01";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/");
+        request.Headers.Add("traceparent", traceParent);
+        var response = await client.SendAsync(request);
+
+        response.IsSuccessStatusCode.Should().BeTrue();
+        response.Headers.GetValues("x-correlation-id").FirstOrDefault()
+            .Should().Be(traceId,
+            "RequestEnrichmentMiddleware must extract the W3C traceparent trace-id and echo it");
+    }
+
+    [Fact]
+    public async Task Host_Generates_CorrelationId_When_No_Traceparent_Header_Is_Supplied()
+    {
+        // T-0014 reviewer M-1 part 2: middleware must still produce a
+        // correlation id (falling back to the per-request TraceIdentifier)
+        // when the client supplies no traceparent.
+        using var factory = BuildFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/");
+
+        response.IsSuccessStatusCode.Should().BeTrue();
+        response.Headers.GetValues("x-correlation-id").FirstOrDefault()
+            .Should().NotBeNullOrWhiteSpace(
+            "the middleware must always produce a correlation id, falling back to context.TraceIdentifier");
+    }
+
+    [Fact]
     public async Task Host_OpenApi_Document_Is_Served()
     {
         // T-0012: each host exposes /openapi/v1.json so NSwag (T-0013) can
