@@ -70,5 +70,21 @@ Reviewer of `500a0a9` returned BLOCKER × 2 + MAJOR × 4. Addressed here:
 - **AC-4** INDEX.md flips for T-0013…T-0016 are committed.
 - **AC-5** T-0015 reviewer BLOCKERs B1 and B2 closed; MAJORs M1/M3/M4 closed in code/ADR.
 
+## Reviewer findings (commit ca2be2f) and resolutions
+
+Reviewer returned **BLOCKER × 4** + **MAJOR × 4** + **MINOR × 6**. Resolutions in a follow-up commit on master:
+
+- **BLOCKER B-1 (production SKUs contradicted ADR 0023 §7)** — flipped `production.bicepparam` to `Standard_D2s_v3` / `GeneralPurpose` Postgres and `P1v3` App Service Plan; updated `main.bicep`'s allowed-SKU list to `[B1, B2, P1v3, P2v3]` (removed the stray `P0v3`).
+- **BLOCKER B-2 (Postgres public + AllowAllAzureServices in prod)** — added `allowAllAzureServices` param to the postgres module; `main.bicep` passes `envSlug == 'stg'` so production is provisioned WITHOUT the firewall rule. Operator wires a Private Endpoint per T-0134's pre-launch runbook before any data lands.
+- **BLOCKER B-3 (empty-string password default)** — dropped the `''` fallback in both `staging.bicepparam` and `production.bicepparam`; `readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')` now fails the deploy loudly if the secret is missing.
+- **BLOCKER B-4 (blob public access)** — **REJECT**. Reviewer misread ADR 0011: the ADR is explicit at line 27 ("`product-images` | Public read (CDN-cacheable)") and line 113 ("blob containers have public access set to None *except* `product-images` which is public-blob"). The implementation matches the ADR. No change.
+- **MAJOR M-1 (CI api-parity job will silently hang)** — added an explicit "did the host come up?" check in the bash loop; if any of the four hosts fails to serve `/openapi/v1.json` within 30 s the job exits non-zero with a clear `::error::` annotation instead of falling through to `npm run check:api` with a confusing downstream failure.
+- **MAJOR M-2 (CORS array default)** — accepted; documented in module XML doc. The strict default ([] → "allow none") is preferable to a permissive default that masks misconfiguration.
+- **MAJOR M-3 (husky `prepare` on shallow checkout)** — script now `test -d .git && husky .husky || echo 'Skipping…'` so CI / Vercel builds without a `.git` directory don't tank.
+- **MAJOR M-4 (AzureWebJobsStorage plain-text key)** — added inline `TODO(T-0134)` pointing at identity-based connections.
+- **MINOR (blob container name `labels` → `maker-documents`)** — fixed to match ADR 0011 §"Containers" table.
+- **MINOR (Postgres conn string not Key-Vault-referenced)** — added inline `TODO(T-0134)` with the cycle-breaking rationale (KV depends on App Service principals that don't exist yet on first deploy).
+
 ## Status log
 - 2026-05-23 done. Bicep + workflows + husky + INDEX flips + T-0015 reviewer fixes folded in.
+- 2026-05-23 T-0016 reviewer fix folded in. BLOCKERs B-1/B-2/B-3 closed; B-4 rejected (reviewer misread ADR 0011); MAJORs M-1/M-3 closed; M-2/M-4 accepted with inline TODO; MINORs closed.

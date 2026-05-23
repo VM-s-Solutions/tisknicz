@@ -30,7 +30,7 @@ var containers = [
   { name: 'product-images', publicAccess: 'Blob' }
   { name: 'order-attachments', publicAccess: 'None' }
   { name: 'invoices', publicAccess: 'None' }
-  { name: 'labels', publicAccess: 'None' }
+  { name: 'maker-documents', publicAccess: 'None' }
 ]
 
 resource containerResources 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = [for c in containers: {

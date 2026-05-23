@@ -34,6 +34,10 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   }
 }
 
+// TODO(T-0134): migrate AzureWebJobsStorage to identity-based connection
+// (AzureWebJobsStorage__accountName + managed-identity role assignment)
+// so the account key is no longer embedded in app settings. Tracked in
+// the pre-launch ops runbook.
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'
 
 resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {

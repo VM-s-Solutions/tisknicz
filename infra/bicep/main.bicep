@@ -29,12 +29,12 @@ param postgresSkuTier string = 'Burstable'
 @description('Postgres storage in GB.')
 param postgresStorageGb int = 32
 
-@description('App Service Plan SKU.')
+@description('App Service Plan SKU. B1/B2 for staging; P1v3 for production per ADR 0023 §7.')
 @allowed([
   'B1'
   'B2'
-  'P0v3'
   'P1v3'
+  'P2v3'
 ])
 param appServicePlanSku string = 'B1'
 
@@ -85,9 +85,21 @@ module postgres 'modules/postgres.bicep' = {
     storageGb: postgresStorageGb
     administratorLogin: postgresAdminUser
     administratorLoginPassword: postgresAdminPassword
+    // Staging gets the "any Azure service" firewall rule for convenience;
+    // production goes through a Private Endpoint that the operator wires
+    // out-of-band per T-0134's runbook.
+    allowAllAzureServices: envSlug == 'stg'
   }
 }
 
+// TODO(T-0134): move the Postgres connection string to a Key Vault secret
+// and reference it from each App Service via
+// `@Microsoft.KeyVault(SecretUri=...)` so the password is not visible in
+// the resource group as a plain App Setting. Requires the application
+// principals to be granted Key Vault Secrets User BEFORE first deploy,
+// which the current ordering does not guarantee (KV depends on principals
+// that come from App Service deploys). Cycle-breaking lives in the
+// pre-launch runbook.
 var postgresConnectionString = 'Host=${postgres.outputs.serverFqdn};Database=makables;Username=${postgresAdminUser};Password=${postgresAdminPassword};SslMode=Require'
 
 module blob 'modules/blob.bicep' = {

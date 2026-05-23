@@ -30,6 +30,9 @@ param administratorLoginPassword string
 @description('Azure AD object IDs that get pg admin via Microsoft Entra. Empty in staging by default.')
 param entraAdminObjectIds array = []
 
+@description('When true (staging), opens the server to any Azure tenant. Production must run with false and route via private endpoint or VNet rules.')
+param allowAllAzureServices bool = false
+
 resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: serverName
   location: location
@@ -63,10 +66,12 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-// Allow Azure services (App Services, Functions) to reach the server.
-// Production should replace this with private endpoints; tracked as a
-// follow-up in the runbook (T-0134).
-resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
+// Staging-only: open to any Azure tenant. Production runs WITHOUT this
+// rule; T-0134 runbook covers the VNet integration that replaces it.
+// Without a connectivity rule, prod App Services cannot reach Postgres
+// over a vanilla deploy — the operator wires a Private Endpoint as part
+// of the pre-launch checklist.
+resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = if (allowAllAzureServices) {
   parent: server
   name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
   properties: {

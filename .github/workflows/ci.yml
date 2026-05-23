@@ -93,12 +93,23 @@ jobs:
           dotnet run --project Makables.Web.Maker    --configuration Release --no-build --urls http://localhost:5002 &
           dotnet run --project Makables.Web.Admin    --configuration Release --no-build --urls http://localhost:5003 &
           dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5004 &
-          # Wait for the OpenAPI documents to be reachable.
+          # Wait for the OpenAPI documents to be reachable, then fail loudly
+          # if any host never came up. EF Core's connection is lazy, so a
+          # placeholder Postgres connection string is enough for hosts to
+          # serve /openapi/v1.json (no DB query happens during the build).
           for port in 5001 5002 5003 5004; do
+            ready=0
             for i in {1..30}; do
-              if curl -sf http://localhost:$port/openapi/v1.json -o /dev/null; then break; fi
+              if curl -sf http://localhost:$port/openapi/v1.json -o /dev/null; then
+                ready=1
+                break
+              fi
               sleep 1
             done
+            if [ "$ready" -ne 1 ]; then
+              echo "::error::Host on port $port did not serve /openapi/v1.json within 30 s. Check the log above."
+              exit 1
+            fi
           done
         env:
           ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
