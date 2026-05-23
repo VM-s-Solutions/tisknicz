@@ -167,4 +167,20 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
         sp.GetService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>()
             .Should().NotBeNull("AddMakablesAuth must register the authentication scheme provider");
     }
+
+    [Fact]
+    public async Task Host_OpenApi_Document_Is_Served()
+    {
+        // T-0012: each host exposes /openapi/v1.json so NSwag (T-0013) can
+        // generate the TypeScript client. Verify the document is reachable
+        // and contains an OpenAPI version field.
+        using var factory = BuildFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+
+        response.IsSuccessStatusCode.Should().BeTrue("/openapi/v1.json must be served");
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"openapi\"", "the document must be a valid OpenAPI spec");
+    }
 }

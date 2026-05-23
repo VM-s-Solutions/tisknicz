@@ -15,8 +15,13 @@ builder.Services.AddMakablesAuth(builder.Configuration, Audience);
 builder.Services.AddMakablesCors(builder.Configuration, Audience);
 builder.Services.AddMakablesRateLimiting(Audience);
 builder.Services.AddMakablesClients(builder.Configuration);
+builder.Services.AddMakablesApiVersioning();
 
 builder.Services.AddControllers();
+
+// OpenAPI per host per version (T-0012). The host exposes /openapi/v1.json
+// which NSwag in T-0013 consumes to generate the TypeScript client.
+builder.Services.AddOpenApi("v1");
 
 var app = builder.Build();
 
@@ -24,11 +29,10 @@ app.UseMakablesPipeline();
 
 app.MapGet("/", () => "Makables Admin API — alive.");
 app.MapControllers();
+app.MapOpenApi();
 
 app.Run();
 
-// Test hook: make Program partial+public so WebApplicationFactory<Program>
-// can target it from the integration-tests project.
 namespace Makables.Web.Admin
 {
     public partial class Program { }
