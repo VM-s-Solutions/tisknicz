@@ -85,21 +85,27 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Build backend (Release)
+        working-directory: backend/src
+        run: dotnet build Makables.Api.slnx --configuration Release
+
       - name: Start backend hosts in background
         working-directory: backend/src
+        env:
+          ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
+          ASPNETCORE_ENVIRONMENT: Production
         run: |
-          dotnet build Makables.Api.slnx --configuration Release
-          dotnet run --project Makables.Web.Customer --configuration Release --no-build --urls http://localhost:5001 &
-          dotnet run --project Makables.Web.Maker    --configuration Release --no-build --urls http://localhost:5002 &
-          dotnet run --project Makables.Web.Admin    --configuration Release --no-build --urls http://localhost:5003 &
-          dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5004 &
-          # Wait for the OpenAPI documents to be reachable, then fail loudly
-          # if any host never came up. EF Core's connection is lazy, so a
-          # placeholder Postgres connection string is enough for hosts to
-          # serve /openapi/v1.json (no DB query happens during the build).
+          mkdir -p /tmp/host-logs
+          dotnet run --project Makables.Web.Customer --configuration Release --no-build --urls http://localhost:5001 > /tmp/host-logs/customer.log 2>&1 &
+          dotnet run --project Makables.Web.Maker    --configuration Release --no-build --urls http://localhost:5002 > /tmp/host-logs/maker.log    2>&1 &
+          dotnet run --project Makables.Web.Admin    --configuration Release --no-build --urls http://localhost:5003 > /tmp/host-logs/admin.log    2>&1 &
+          dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5004 > /tmp/host-logs/public.log   2>&1 &
+          # Wait for the OpenAPI documents to be reachable. EF Core's connection
+          # is lazy, so a placeholder Postgres connection string is enough for
+          # hosts to serve /openapi/v1.json (no DB query happens at startup).
           for port in 5001 5002 5003 5004; do
             ready=0
-            for i in {1..30}; do
+            for i in {1..60}; do
               if curl -sf http://localhost:$port/openapi/v1.json -o /dev/null; then
                 ready=1
                 break
@@ -107,12 +113,24 @@ jobs:
               sleep 1
             done
             if [ "$ready" -ne 1 ]; then
-              echo "::error::Host on port $port did not serve /openapi/v1.json within 30 s. Check the log above."
+              echo "::error::Host on port $port did not serve /openapi/v1.json within 60 s."
+              echo "--- host log for port $port ---"
+              case $port in
+                5001) cat /tmp/host-logs/customer.log ;;
+                5002) cat /tmp/host-logs/maker.log    ;;
+                5003) cat /tmp/host-logs/admin.log    ;;
+                5004) cat /tmp/host-logs/public.log   ;;
+              esac
               exit 1
             fi
           done
-        env:
-          ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
+
+      - name: Upload host logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-startup-logs
+          path: /tmp/host-logs/
 
       - name: Check API parity
         run: npm run check:api
