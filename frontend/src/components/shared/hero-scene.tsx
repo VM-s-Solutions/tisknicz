@@ -175,13 +175,24 @@ function FloatingRing({ position, scale, speed }: { position: [number, number, n
 function Particles() {
   const pointsRef = useRef<THREE.Points>(null);
 
+  // Deterministic mulberry32 PRNG seeded by the particle index, so the
+  // useMemo body stays pure (no Math.random — violates react-hooks/purity)
+  // and the hero scene renders identically on every mount, including SSR.
   const positions = useMemo(() => {
     const count = 120;
     const pos = new Float32Array(count * 3);
+    let state = 0x9e3779b9;
+    const next = () => {
+      state |= 0;
+      state = (state + 0x6d2b79f5) | 0;
+      let t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 16;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 10;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 6 - 2;
+      pos[i * 3] = (next() - 0.5) * 16;
+      pos[i * 3 + 1] = (next() - 0.5) * 10;
+      pos[i * 3 + 2] = (next() - 0.5) * 6 - 2;
     }
     return pos;
   }, []);

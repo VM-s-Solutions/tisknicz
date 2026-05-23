@@ -21,7 +21,7 @@ export default function GdprPage() {
           <Section title="1. Správce údajů">
             <p>
               Správcem osobních údajů je společnost JVM YORE s.r.o., IČO: [bude doplněno],
-              se sídlem [bude doplněno] (dále jen „Správce"), provozovatel platformy Makables
+              se sídlem [bude doplněno] (dále jen „Správce&quot;), provozovatel platformy Makables
               na adrese makables.cz.
             </p>
             <p>

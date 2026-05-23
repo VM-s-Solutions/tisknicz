@@ -20,9 +20,9 @@ export default function VopPage() {
         <div className="mt-12 space-y-10">
           <Section title="1. Úvodní ustanovení">
             <p>
-              Tyto obchodní podmínky (dále jen „Podmínky") upravují práva a povinnosti mezi provozovatelem
+              Tyto obchodní podmínky (dále jen „Podmínky&quot;) upravují práva a povinnosti mezi provozovatelem
               platformy Makables — společností JVM YORE s.r.o., IČO: [bude doplněno], se sídlem [bude doplněno]
-              (dále jen „Provozovatel") a uživateli platformy (dále jen „Uživatelé").
+              (dále jen „Provozovatel&quot;) a uživateli platformy (dále jen „Uživatelé&quot;).
             </p>
             <p>
               Platforma Makables (dostupná na adrese makables.cz) je online marketplace propojující zákazníky
