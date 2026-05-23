@@ -1,6 +1,7 @@
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
@@ -65,6 +66,8 @@ public static class MakablesInfrastructureExtensions
 
         // === Repositories (Phase 2+ adds more) ===
         services.AddScoped<ICountryConfigurationRepository, CountryConfigurationRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();

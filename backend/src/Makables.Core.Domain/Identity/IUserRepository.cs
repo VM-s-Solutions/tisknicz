@@ -1,0 +1,34 @@
+namespace Makables.Core.Domain.Identity;
+
+/// <summary>
+/// Persistence boundary for <see cref="User"/>. Implementation lives in
+/// <c>Makables.Infra.Database.Repositories</c>; handlers depend on this
+/// interface only (ADR 0001 layering).
+///
+/// Lookup methods return the tracked entity when found so subsequent
+/// mutations + UoW commit work naturally. Use the read-only variants
+/// (suffixed <c>AsNoTrackingAsync</c>) only for queries that don't
+/// intend to write.
+/// </summary>
+public interface IUserRepository
+{
+    Task<User?> GetByIdAsync(string userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Look up by normalized email (see <see cref="User.NormalizeEmail"/>).
+    /// Returns the tracked entity if present.
+    /// </summary>
+    Task<User?> GetByEmailNormalizedAsync(string emailNormalized, CancellationToken cancellationToken);
+
+    /// <summary>Look up by Google <c>sub</c> (for OAuth login).</summary>
+    Task<User?> GetByGoogleSubAsync(string googleSub, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// True if any user (active or soft-deleted) has the given normalized
+    /// email. Used at registration to prevent re-using a deactivated
+    /// account's email until ops explicitly purges it.
+    /// </summary>
+    Task<bool> EmailExistsAsync(string emailNormalized, CancellationToken cancellationToken);
+
+    void Add(User user);
+}
