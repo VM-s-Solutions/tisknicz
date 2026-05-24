@@ -12,18 +12,16 @@ namespace Makables.Tests.AppServices.Features.Auth;
 public class RegisterHandlerTests
 {
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
-    private readonly IOneTimeTokenRepository _tokens = Substitute.For<IOneTimeTokenRepository>();
-    private readonly IOutbox _outbox = Substitute.For<IOutbox>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly IIdGenerator _ids = Substitute.For<IIdGenerator>();
-    private readonly FakeClock _clock = new(new DateTimeOffset(2026, 5, 24, 12, 0, 0, TimeSpan.Zero));
+    private readonly IOneTimeTokenIssuer _issuer = Substitute.For<IOneTimeTokenIssuer>();
     private readonly Register.Handler _handler;
 
     public RegisterHandlerTests()
     {
         _ids.Next().Returns("user-fresh-01");
         _hasher.Hash(Arg.Any<string>()).Returns("argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
-        _handler = new Register.Handler(_users, _tokens, _outbox, _hasher, _ids, _clock, NullLogger<Register.Handler>.Instance);
+        _handler = new Register.Handler(_users, _hasher, _ids, _issuer, NullLogger<Register.Handler>.Instance);
     }
 
     [Fact]
@@ -39,8 +37,7 @@ public class RegisterHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthEmailAlreadyExists);
         result.Error.Type.Should().Be(ErrorType.Conflict);
-        _tokens.DidNotReceive().Add(Arg.Any<OneTimeToken>());
-        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        await _issuer.DidNotReceive().IssueAsync(Arg.Any<IssueRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -54,10 +51,11 @@ public class RegisterHandlerTests
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthForbidden);
         result.Error.Type.Should().Be(ErrorType.Forbidden);
         _users.DidNotReceive().Add(Arg.Any<User>());
+        await _issuer.DidNotReceive().IssueAsync(Arg.Any<IssueRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Happy_path_creates_user_and_enqueues_email_confirmation()
+    public async Task Happy_path_creates_user_and_delegates_to_issuer_with_shared_rate_limit_budget()
     {
         _users.EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(false);
@@ -77,16 +75,17 @@ public class RegisterHandlerTests
             u.Role == UserRole.Customer &&
             u.PasswordHash == "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB"));
 
-        // T-0024: registration auto-enqueues the FIRST confirmation token.
-        _tokens.Received(1).Add(Arg.Is<OneTimeToken>(t =>
-            t.UserId == "user-fresh-01" &&
-            t.Purpose == OneTimeTokenPurpose.EmailConfirmation &&
-            t.ExpiresAt == _clock.UtcNow + SendEmailConfirmation.TokenLifetime));
-        _outbox.Received(1).Enqueue(
-            "user-fresh-01",
-            SendEmailConfirmation.OutboxEventType,
-            Arg.Any<string>());
+        // T-0024 security M-2 fix: Register flows through the SAME issuer
+        // as SendEmailConfirmation, so register + 2 resends = 3 emails in
+        // 10 min (not 4 — sharing the per-user rate-limit budget).
+        await _issuer.Received(1).IssueAsync(Arg.Is<IssueRequest>(r =>
+            r.Email == "Anna.Nováková@example.cz" &&
+            r.Purpose == OneTimeTokenPurpose.EmailConfirmation &&
+            r.TokenLifetime == SendEmailConfirmation.TokenLifetime &&
+            r.OutboxEventType == OutboxEventTypes.AuthEmailConfirmationSend &&
+            r.MaxRequestsPerWindow == SendEmailConfirmation.MaxRequestsPerWindow &&
+            r.RateLimitWindow == SendEmailConfirmation.RateLimitWindow &&
+            r.EligibilityFilter != null),
+            Arg.Any<CancellationToken>());
     }
-
-    private sealed class FakeClock(DateTimeOffset now) : IClock { public DateTimeOffset UtcNow { get; } = now; }
 }

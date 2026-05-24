@@ -3,6 +3,7 @@ using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using NSubstitute;
+using Makables.TestUtilities;
 
 namespace Makables.Tests.AppServices.Features.Auth;
 
@@ -42,5 +43,4 @@ public class LogoutHandlerTests
         result.IsSuccess.Should().BeTrue("logout silently succeeds so the UI doesn't flap");
     }
 
-    private sealed class FakeClock(DateTimeOffset now) : IClock { public DateTimeOffset UtcNow { get; } = now; }
 }

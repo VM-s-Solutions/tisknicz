@@ -1,4 +1,3 @@
-using System.Text.Json;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.AppServices.Common;
@@ -18,10 +17,12 @@ namespace Makables.Core.AppServices.Features.Auth;
 ///   - Validation: missing email / weak password / wrong country → ValidationFailure
 ///   - Email already exists (active or soft-deleted) → AuthEmailAlreadyExists
 ///   - Success → returns the new user id. The account is created with
-///     <c>EmailConfirmedAt = null</c>; T-0024 owns the confirmation flow,
-///     and order placement is gated on confirmation per ADR 0012 §Email
-///     confirmation. No session is minted yet — the user logs in after
-///     confirming.
+///     <c>EmailConfirmedAt = null</c>; the handler auto-fires the first
+///     email-confirmation token through <see cref="IOneTimeTokenIssuer"/>
+///     (same pipeline as the user-driven <see cref="SendEmailConfirmation"/>
+///     flow, so the per-email rate-limit budget is shared — the user
+///     who registers and then resends gets 3 total emails per 10 min,
+///     not 4. Closes T-0024 reviewer security M-2).
 ///
 /// Audience is the role being registered (customer / maker / admin), but
 /// admins are not self-registerable in the MVP. The handler rejects
@@ -49,9 +50,7 @@ public static class Register
                 .MaximumLength(320).WithErrorCode(BusinessErrorMessage.MaxLength);
 
             // ADR 0012: minimum 10 characters, no other complexity
-            // requirements (NIST 800-63B). The top-100 breached-passwords
-            // check happens in the handler so we can return the
-            // domain-specific AuthPasswordTooCommon code.
+            // requirements (NIST 800-63B).
             RuleFor(c => c.Password)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .MinimumLength(10).WithErrorCode(BusinessErrorMessage.MinLength)
@@ -72,19 +71,15 @@ public static class Register
 
     public sealed class Handler(
         IUserRepository users,
-        IOneTimeTokenRepository tokens,
-        IOutbox outbox,
         IPasswordHasher hasher,
         IIdGenerator ids,
-        IClock clock,
+        IOneTimeTokenIssuer issuer,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
     {
         public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken cancellationToken)
         {
             if (command.Role == UserRole.Admin)
             {
-                // Public registration must not mint an admin. Admins are
-                // provisioned out-of-band.
                 logger.LogWarning("Attempted public registration with Admin role for {Email}; rejected.", command.Email);
                 return BusinessResult.Failure<Response>(Error.Forbidden(BusinessErrorMessage.AuthForbidden));
             }
@@ -107,22 +102,19 @@ public static class Register
 
             users.Add(user);
 
-            // Mint the FIRST email-confirmation token and enqueue the
-            // outbox event in the same UoW commit as the user insert.
-            // Resending is the user-driven SendEmailConfirmation flow.
-            var now = clock.UtcNow;
-            var (rawToken, tokenHash) = OpaqueTokenFactory.GenerateUrlSafe32();
-            var expiresAt = now + SendEmailConfirmation.TokenLifetime;
-            tokens.Add(OneTimeToken.Issue(
-                tokenHash: tokenHash,
-                userId: user.Id,
-                purpose: OneTimeTokenPurpose.EmailConfirmation,
-                expiresAt: expiresAt,
-                now: now));
-
-            var payload = JsonSerializer.Serialize(
-                new SendEmailConfirmation.OutboxPayload(user.Id, user.Email, rawToken, expiresAt));
-            outbox.Enqueue(user.Id, SendEmailConfirmation.OutboxEventType, payload);
+            // Auto-fire the first email-confirmation token through the
+            // same pipeline the user-driven resend uses. Sharing the
+            // issuer means the per-user rate-limit budget is shared
+            // (closes T-0024 security M-2).
+            await issuer.IssueAsync(new IssueRequest(
+                Email: command.Email,
+                Purpose: OneTimeTokenPurpose.EmailConfirmation,
+                TokenLifetime: SendEmailConfirmation.TokenLifetime,
+                OutboxEventType: OutboxEventTypes.AuthEmailConfirmationSend,
+                MaxRequestsPerWindow: SendEmailConfirmation.MaxRequestsPerWindow,
+                RateLimitWindow: SendEmailConfirmation.RateLimitWindow,
+                EligibilityFilter: u => u.EmailConfirmedAt is null),
+                cancellationToken);
 
             return BusinessResult.Success(new Response(user.Id));
         }

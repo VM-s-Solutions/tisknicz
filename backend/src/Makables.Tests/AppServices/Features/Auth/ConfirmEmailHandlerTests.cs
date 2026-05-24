@@ -5,6 +5,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using Makables.TestUtilities;
 
 namespace Makables.Tests.AppServices.Features.Auth;
 
@@ -134,5 +135,4 @@ public class ConfirmEmailHandlerTests
         user.EmailConfirmedAt.Should().Be(originalConfirmedAt, "ConfirmEmail is idempotent — first confirmation wins");
     }
 
-    private sealed class FakeClock(DateTimeOffset now) : IClock { public DateTimeOffset UtcNow { get; } = now; }
 }

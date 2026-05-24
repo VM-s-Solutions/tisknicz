@@ -33,21 +33,18 @@ public sealed class OneTimeTokenRepository(MakablesDbContext db) : IOneTimeToken
     {
         if (string.IsNullOrWhiteSpace(userId)) return;
 
-        // Load tracked so the audit interceptor and the UoW commit cover
-        // the mutation. The volumes are tiny (one user, one purpose,
-        // at most a handful of unconsumed tokens) so a bulk UPDATE isn't
-        // worth the complexity here.
-        var tokens = await db.Set<OneTimeToken>()
+        // Atomic UPDATE via ExecuteUpdateAsync — mirrors TryConsumeAsync
+        // (T-0023 M-1 fix). Closes T-0025 security MINOR (concurrent
+        // request race window): two parallel RequestPasswordReset calls
+        // can't end up with overlapping valid tokens because the second
+        // call's invalidate runs against the committed snapshot of the
+        // first.
+        await db.Set<OneTimeToken>()
             .Where(t => t.UserId == userId
                      && t.Purpose == purpose
                      && t.ConsumedAt == null
                      && t.ExpiresAt > now)
-            .ToListAsync(cancellationToken);
-
-        foreach (var token in tokens)
-        {
-            token.Consume(now);
-        }
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ConsumedAt, now), cancellationToken);
     }
 
     public async Task<bool> TryConsumeAsync(string tokenHash, DateTimeOffset now, CancellationToken cancellationToken)

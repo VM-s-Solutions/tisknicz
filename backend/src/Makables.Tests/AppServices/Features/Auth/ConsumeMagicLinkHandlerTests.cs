@@ -5,6 +5,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using Makables.TestUtilities;
 
 namespace Makables.Tests.AppServices.Features.Auth;
 
@@ -178,5 +179,4 @@ public class ConsumeMagicLinkHandlerTests
         _refreshTokens.Received(1).Add(Arg.Any<RefreshToken>());
     }
 
-    private sealed class FakeClock(DateTimeOffset now) : IClock { public DateTimeOffset UtcNow { get; } = now; }
 }

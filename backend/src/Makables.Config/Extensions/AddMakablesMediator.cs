@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Makables.Core.AppServices;
 using Makables.Core.AppServices.Behaviors;
+using Makables.Core.AppServices.Features.Auth;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Makables.Config.Extensions;
@@ -38,6 +39,12 @@ public static class MakablesMediatorExtensions
 
         // FluentValidation validators in Core.AppServices.
         services.AddValidatorsFromAssembly(appServicesAssembly);
+
+        // Shared "issue an opaque single-use token by email" pipeline
+        // used by RequestMagicLink, SendEmailConfirmation, Register, and
+        // RequestPasswordReset. Owns the timing-equalization invariant
+        // (T-0023 B-1) in one place so it can't drift between flows.
+        services.AddScoped<IOneTimeTokenIssuer, OneTimeTokenIssuer>();
 
         return services;
     }

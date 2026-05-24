@@ -6,6 +6,7 @@ using Makables.Core.Domain.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Makables.TestUtilities;
 
 namespace Makables.Tests.AppServices.Features.Auth;
 
@@ -223,8 +224,4 @@ public class LoginHandlerTests
         user.PasswordHash.Should().StartWith("argon2id$v=19$m=65536");
     }
 
-    private sealed class FakeClock(DateTimeOffset now) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = now;
-    }
 }
