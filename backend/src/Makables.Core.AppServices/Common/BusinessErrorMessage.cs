@@ -21,6 +21,9 @@ public static class BusinessErrorMessage
     public const string AuthMagicLinkInvalid = "auth.magicLinkInvalid";
     public const string AuthEmailConfirmationInvalid = "auth.emailConfirmationInvalid";
     public const string AuthPasswordResetInvalid = "auth.passwordResetInvalid";
+    public const string AuthOAuthInvalidState = "auth.oauthInvalidState";
+    public const string AuthOAuthEmailNotVerified = "auth.oauthEmailNotVerified";
+    public const string AuthOAuthExchangeFailed = "auth.oauthExchangeFailed";
 
     // === Validation ===
     public const string Required = "validation.required";

@@ -47,6 +47,9 @@ public static class MakablesInfrastructureExtensions
             .Bind(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IJwtIssuer, JwtIssuer>();
 
+        // Shared HMAC-signed OAuth state signer (T-0026).
+        services.AddSingleton<IOAuthStateSigner, OAuthStateSigner>();
+
         // === Auth policy (T-0022) ===
         services.AddOptions<LockoutOptions>()
             .Bind(configuration.GetSection(LockoutOptions.SectionName));
