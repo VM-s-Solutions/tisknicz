@@ -8,6 +8,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Ulid" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />

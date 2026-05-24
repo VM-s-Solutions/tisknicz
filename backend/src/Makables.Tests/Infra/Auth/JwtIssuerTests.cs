@@ -87,6 +87,30 @@ public class JwtIssuerTests
     }
 
     [Fact]
+    public void Email_claim_carries_the_display_form_not_the_normalized_form()
+    {
+        // Reviewer T-0021 MAJOR M-2: the JWT `email` claim is a DISPLAY
+        // claim (e.g. for "logged in as Anna.Novakova@…"). Server-side
+        // lookups must take `sub` (user.Id) and resolve via the
+        // repository, NEVER the JWT `email` claim, because the claim
+        // value is NOT normalized and won't match EmailNormalized.
+        var issuer = CreateIssuer();
+        var mixedCaseUser = User.Create(
+            id: "user-02",
+            email: "Anna.NOVÁKOVÁ@Example.cz",
+            role: UserRole.Customer,
+            fullName: "Anna",
+            countryCodePrimary: "CZ");
+
+        var token = issuer.Issue(mixedCaseUser, "customer", DateTimeOffset.UtcNow);
+        var parsed = new JsonWebToken(token.Token);
+
+        parsed.GetClaim("email").Value.Should().Be("Anna.NOVÁKOVÁ@Example.cz",
+            "raw display-cased email lands in the claim; normalized form is the repo lookup key only");
+        parsed.GetClaim("email").Value.Should().NotBe(mixedCaseUser.EmailNormalized);
+    }
+
+    [Fact]
     public async Task Token_validates_with_the_same_signing_key()
     {
         var issuer = CreateIssuer();

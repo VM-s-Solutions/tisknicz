@@ -41,6 +41,7 @@ public static class MakablesInfrastructureExtensions
         services.AddOptions<Argon2idOptions>()
             .Bind(configuration.GetSection(Argon2idOptions.SectionName));
         services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+        services.AddHostedService<Argon2idStartupBenchmark>();
 
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName));

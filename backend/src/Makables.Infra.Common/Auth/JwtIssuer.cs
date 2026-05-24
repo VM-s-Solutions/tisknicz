@@ -18,7 +18,9 @@ namespace Makables.Infra.Common.Auth;
 /// </summary>
 public sealed class JwtIssuer : IJwtIssuer
 {
-    private static readonly string[] AllowedAudiences = ["customer", "maker", "admin"];
+    // JsonWebTokenHandler is thread-safe per Microsoft docs; one shared
+    // instance avoids allocation on every Issue call (reviewer T-0021 NIT).
+    private static readonly JsonWebTokenHandler TokenHandler = new();
 
     private readonly JwtOptions _options;
     private readonly SigningCredentials _signingCredentials;
@@ -45,8 +47,10 @@ public sealed class JwtIssuer : IJwtIssuer
     public AccessToken Issue(User user, string audience, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(user);
-        if (!Array.Exists(AllowedAudiences, a => a == audience))
-            throw new ArgumentException($"Audience '{audience}' is not allowed. Expected one of: {string.Join(", ", AllowedAudiences)}.", nameof(audience));
+        if (!MakablesAudiences.IsValid(audience))
+            throw new ArgumentException(
+                $"Audience '{audience}' is not allowed. Expected one of: {string.Join(", ", MakablesAudiences.All)}.",
+                nameof(audience));
 
         var jti = Ulid.NewUlid().ToString();
         var expiresAt = now + _options.AccessTokenLifetime;
@@ -54,6 +58,13 @@ public sealed class JwtIssuer : IJwtIssuer
         var claims = new Dictionary<string, object>
         {
             [JwtRegisteredClaimNames.Sub] = user.Id,
+            // The `email` claim carries the DISPLAY-cased email
+            // (User.Email), not User.EmailNormalized. The claim is for UI
+            // rendering ("logged in as Anna.Novakova@…"); any server-side
+            // lookup that needs the normalized form must take `sub`
+            // (user id) and resolve via IUserRepository.GetByIdAsync, or
+            // call User.NormalizeEmail on the claim value itself.
+            // Reviewer T-0021 MAJOR M-2 clarification.
             [JwtRegisteredClaimNames.Email] = user.Email,
             [JwtRegisteredClaimNames.Jti] = jti,
             ["role"] = user.Role.ToString().ToLowerInvariant(),
@@ -75,8 +86,7 @@ public sealed class JwtIssuer : IJwtIssuer
             SigningCredentials = _signingCredentials,
         };
 
-        var handler = new JsonWebTokenHandler();
-        var token = handler.CreateToken(descriptor);
+        var token = TokenHandler.CreateToken(descriptor);
         return new AccessToken(token, expiresAt, jti);
     }
 }

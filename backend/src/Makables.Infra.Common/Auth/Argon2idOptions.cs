@@ -10,6 +10,9 @@ public sealed class Argon2idOptions
 {
     public const string SectionName = "Auth:Argon2id";
 
+    // Setters are present (not init-only) so the .NET Configuration
+    // Binder can populate from IConfiguration. Consumers MUST treat the
+    // bound instance as read-only.
     /// <summary>Memory in KiB. ADR default 64 MiB = 65536 KiB.</summary>
     public int MemorySizeKib { get; set; } = 65536;
 
