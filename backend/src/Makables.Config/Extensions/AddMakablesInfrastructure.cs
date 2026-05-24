@@ -50,6 +50,11 @@ public static class MakablesInfrastructureExtensions
         // Shared HMAC-signed OAuth state signer (T-0026).
         services.AddSingleton<IOAuthStateSigner, OAuthStateSigner>();
 
+        // Default country for OAuth-created accounts (T-0026 CQ M-1).
+        services.AddOptions<Makables.Core.AppServices.Features.Auth.AuthDefaultCountryOptions>()
+            .Bind(configuration.GetSection(
+                Makables.Core.AppServices.Features.Auth.AuthDefaultCountryOptions.SectionName));
+
         // === Auth policy (T-0022) ===
         services.AddOptions<LockoutOptions>()
             .Bind(configuration.GetSection(LockoutOptions.SectionName));

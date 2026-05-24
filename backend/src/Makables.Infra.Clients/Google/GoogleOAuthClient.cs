@@ -27,9 +27,6 @@ public sealed class GoogleOAuthClient(
     IOptions<GoogleOAuthOptions> options,
     ILogger<GoogleOAuthClient> logger) : IGoogleOAuthClient
 {
-    private const string AuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth";
-    private const string TokenEndpoint = "https://oauth2.googleapis.com/token";
-
     /// <summary>Named HttpClient registered by the wiring extension.</summary>
     public const string HttpClientName = "Makables.Infra.Clients.Google";
 
@@ -55,7 +52,7 @@ public sealed class GoogleOAuthClient(
         };
 
         var qs = string.Join("&", query.Select(p => $"{Uri.EscapeDataString(p.Item1)}={Uri.EscapeDataString(p.Item2)}"));
-        return $"{AuthorizationEndpoint}?{qs}";
+        return $"{opts.AuthorizationEndpoint}?{qs}";
     }
 
     public async Task<GoogleProfile> ExchangeCodeAsync(string code, string redirectUri, CancellationToken cancellationToken)
@@ -78,7 +75,7 @@ public sealed class GoogleOAuthClient(
             ["grant_type"] = "authorization_code",
         });
 
-        using var response = await http.PostAsync(TokenEndpoint, form, cancellationToken);
+        using var response = await http.PostAsync(opts.TokenEndpoint, form, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
