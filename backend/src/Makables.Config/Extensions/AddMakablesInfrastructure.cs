@@ -1,6 +1,9 @@
+using Makables.Core.AppServices.Common;
+using Makables.Core.AppServices.Features.Email;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
@@ -93,6 +96,14 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
         services.AddScoped<IOneTimeTokenRepository, OneTimeTokenRepository>();
+
+        // === Email templates + send pipeline (T-0028) ===
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
+        services.AddScoped<IEmailTemplateTranslationRepository, EmailTemplateTranslationRepository>();
+        services.AddScoped<ILanguageResolver, LanguageResolver>();
+        services.AddOptions<PublicAppUrlsOptions>()
+            .Bind(configuration.GetSection(PublicAppUrlsOptions.SectionName));
+        services.AddScoped<IEmailSendService, EmailSendService>();
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();

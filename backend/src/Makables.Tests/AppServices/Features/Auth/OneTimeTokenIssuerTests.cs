@@ -1,5 +1,7 @@
 using FluentAssertions;
+using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Auth;
+using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Outbox;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,12 +22,15 @@ public class OneTimeTokenIssuerTests
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IOneTimeTokenRepository _tokens = Substitute.For<IOneTimeTokenRepository>();
     private readonly IOutbox _outbox = Substitute.For<IOutbox>();
+    private readonly ILanguageResolver _languageResolver = Substitute.For<ILanguageResolver>();
     private readonly FakeClock _clock = new();
     private readonly OneTimeTokenIssuer _sut;
 
     public OneTimeTokenIssuerTests()
     {
-        _sut = new OneTimeTokenIssuer(_users, _tokens, _outbox, _clock,
+        _languageResolver.ResolveForUserAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            .Returns(LanguageCode.DefaultFallback);
+        _sut = new OneTimeTokenIssuer(_users, _tokens, _outbox, _clock, _languageResolver,
             NullLogger<OneTimeTokenIssuer>.Instance);
     }
 

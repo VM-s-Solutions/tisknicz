@@ -46,6 +46,12 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.FailedLoginCount).HasColumnName("failed_login_count").IsRequired();
         builder.Property(u => u.LockedUntil).HasColumnName("locked_until");
 
+        // BCP-47 tag (e.g. "cs-CZ"). 16 chars covers every BCP-47 shape
+        // we will plausibly see (lang-script-region-variant). Null is the
+        // "no preference set" sentinel — language resolution falls back
+        // to CountryConfiguration.DefaultLanguageCode (T-0028).
+        builder.Property(u => u.PreferredLanguage).HasColumnName("preferred_language").HasMaxLength(16);
+
         ConfigureAuditable(builder);
     }
 

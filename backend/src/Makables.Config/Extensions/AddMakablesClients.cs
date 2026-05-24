@@ -1,7 +1,13 @@
+using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Infra.Clients.Google;
+using Makables.Infra.Clients.SendGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Retry;
+using SendGrid;
 
 namespace Makables.Config.Extensions;
 
@@ -26,6 +32,43 @@ public static class MakablesClientsExtensions
             .Bind(configuration.GetSection(GoogleOAuthOptions.SectionName));
         services.AddHttpClient(GoogleOAuthClient.HttpClientName);
         services.AddScoped<IGoogleOAuthClient, GoogleOAuthClient>();
+
+        // === SendGrid (T-0028) ===
+        services.AddOptions<SendGridOptions>()
+            .Bind(configuration.GetSection(SendGridOptions.SectionName));
+
+        // ISendGridClient is registered as singleton — the official SDK
+        // is thread-safe and pools its underlying HttpClient internally.
+        services.AddSingleton<ISendGridClient>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<SendGridOptions>>().Value;
+            return new SendGridClient(opts.ApiKey);
+        });
+
+        // Polly v8 ResiliencePipeline<Response>. Retries 5xx / 429 / 408
+        // with exponential backoff capped by SendGridOptions.RetryCount.
+        // Failed terminal responses surface to the provider which maps
+        // to Transient vs Permanent BusinessErrors.
+        services.AddSingleton<ResiliencePipeline<Response>>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<SendGridOptions>>().Value;
+            return new ResiliencePipelineBuilder<Response>()
+                .AddRetry(new RetryStrategyOptions<Response>
+                {
+                    MaxRetryAttempts = Math.Max(0, opts.RetryCount),
+                    Delay = TimeSpan.FromMilliseconds(Math.Max(50, opts.RetryBaseDelayMs)),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,
+                    ShouldHandle = new PredicateBuilder<Response>()
+                        .Handle<HttpRequestException>()
+                        .Handle<TaskCanceledException>()
+                        .HandleResult(static r =>
+                            (int)r.StatusCode is 408 or 429 or >= 500 and <= 599),
+                })
+                .Build();
+        });
+
+        services.AddSingleton<IEmailProvider, SendGridEmailProvider>();
 
         return services;
     }

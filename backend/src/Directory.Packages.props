@@ -65,6 +65,12 @@
          JWKS and exposes the parsed payload. -->
     <PackageVersion Include="Google.Apis.Auth" Version="1.74.0" />
 
+    <!-- SendGrid + Polly (Infra.Clients/SendGrid) — T-0028.
+         SendGrid client + dynamic-template helpers. Polly is the retry
+         policy in front of the transient send path. -->
+    <PackageVersion Include="SendGrid" Version="9.29.3" />
+    <PackageVersion Include="Polly" Version="8.4.2" />
+
     <!-- Azure Functions Isolated Worker (Makables.Functions) -->
     <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.1.0" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.7" />

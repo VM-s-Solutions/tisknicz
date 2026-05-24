@@ -1,4 +1,4 @@
-namespace Makables.Core.AppServices.Common;
+namespace Makables.Core.Domain.Common;
 
 /// <summary>
 /// Canonical, dot-notation error codes used across the platform. Every code
@@ -82,4 +82,12 @@ public static class BusinessErrorMessage
 
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
+
+    // === Email pipeline (T-0028) ===
+    public const string EmailTemplateNotFound = "email.templateNotFound";
+    public const string EmailTemplateTranslationMissing = "email.translationMissing";
+    public const string EmailProviderTransientFailure = "email.providerTransient";
+    public const string EmailProviderPermanentFailure = "email.providerPermanent";
+    public const string EmailPayloadInvalid = "email.payloadInvalid";
+    public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
 }
