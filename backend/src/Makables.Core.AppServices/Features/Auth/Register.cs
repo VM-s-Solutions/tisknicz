@@ -1,8 +1,10 @@
+using System.Text.Json;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Outbox;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -70,8 +72,11 @@ public static class Register
 
     public sealed class Handler(
         IUserRepository users,
+        IOneTimeTokenRepository tokens,
+        IOutbox outbox,
         IPasswordHasher hasher,
         IIdGenerator ids,
+        IClock clock,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
     {
         public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken cancellationToken)
@@ -101,6 +106,24 @@ public static class Register
                 passwordHash: passwordHash);
 
             users.Add(user);
+
+            // Mint the FIRST email-confirmation token and enqueue the
+            // outbox event in the same UoW commit as the user insert.
+            // Resending is the user-driven SendEmailConfirmation flow.
+            var now = clock.UtcNow;
+            var (rawToken, tokenHash) = OpaqueTokenFactory.GenerateUrlSafe32();
+            var expiresAt = now + SendEmailConfirmation.TokenLifetime;
+            tokens.Add(OneTimeToken.Issue(
+                tokenHash: tokenHash,
+                userId: user.Id,
+                purpose: OneTimeTokenPurpose.EmailConfirmation,
+                expiresAt: expiresAt,
+                now: now));
+
+            var payload = JsonSerializer.Serialize(
+                new SendEmailConfirmation.OutboxPayload(user.Id, user.Email, rawToken, expiresAt));
+            outbox.Enqueue(user.Id, SendEmailConfirmation.OutboxEventType, payload);
+
             return BusinessResult.Success(new Response(user.Id));
         }
     }

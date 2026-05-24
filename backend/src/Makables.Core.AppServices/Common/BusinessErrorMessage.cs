@@ -19,6 +19,7 @@ public static class BusinessErrorMessage
     public const string AuthCurrentPasswordWrong = "auth.currentPasswordWrong";
     public const string AuthOAuthNotAllowedForAdmin = "auth.oauthNotAllowedForAdmin";
     public const string AuthMagicLinkInvalid = "auth.magicLinkInvalid";
+    public const string AuthEmailConfirmationInvalid = "auth.emailConfirmationInvalid";
 
     // === Validation ===
     public const string Required = "validation.required";
