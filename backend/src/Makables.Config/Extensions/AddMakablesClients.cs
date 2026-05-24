@@ -34,8 +34,19 @@ public static class MakablesClientsExtensions
         services.AddScoped<IGoogleOAuthClient, GoogleOAuthClient>();
 
         // === SendGrid (T-0028) ===
+        // ValidateOnStart so a missing/typo'd SendGrid:ApiKey crashes the
+        // host at boot, not on the first email send. T-0028 sec reviewer M-3.
         services.AddOptions<SendGridOptions>()
-            .Bind(configuration.GetSection(SendGridOptions.SectionName));
+            .Bind(configuration.GetSection(SendGridOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey),
+                "SendGrid:ApiKey is required.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.DefaultFromAddress),
+                "SendGrid:DefaultFromAddress is required.")
+            .Validate(o => o.RetryCount >= 0 && o.RetryCount <= 10,
+                "SendGrid:RetryCount must be 0..10.")
+            .Validate(o => o.PerSendTimeoutSeconds is >= 1 and <= 60,
+                "SendGrid:PerSendTimeoutSeconds must be 1..60.")
+            .ValidateOnStart();
 
         // ISendGridClient is registered as singleton — the official SDK
         // is thread-safe and pools its underlying HttpClient internally.

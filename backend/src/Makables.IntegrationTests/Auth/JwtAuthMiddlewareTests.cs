@@ -57,6 +57,12 @@ public sealed class JwtAuthMiddlewareTests
                     ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
                     ["Jwt:Issuer"] = TestIssuer,
                     ["Jwt:SigningKeyBase64"] = TestKeyBase64,
+                    // T-0028: SendGrid + PublicAppUrls Options are now
+                    // ValidateOnStart per sec reviewer M-3 / B-2. Tests
+                    // that boot a host must seed plausible values.
+                    ["SendGrid:ApiKey"] = "SG.integration-test-stub",
+                    ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
+                    ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                 });
             });
 
@@ -306,6 +312,9 @@ public sealed class JwtAuthMiddlewareTests
                         ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
                         ["Jwt:Issuer"] = TestIssuer,
                         ["Jwt:SigningKeyBase64"] = TestKeyBase64,
+                        ["SendGrid:ApiKey"] = "SG.integration-test-stub",
+                        ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
+                        ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                     });
                 });
                 builder.ConfigureServices(services =>

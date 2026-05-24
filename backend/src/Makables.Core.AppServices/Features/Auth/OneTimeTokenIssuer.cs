@@ -68,17 +68,11 @@ public sealed class OneTimeTokenIssuer(
     // row will match this id, so the count is always 0.
     private const string NoSuchUserSentinel = "__no-such-user__";
 
-    // Sentinel User instance used to drive the language resolver on the
-    // no-user branch, so it pays the same country-lookup roundtrip as
-    // the known-user branch. The resolved value is discarded (no email
-    // is sent). Country is the launch market — keeps the country-lookup
-    // SQL shape identical and the cache hot.
-    private static readonly User UnknownUserProbe = User.Create(
-        id: NoSuchUserSentinel,
-        email: "__no-such-user__@invalid.local",
-        role: UserRole.Customer,
-        fullName: "__no-such-user__",
-        countryCodePrimary: LanguageCode.DefaultFallback[3..]);
+    // Country code used when probing the language resolver on the
+    // unknown-user branch so it pays the same country-lookup roundtrip
+    // as the known-user branch (timing-equalization invariant T-0023 B-1).
+    // The resolved value is discarded — no email is sent.
+    private const string ProbeCountryCode = "CZ";
 
     public async Task<IssueOutcome> IssueAsync(IssueRequest request, CancellationToken cancellationToken)
     {
@@ -101,13 +95,14 @@ public sealed class OneTimeTokenIssuer(
         var expiresAt = now + request.TokenLifetime;
         // Resolve language unconditionally so the no-user branch pays the
         // same DB-roundtrip cost as the known-user branch (timing-equalization
-        // invariant T-0023 B-1). For the no-user case we use a sentinel User
-        // with the launch country and no preferred language — the resolver
-        // performs the same country lookup the known-user case does, but
-        // the value is unused because no email will be sent.
-        var languageProbe = user ?? UnknownUserProbe;
-        var languageCode = await languageResolver.ResolveForUserAsync(
-            languageProbe, cancellationToken);
+        // invariant T-0023 B-1). On the no-user branch we pass null + the
+        // launch country code so the resolver performs the same country
+        // lookup the known-user case does; the value is unused because no
+        // email will be sent.
+        var languageCode = await languageResolver.ResolveAsync(
+            preferredLanguage: user?.PreferredLanguage,
+            countryCode: user?.CountryCodePrimary ?? ProbeCountryCode,
+            cancellationToken);
         var payloadJson = JsonSerializer.Serialize(
             new OneTimeTokenOutboxPayload(
                 UserId: user?.Id ?? string.Empty,

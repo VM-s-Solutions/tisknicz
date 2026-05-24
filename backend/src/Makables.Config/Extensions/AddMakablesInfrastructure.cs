@@ -101,8 +101,18 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
         services.AddScoped<IEmailTemplateTranslationRepository, EmailTemplateTranslationRepository>();
         services.AddScoped<ILanguageResolver, LanguageResolver>();
+        // Validated on start so a misconfigured WebBaseUrl (e.g. "javascript:")
+        // or a path template missing the {token} placeholder crashes the host
+        // at boot, not on the first email send. T-0028 sec reviewer B-2 / M-1.
         services.AddOptions<PublicAppUrlsOptions>()
-            .Bind(configuration.GetSection(PublicAppUrlsOptions.SectionName));
+            .Bind(configuration.GetSection(PublicAppUrlsOptions.SectionName))
+            .Validate(o =>
+            {
+                var (ok, _) = PublicAppUrlsOptionsValidator.Validate(o);
+                return ok;
+            }, "PublicAppUrls is misconfigured. WebBaseUrl must be absolute https (or http on loopback for dev) " +
+               "and every path template must start with '/' and contain the literal '{token}' placeholder.")
+            .ValidateOnStart();
         services.AddScoped<IEmailSendService, EmailSendService>();
 
         // === Outbox + Admin audit log ===

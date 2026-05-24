@@ -27,11 +27,20 @@ public static class LanguageCode
     public const string DefaultFallback = CsCZ;
 
     /// <summary>
-    /// True when <paramref name="tag"/> matches the platform's accepted
-    /// BCP-47 shape: <c>{2 lowercase letters}-{2 uppercase letters}</c>.
+    /// True when <paramref name="tag"/> matches the launch-scope BCP-47
+    /// shape: exactly <c>{2 lowercase letters}-{2 uppercase letters}</c>.
     /// We don't accept bare language ("cs") or regionless tags at storage
     /// time — every persisted language MUST carry a region so template
     /// lookups are unambiguous.
+    ///
+    /// Intentionally rejects (at launch scope):
+    /// <list type="bullet">
+    ///   <item><description>Script subtags (<c>zh-Hans-CN</c>) — re-evaluate when a CJK language ships.</description></item>
+    ///   <item><description>3-letter language tags (<c>fil-PH</c>) — re-evaluate when needed.</description></item>
+    ///   <item><description>Variant or private-use extensions — never needed for transactional copy.</description></item>
+    /// </list>
+    /// The <c>users.preferred_language</c> column width (16) is forward-compatible
+    /// for those shapes; widening the validator is a one-line change here.
     /// </summary>
     public static bool IsValid(string? tag)
     {

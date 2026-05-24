@@ -74,8 +74,43 @@ ADR 0019 amended in the same commit — see §"Amendment 2026-05-24". Original R
 
 `docs/adr/0019-email-resend.md` — front-matter `status` flipped `accepted` → `amended`; new top section §"Amendment 2026-05-24 (T-0028)" documents the Resend→SendGrid pivot, the DB-backed translation choice, what stayed the same, and exactly which sub-sections of the original ADR are now wrong vs still hold. The original body is preserved below for context.
 
+## Reviewer findings and resolutions (commit ed891ed)
+
+Two reviewers ran in parallel.
+
+### Security reviewer — BLOCKER × 2 + MAJOR × 3
+
+- **B-1 SendGrid response body propagated through Error.Details + logged structured** — SendGrid 4xx responses can echo recipient PII and (rarely) request headers. The body was reaching `Error.Permanent/Transient(..., body)` and a structured log property `Body` that the `SensitivePropertyMasker` did NOT cover (`"body"` isn't on its pattern list). **Fixed:** `SendGridEmailProvider` no longer propagates the body. Failures return `Error.*(code)` with no details. The body is logged only at Debug level, truncated to 512 chars, under a property name (`TokenBody`) that the masker's `"token"` pattern redacts. Status code goes out as a separate Warning. Pinned by `Failure_responses_never_carry_the_SendGrid_response_body_in_the_returned_Error`.
+- **B-2 `WebBaseUrl` unvalidated** — `javascript:`/`data:`/hostile-host would produce phishing-grade clickable links in every transactional email. **Fixed:** new `PublicAppUrlsOptionsValidator` enforces (a) `WebBaseUrl` is absolute https (or http on loopback for dev), (b) every path template starts with `/`, (c) every path template contains the literal `{token}` placeholder. Wired with `.Validate(...).ValidateOnStart()` in `AddMakablesInfrastructure`. Misconfig now crashes the host at boot. Pinned by `PublicAppUrlsOptionsValidatorTests` (7 facts).
+- **M-1 Silent missing-`{token}` substitution** — Closed by the B-2 validator (every path template MUST contain the placeholder). `BuildActionUrl` comment notes the invariant.
+- **M-3 No `ValidateOnStart` on `SendGridOptions`** — **Fixed:** `services.AddOptions<SendGridOptions>().Validate(...).ValidateOnStart()` checks `ApiKey` + `DefaultFromAddress` non-empty + `RetryCount` 0..10 + `PerSendTimeoutSeconds` 1..60 at boot.
+- **M-4 Retry budget compounds with outbox-level retry** — **Fixed:** default `SendGridOptions.RetryCount` reduced 3 → 1 (outbox owns the authoritative retry budget per ADR 0019); added `SendGridOptions.PerSendTimeoutSeconds` (default 10) which `SendGridEmailProvider` enforces via a linked `CancellationTokenSource.CancelAfter` so a stuck connection can't pin an outbox-processor worker. Per-call timeout fires as `Transient` so outbox-level retry takes over.
+- **MIN-1/3/5 (deploy-checklist items)** — accepted; not in code. To be tracked in a follow-up `docs/security/email-deliverability.md` (Outlook Safe-Links posture, SPF/DKIM/DMARC verification before flipping to sendgrid, secret-rotation runbook).
+- **MIN-4 / N-2 (`LanguageCode` as untrusted input + probe sentinel timing invariant)** — verified clean; no action needed.
+
+### Code-quality reviewer — 0 BLOCKERs + 2 MAJORs + N MINORs
+
+- **M-1 `EmailMessage.Subject` silently dropped by `SendGridEmailProvider`** — **Fixed:** provider now calls `sgMessage.SetSubject(message.Subject)` AND injects `subject` into the dynamic-template data dictionary so the SendGrid template can render it in the HTML body too. Pinned by `Subject_is_forwarded_to_SendGrid_message_AND_data_dictionary`.
+- **M-2 Dead `using Makables.Core.AppServices.Common;` in 12 auth handlers + 8 auth tests** — **Fixed:** stripped from 20 files. Encoding preserved (UTF-8 with original BOM-or-not state retained per file).
+- **N-3 `UnknownUserProbe` sentinel User aggregate is fragile coupling** — **Fixed (cleaner alternative):** added `ILanguageResolver.ResolveAsync(string? preferredLanguage, string countryCode, ct)` overload. `OneTimeTokenIssuer` calls it with `(user?.PreferredLanguage, user?.CountryCodePrimary ?? "CZ")`. No sentinel `User`, no `TypeInitializationException` risk, no `User` aggregate misuse. Pinned by `ResolveAsync_*` facts in `LanguageResolverTests`.
+- **N-4 `EmailPayloadInvalid` overloaded** — **Fixed:** split into `EmailPayloadMalformed` (JSON decode crashed) and `EmailPayloadMissingFields` (decoded but blank). T-0029's triage UI can distinguish producer-side malformed-payload from missing-field bugs.
+- **N-2 `LanguageCode.IsValid` strictness vs column width** — **Documented in xmldoc:** validator is intentionally strict (script + variant + 3-letter rejected at launch); 16-char column is forward-compatible for when those land.
+- **N-5 `SubstitutePlainTextPlaceholders` HTML-XSS footgun if reused** — **Fixed:** added `SECURITY:` comment forbidding HTML reuse.
+- **T-1 Step-number comments duplicate xmldoc** — **Fixed:** dropped numbered-step comments in `EmailSendService`.
+- **T-2 `ExtractMessageId` micro-style** — **Fixed:** now `values.FirstOrDefault() ?? string.Empty`.
+- **N-1 / N-7 / N-8 / N-9 / N-10 / N-6 / T-3 / T-4** — accepted as-is or already correct.
+
+### Test deltas (+21 facts; 431 total = 349 unit + 82 integration)
+- `PublicAppUrlsOptionsValidatorTests` — 7 facts (accept defaults, reject `javascript:` / `data:` / `ftp:` / non-loopback `http`, reject malformed, accept loopback http + https, reject path without `{token}`, reject path without leading `/`, reject blank path).
+- `LanguageResolverTests` — 5 new `ResolveAsync(...)` overload facts (explicit preferred wins; null falls to country; malformed falls to country; unknown country falls to platform default; lookup runs unconditionally so timing-invariant proxy holds).
+- `SendGridEmailProviderTests` — 2 new facts (subject forwarded to wire; failure body never propagated into Error).
+- `EmailSendServiceTests` — split former `payloadInvalid` test into `Returns_payloadMalformed_for_malformed_json` + `Returns_payloadMissingFields_for_payload_decoded_but_blank`.
+
+### Integration test infrastructure
+- `JwtAuthMiddlewareTests` + `WebHostStartupTests` now seed `SendGrid:ApiKey` + `SendGrid:DefaultFromAddress` + `PublicAppUrls:WebBaseUrl` because both options classes are now `ValidateOnStart`. Stub values; tests never actually call SendGrid.
+
 ## Acceptance criteria
-- **AC-1** Build clean; 410 tests pass (328 unit + 82 integration).
+- **AC-1** Build clean; 431 tests pass (349 unit + 82 integration).
 - **AC-2** `OneTimeTokenOutboxPayload` carries `LanguageCode`; `OneTimeTokenIssuer` resolves it via `ILanguageResolver` on every branch (T-0023 B-1 timing invariant preserved).
 - **AC-3** `ILanguageResolver` honours the order: `User.PreferredLanguage → CountryConfiguration.DefaultLanguageCode → LanguageCode.DefaultFallback`.
 - **AC-4** `EmailSendService` composes `EmailMessage` from outbox event-type + payload + DB template/translation; URL-escapes the token; substitutes `{{action_url}}` / `{{expires_at}}` into the plain-text body.
@@ -94,4 +129,5 @@ ADR 0019 amended in the same commit — see §"Amendment 2026-05-24". Original R
 - Order / payout / message email templates — Phase 4/5+ tickets, additional `EmailTemplateType` values.
 
 ## Status log
-- 2026-05-24 done. 410 tests pass. ADR 0019 amended. Awaiting dual reviewer (security + code-quality) per workflow.
+- 2026-05-24 initial commit ed891ed. 410 tests pass. ADR 0019 amended.
+- 2026-05-25 reviewer fix folded in. Sec B-1 / B-2 closed; sec M-1/M-3/M-4 closed; CQ M-1/M-2 closed; CQ N-3/N-4/N-5/T-1/T-2 closed. 431 tests pass (349 unit + 82 integration; +21 facts).

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Email;
@@ -10,13 +10,13 @@ namespace Makables.Core.AppServices.Features.Email;
 
 /// <summary>
 /// Composes + dispatches one transactional email from a queued outbox
-/// row. Owns the end-to-end logic (decode payload â†’ look up template â†’
-/// resolve translation with fallback â†’ assemble <see cref="EmailMessage"/>
-/// â†’ call <see cref="IEmailProvider"/>) so T-0029's
+/// row. Owns the end-to-end logic (decode payload → look up template →
+/// resolve translation with fallback → assemble <see cref="EmailMessage"/>
+/// → call <see cref="IEmailProvider"/>) so T-0029's
 /// <c>ProcessOutboxFunction</c> stays a thin scheduler.
 ///
 /// Per ADR 0019 (amended): the outbox is the single chokepoint into
-/// emails â€” no handler ever calls <see cref="IEmailProvider"/> directly.
+/// emails — no handler ever calls <see cref="IEmailProvider"/> directly.
 /// This service is the only consumer.
 /// </summary>
 public interface IEmailSendService
@@ -47,7 +47,6 @@ public sealed class EmailSendService(
         ArgumentException.ThrowIfNullOrWhiteSpace(outboxEventType);
         ArgumentException.ThrowIfNullOrWhiteSpace(payloadJson);
 
-        // 1) Outbox event â†’ EmailTemplateType.
         if (!TryMapEventToTemplateType(outboxEventType, out var templateType))
         {
             logger.LogWarning("Unknown outbox event type {EventType}.", outboxEventType);
@@ -56,7 +55,6 @@ public sealed class EmailSendService(
                     $"No email template is mapped to outbox event '{outboxEventType}'."));
         }
 
-        // 2) Decode payload.
         OneTimeTokenOutboxPayload? payload;
         try
         {
@@ -64,22 +62,25 @@ public sealed class EmailSendService(
         }
         catch (JsonException ex)
         {
+            // T-0028 CQ reviewer N-4: split from MissingFields so T-0029's
+            // triage UI can distinguish "decode crashed" from "decode succeeded
+            // but a field is blank".
             logger.LogWarning(ex, "Outbox payload JSON malformed for event {EventType}.", outboxEventType);
             return BusinessResult.Failure<EmailSentReceipt>(
-                Error.Permanent(BusinessErrorMessage.EmailPayloadInvalid,
-                    "Outbox payload could not be decoded."));
+                Error.Permanent(BusinessErrorMessage.EmailPayloadMalformed,
+                    "Outbox payload could not be JSON-decoded."));
         }
         if (payload is null
             || string.IsNullOrWhiteSpace(payload.Email)
             || string.IsNullOrWhiteSpace(payload.RawToken)
             || string.IsNullOrWhiteSpace(payload.LanguageCode))
         {
+            logger.LogWarning("Outbox payload for {EventType} decoded but is missing required fields.", outboxEventType);
             return BusinessResult.Failure<EmailSentReceipt>(
-                Error.Permanent(BusinessErrorMessage.EmailPayloadInvalid,
-                    "Outbox payload is missing required fields."));
+                Error.Permanent(BusinessErrorMessage.EmailPayloadMissingFields,
+                    "Outbox payload is missing one or more required fields (Email, RawToken, LanguageCode)."));
         }
 
-        // 3) Template lookup.
         var template = await templates.GetByTypeAsync(templateType, cancellationToken);
         if (template is null)
         {
@@ -89,7 +90,6 @@ public sealed class EmailSendService(
                     $"No EmailTemplate row exists for type '{templateType}'."));
         }
 
-        // 4) Translation lookup with one-step fallback to the platform default.
         var translation = await translations.GetAsync(template.Id, payload.LanguageCode, cancellationToken);
         if (translation is null && payload.LanguageCode != LanguageCode.DefaultFallback)
         {
@@ -105,7 +105,6 @@ public sealed class EmailSendService(
                     $"No translation exists for template '{template.Id}' in '{payload.LanguageCode}' or the fallback '{LanguageCode.DefaultFallback}'."));
         }
 
-        // 5) Compose message.
         var u = urls.Value;
         var actionUrl = BuildActionUrl(u, templateType, payload.RawToken);
         var data = new Dictionary<string, object>
@@ -128,7 +127,6 @@ public sealed class EmailSendService(
             PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, data),
             Data: data);
 
-        // 6) Dispatch.
         var result = await provider.SendAsync(message, cancellationToken);
         if (!result.IsSuccess)
         {
@@ -167,17 +165,22 @@ public sealed class EmailSendService(
             EmailTemplateType.AuthPasswordReset     => u.PasswordResetPath,
             _ => throw new InvalidOperationException($"No URL path mapped for {type}."),
         };
-        var path = pathTemplate.Replace("{token}", Uri.EscapeDataString(rawToken));
+        // The PublicAppUrlsOptionsValidator (startup) guarantees pathTemplate
+        // contains {token} — so Replace is always a real substitution here.
+        // Sec reviewer M-1 closed at the validator layer rather than via a
+        // post-replace check.
+        var path = pathTemplate.Replace(PublicAppUrlsOptions.TokenPlaceholder, Uri.EscapeDataString(rawToken));
         var basePart = u.WebBaseUrl.TrimEnd('/');
         return path.StartsWith('/') ? basePart + path : $"{basePart}/{path}";
     }
 
+    // SECURITY: plain-text only. Do NOT reuse for HTML bodies — there is no
+    // escaping, so any value-containing-{{key}} would produce an XSS-shaped
+    // surprise. The current callers feed only URL / timestamp / language tag
+    // values; revisit if that changes.
     private static string SubstitutePlainTextPlaceholders(
         string body, IReadOnlyDictionary<string, object> data)
     {
-        // The plain-text body is for the multipart/alternative part. We
-        // substitute {{key}} placeholders directly so the plain-text part
-        // is rendered without depending on SendGrid's HTML template engine.
         var result = body;
         foreach (var (key, value) in data)
             result = result.Replace($"{{{{{key}}}}}", value?.ToString() ?? string.Empty);

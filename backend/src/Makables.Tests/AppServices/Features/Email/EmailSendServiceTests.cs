@@ -175,17 +175,17 @@ public class EmailSendServiceTests
     }
 
     [Fact]
-    public async Task Returns_payloadInvalid_for_malformed_json()
+    public async Task Returns_payloadMalformed_for_malformed_json()
     {
         var result = await _sut.SendAsync(OutboxEventTypes.AuthMagicLinkSend,
             "{not valid json", CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailPayloadInvalid);
+        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailPayloadMalformed);
     }
 
     [Fact]
-    public async Task Returns_payloadInvalid_for_payload_missing_required_fields()
+    public async Task Returns_payloadMissingFields_for_payload_decoded_but_blank()
     {
         var bad = JsonSerializer.Serialize(new OneTimeTokenOutboxPayload(
             UserId: "user-1", Email: "", RawToken: "tok", ExpiresAt: DateTimeOffset.UtcNow,
@@ -194,7 +194,7 @@ public class EmailSendServiceTests
         var result = await _sut.SendAsync(OutboxEventTypes.AuthMagicLinkSend, bad, CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailPayloadInvalid);
+        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailPayloadMissingFields);
     }
 
     [Fact]

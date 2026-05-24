@@ -92,6 +92,52 @@ public class SendGridEmailProviderTests
         captured.From.Name.Should().Be("Makables");
     }
 
+    [Fact]
+    public async Task Subject_is_forwarded_to_SendGrid_message_AND_data_dictionary()
+    {
+        // T-0028 CQ reviewer M-1: the resolved subject from
+        // EmailTemplateTranslation MUST reach the wire. Without this it
+        // silently relied on whatever subject was hard-coded in the SendGrid
+        // template, ignoring the DB row.
+        SendGridMessage? captured = null;
+        _client.SendEmailAsync(Arg.Do<SendGridMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(CreateResponse(HttpStatusCode.Accepted, "sg-x"));
+
+        await _sut.SendAsync(CreateMessage() with { Subject = "Custom subject from DB" },
+            CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        // SendGrid's SetSubject puts the value on the first Personalization
+        // (per-recipient override); the top-level Subject is the template default.
+        captured!.Personalizations.Should().HaveCountGreaterThan(0);
+        captured.Personalizations[0].Subject.Should().Be("Custom subject from DB");
+        // Personalization data dict also carries the subject so the SendGrid
+        // template can render it inside the HTML body.
+        captured.Personalizations[0].TemplateData.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Failure_responses_never_carry_the_SendGrid_response_body_in_the_returned_Error()
+    {
+        // T-0028 sec reviewer B-1: SendGrid 4xx echoes the offending request
+        // (recipient address, headers). The body MUST NOT propagate to the
+        // BusinessResult — outbox last_error column or admin UI would
+        // otherwise persist PII.
+        var body = new StringContent("Bad Request: recipient anna@example.cz rejected; Authorization: Bearer leaked");
+        var http = new HttpResponseMessage(HttpStatusCode.BadRequest);
+        var responseWithBody = new Response(HttpStatusCode.BadRequest, body, http.Headers);
+        _client.SendEmailAsync(Arg.Any<SendGridMessage>(), Arg.Any<CancellationToken>())
+            .Returns(responseWithBody);
+
+        var result = await _sut.SendAsync(CreateMessage(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailProviderPermanentFailure);
+        // Error.Details is where the body USED to be propagated; it must
+        // now be null so nothing PII flows to outbox / logs / admin UI.
+        result.Error.Details.Should().BeNull();
+    }
+
     [Theory]
     [InlineData((int)HttpStatusCode.InternalServerError)]
     [InlineData((int)HttpStatusCode.BadGateway)]

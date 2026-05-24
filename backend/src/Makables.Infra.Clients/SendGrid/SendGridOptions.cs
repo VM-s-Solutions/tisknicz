@@ -25,8 +25,18 @@ public sealed class SendGridOptions
     /// <summary>
     /// Polly retry policy parameters. SendGrid is the upstream — short,
     /// few retries because the outbox processor will pick up failed rows
-    /// again on the next tick.
+    /// again on the next tick. Default of 1 is intentional (T-0028 sec
+    /// reviewer M-4): outbox-level retry is the authoritative budget per
+    /// ADR 0019; the in-provider retry handles a single transient blip
+    /// without forcing the outbox row back into the queue.
     /// </summary>
-    public int RetryCount { get; set; } = 3;
+    public int RetryCount { get; set; } = 1;
     public int RetryBaseDelayMs { get; set; } = 300;
+
+    /// <summary>
+    /// Hard upper bound on a single <c>SendEmailAsync</c> attempt (including
+    /// retries). Protects against a stuck connection pinning an outbox-processor
+    /// worker. T-0028 sec reviewer M-4.
+    /// </summary>
+    public int PerSendTimeoutSeconds { get; set; } = 10;
 }

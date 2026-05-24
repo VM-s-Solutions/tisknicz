@@ -6,7 +6,7 @@ namespace Makables.Core.AppServices.Common;
 
 /// <summary>
 /// Resolves the language a user should receive UI / email content in. Per
-/// T-0028 design directive: <c>User.PreferredLanguage → CountryConfiguration.DefaultLanguageCode → "cs-CZ"</c>.
+/// T-0028 design directive: <c>preferredLang → CountryConfiguration.DefaultLanguageCode → "cs-CZ"</c>.
 ///
 /// The resolver runs at outbox-enqueue time so the language is locked in
 /// before the email is dispatched (T-0029 consumer doesn't re-resolve).
@@ -14,10 +14,22 @@ namespace Makables.Core.AppServices.Common;
 public interface ILanguageResolver
 {
     /// <summary>
-    /// Resolve the language for a fully-loaded <paramref name="user"/>.
-    /// Returns a BCP-47 tag from <see cref="LanguageCode.Supported"/>.
-    /// Falls back to <see cref="LanguageCode.DefaultFallback"/> if neither
-    /// the user nor their country has a recognised language set.
+    /// Resolve the language given an explicit preferred-language string and
+    /// a country code. Use this overload from places that don't (yet) have
+    /// a <see cref="User"/> aggregate — e.g. the unknown-user branch of
+    /// <c>OneTimeTokenIssuer</c> which must pay the same DB-roundtrip
+    /// cost as the known-user branch (timing-equalization invariant
+    /// T-0023 B-1). <paramref name="preferredLanguage"/> may be null /
+    /// blank / malformed; it's accepted only when it passes
+    /// <see cref="LanguageCode.IsValid"/>.
+    /// </summary>
+    Task<string> ResolveAsync(
+        string? preferredLanguage,
+        string countryCode,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Convenience overload that reads the inputs off <paramref name="user"/>.
     /// </summary>
     Task<string> ResolveForUserAsync(User user, CancellationToken cancellationToken);
 }
@@ -30,17 +42,27 @@ public interface ILanguageResolver
 /// </summary>
 public sealed class LanguageResolver(ICountryConfigurationRepository countries) : ILanguageResolver
 {
-    public async Task<string> ResolveForUserAsync(User user, CancellationToken cancellationToken)
+    public async Task<string> ResolveAsync(
+        string? preferredLanguage,
+        string countryCode,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(user);
+        if (LanguageCode.IsValid(preferredLanguage))
+            return preferredLanguage!;
 
-        if (LanguageCode.IsValid(user.PreferredLanguage))
-            return user.PreferredLanguage!;
-
-        var country = await countries.GetByCodeAsync(user.CountryCodePrimary, cancellationToken);
-        if (country is not null && LanguageCode.IsValid(country.DefaultLanguageCode))
-            return country.DefaultLanguageCode;
+        if (!string.IsNullOrWhiteSpace(countryCode))
+        {
+            var country = await countries.GetByCodeAsync(countryCode, cancellationToken);
+            if (country is not null && LanguageCode.IsValid(country.DefaultLanguageCode))
+                return country.DefaultLanguageCode;
+        }
 
         return LanguageCode.DefaultFallback;
+    }
+
+    public Task<string> ResolveForUserAsync(User user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return ResolveAsync(user.PreferredLanguage, user.CountryCodePrimary, cancellationToken);
     }
 }

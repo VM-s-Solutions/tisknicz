@@ -1,6 +1,5 @@
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
-using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using MediatR;

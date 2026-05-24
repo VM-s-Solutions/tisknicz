@@ -95,4 +95,63 @@ public class LanguageResolverTests
 
         result.Should().Be(LanguageCode.CsCZ);
     }
+
+    // T-0028 CQ reviewer N-3: the ResolveAsync(preferredLang, countryCode, ct)
+    // overload exists so OneTimeTokenIssuer's no-user branch can probe the
+    // resolver without minting a fake User aggregate. It MUST do the same
+    // country lookup the User-bound overload does.
+
+    [Fact]
+    public async Task ResolveAsync_uses_explicit_preferred_language_when_valid()
+    {
+        ArrangeCountry("CZ", LanguageCode.CsCZ);
+
+        var result = await _sut.ResolveAsync(LanguageCode.EnUS, "CZ", CancellationToken.None);
+
+        result.Should().Be(LanguageCode.EnUS);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_falls_back_to_country_when_preferred_is_null()
+    {
+        ArrangeCountry("CZ", LanguageCode.CsCZ);
+
+        var result = await _sut.ResolveAsync(null, "CZ", CancellationToken.None);
+
+        result.Should().Be(LanguageCode.CsCZ);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_falls_back_to_country_when_preferred_is_malformed()
+    {
+        ArrangeCountry("CZ", LanguageCode.CsCZ);
+
+        var result = await _sut.ResolveAsync("garbage", "CZ", CancellationToken.None);
+
+        result.Should().Be(LanguageCode.CsCZ);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_falls_back_to_platform_default_when_country_unknown()
+    {
+        _countries.GetByCodeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((CountryConfiguration?)null);
+
+        var result = await _sut.ResolveAsync(null, "ZZ", CancellationToken.None);
+
+        result.Should().Be(LanguageCode.DefaultFallback);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_country_lookup_runs_unconditionally_when_preferred_is_invalid()
+    {
+        // Timing-equalization invariant proxy: the call count is identical
+        // for the "no preferred language" path vs the "country alone" path.
+        ArrangeCountry("CZ", LanguageCode.CsCZ);
+
+        await _sut.ResolveAsync(null, "CZ", CancellationToken.None);
+        await _sut.ResolveAsync("not-a-tag", "CZ", CancellationToken.None);
+
+        await _countries.Received(2).GetByCodeAsync("CZ", Arg.Any<CancellationToken>());
+    }
 }

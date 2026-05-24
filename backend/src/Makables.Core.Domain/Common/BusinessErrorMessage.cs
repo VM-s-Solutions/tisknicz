@@ -88,6 +88,10 @@ public static class BusinessErrorMessage
     public const string EmailTemplateTranslationMissing = "email.translationMissing";
     public const string EmailProviderTransientFailure = "email.providerTransient";
     public const string EmailProviderPermanentFailure = "email.providerPermanent";
-    public const string EmailPayloadInvalid = "email.payloadInvalid";
+    // Split per T-0028 CQ reviewer N-4: T-0029's outbox-row triage UI needs
+    // to distinguish "decode crashed" (malformed JSON) from "decode succeeded
+    // but fields are blank" (producer wrote a partial payload).
+    public const string EmailPayloadMalformed = "email.payloadMalformed";
+    public const string EmailPayloadMissingFields = "email.payloadMissingFields";
     public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
 }
