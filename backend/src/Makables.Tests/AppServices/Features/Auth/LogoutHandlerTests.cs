@@ -21,7 +21,7 @@ public class LogoutHandlerTests
     public async Task Logout_revokes_a_live_refresh_token()
     {
         var token = RefreshToken.IssueNew("tok-1", "user-1",
-            RefreshTokenHasher.Sha256Hex("raw-refresh"),
+            OpaqueTokenFactory.Sha256Hex("raw-refresh"),
             "fam-1", _clock.UtcNow + TimeSpan.FromDays(30), "CZ", null, null);
         _refreshTokens.GetByTokenHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
 

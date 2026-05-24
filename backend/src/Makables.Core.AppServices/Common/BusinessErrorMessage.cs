@@ -18,6 +18,7 @@ public static class BusinessErrorMessage
     public const string AuthPasswordTooCommon = "auth.passwordTooCommon";
     public const string AuthCurrentPasswordWrong = "auth.currentPasswordWrong";
     public const string AuthOAuthNotAllowedForAdmin = "auth.oauthNotAllowedForAdmin";
+    public const string AuthMagicLinkInvalid = "auth.magicLinkInvalid";
 
     // === Validation ===
     public const string Required = "validation.required";

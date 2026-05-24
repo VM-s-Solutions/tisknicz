@@ -58,7 +58,7 @@ public static class Refresh
         public async Task<BusinessResult<SessionResult>> Handle(Command command, CancellationToken cancellationToken)
         {
             var now = clock.UtcNow;
-            var presentedHash = RefreshTokenHasher.Sha256Hex(command.RawRefreshToken);
+            var presentedHash = OpaqueTokenFactory.Sha256Hex(command.RawRefreshToken);
 
             var token = await refreshTokens.GetByTokenHashAsync(presentedHash, cancellationToken);
             if (token is null)
@@ -104,7 +104,7 @@ public static class Refresh
 
             // Issue rotation. The old token gets marked rotated -> new one
             // is added in the same family.
-            var (rawNew, newHash) = RefreshTokenHasher.GenerateNewPair();
+            var (rawNew, newHash) = OpaqueTokenFactory.GenerateUrlSafe32();
             var newId = ids.Next();
             var newExpiresAt = now + RefreshTokenLifetime;
             var rotated = token.IssueRotation(newId, newHash, newExpiresAt, command.UserAgent, command.IpAddress);

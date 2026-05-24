@@ -149,7 +149,7 @@ public static class Login
             }
 
             var access = jwt.Issue(user, command.Audience, now);
-            var (rawRefresh, refreshHash) = RefreshTokenHasher.GenerateNewPair();
+            var (rawRefresh, refreshHash) = OpaqueTokenFactory.GenerateUrlSafe32();
             var refreshExpiresAt = now + RefreshTokenLifetime;
 
             refreshTokens.Add(RefreshToken.IssueNew(

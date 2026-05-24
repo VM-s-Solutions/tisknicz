@@ -84,6 +84,7 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
+        services.AddScoped<IOneTimeTokenRepository, OneTimeTokenRepository>();
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();

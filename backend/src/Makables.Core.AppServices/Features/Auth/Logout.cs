@@ -36,7 +36,7 @@ public static class Logout
     {
         public async Task<BusinessResult> Handle(Command command, CancellationToken cancellationToken)
         {
-            var hash = RefreshTokenHasher.Sha256Hex(command.RawRefreshToken);
+            var hash = OpaqueTokenFactory.Sha256Hex(command.RawRefreshToken);
             var token = await refreshTokens.GetByTokenHashAsync(hash, cancellationToken);
             token?.Revoke(clock.UtcNow);
             return BusinessResult.Success();
