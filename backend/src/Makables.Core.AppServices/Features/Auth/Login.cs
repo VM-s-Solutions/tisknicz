@@ -67,7 +67,7 @@ public static class Login
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<SessionResult>>
     {
         // Per ADR 0012 §Refresh token: 30 days, single-use.
-        private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+        private static readonly TimeSpan RefreshTokenLifetime = RefreshToken.DefaultLifetime;
 
         public async Task<BusinessResult<SessionResult>> Handle(Command command, CancellationToken cancellationToken)
         {

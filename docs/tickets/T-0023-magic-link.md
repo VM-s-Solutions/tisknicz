@@ -127,5 +127,35 @@ use case each.
   password-reset tokens all flow through one `OpaqueTokenFactory`;
   per-flow `RefreshTokenHasher` is removed (no encoding drift).
 
+## Reviewer findings (commit 27dd9ce) and resolutions
+
+Two reviewers ran in parallel (new workflow established by user).
+
+### Security reviewer — BLOCKER × 2 + MAJOR × 2
+
+- **B-1 timing-attack enumeration** — `RequestMagicLink`'s no-op branches returned faster than the happy path. Fixed: handler now ALWAYS calls `CountIssuedSinceAsync`, ALWAYS mints `(raw, hash)` via `OpaqueTokenFactory`, ALWAYS serializes the JSON payload. The `willSend` decision is made AFTER all expensive operations and discards the result on no-op. Sentinel user id `"__no-such-user__"` keeps the SQL plan identical for unknown emails. Pinned by `Unknown_email_path_also_runs_CountIssuedSince_to_equalize_latency`.
+- **B-2 redaction claim was FALSE** — ticket asserted that `SensitivePropertyMasker` would redact `RawToken`, but the pattern list only had `tokenhash` / `refreshtoken` variants, not bare `token`. Added `"token"` to `Patterns` so `RawToken`, `AccessToken`, `RefreshToken`, and any outbox-payload JSON property containing "token" are now redacted. New `SensitivePropertyMaskerTests` in `Makables.IntegrationTests` pin the contract (17 redaction + 5 leave-alone facts).
+- **M-1 double-redemption race** — two concurrent `ConsumeMagicLink` requests could both observe an un-consumed token and both mint sessions. Fixed: added `IOneTimeTokenRepository.TryConsumeAsync(hash, now)` backed by `ExecuteUpdateAsync(... WHERE consumed_at IS NULL AND expires_at > now)` — atomic at the DB level. Exactly one of two concurrent requests gets affected-rows = 1. Pinned by `Lost_race_to_concurrent_request_returns_invalid`.
+- **M-2 audience-burn DoS** — burning the token on wrong-audience let anyone who knew the URL deny the link to the legitimate user. Fixed: audience mismatch now returns `Forbidden` WITHOUT calling `TryConsumeAsync`. Pinned by `Audience_mismatch_for_non_admin_returns_forbidden_WITHOUT_burning_the_token`.
+
+Security reviewer's MINORs (cross-purpose verified, unsalted SHA-256 acceptable, IP validation, field name) — all no-ops or deferred.
+
+### Code-quality reviewer — 0 BLOCKERs, 2 MAJORs, 6 MINORs
+
+- **M-1 naming** — kept `OneTimeTokenEntityConfiguration` class name (matches sibling files); ticket doc clarifies.
+- **M-2 OutboxPayload visibility** — defer to T-0025 when a central registry can house all three flows' payloads.
+- **Mi-3 dead `is_active` column** — `OneTimeTokenConfiguration` now calls `Ignore(t => t.IsActive)`; original migration + designer + snapshot edited.
+- **Mi-4 `RefreshTokenLifetime` duplicated** — added `RefreshToken.DefaultLifetime` (30 days); `Login` / `Refresh` / `ConsumeMagicLink` all reference it.
+- **Mi-6 lockout-reset rationale** — added a WHY comment in `ConsumeMagicLink.Handler`.
+- Mi-1 (central outbox-event-types registry), Mi-2 (magic-number comments), Mi-5 (FakeClock dedupe to TestUtilities) — deferred to T-0024 or beyond.
+
+### Tests after fold-in
+- 289 total (226 unit + 63 integration; +24 since 27dd9ce).
+- +22 for `SensitivePropertyMaskerTests`
+- +1 for `Unknown_email_path_also_runs_CountIssuedSince_to_equalize_latency` (B-1 pin)
+- +1 for `Lost_race_to_concurrent_request_returns_invalid` (M-1 pin)
+- Audience-mismatch test rewritten to assert NO `TryConsumeAsync` call (M-2 pin)
+
 ## Status log
 - 2026-05-24 done. 265 tests pass.
+- 2026-05-24 reviewer fix folded in. 289 tests. Security BLOCKERs B-1/B-2 + MAJORs M-1/M-2 closed; code-quality Mi-3/Mi-4/Mi-6 folded; rest deferred.

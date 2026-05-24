@@ -23,6 +23,12 @@ public sealed class SensitivePropertyMasker : ILogEventEnricher
         "secret",
         "apikey",
         "api_key",
+        // `token` (bare substring) catches RawToken, AccessToken,
+        // RefreshToken, MagicLinkToken, and the JSON-serialized outbox
+        // payloads that carry single-use tokens (T-0023 reviewer B-2).
+        // The two specific entries below are kept for clarity but are
+        // strictly redundant — left in so a future grep finds them.
+        "token",
         "tokenhash",
         "token_hash",
         "refreshtoken",

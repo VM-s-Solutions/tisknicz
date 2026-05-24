@@ -21,8 +21,7 @@ namespace Makables.Infra.Database.Migrations
                     expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     consumed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    ip_address = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    is_active = table.Column<bool>(type: "boolean", nullable: false)
+                    ip_address = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {

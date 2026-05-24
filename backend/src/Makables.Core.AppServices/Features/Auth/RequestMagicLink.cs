@@ -15,19 +15,22 @@ namespace Makables.Core.AppServices.Features.Auth;
 /// §Magic link.
 ///
 /// Behaviour:
-///   - Email unknown / soft-deleted → return Success (no leak). NO email
-///     enqueued. NO token persisted.
+///   - Email unknown / soft-deleted → return Success (no leak).
 ///   - Email known, request budget exhausted ("3 per 10 minutes") →
-///     return Success (no leak). NO email enqueued. NO new token persisted.
+///     return Success (no leak).
 ///   - Email known, budget available → mint a 32-byte URL-safe-base64
 ///     opaque token, persist SHA-256(token), enqueue an outbox event so
 ///     T-0028/T-0029 can email the raw token. TTL 15 min, single-use.
 ///
 /// Returns Success in every path so the caller cannot use response
-/// shape / latency to enumerate emails. The handler implements
-/// <see cref="IPersistOnFailureCommand"/> as defense-in-depth: even when
-/// a future change introduces a failure return, any per-user state
-/// (e.g. a future rate-limit bucket) persists.
+/// shape to enumerate emails. The handler also runs the same expensive
+/// operations (CSPRNG mint + SHA-256 + JSON serialize + a CountIssued
+/// round-trip) on the no-op branches so total LATENCY does not differ
+/// by enumeration — per T-0023 security review BLOCKER B-1.
+///
+/// Implements <see cref="IPersistOnFailureCommand"/> as defense-in-depth:
+/// even when a future change introduces a failure return, any per-user
+/// state (e.g. a future rate-limit bucket) persists.
 /// </summary>
 public static class RequestMagicLink
 {
@@ -35,7 +38,7 @@ public static class RequestMagicLink
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(15);
 
     /// <summary>Per-email request budget — 3 requests per 10 minutes.</summary>
-    public static readonly int MaxRequestsPerWindow = 3;
+    public const int MaxRequestsPerWindow = 3;
     public static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(10);
 
     /// <summary>Outbox event type emitted on success (consumed by T-0029).</summary>
@@ -45,6 +48,15 @@ public static class RequestMagicLink
         string Email,
         string? IpAddress) : ICommand, IPersistOnFailureCommand;
 
+    /// <summary>
+    /// Outbox payload. The <c>RawToken</c> property name is intentional —
+    /// the T-0014 <c>SensitivePropertyMasker</c> pattern list includes
+    /// the bare substring "token", so any Serilog scope or EF SQL trace
+    /// capturing the serialized payload property-by-property would
+    /// redact it. The masker is exercised by the
+    /// <c>SensitivePropertyMaskerTests</c> integration test to keep this
+    /// contract honest.
+    /// </summary>
     public sealed record OutboxPayload(string UserId, string Email, string RawToken, DateTimeOffset ExpiresAt);
 
     public sealed class Validator : AbstractValidator<Command>
@@ -64,55 +76,56 @@ public static class RequestMagicLink
         IClock clock,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult>
     {
+        // Sentinel user id used for the rate-limit round-trip when no
+        // user exists. Identical SQL shape and cost as the known-user
+        // case; no row will match this id, so the count is 0.
+        private const string NoSuchUserSentinel = "__no-such-user__";
+
         public async Task<BusinessResult> Handle(Command command, CancellationToken cancellationToken)
         {
             var now = clock.UtcNow;
             var emailNormalized = User.NormalizeEmail(command.Email);
 
             // 1. Resolve the user (includes soft-deleted rows per T-0020 fix).
-            //    Both "no such email" and "soft-deleted" exit silently with
-            //    Success so the caller can't enumerate.
             var user = await users.GetByEmailNormalizedAsync(emailNormalized, cancellationToken);
-            if (user is null || !user.IsActive)
-            {
-                logger.LogInformation("Magic-link request for {EmailNormalized}: no active user; noop.", emailNormalized);
-                return BusinessResult.Success();
-            }
 
-            // 2. Per-user budget. The window starts MaxRequestsPerWindow
-            //    requests ago — any further request inside the window is
-            //    a silent no-op.
+            // 2. Always count recent issuance so the round-trip cost is
+            //    constant whether the email is real or not. Per T-0023
+            //    security review B-1 — closes the timing channel.
+            var rateLimitUserId = user?.Id ?? NoSuchUserSentinel;
             var since = now - RateLimitWindow;
             var recent = await tokens.CountIssuedSinceAsync(
-                user.Id, OneTimeTokenPurpose.MagicLink, since, cancellationToken);
-            if (recent >= MaxRequestsPerWindow)
+                rateLimitUserId, OneTimeTokenPurpose.MagicLink, since, cancellationToken);
+
+            // 3. Always mint + serialize so the CSPRNG + SHA-256 + JSON
+            //    cost is paid on every call. Discarded on no-op branches.
+            var (raw, hash) = OpaqueTokenFactory.GenerateUrlSafe32();
+            var expiresAt = now + TokenLifetime;
+            var payloadJson = JsonSerializer.Serialize(
+                new OutboxPayload(user?.Id ?? string.Empty, user?.Email ?? string.Empty, raw, expiresAt));
+
+            // 4. Decide whether to actually persist + enqueue.
+            var willSend = user is not null
+                        && user.IsActive
+                        && recent < MaxRequestsPerWindow;
+
+            if (!willSend)
             {
-                logger.LogInformation(
-                    "Magic-link request for {UserId} silently dropped: {RecentCount} requests in the last {Window} min.",
-                    user.Id, recent, RateLimitWindow.TotalMinutes);
+                logger.LogInformation("Magic-link request for {EmailNormalized}: silent no-op.", emailNormalized);
                 return BusinessResult.Success();
             }
 
-            // 3. Mint the token. Raw value emailed; only hash persisted.
-            var (raw, hash) = OpaqueTokenFactory.GenerateUrlSafe32();
-            var expiresAt = now + TokenLifetime;
             tokens.Add(OneTimeToken.Issue(
                 tokenHash: hash,
-                userId: user.Id,
+                userId: user!.Id,
                 purpose: OneTimeTokenPurpose.MagicLink,
                 expiresAt: expiresAt,
                 now: now,
                 ipAddress: command.IpAddress));
 
-            // 4. Enqueue the email. The outbox row commits in the same UoW
-            //    as the token row so we never email a token that isn't in
-            //    the DB (or vice-versa). The raw token MUST NOT appear in
-            //    any log; the outbox payload is the only place it lives
-            //    server-side, and the T-0014 SensitivePropertyMasker
-            //    redacts it because "token" is on the redaction list.
-            var payload = JsonSerializer.Serialize(
-                new OutboxPayload(user.Id, user.Email, raw, expiresAt));
-            outbox.Enqueue(user.Id, OutboxEventType, payload);
+            // The outbox row commits in the same UoW as the token row so
+            // we never email a token that isn't in the DB or vice versa.
+            outbox.Enqueue(user.Id, OutboxEventType, payloadJson);
 
             return BusinessResult.Success();
         }

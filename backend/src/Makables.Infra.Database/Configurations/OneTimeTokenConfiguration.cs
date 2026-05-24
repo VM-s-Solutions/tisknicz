@@ -28,7 +28,11 @@ internal sealed class OneTimeTokenEntityConfiguration : IEntityTypeConfiguration
         builder.Property(t => t.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(t => t.IpAddress).HasColumnName("ip_address").HasMaxLength(64);
 
-        builder.Property(t => t.IsActive).HasColumnName("is_active").IsRequired();
+        // OneTimeToken is never soft-deleted (it's consumed, then purged
+        // by the T-0114 cleanup Function). The inherited BaseEntity.IsActive
+        // column would be dead weight; suppress it via Ignore so the table
+        // doesn't carry a column the application never reads or writes.
+        builder.Ignore(t => t.IsActive);
 
         // Per-user / per-purpose lookups for rate-limit + invalidate flows.
         builder.HasIndex(t => new { t.UserId, t.Purpose, t.CreatedAt });

@@ -13,6 +13,13 @@ namespace Makables.Core.Domain.Identity;
 /// </summary>
 public sealed class RefreshToken : Auditable
 {
+    /// <summary>
+    /// Default refresh-token lifetime per ADR 0012 §Refresh token (30 days).
+    /// Single source of truth for Login / Refresh / ConsumeMagicLink so
+    /// the value doesn't drift between flows.
+    /// </summary>
+    public static readonly TimeSpan DefaultLifetime = TimeSpan.FromDays(30);
+
     public string UserId { get; private set; } = default!;
     public string TokenHash { get; private set; } = default!;
     public DateTimeOffset ExpiresAt { get; private set; }

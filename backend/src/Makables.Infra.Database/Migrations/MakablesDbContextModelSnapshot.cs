@@ -396,10 +396,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("ip_address");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
                     b.Property<string>("Purpose")
                         .IsRequired()
                         .HasMaxLength(40)

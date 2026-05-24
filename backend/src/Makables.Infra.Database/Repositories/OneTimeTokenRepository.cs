@@ -50,5 +50,25 @@ public sealed class OneTimeTokenRepository(MakablesDbContext db) : IOneTimeToken
         }
     }
 
+    public async Task<bool> TryConsumeAsync(string tokenHash, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash)) return false;
+
+        // Conditional UPDATE: only flip ConsumedAt when the row is still
+        // redeemable. ExecuteUpdateAsync runs in a single SQL statement
+        // so two concurrent requests race in the DB, not in EF's change
+        // tracker — exactly one returns affected-rows = 1. Writes
+        // immediately, outside the UnitOfWork commit; that's intentional
+        // because the UoW only fires on handler completion which is
+        // exactly the race window we need to close. Per T-0023 review M-1.
+        var affected = await db.Set<OneTimeToken>()
+            .Where(t => t.Id == tokenHash
+                     && t.ConsumedAt == null
+                     && t.ExpiresAt > now)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ConsumedAt, now), cancellationToken);
+
+        return affected == 1;
+    }
+
     public void Add(OneTimeToken token) => db.Set<OneTimeToken>().Add(token);
 }

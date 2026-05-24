@@ -50,10 +50,11 @@ public class ConsumeMagicLinkHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthMagicLinkInvalid);
+        await _tokens.DidNotReceive().TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Returns_invalid_when_token_purpose_is_wrong()
+    public async Task Returns_invalid_when_token_purpose_is_wrong_AND_does_not_claim_it()
     {
         var token = IssueRedeemable(_clock.UtcNow, OneTimeTokenPurpose.PasswordReset);
         _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
@@ -64,8 +65,7 @@ public class ConsumeMagicLinkHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthMagicLinkInvalid);
-        // Wrong-purpose tokens MUST NOT be silently consumed.
-        token.IsConsumed.Should().BeFalse();
+        await _tokens.DidNotReceive().TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -99,13 +99,14 @@ public class ConsumeMagicLinkHandlerTests
     }
 
     [Fact]
-    public async Task Soft_deleted_user_returns_invalid_AND_burns_the_token()
+    public async Task Soft_deleted_user_returns_invalid_AND_claims_the_token_to_prevent_replay()
     {
         var token = IssueRedeemable(_clock.UtcNow);
         _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
         var user = CreateUser();
         user.MarkDeactivated("admin", _clock.UtcNow.AddMinutes(-10));
         _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(user);
+        _tokens.TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
             new ConsumeMagicLink.Command("raw", "customer", null, null),
@@ -113,12 +114,16 @@ public class ConsumeMagicLinkHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthMagicLinkInvalid);
-        token.IsConsumed.Should().BeTrue("a stolen valid link must not be replayable after reactivation");
+        await _tokens.Received(1).TryConsumeAsync(Arg.Any<string>(), _clock.UtcNow, Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Audience_mismatch_for_non_admin_returns_forbidden_AND_burns_the_token()
+    public async Task Audience_mismatch_for_non_admin_returns_forbidden_WITHOUT_burning_the_token()
     {
+        // Reviewer T-0023 security review M-2: burning on audience
+        // mismatch lets anyone who knows the URL deny the link to the
+        // legitimate user. The token must remain redeemable from the
+        // correct audience host.
         var token = IssueRedeemable(_clock.UtcNow);
         _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
         _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(CreateUser(UserRole.Customer));
@@ -129,16 +134,38 @@ public class ConsumeMagicLinkHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.Forbidden);
-        token.IsConsumed.Should().BeTrue("a link targeted at the wrong audience burns on first attempt");
+        await _tokens.DidNotReceive().TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Happy_path_consumes_token_confirms_email_and_issues_session()
+    public async Task Lost_race_to_concurrent_request_returns_invalid()
+    {
+        // Reviewer T-0023 security review M-1: two concurrent redeem
+        // attempts (e.g. user double-clicks the email link) must not
+        // both mint a session. The loser observes affected-rows=0 from
+        // TryConsumeAsync and exits.
+        var token = IssueRedeemable(_clock.UtcNow);
+        _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
+        _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(CreateUser());
+        _tokens.TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _handler.Handle(
+            new ConsumeMagicLink.Command("raw", "customer", null, null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.AuthMagicLinkInvalid);
+        _refreshTokens.DidNotReceive().Add(Arg.Any<RefreshToken>());
+    }
+
+    [Fact]
+    public async Task Happy_path_claims_token_confirms_email_and_issues_session()
     {
         var token = IssueRedeemable(_clock.UtcNow);
         _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
         var user = CreateUser(confirmed: false);
         _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(user);
+        _tokens.TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
             new ConsumeMagicLink.Command("raw", "customer", "ua", "1.2.3.4"),
@@ -147,7 +174,6 @@ public class ConsumeMagicLinkHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.AccessToken.Should().Be("access.jwt");
         result.Value.RefreshToken.Should().NotBeNullOrWhiteSpace();
-        token.IsConsumed.Should().BeTrue();
         user.EmailConfirmedAt.Should().NotBeNull("successful magic-link redemption proves inbox control");
         _refreshTokens.Received(1).Add(Arg.Any<RefreshToken>());
     }

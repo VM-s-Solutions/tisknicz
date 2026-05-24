@@ -40,5 +40,20 @@ public interface IOneTimeTokenRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Atomically mark a token consumed iff it is still redeemable
+    /// (exists, not previously consumed, not yet expired). Returns true
+    /// on success — the caller can now mint the side-effect — or false
+    /// if a concurrent request already claimed it. Per T-0023 security
+    /// review M-1: prevents a double-click on a magic-link email from
+    /// minting two sessions because EF's change-tracker can't serialize
+    /// the read-then-write across concurrent handlers.
+    ///
+    /// Writes immediately, OUTSIDE the UnitOfWork commit. Caller must
+    /// then re-read the token (now visible as consumed) to obtain the
+    /// associated <see cref="OneTimeToken.UserId"/> / <see cref="OneTimeToken.Purpose"/>.
+    /// </summary>
+    Task<bool> TryConsumeAsync(string tokenHash, DateTimeOffset now, CancellationToken cancellationToken);
+
     void Add(OneTimeToken token);
 }

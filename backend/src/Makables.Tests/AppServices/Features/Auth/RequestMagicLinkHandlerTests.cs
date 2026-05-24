@@ -110,5 +110,22 @@ public class RequestMagicLinkHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task Unknown_email_path_also_runs_CountIssuedSince_to_equalize_latency()
+    {
+        // Reviewer T-0023 security review B-1: the no-op branch MUST
+        // pay the same DB round-trip cost as the happy path so an
+        // attacker can't enumerate emails by response latency.
+        _users.GetByEmailNormalizedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((User?)null);
+
+        await _handler.Handle(new RequestMagicLink.Command("ghost@nope.cz", null), CancellationToken.None);
+
+        await _tokens.Received(1).CountIssuedSinceAsync(
+            Arg.Any<string>(),
+            OneTimeTokenPurpose.MagicLink,
+            _clock.UtcNow - RequestMagicLink.RateLimitWindow,
+            Arg.Any<CancellationToken>());
+    }
+
     private sealed class FakeClock(DateTimeOffset now) : IClock { public DateTimeOffset UtcNow { get; } = now; }
 }

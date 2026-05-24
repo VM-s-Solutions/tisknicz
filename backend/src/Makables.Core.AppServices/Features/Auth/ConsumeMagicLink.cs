@@ -11,26 +11,25 @@ namespace Makables.Core.AppServices.Features.Auth;
 /// <summary>
 /// Exchange a magic-link token for a session. Per ADR 0012 §Magic link.
 ///
-/// Behaviour:
-///   - Token missing / wrong purpose / expired / already consumed →
-///     <see cref="BusinessErrorMessage.AuthMagicLinkInvalid"/>. Single
-///     generic code so an attacker can't tell which condition fired.
-///   - Token valid + user soft-deleted → same invalid code; the token is
-///     also marked consumed so a stolen valid link can't be replayed
-///     after the account comes back.
-///   - Token valid + audience mismatch for non-admin → forbidden.
-///   - Happy path: mark consumed, confirm the email if it wasn't already
-///     (a successful magic-link redemption proves the user controls the
-///     inbox, which is what email confirmation is for), reset lockout
-///     counters, issue access + refresh tokens.
+/// Failure outcomes (collapsed to <see cref="BusinessErrorMessage.AuthMagicLinkInvalid"/>
+/// to deny probe channels):
+///   - Token missing / wrong purpose / expired / already consumed.
+///   - Token claim race lost (another concurrent request consumed it).
+///   - Audience mismatch for a non-admin user. The token is NOT burned
+///     in this case — burning on cross-audience presentation would let
+///     anyone with the URL deny the magic link to the legitimate user
+///     (T-0023 security review M-2). The legitimate user can still
+///     redeem from the correct audience.
+///   - Token valid + user soft-deleted → the token IS burned (a stolen
+///     valid link must not be replayable after reactivation).
 ///
-/// <see cref="IPersistOnFailureCommand"/>: every non-happy path that
-/// touches state (marking the token consumed on soft-deleted-user or
-/// audience-mismatch) MUST persist so the token can't be replayed.
+/// Happy path: confirm the email if not already, reset lockout counters
+/// (a successful passwordless sign-in is morally a successful auth
+/// event), mint access + refresh tokens.
 /// </summary>
 public static class ConsumeMagicLink
 {
-    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+    private static readonly TimeSpan RefreshTokenLifetime = RefreshToken.DefaultLifetime;
 
     public sealed record Command(
         string RawToken,
@@ -65,6 +64,11 @@ public static class ConsumeMagicLink
             var now = clock.UtcNow;
             var hash = OpaqueTokenFactory.Sha256Hex(command.RawToken);
 
+            // Pre-read for purpose + audience checks BEFORE the atomic claim.
+            // We must know the purpose so we don't burn an EmailConfirmation
+            // or PasswordReset token from this handler. We must know the
+            // audience so a wrong-audience attempt doesn't burn the token
+            // (M-2 fix).
             var token = await tokens.GetByHashAsync(hash, cancellationToken);
             if (token is null
                 || token.Purpose != OneTimeTokenPurpose.MagicLink
@@ -76,22 +80,38 @@ public static class ConsumeMagicLink
             var user = await users.GetByIdAsync(token.UserId, cancellationToken);
             if (user is null || !user.IsActive)
             {
-                // Burn the token so a stolen link can't be re-presented if
-                // the user is reactivated later.
-                token.Consume(now);
+                // Soft-deleted / deleted users: burn the token so a stolen
+                // valid link can't be replayed if the account comes back.
+                // Best-effort claim; if the race-claim fails we still
+                // return Invalid().
+                _ = await tokens.TryConsumeAsync(hash, now, cancellationToken);
                 return Invalid();
             }
 
             if (!user.MatchesAudience(command.Audience))
             {
-                token.Consume(now);
+                // Audience mismatch: DO NOT burn. The token remains
+                // redeemable from the correct audience host. Per T-0023
+                // security review M-2.
                 return BusinessResult.Failure<SessionResult>(
                     Error.Forbidden(BusinessErrorMessage.AuthForbidden));
             }
 
-            // Happy path. Burn the token, mark the email confirmed (the
-            // user just proved inbox control), and mint a session.
-            token.Consume(now);
+            // Atomic claim. Exactly one of two concurrent requests wins;
+            // the loser observes affected-rows = 0 and returns Invalid.
+            // Per T-0023 security review M-1.
+            var claimed = await tokens.TryConsumeAsync(hash, now, cancellationToken);
+            if (!claimed)
+            {
+                return Invalid();
+            }
+
+            // Happy path. Reset lockout counters (a successful passwordless
+            // sign-in is a successful auth event and should clear failed
+            // password attempts on the same account — otherwise a magic-link
+            // user with a stale failed-password streak could still be
+            // locked after redemption), confirm the email if it wasn't
+            // already (redemption proves inbox control), mint the session.
             user.ConfirmEmail(now);
             user.RegisterSuccessfulLogin();
 
