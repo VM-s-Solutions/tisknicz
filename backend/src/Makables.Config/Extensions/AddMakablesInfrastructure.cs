@@ -5,6 +5,7 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
+using Makables.Infra.Common.Auth;
 using Makables.Infra.Common.Identifiers;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
@@ -35,6 +36,15 @@ public static class MakablesInfrastructureExtensions
         // === Cross-cutting primitives ===
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, UlidIdGenerator>();
+
+        // === Auth crypto (T-0021) ===
+        services.AddOptions<Argon2idOptions>()
+            .Bind(configuration.GetSection(Argon2idOptions.SectionName));
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton<IJwtIssuer, JwtIssuer>();
 
         // === EF Core DbContext + interceptor + UoW alias ===
         services.AddScoped<AuditableSaveChangesInterceptor>();

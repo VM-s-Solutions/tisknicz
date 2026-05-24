@@ -56,11 +56,16 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
             // string (reviewer T-0009 MAJOR #1 fix). Supply a placeholder so
             // the host starts; ConfigureServices below swaps the registration
             // for SQLite before any DbContext is actually constructed.
+            // T-0021 added eager validation of the JWT signing key — supply
+            // a deterministic 32-byte key so JwtIssuer can be resolved if a
+            // test asks for it; tests never produce real tokens with it.
             builder.ConfigureAppConfiguration((_, config) =>
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
+                    ["Jwt:Issuer"] = "https://makables.test",
+                    ["Jwt:SigningKeyBase64"] = Convert.ToBase64String(new byte[32]),
                 });
             });
 
