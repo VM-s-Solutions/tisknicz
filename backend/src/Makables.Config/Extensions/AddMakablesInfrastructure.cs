@@ -47,6 +47,10 @@ public static class MakablesInfrastructureExtensions
             .Bind(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IJwtIssuer, JwtIssuer>();
 
+        // === Auth policy (T-0022) ===
+        services.AddOptions<LockoutOptions>()
+            .Bind(configuration.GetSection(LockoutOptions.SectionName));
+
         // === EF Core DbContext + interceptor + UoW alias ===
         services.AddScoped<AuditableSaveChangesInterceptor>();
 
@@ -79,6 +83,7 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<ICountryConfigurationRepository, CountryConfigurationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();
