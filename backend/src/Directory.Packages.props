@@ -60,6 +60,9 @@
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
 
+    <!-- Azure Storage Queues (Infra.Common — T-0029 outbox queue publisher) -->
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.22.0" />
+
     <!-- Google OAuth (Infra.Clients/Google) — T-0026.
          Google.Apis.Auth verifies ID-token signatures against Google's
          JWKS and exposes the parsed payload. -->

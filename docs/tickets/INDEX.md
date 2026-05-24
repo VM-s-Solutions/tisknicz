@@ -53,7 +53,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0026 | Google OAuth: GoogleOAuthClient + CompleteGoogleOAuthAsync; audience-bound state; reject for admin audience | 2 | M | draft | T-0022 | US-customer-0004 | 0012 |
 | T-0027 | Auth middleware per host: JWT validation, audience enforcement, role check | 2 | M | done | T-0021, T-0009 | — | 0005, 0012 |
 | T-0028 | Email pipeline: SendGrid Dynamic Templates + DB-backed translation (EmailTemplate + EmailTemplateTranslation) + ILanguageResolver + outbox payload carries LanguageCode; ADR 0019 amended Resend→SendGrid; bounce webhook deferred | 2 | L | done | T-0011, T-0020, T-0023, T-0024, T-0025 | — | 0019 |
-| T-0029 | Outbox processor Function: ProcessOutboxFunction (timer 30s + HTTP); route email.send to SendEmail Function | 2 | M | draft | T-0011, T-0028 | — | 0020 |
+| T-0029 | Outbox processor Function: ProcessOutboxFunction (timer 30s + HTTP) routes to send-email queue → SendEmailFunction calls IEmailSendService; OutboxRetryPolicy (1m→5m→15m→1h→6h→24h, stall after 6); OutboxEvent.ParkPendingConsumer; queue-message body = bare outbox id (payload stays in Postgres) | 2 | M | done | T-0011, T-0028 | — | 0020 |
 | T-0030 | Address entity + IAddressRepository + AddressFormatValidator (reads CountryConfiguration.ZipFormat) | 2 | S | draft | T-0010 | — | 0010 |
 | T-0031 | IAddressGeocoder + MapboxAddressGeocoder; backend autocomplete proxy with per-user rate limit | 2 | M | draft | T-0030 | — | 0010 |
 | T-0032 | ICompanyRegistry + AresCompanyRegistry; IČO format validator (mod-11); company_registry_cache table + 24h TTL; in-memory cache | 2 | M | draft | T-0030 | — | 0018 |

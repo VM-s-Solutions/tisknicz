@@ -1,5 +1,6 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
+using Makables.Core.AppServices.Features.Outbox;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
@@ -10,6 +11,7 @@ using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Common.Identifiers;
+using Makables.Infra.Common.Outbox;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
 using Makables.Infra.Database.Auditing;
@@ -117,7 +119,19 @@ public static class MakablesInfrastructureExtensions
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();
+        services.AddScoped<IOutboxConsumerRepository, OutboxConsumerRepository>();
         services.AddScoped<IAdminAuditLogWriter, AdminAuditLogWriter>();
+
+        // === T-0029 outbox queue publisher (used by Makables.Functions
+        // ProcessOutboxFunction). The Web hosts don't strictly need this
+        // — only the Functions host enqueues — but registering it here
+        // keeps the DI surface uniform across hosts. Singleton because
+        // QueueClient is thread-safe and pools connections internally.
+        services.AddOptions<OutboxQueueOptions>()
+            .Bind(configuration.GetSection(OutboxQueueOptions.SectionName));
+        services.AddSingleton<IOutboxQueuePublisher, StorageQueueOutboxPublisher>();
+        services.AddScoped<IOutboxDispatcher, OutboxDispatcher>();
+        services.AddScoped<ISendEmailHandler, SendEmailHandler>();
 
         return services;
     }

@@ -102,4 +102,36 @@ public class OutboxEventTests
         var act = () => e.Acknowledge("  ", Now);
         act.Should().Throw<ArgumentException>();
     }
+
+    // T-0029: ParkPendingConsumer advances NextRetryAt without touching
+    // RetryCount, error fields, or ProcessedAt. Used by OutboxDispatcher
+    // after publishing the row id to the send-email queue so a concurrent
+    // sweep doesn't re-publish before the consumer confirms.
+
+    [Fact]
+    public void ParkPendingConsumer_advances_next_retry_without_touching_retry_count()
+    {
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        var initialRetryCount = e.RetryCount;
+        var parkedUntil = Now.AddMinutes(15);
+
+        e.ParkPendingConsumer(parkedUntil);
+
+        e.NextRetryAt.Should().Be(parkedUntil);
+        e.RetryCount.Should().Be(initialRetryCount, "park is not a failure");
+        e.ProcessedAt.Should().BeNull();
+        e.LastErrorKind.Should().Be(OutboxErrorKind.None);
+        e.LastErrorCode.Should().BeNull();
+    }
+
+    [Fact]
+    public void ParkPendingConsumer_refuses_to_park_already_processed_row()
+    {
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.MarkProcessed(Now);
+
+        var act = () => e.ParkPendingConsumer(Now.AddMinutes(15));
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

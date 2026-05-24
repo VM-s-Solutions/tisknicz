@@ -78,6 +78,22 @@ public sealed class OutboxEvent
         NextRetryAt = nextRetryAt;
     }
 
+    /// <summary>
+    /// Park the row until <paramref name="parkedUntil"/> so a concurrent
+    /// sweep doesn't re-publish before the queue consumer has had a chance
+    /// to mark it processed (T-0029 ProcessOutboxFunction handoff). Does
+    /// NOT increment <see cref="RetryCount"/> and does NOT set any error
+    /// fields — the row is still in flight, not failed. If the consumer
+    /// never confirms (queue dropped / worker crashed), the park expires
+    /// and the next sweep re-publishes.
+    /// </summary>
+    public void ParkPendingConsumer(DateTimeOffset parkedUntil)
+    {
+        if (ProcessedAt is not null)
+            throw new InvalidOperationException("Cannot park an already-processed event.");
+        NextRetryAt = parkedUntil;
+    }
+
     /// <summary>Admin marks a stalled event as acknowledged (won't be retried).</summary>
     public void Acknowledge(string adminUserId, DateTimeOffset now)
     {

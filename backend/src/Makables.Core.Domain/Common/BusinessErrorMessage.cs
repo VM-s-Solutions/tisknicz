@@ -94,4 +94,8 @@ public static class BusinessErrorMessage
     public const string EmailPayloadMalformed = "email.payloadMalformed";
     public const string EmailPayloadMissingFields = "email.payloadMissingFields";
     public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
+
+    // === Outbox processor (T-0029) ===
+    public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
+    public const string OutboxRowNotFound = "outbox.rowNotFound";
 }
