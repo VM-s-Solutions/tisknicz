@@ -19,12 +19,29 @@ namespace Makables.Infra.Common.Auth;
 public sealed class Argon2idPasswordHasher : IPasswordHasher
 {
     private readonly Argon2idOptions _options;
+    private readonly Lazy<string> _dummyHash;
 
     public Argon2idPasswordHasher(IOptions<Argon2idOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options.Value;
+        // Built lazily + cached so the timing-equalization hash on the
+        // login-unknown-email branch costs one Argon2id evaluation total
+        // per process, not per login attempt.
+        _dummyHash = new Lazy<string>(() =>
+        {
+            // Random-per-process synthetic password. The verify path
+            // returns false because no real user input could match this
+            // hash (the password is never persisted and the salt is
+            // freshly random inside Hash), while the cost equals one
+            // current-policy Argon2id evaluation.
+            var rnd = RandomNumberGenerator.GetBytes(32);
+            var synthetic = Convert.ToBase64String(rnd);
+            return Hash(synthetic);
+        });
     }
+
+    public string DummyHashForTimingEqualization => _dummyHash.Value;
 
     public string Hash(string password)
     {

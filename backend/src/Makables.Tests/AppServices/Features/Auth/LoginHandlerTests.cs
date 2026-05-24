@@ -49,6 +49,7 @@ public class LoginHandlerTests
     {
         _buckets.GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((LoginAttemptBucket?)null);
         _users.GetByEmailNormalizedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((User?)null);
+        _hasher.DummyHashForTimingEqualization.Returns("dummy-argon2-hash");
 
         var result = await _handler.Handle(
             new Login.Command("ghost@nope.cz", "whatever1234", "customer", null, null),
@@ -58,6 +59,29 @@ public class LoginHandlerTests
         result.Error!.Code.Should().Be(BusinessErrorMessage.AuthInvalidCredentials);
         // A fresh bucket was created AND a failed attempt was registered.
         _buckets.Received(1).Add(Arg.Is<LoginAttemptBucket>(b => b.AttemptCount == 1));
+        // Reviewer T-0022 BLOCKER B-2: unknown-email branch MUST run a
+        // dummy Argon2id verify so total latency matches the known-email
+        // branch and an attacker can't enumerate emails by response time.
+        _hasher.Received(1).Verify("whatever1234", "dummy-argon2-hash");
+    }
+
+    [Fact]
+    public async Task Successful_first_login_for_account_without_prior_bucket_does_NOT_create_a_bucket_row()
+    {
+        // Reviewer T-0022 MINOR Mi-1: don't write a no-op bucket row when
+        // the success path will only Reset it back to zero.
+        var user = CreateUser();
+        _buckets.GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((LoginAttemptBucket?)null);
+        _users.GetByEmailNormalizedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(user);
+        _hasher.Verify("correct-pw", Arg.Any<string>()).Returns(true);
+        _hasher.NeedsRehash(Arg.Any<string>()).Returns(false);
+
+        var result = await _handler.Handle(
+            new Login.Command("anna@example.cz", "correct-pw", "customer", null, null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _buckets.DidNotReceive().Add(Arg.Any<LoginAttemptBucket>());
     }
 
     [Fact]

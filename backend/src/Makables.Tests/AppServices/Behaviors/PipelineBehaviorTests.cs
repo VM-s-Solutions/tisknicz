@@ -191,6 +191,39 @@ public class PipelineBehaviorTests
     }
 
     [Fact]
+    public async Task UoW_Commits_On_Failure_When_Command_Implements_IPersistOnFailureCommand()
+    {
+        // Reviewer T-0022 BLOCKER B-1: Auth use cases mutate anti-abuse
+        // state (lockout counters, family-wide revocation) on the failure
+        // path. The pipeline MUST commit those mutations alongside the
+        // failure response or the security mechanisms are silent no-ops.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PipelineBehaviorTests>());
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationPipelineBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UnitOfWorkPipelineBehavior<,>));
+
+        var uow = Substitute.For<IUnitOfWork>();
+        services.AddSingleton(uow);
+
+        var provider = services.BuildServiceProvider();
+        var sender = provider.GetRequiredService<ISender>();
+
+        var result = await sender.Send(new PersistOnFailureCommand("burn-the-family"));
+
+        result.IsSuccess.Should().BeFalse();
+        await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    public record PersistOnFailureCommand(string Reason) : ICommand, IPersistOnFailureCommand;
+
+    public class PersistOnFailureHandler : ICommandHandler<PersistOnFailureCommand>
+    {
+        public Task<BusinessResult> Handle(PersistOnFailureCommand request, CancellationToken ct) =>
+            Task.FromResult(BusinessResult.Failure(Error.Conflict("conflict.test", "test.failed")));
+    }
+
+    [Fact]
     public async Task UoW_Skips_Query_Even_On_Success()
     {
         // Queries are not ICommandMarker, so UnitOfWorkPipelineBehavior won't

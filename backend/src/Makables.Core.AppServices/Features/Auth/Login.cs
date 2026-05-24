@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.AppServices.Common;
@@ -15,7 +14,8 @@ namespace Makables.Core.AppServices.Features.Auth;
 ///
 /// Failure outcomes (all return the SAME error code <see cref="BusinessErrorMessage.AuthInvalidCredentials"/>
 /// on the wire so the response doesn't leak whether the email exists):
-///   - Email unknown → register a ghost-bucket attempt, then fail.
+///   - Email unknown → run a dummy Argon2id verify to equalize latency,
+///     register a ghost-bucket attempt, then fail.
 ///   - Email known + password wrong → register attempt against User,
 ///     mirror to the bucket for cross-restart safety.
 ///   - Either side is locked → fail with <see cref="BusinessErrorMessage.AuthLocked"/>.
@@ -25,6 +25,10 @@ namespace Makables.Core.AppServices.Features.Auth;
 ///
 /// On success: reset both counters, issue access + refresh tokens, persist
 /// the refresh-token row keyed by its SHA-256 hash.
+///
+/// Implements <see cref="IPersistOnFailureCommand"/> so the UoW pipeline
+/// commits the lockout-counter mutations on failure responses too —
+/// reviewer T-0022 BLOCKER B-1 fix.
 /// </summary>
 public static class Login
 {
@@ -33,7 +37,7 @@ public static class Login
         string Password,
         string Audience,
         string? UserAgent,
-        string? IpAddress) : ICommand<SessionResult>;
+        string? IpAddress) : ICommand<SessionResult>, IPersistOnFailureCommand;
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -71,16 +75,13 @@ public static class Login
             var emailNormalized = User.NormalizeEmail(command.Email);
             var lockout = lockoutOptions.Value;
 
-            // 1. Resolve (or create) the per-email bucket FIRST so unknown
-            //    emails consume ghost slots identically to known ones.
+            // 1. Resolve the per-email bucket. Create it lazily ONLY when
+            //    we actually need to record an attempt (success path with
+            //    no prior bucket is the common case for fresh accounts and
+            //    shouldn't write a no-op row — reviewer T-0022 MINOR Mi-1).
             var bucket = await buckets.GetAsync(emailNormalized, cancellationToken);
-            if (bucket is null)
-            {
-                bucket = LoginAttemptBucket.Create(emailNormalized, now);
-                buckets.Add(bucket);
-            }
 
-            if (bucket.IsLocked(now))
+            if (bucket is not null && bucket.IsLocked(now))
             {
                 logger.LogInformation("Login rejected: bucket locked for {EmailNormalized} until {LockedUntil:o}",
                     emailNormalized, bucket.LockedUntil);
@@ -88,14 +89,17 @@ public static class Login
                     Error.Validation("email", BusinessErrorMessage.AuthLocked));
             }
 
-            // 2. Look up the user. Returns soft-deleted rows too (B-1 fix)
+            // 2. Look up the user. Returns soft-deleted rows too (T-0020 fix)
             //    so we can mint the same generic credentials error.
             var user = await users.GetByEmailNormalizedAsync(emailNormalized, cancellationToken);
             if (user is null || !user.IsActive || user.PasswordHash is null)
             {
-                // Burn a bucket slot for the unknown / soft-deleted case
-                // so an attacker can't enumerate emails by latency.
-                bucket.RegisterFailedAttempt(now, lockout.Threshold, lockout.Window);
+                // Run a dummy Argon2id verify so total latency matches the
+                // known-email path. The result is intentionally discarded.
+                _ = hasher.Verify(command.Password, hasher.DummyHashForTimingEqualization);
+
+                EnsureBucket(ref bucket, emailNormalized, now)
+                    .RegisterFailedAttempt(now, lockout.Threshold, lockout.Window);
                 return BusinessResult.Failure<SessionResult>(
                     Error.Validation("email", BusinessErrorMessage.AuthInvalidCredentials));
             }
@@ -111,7 +115,8 @@ public static class Login
             if (!hasher.Verify(command.Password, user.PasswordHash))
             {
                 user.RegisterFailedLogin(now, lockout.Threshold, lockout.Window);
-                bucket.RegisterFailedAttempt(now, lockout.Threshold, lockout.Window);
+                EnsureBucket(ref bucket, emailNormalized, now)
+                    .RegisterFailedAttempt(now, lockout.Threshold, lockout.Window);
                 return BusinessResult.Failure<SessionResult>(
                     Error.Validation("email", BusinessErrorMessage.AuthInvalidCredentials));
             }
@@ -126,37 +131,32 @@ public static class Login
                     Error.Validation("email", BusinessErrorMessage.AuthEmailNotConfirmed));
             }
 
-            // Admin login is permitted from any host; non-admin tokens
-            // bind to the requested audience. T-0027's middleware enforces
-            // audience binding on every protected endpoint.
-            var audience = command.Audience;
-            if (user.Role != UserRole.Admin && audience != user.Role.ToString().ToLowerInvariant())
+            if (!user.MatchesAudience(command.Audience))
             {
                 return BusinessResult.Failure<SessionResult>(
                     Error.Forbidden(BusinessErrorMessage.AuthForbidden));
             }
 
-            // 3. Success path. Reset counters, transparently re-hash if
-            //    the stored hash is older than current policy, mint tokens.
+            // 3. Success path. Reset counters (if a bucket exists from a
+            //    prior failed attempt), transparently re-hash if the
+            //    stored hash is older than current policy, mint tokens.
             user.RegisterSuccessfulLogin();
-            bucket.Reset(now);
+            bucket?.Reset(now);
 
             if (hasher.NeedsRehash(user.PasswordHash))
             {
                 user.SetPasswordHash(hasher.Hash(command.Password));
             }
 
-            var access = jwt.Issue(user, audience, now);
-            var (rawRefresh, refreshHash) = GenerateRefreshToken();
-            var refreshId = ids.Next();
-            var familyId = ids.Next();
+            var access = jwt.Issue(user, command.Audience, now);
+            var (rawRefresh, refreshHash) = RefreshTokenHasher.GenerateNewPair();
             var refreshExpiresAt = now + RefreshTokenLifetime;
 
             refreshTokens.Add(RefreshToken.IssueNew(
-                id: refreshId,
+                id: ids.Next(),
                 userId: user.Id,
                 tokenHash: refreshHash,
-                familyId: familyId,
+                familyId: ids.Next(),
                 expiresAt: refreshExpiresAt,
                 countryCode: user.CountryCodePrimary,
                 userAgent: command.UserAgent,
@@ -170,15 +170,12 @@ public static class Login
                 RefreshTokenExpiresAt: refreshExpiresAt));
         }
 
-        private static (string Raw, string Hash) GenerateRefreshToken()
+        private LoginAttemptBucket EnsureBucket(ref LoginAttemptBucket? bucket, string emailNormalized, DateTimeOffset now)
         {
-            // 32 bytes of CSPRNG = 256 bits of entropy. URL-safe base64 so
-            // the client can carry it in a cookie value without escaping.
-            var bytes = RandomNumberGenerator.GetBytes(32);
-            var raw = Convert.ToBase64String(bytes)
-                .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-            var hash = RefreshTokenHasher.Sha256Hex(raw);
-            return (raw, hash);
+            if (bucket is not null) return bucket;
+            bucket = LoginAttemptBucket.Create(emailNormalized, now);
+            buckets.Add(bucket);
+            return bucket;
         }
     }
 }

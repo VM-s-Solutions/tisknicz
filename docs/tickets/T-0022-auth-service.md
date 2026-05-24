@@ -90,5 +90,28 @@ Four use cases, each in its own file per CLAUDE.md / patterns §A.3:
 - **AC-5** Lockout window is NOT extended by attempts inside it (both User and bucket counters share the same guard).
 - **AC-6** Transparent re-hash runs on a successful login when `NeedsRehash` returns true.
 
+## Reviewer findings (commit 009e451) and resolutions
+
+Reviewer returned **BLOCKER × 2** + **MAJOR × 4** + **MINOR × 3**. Resolutions in a follow-up commit on master:
+
+- **BLOCKER B-1 (UoW silently drops failure-path mutations)** — added `IPersistOnFailureCommand` marker in `Core.AppServices/Abstractions/`; the `UnitOfWorkPipelineBehavior` now commits when `IsSuccess || request is IPersistOnFailureCommand`. Marked `Login.Command` and `Refresh.Command`. Without this fix, the lockout counters on the wrong-password path, the family-wide revocation on reuse detection, and the explicit revoke on a soft-deleted user were ALL silently discarded.
+- **BLOCKER B-2 (timing-attack vector)** — added `IPasswordHasher.DummyHashForTimingEqualization` (lazy, cached, current-policy parameters). `Login.Handler` runs a dummy `Verify` on the unknown / soft-deleted / no-password-hash branch so total latency matches the known-email path within one Argon2id evaluation.
+- **MAJOR M-1 (atomicity)** — addressed implicitly by B-1: `Refresh.Command` is now `IPersistOnFailureCommand`, so partial state survives unexpected failure mid-rotation rather than vanishing.
+- **MAJOR M-2 (`GenerateRefreshToken` duplicated)** — promoted to `RefreshTokenHasher.GenerateNewPair()`. Login and Refresh both call it.
+- **MAJOR M-3 (no SaveChanges-not-called assertion)** — added `UoW_Commits_On_Failure_When_Command_Implements_IPersistOnFailureCommand` to `PipelineBehaviorTests`; the existing negative test pins the other half.
+- **MAJOR M-4 (claim about integration tests)** — kept the doc honest; no integration tests for the four use cases are added in this commit. They land with T-0027 / T-0035 when the HTTP edges exist.
+- **MINOR Mi-1 (no-op bucket row on successful first login)** — bucket is now created lazily via `EnsureBucket(ref bucket, …)` only when a failed attempt is about to be recorded. New test pins it.
+- **MINOR (audience comparison drift)** — added `User.MatchesAudience(audience)`; both handlers route through it.
+
+## Acceptance criteria (revised)
+- **AC-1** Build clean; 240 tests pass (199 unit + 41 integration; +2 since 009e451).
+- **AC-2** Unknown emails consume a ghost slot AND run a dummy Argon2id verify so latency doesn't leak existence — pinned by a new `Verify(...)` assertion.
+- **AC-3** Reuse-detection burns the whole token family AND persists the revocation — pinned by behavior test + the new persistence-contract test.
+- **AC-4** Audience binding via `User.MatchesAudience`; non-admins can't cross, admins can.
+- **AC-5** Lockout window not extended by attempts inside it; failure-path mutations persist via `IPersistOnFailureCommand`.
+- **AC-6** Transparent re-hash on successful login when `NeedsRehash` returns true.
+- **AC-7** Successful first login for an account with no prior bucket does NOT create a no-op bucket row.
+
 ## Status log
 - 2026-05-24 done. 238 tests. Q-0004 resolved in code.
+- 2026-05-24 T-0022 reviewer fix folded in. 240 tests. BLOCKERs B-1/B-2 closed; MAJORs M-1/M-2/M-3 closed; M-4 acknowledged; MINOR Mi-1 closed; audience helper extracted.

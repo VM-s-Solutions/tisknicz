@@ -151,4 +151,17 @@ public sealed class User : Auditable
 
     /// <summary>True when the account is currently locked (i.e. <see cref="LockedUntil"/> is in the future).</summary>
     public bool IsLocked(DateTimeOffset now) => LockedUntil is not null && LockedUntil > now;
+
+    /// <summary>
+    /// True when the user can present a JWT with audience
+    /// <paramref name="audience"/>. Non-admins are bound to the audience
+    /// matching their role; admins can present any audience. The audience
+    /// claim is lowercase per ADR 0012 §JWT, so the comparison is too.
+    /// Reviewer T-0022 NIT — keeps the rule in one place across Login + Refresh.
+    /// </summary>
+    public bool MatchesAudience(string audience)
+    {
+        if (Role == UserRole.Admin) return MakablesAudiences.IsValid(audience);
+        return audience == Role.ToString().ToLowerInvariant();
+    }
 }

@@ -27,4 +27,14 @@ public interface IPasswordHasher
     /// successful verification and persists the new hash transparently.
     /// </summary>
     bool NeedsRehash(string storedHash);
+
+    /// <summary>
+    /// A throwaway hash produced with the CURRENT parameters that
+    /// <see cref="Verify"/> always rejects. Used by the login flow to
+    /// equalize Argon2 latency on the unknown-email branch so an attacker
+    /// can't enumerate emails by response time (reviewer T-0022 B-2).
+    /// Implementations cache the value so the cost is paid once per
+    /// process, not once per failed login.
+    /// </summary>
+    string DummyHashForTimingEqualization { get; }
 }

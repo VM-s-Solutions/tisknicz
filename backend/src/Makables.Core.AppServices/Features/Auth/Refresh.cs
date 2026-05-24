@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.AppServices.Common;
@@ -19,6 +18,11 @@ namespace Makables.Core.AppServices.Features.Auth;
 /// replay). The caller still receives <see cref="BusinessErrorMessage.AuthRequired"/>
 /// so the attacker can't tell whether the token was valid-once or
 /// always-bad.
+///
+/// Implements <see cref="IPersistOnFailureCommand"/> so the family-wide
+/// revocation on reuse detection AND the explicit revoke on a
+/// soft-deleted user persist alongside the failure response — reviewer
+/// T-0022 BLOCKER B-1 fix.
 /// </summary>
 public static class Refresh
 {
@@ -26,7 +30,7 @@ public static class Refresh
         string RawRefreshToken,
         string Audience,
         string? UserAgent,
-        string? IpAddress) : ICommand<SessionResult>;
+        string? IpAddress) : ICommand<SessionResult>, IPersistOnFailureCommand;
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -93,14 +97,14 @@ public static class Refresh
             // Audience must remain stable across a refresh — a token issued
             // for `customer` cannot be exchanged for a `maker` token.
             // Admins can refresh into any audience (parallels Login).
-            if (user.Role != UserRole.Admin && command.Audience != user.Role.ToString().ToLowerInvariant())
+            if (!user.MatchesAudience(command.Audience))
             {
                 return BusinessResult.Failure<SessionResult>(Error.Forbidden(BusinessErrorMessage.AuthForbidden));
             }
 
             // Issue rotation. The old token gets marked rotated -> new one
             // is added in the same family.
-            var (rawNew, newHash) = GenerateRefreshToken();
+            var (rawNew, newHash) = RefreshTokenHasher.GenerateNewPair();
             var newId = ids.Next();
             var newExpiresAt = now + RefreshTokenLifetime;
             var rotated = token.IssueRotation(newId, newHash, newExpiresAt, command.UserAgent, command.IpAddress);
@@ -118,14 +122,5 @@ public static class Refresh
 
         private static BusinessResult<SessionResult> Unauthorized() =>
             BusinessResult.Failure<SessionResult>(Error.Unauthorized(BusinessErrorMessage.AuthRequired));
-
-        private static (string Raw, string Hash) GenerateRefreshToken()
-        {
-            var bytes = RandomNumberGenerator.GetBytes(32);
-            var raw = Convert.ToBase64String(bytes)
-                .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-            var hash = RefreshTokenHasher.Sha256Hex(raw);
-            return (raw, hash);
-        }
     }
 }
