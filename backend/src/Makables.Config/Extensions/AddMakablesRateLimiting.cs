@@ -1,3 +1,4 @@
+using Makables.Core.Domain.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -21,11 +22,11 @@ public static class MakablesRateLimitingExtensions
     {
         var (permitLimit, window) = audience.ToLowerInvariant() switch
         {
-            "customer" => (100, TimeSpan.FromMinutes(1)),
-            "maker"    => (60, TimeSpan.FromMinutes(1)),
-            "admin"    => (30, TimeSpan.FromMinutes(1)),
-            "public"   => (60, TimeSpan.FromMinutes(1)),
-            _          => (60, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Customer => (100, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Maker    => (60, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Admin    => (30, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Public   => (60, TimeSpan.FromMinutes(1)),
+            _                      => (60, TimeSpan.FromMinutes(1)),
         };
 
         services.AddRateLimiter(options =>

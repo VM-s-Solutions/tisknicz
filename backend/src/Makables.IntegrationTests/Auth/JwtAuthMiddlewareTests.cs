@@ -225,4 +225,123 @@ public sealed class JwtAuthMiddlewareTests
         var response = await client.GetAsync("/__test/protected");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task Customer_host_rejects_expired_token()
+    {
+        // Issue a token whose `exp` is well past the 30 s clock skew.
+        var issuer = new JwtIssuer(Options.Create(new JwtOptions
+        {
+            Issuer = TestIssuer,
+            SigningKeyBase64 = TestKeyBase64,
+            AccessTokenLifetime = TimeSpan.FromMinutes(15),
+        }));
+        var token = issuer.Issue(
+            CreateUser(UserRole.Customer),
+            MakablesAudiences.Customer,
+            DateTimeOffset.UtcNow - TimeSpan.FromHours(1)).Token;
+
+        var status = await CallProtectedAsync<Makables.Web.Customer.Program>(token);
+        status.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Customer_host_rejects_token_with_wrong_issuer()
+    {
+        // Signed with the right key + right audience but wrong `iss`.
+        var issuer = new JwtIssuer(Options.Create(new JwtOptions
+        {
+            Issuer = "https://evil.example",
+            SigningKeyBase64 = TestKeyBase64,
+            AccessTokenLifetime = TimeSpan.FromMinutes(15),
+        }));
+        var token = issuer.Issue(CreateUser(UserRole.Customer),
+            MakablesAudiences.Customer, DateTimeOffset.UtcNow).Token;
+
+        var status = await CallProtectedAsync<Makables.Web.Customer.Program>(token);
+        status.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Customer_host_rejects_unsigned_alg_none_token()
+    {
+        // Hand-crafted `alg=none` token. Defense-in-depth: ASP.NET Core
+        // JwtBearer rejects this by default; pinned so a future
+        // ValidAlgorithms misconfig can't silently accept it.
+        const string headerB64 = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0";
+        var payloadJson = $"{{\"iss\":\"{TestIssuer}\",\"aud\":\"customer\",\"sub\":\"user-1\",\"exp\":{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()}}}";
+        var payloadB64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payloadJson))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var token = $"{headerB64}.{payloadB64}.";
+
+        var status = await CallProtectedAsync<Makables.Web.Customer.Program>(token);
+        status.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Customer_host_rejects_malformed_bearer_value()
+    {
+        using var factory = Build<Makables.Web.Customer.Program>();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "not.a.jwt");
+        var response = await client.GetAsync("/__test/protected");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task MapInboundClaims_is_off_so_sub_claim_is_present_verbatim()
+    {
+        // Pins the AddMakablesAuth `MapInboundClaims = false` choice.
+        // If a future change flips it back to true, the framework
+        // would rewrite `sub` → `nameidentifier` URI and User.Identity.Name
+        // would resolve through the URI claim; `sub` directly would be gone.
+        using var factory = new WebApplicationFactory<Makables.Web.Customer.Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("IntegrationTest");
+                builder.ConfigureAppConfiguration((_, config) =>
+                {
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
+                        ["Jwt:Issuer"] = TestIssuer,
+                        ["Jwt:SigningKeyBase64"] = TestKeyBase64,
+                    });
+                });
+                builder.ConfigureServices(services =>
+                {
+                    var d = services.SingleOrDefault(x => x.ServiceType == typeof(DbContextOptions<MakablesDbContext>));
+                    if (d is not null) services.Remove(d);
+                    var connection = new SqliteConnection("DataSource=:memory:");
+                    connection.Open();
+                    services.AddSingleton(connection);
+                    services.AddDbContext<MakablesDbContext>(o => o.UseSqlite(connection));
+                });
+                builder.Configure(app =>
+                {
+                    app.UseRouting();
+                    app.UseAuthentication();
+                    app.UseAuthorization();
+                    app.UseEndpoints(e =>
+                    {
+                        e.MapGet("/__test/claims",
+                            [Authorize] (Microsoft.AspNetCore.Http.HttpContext ctx) =>
+                                Results.Ok(new
+                                {
+                                    sub = ctx.User.FindFirst("sub")?.Value,
+                                    role = ctx.User.FindFirst("role")?.Value,
+                                }));
+                    });
+                });
+            });
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+            IssueToken(UserRole.Customer, MakablesAudiences.Customer));
+
+        var response = await client.GetAsync("/__test/claims");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"sub\":\"user-1\"");
+        body.Should().Contain("\"role\":\"customer\"");
+    }
 }

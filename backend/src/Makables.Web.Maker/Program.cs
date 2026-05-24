@@ -4,8 +4,9 @@
 
 using Makables.Config;
 using Makables.Config.Extensions;
+using Makables.Core.Domain.Identity;
 
-const string Audience = "maker";
+const string Audience = MakablesHosts.Maker;
 
 var builder = WebApplication.CreateBuilder(args);
 

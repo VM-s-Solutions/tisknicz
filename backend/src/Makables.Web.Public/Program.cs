@@ -4,8 +4,9 @@
 
 using Makables.Config;
 using Makables.Config.Extensions;
+using Makables.Core.Domain.Identity;
 
-const string Audience = "public";
+const string Audience = MakablesHosts.Public;
 
 var builder = WebApplication.CreateBuilder(args);
 
