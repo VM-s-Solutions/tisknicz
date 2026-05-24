@@ -122,9 +122,18 @@ public sealed class User : Auditable
     /// Increments <see cref="FailedLoginCount"/> by one. When it reaches
     /// <paramref name="lockoutThreshold"/> the account is locked for
     /// <paramref name="lockoutWindow"/> per ADR 0012 §Lockout.
+    ///
+    /// If the account is already locked at <paramref name="now"/> the call
+    /// is a no-op — the lockout window does NOT extend with further
+    /// attempts (reviewer T-0020 MAJOR M-1). The service layer should
+    /// short-circuit on <see cref="IsLocked"/> before calling this, but
+    /// the entity also guards defensively so a bypass can't sustain an
+    /// indefinite lockout on a victim.
     /// </summary>
     public User RegisterFailedLogin(DateTimeOffset now, int lockoutThreshold, TimeSpan lockoutWindow)
     {
+        if (IsLocked(now)) return this;
+
         FailedLoginCount += 1;
         if (FailedLoginCount >= lockoutThreshold)
         {

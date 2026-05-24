@@ -15,11 +15,16 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
         builder.Property(u => u.EmailNormalized).HasColumnName("email_normalized").HasMaxLength(320).IsRequired();
-        // Unique on (email_normalized, is_active=true) would be ideal but EF Core
-        // doesn't natively model partial indexes; the application enforces
-        // re-registration blocking via IUserRepository.EmailExistsAsync which
-        // includes soft-deleted rows.
-        builder.HasIndex(u => u.EmailNormalized).IsUnique();
+        // Partial unique index on (email_normalized) WHERE is_active. This lets
+        // an admin GDPR purge leave a soft-deleted row in place while a new
+        // user can still register the same email AFTER an explicit purge.
+        // Application-side re-registration blocking lives in
+        // IUserRepository.EmailExistsAsync (which IgnoreQueryFilters); the
+        // partial index keeps the DB consistent for ACTIVE rows.
+        // Reviewer T-0020 BLOCKER B-2 fix.
+        builder.HasIndex(u => u.EmailNormalized)
+            .IsUnique()
+            .HasFilter("is_active");
 
         builder.Property(u => u.PasswordHash).HasColumnName("password_hash").HasMaxLength(500);
         builder.Property(u => u.EmailConfirmedAt).HasColumnName("email_confirmed_at");
@@ -34,7 +39,8 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Phone).HasColumnName("phone").HasMaxLength(40);
         builder.Property(u => u.CountryCodePrimary).HasColumnName("country_code_primary").HasMaxLength(2).IsRequired();
 
-        builder.Property(u => u.GoogleSub).HasColumnName("google_sub").HasMaxLength(100);
+        // Google's `sub` claim is documented as up to 255 chars (reviewer T-0020 N-1).
+        builder.Property(u => u.GoogleSub).HasColumnName("google_sub").HasMaxLength(255);
         builder.HasIndex(u => u.GoogleSub).IsUnique().HasFilter("google_sub IS NOT NULL");
 
         builder.Property(u => u.FailedLoginCount).HasColumnName("failed_login_count").IsRequired();

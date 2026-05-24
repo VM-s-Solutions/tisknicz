@@ -51,7 +51,7 @@ namespace Makables.Infra.Database.Migrations
                     full_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     phone = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: true),
                     country_code_primary = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
-                    google_sub = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    google_sub = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     failed_login_count = table.Column<int>(type: "integer", nullable: false),
                     locked_until = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     is_active = table.Column<bool>(type: "boolean", nullable: false),
@@ -88,7 +88,8 @@ namespace Makables.Infra.Database.Migrations
                 name: "IX_users_email_normalized",
                 table: "users",
                 column: "email_normalized",
-                unique: true);
+                unique: true,
+                filter: "is_active");
 
             migrationBuilder.CreateIndex(
                 name: "IX_users_google_sub",

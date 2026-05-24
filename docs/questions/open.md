@@ -51,3 +51,16 @@
 - **Question:** Is the admin assistant technical (developer-adjacent) or non-technical (operations / customer-support background)? Affects how much we invest in admin UX vs. CSV/SQL escape hatches.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0004 — Ghost lockout slots for unknown emails
+- **From:** dotnet-backend (T-0020 reviewer)
+- **Ticket / context:** T-0022 (AuthService.Login)
+- **Asked:** 2026-05-23
+- **Blocking:** before T-0022 starts
+- **Question:** ADR 0012 §Lockout says "if the email doesn't exist, we still consume ghost lockout slots (rate limit by EmailNormalized even if user is missing) to prevent enumeration." The `User` entity stores its own `FailedLoginCount`/`LockedUntil`; there is no place to record lockout state for emails that have NO user row. Where should ghost lockout state live?
+- **Options the agent has considered:**
+  - In-memory cache on the AuthService host with a per-process LRU. Simple. Loses state on restart and per-instance — defeats the rate-limit intent under multi-host scale-out.
+  - A new `login_attempt_buckets` table keyed by `email_normalized` with `attempts` + `locked_until`, written on both unknown-email and known-email failed logins. Persistent, scale-out safe; one extra write per failed login. Probably the right call.
+  - Lean on the ASP.NET RateLimiter at the endpoint level keyed by email (request body parsing in the limiter is awkward) — covers DoS but does not match the ADR's per-email semantics.
+- **Status:** open
+- **Answer (filled by user):**

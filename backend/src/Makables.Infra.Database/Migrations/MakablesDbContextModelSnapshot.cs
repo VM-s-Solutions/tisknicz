@@ -547,7 +547,8 @@ namespace Makables.Infra.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmailNormalized")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("is_active");
 
                     b.HasIndex("GoogleSub")
                         .IsUnique()

@@ -14,7 +14,14 @@ public sealed class UserRepository(MakablesDbContext db) : IUserRepository
     public Task<User?> GetByEmailNormalizedAsync(string emailNormalized, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(emailNormalized)) return Task.FromResult<User?>(null);
-        return db.Set<User>().FirstOrDefaultAsync(u => u.EmailNormalized == emailNormalized, cancellationToken);
+        // IgnoreQueryFilters: login / password-reset / magic-link / OAuth
+        // linking must be able to resolve a soft-deleted account so the
+        // service layer can produce the correct user-facing error
+        // ("account deactivated") and so the lockout-by-email symmetry
+        // from ADR 0012 §Lockout stays intact. Reviewer T-0020 BLOCKER B-1.
+        return db.Set<User>()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.EmailNormalized == emailNormalized, cancellationToken);
     }
 
     public Task<User?> GetByGoogleSubAsync(string googleSub, CancellationToken cancellationToken)

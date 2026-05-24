@@ -6,9 +6,7 @@ namespace Makables.Core.Domain.Identity;
 /// interface only (ADR 0001 layering).
 ///
 /// Lookup methods return the tracked entity when found so subsequent
-/// mutations + UoW commit work naturally. Use the read-only variants
-/// (suffixed <c>AsNoTrackingAsync</c>) only for queries that don't
-/// intend to write.
+/// mutations + UoW commit work naturally.
 /// </summary>
 public interface IUserRepository
 {
@@ -16,7 +14,10 @@ public interface IUserRepository
 
     /// <summary>
     /// Look up by normalized email (see <see cref="User.NormalizeEmail"/>).
-    /// Returns the tracked entity if present.
+    /// Returns the tracked entity if present, INCLUDING soft-deleted rows —
+    /// the service layer needs to distinguish "no such account" from
+    /// "account deactivated" and ADR 0012 §Lockout requires the lookup to
+    /// be deterministic regardless of IsActive.
     /// </summary>
     Task<User?> GetByEmailNormalizedAsync(string emailNormalized, CancellationToken cancellationToken);
 

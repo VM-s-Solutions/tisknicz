@@ -54,9 +54,16 @@ public class UserTests
     [Fact]
     public void NormalizeEmail_is_stable_across_unicode_forms()
     {
-        // U+00E1 (precomposed á) vs. U+0061 U+0301 (a + combining acute).
+        // Use \u escapes so the editor cannot silently normalize both
+        // literals to NFC and turn the test into a tautology (reviewer
+        // T-0020 MINOR fix).
+        //   U+00E1            = precomposed á
+        //   U+0061 + U+0301   = a + combining acute (decomposed form)
         var precomposed = "anna@domáin.cz";
         var decomposed = "anna@domáin.cz";
+
+        precomposed.Should().NotBe(decomposed,
+            "the two literals must differ before normalization or the test is a tautology");
 
         User.NormalizeEmail(precomposed).Should().Be(User.NormalizeEmail(decomposed));
     }
@@ -154,6 +161,28 @@ public class UserTests
 
         var afterWindow = lockedAt + TimeSpan.FromMinutes(16);
         u.IsLocked(afterWindow).Should().BeFalse();
+    }
+
+    [Fact]
+    public void RegisterFailedLogin_is_a_no_op_while_already_locked()
+    {
+        // Reviewer T-0020 MAJOR M-1: a determined attacker must not be
+        // able to keep an account locked indefinitely by retrying inside
+        // the lockout window.
+        var u = CreateValidUser();
+        var lockedAt = DateTimeOffset.UtcNow;
+        for (var i = 0; i < 5; i++)
+            u.RegisterFailedLogin(lockedAt, 5, TimeSpan.FromMinutes(15));
+
+        var countAtLock = u.FailedLoginCount;
+        var lockedUntilAtLock = u.LockedUntil;
+
+        // Try to "extend" the lock from inside the window.
+        var midWindow = lockedAt + TimeSpan.FromMinutes(5);
+        u.RegisterFailedLogin(midWindow, 5, TimeSpan.FromMinutes(15));
+
+        u.FailedLoginCount.Should().Be(countAtLock, "counter must not increment while locked");
+        u.LockedUntil.Should().Be(lockedUntilAtLock, "lockout window must NOT be extended by attempts inside it");
     }
 
     [Fact]

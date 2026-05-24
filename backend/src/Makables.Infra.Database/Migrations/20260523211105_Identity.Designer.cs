@@ -510,8 +510,8 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnName("full_name");
 
                     b.Property<string>("GoogleSub")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("google_sub");
 
                     b.Property<bool>("IsActive")
@@ -550,7 +550,8 @@ namespace Makables.Infra.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmailNormalized")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("is_active");
 
                     b.HasIndex("GoogleSub")
                         .IsUnique()

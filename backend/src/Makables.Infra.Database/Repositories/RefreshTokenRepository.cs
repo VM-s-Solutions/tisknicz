@@ -19,7 +19,13 @@ public sealed class RefreshTokenRepository(MakablesDbContext db) : IRefreshToken
     public async Task<IReadOnlyList<RefreshToken>> GetActiveByFamilyAsync(string familyId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(familyId)) return [];
+        // IgnoreQueryFilters: refresh tokens are never soft-deleted — their
+        // lifecycle is RevokedAt + ExpiresAt. Adding IgnoreQueryFilters is
+        // defense-in-depth so a stray IsActive=false (admin tool, bug)
+        // can't make a family member vanish during reuse-detection
+        // revocation. Reviewer T-0020 MAJOR M-4.
         var list = await db.Set<RefreshToken>()
+            .IgnoreQueryFilters()
             .Where(t => t.FamilyId == familyId && t.RevokedAt == null)
             .ToListAsync(cancellationToken);
         return list;
@@ -28,7 +34,9 @@ public sealed class RefreshTokenRepository(MakablesDbContext db) : IRefreshToken
     public async Task<IReadOnlyList<RefreshToken>> GetActiveByUserAsync(string userId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(userId)) return [];
+        // IgnoreQueryFilters — see GetActiveByFamilyAsync above.
         var list = await db.Set<RefreshToken>()
+            .IgnoreQueryFilters()
             .Where(t => t.UserId == userId && t.RevokedAt == null)
             .ToListAsync(cancellationToken);
         return list;
