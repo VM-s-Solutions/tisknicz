@@ -98,4 +98,7 @@ public static class BusinessErrorMessage
     // === Outbox processor (T-0029) ===
     public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
     public const string OutboxRowNotFound = "outbox.rowNotFound";
+
+    // === Address (T-0030) ===
+    public const string AddressNotFound = "address.notFound";
 }
