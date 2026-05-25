@@ -63,6 +63,8 @@ public sealed class JwtAuthMiddlewareTests
                     ["SendGrid:ApiKey"] = "SG.integration-test-stub",
                     ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
+                    // T-0031: Mapbox ValidateOnStart.
+                    ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                 });
             });
 
@@ -315,6 +317,7 @@ public sealed class JwtAuthMiddlewareTests
                         ["SendGrid:ApiKey"] = "SG.integration-test-stub",
                         ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
+                        ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                     });
                 });
                 builder.ConfigureServices(services =>

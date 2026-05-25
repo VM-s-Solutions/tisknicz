@@ -71,6 +71,7 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
                     ["SendGrid:ApiKey"] = "SG.integration-test-stub",
                     ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
+                    ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                 });
             });
 

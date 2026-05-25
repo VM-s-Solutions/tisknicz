@@ -106,6 +106,7 @@ jobs:
           OutboxQueues__ConnectionString: 'UseDevelopmentStorage=true'
           OutboxQueues__SendEmailQueueName: 'send-email'
           OutboxDispatcher__HandoffParkMinutes: '15'
+          Mapbox__AccessToken: 'pk.ci-spec-parity-stub'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs
