@@ -92,7 +92,20 @@ jobs:
       - name: Start backend hosts in background
         working-directory: backend/src
         env:
+          # Placeholder values to satisfy every Options class wired with
+          # .ValidateOnStart() (T-0027 Jwt, T-0028 SendGrid + PublicAppUrls,
+          # T-0029 OutboxDispatcher + OutboxQueues). The hosts never touch
+          # any of these at startup — they only need to pass the boot-time
+          # validators so /openapi/v1.json becomes reachable.
           ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
+          Jwt__Issuer: 'https://makables.test'
+          Jwt__SigningKeyBase64: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          SendGrid__ApiKey: 'SG.ci-spec-parity-stub'
+          SendGrid__DefaultFromAddress: 'no-reply@makables.test'
+          PublicAppUrls__WebBaseUrl: 'https://makables.test'
+          OutboxQueues__ConnectionString: 'UseDevelopmentStorage=true'
+          OutboxQueues__SendEmailQueueName: 'send-email'
+          OutboxDispatcher__HandoffParkMinutes: '15'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs
