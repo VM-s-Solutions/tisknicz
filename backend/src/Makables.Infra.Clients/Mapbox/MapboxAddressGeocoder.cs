@@ -1,4 +1,4 @@
-using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Makables.Core.Domain.Addresses;
@@ -23,6 +23,16 @@ namespace Makables.Infra.Clients.Mapbox;
 /// named <see cref="IHttpClientFactory"/> HttpClient + a shared Polly
 /// <see cref="ResiliencePipeline{HttpResponseMessage}"/> registered in
 /// <c>AddMakablesClients</c>.
+///
+/// <b>Token transport (T-0031 sec reviewer B-1).</b> The Mapbox access
+/// token is sent as an <c>Authorization: Bearer</c> header per request,
+/// NOT in the URL query string. OTel HttpClient instrumentation (ADR
+/// 0023) captures every request URL into <c>url.full</c> span attributes
+/// that ship to Application Insights — a token in the query string
+/// would leak verbatim to anyone with App Insights read access. The
+/// Authorization header is stripped from OTel HTTP span attributes by
+/// default AND is on the <c>SensitivePropertyMasker</c> redaction list
+/// for Serilog.
 ///
 /// All failures are surfaced as <see cref="BusinessResult{T}"/> failures
 /// (no exceptions cross the boundary). Per ADR 0010 §"Geocoding policy"
@@ -49,42 +59,41 @@ public sealed class MapboxAddressGeocoder(
         var opts = options.Value;
         var url = BuildUrl(opts, query, address.CountryCodeIso, autocomplete: false, limit: 1);
 
-        var (response, error) = await CallMapboxAsync(url, "geocode", cancellationToken);
-        if (response is null) return BusinessResult.Failure<Coordinates>(error!);
+        var callResult = await CallMapboxAsync(url, opts, "geocode", cancellationToken);
+        if (!callResult.IsSuccess)
+            return BusinessResult.Failure<Coordinates>(callResult.Error!);
 
-        using (response)
+        using var response = callResult.Value!;
+        MapboxFeatureCollection? payload;
+        try
         {
-            MapboxFeatureCollection? payload;
-            try
-            {
-                payload = await response.Content.ReadFromJsonAsync<MapboxFeatureCollection>(cancellationToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogWarning(ex, "Mapbox geocode response could not be deserialised.");
-                return BusinessResult.Failure<Coordinates>(
-                    Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
-            }
+            payload = await response.Content.ReadFromJsonAsync<MapboxFeatureCollection>(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Mapbox geocode response could not be deserialised.");
+            return BusinessResult.Failure<Coordinates>(
+                Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
+        }
 
-            var first = payload?.Features?.FirstOrDefault();
-            if (first is null || first.Center is null || first.Center.Length < 2)
-            {
-                logger.LogInformation("Mapbox geocode returned no match for address id {AddressId}.", address.Id);
-                return BusinessResult.Failure<Coordinates>(
-                    Error.Permanent(BusinessErrorMessage.GeocoderNoMatch));
-            }
+        var first = payload?.Features?.FirstOrDefault();
+        if (first is null || first.Center is null || first.Center.Length < 2)
+        {
+            logger.LogInformation("Mapbox geocode returned no match for address id {AddressId}.", address.Id);
+            return BusinessResult.Failure<Coordinates>(
+                Error.Permanent(BusinessErrorMessage.GeocoderNoMatch));
+        }
 
-            // Mapbox returns [longitude, latitude] — note the order.
-            try
-            {
-                return BusinessResult.Success(Coordinates.Of(first.Center[1], first.Center[0]));
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                logger.LogWarning(ex, "Mapbox returned out-of-range coordinates for address id {AddressId}.", address.Id);
-                return BusinessResult.Failure<Coordinates>(
-                    Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
-            }
+        // Mapbox returns [longitude, latitude] — note the order.
+        try
+        {
+            return BusinessResult.Success(Coordinates.Of(first.Center[1], first.Center[0]));
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            logger.LogWarning(ex, "Mapbox returned out-of-range coordinates for address id {AddressId}.", address.Id);
+            return BusinessResult.Failure<Coordinates>(
+                Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
         }
     }
 
@@ -93,62 +102,76 @@ public sealed class MapboxAddressGeocoder(
         string countryCodeIso,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (!AutocompleteInputGuard.IsValid(query, countryCodeIso, out var field))
             return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(
-                Error.Validation("query", BusinessErrorMessage.GeocoderInvalidInput));
-        if (string.IsNullOrWhiteSpace(countryCodeIso) || countryCodeIso.Length != 2)
-            return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(
-                Error.Validation("countryCodeIso", BusinessErrorMessage.GeocoderInvalidInput));
+                Error.Validation(field!, BusinessErrorMessage.GeocoderInvalidInput));
 
         var opts = options.Value;
         var url = BuildUrl(opts, query, countryCodeIso, autocomplete: true, limit: opts.AutocompleteLimit);
 
-        var (response, error) = await CallMapboxAsync(url, "autocomplete", cancellationToken);
-        if (response is null)
-            return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(error!);
+        var callResult = await CallMapboxAsync(url, opts, "autocomplete", cancellationToken);
+        if (!callResult.IsSuccess)
+            return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(callResult.Error!);
 
-        using (response)
+        using var response = callResult.Value!;
+        MapboxFeatureCollection? payload;
+        try
         {
-            MapboxFeatureCollection? payload;
-            try
-            {
-                payload = await response.Content.ReadFromJsonAsync<MapboxFeatureCollection>(cancellationToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogWarning(ex, "Mapbox autocomplete response could not be deserialised.");
-                return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(
-                    Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
-            }
-
-            var suggestions = (payload?.Features ?? [])
-                .Select(f => ToSuggestion(f, countryCodeIso))
-                .ToList();
-            return BusinessResult.Success<IReadOnlyList<AddressSuggestion>>(suggestions);
+            payload = await response.Content.ReadFromJsonAsync<MapboxFeatureCollection>(cancellationToken);
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Mapbox autocomplete response could not be deserialised.");
+            return BusinessResult.Failure<IReadOnlyList<AddressSuggestion>>(
+                Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
+        }
+
+        var suggestions = (payload?.Features ?? [])
+            .Select(f => ToSuggestion(f, countryCodeIso))
+            .ToList();
+        return BusinessResult.Success<IReadOnlyList<AddressSuggestion>>(suggestions);
     }
 
     // ---- helpers ----
 
-    private async Task<(HttpResponseMessage? Response, Error? Error)> CallMapboxAsync(
-        string url, string operationLabel, CancellationToken cancellationToken)
+    /// <summary>
+    /// One Mapbox operation wrapped in the Polly retry pipeline + the
+    /// linked overall-timeout CTS. Returns the response on success
+    /// (caller owns the dispose), or a classified <see cref="Error"/>
+    /// inside a <see cref="BusinessResult{T}"/> failure on any failure
+    /// path (T-0031 CQ reviewer M-2 — replaces the old
+    /// <c>(HttpResponseMessage?, Error?)</c> tuple).
+    /// </summary>
+    private async Task<BusinessResult<HttpResponseMessage>> CallMapboxAsync(
+        string url, MapboxOptions opts, string operationLabel, CancellationToken cancellationToken)
     {
-        var opts = options.Value;
+        // ValidateOnStart already guarantees a non-blank token; this
+        // boundary check is a defensive belt-and-braces, cheap to keep.
         if (string.IsNullOrWhiteSpace(opts.AccessToken))
         {
             logger.LogError("Mapbox:AccessToken is not configured.");
-            return (null, Error.Configuration(BusinessErrorMessage.GeocoderPermanentFailure));
+            return BusinessResult.Failure<HttpResponseMessage>(
+                Error.Configuration(BusinessErrorMessage.GeocoderPermanentFailure));
         }
 
         var http = httpClientFactory.CreateClient(HttpClientName);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, opts.PerCallTimeoutSeconds)));
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, opts.OverallTimeoutSeconds)));
 
         HttpResponseMessage response;
         try
         {
             response = await retryPipeline.ExecuteAsync(
-                async ct => await http.GetAsync(url, ct),
+                async ct =>
+                {
+                    // Build a fresh HttpRequestMessage per attempt — a request
+                    // can only be sent once, and the Polly retry loop resends.
+                    // Attaching the Authorization here keeps the token out of
+                    // the URL (T-0031 sec B-1).
+                    using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", opts.AccessToken);
+                    return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                },
                 timeoutCts.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -158,40 +181,45 @@ public sealed class MapboxAddressGeocoder(
         catch (OperationCanceledException)
         {
             logger.LogWarning("Mapbox {Operation} timed out after {Seconds}s.",
-                operationLabel, opts.PerCallTimeoutSeconds);
-            return (null, Error.Transient(BusinessErrorMessage.GeocoderTransientFailure));
+                operationLabel, opts.OverallTimeoutSeconds);
+            return BusinessResult.Failure<HttpResponseMessage>(
+                Error.Transient(BusinessErrorMessage.GeocoderTransientFailure));
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Mapbox {Operation} threw after retries.", operationLabel);
-            return (null, Error.Transient(BusinessErrorMessage.GeocoderTransientFailure));
+            return BusinessResult.Failure<HttpResponseMessage>(
+                Error.Transient(BusinessErrorMessage.GeocoderTransientFailure));
         }
 
-        if (response.IsSuccessStatusCode) return (response, null);
+        if (response.IsSuccessStatusCode) return BusinessResult.Success(response);
 
         var status = (int)response.StatusCode;
         var isTransient = status is 408 or 429 or >= 500 and <= 599;
         logger.LogWarning("Mapbox {Operation} returned {Status}.", operationLabel, status);
         response.Dispose();
-        return (null, isTransient
+        return BusinessResult.Failure<HttpResponseMessage>(isTransient
             ? Error.Transient(BusinessErrorMessage.GeocoderTransientFailure)
             : Error.Permanent(BusinessErrorMessage.GeocoderPermanentFailure));
     }
 
+    /// <summary>
+    /// Builds the Mapbox URL <em>without</em> the access token (sent as
+    /// the Authorization header instead, see class XML doc).
+    /// <c>AutocompleteLimit</c> range is validated at startup so no
+    /// runtime clamp is needed here.
+    /// </summary>
     private static string BuildUrl(MapboxOptions opts, string query, string country, bool autocomplete, int limit)
     {
-        // Mapbox v5 Geocoding format:
-        //   /geocoding/v5/mapbox.places/{encoded-query}.json?...
         var encoded = Uri.EscapeDataString(query);
         var qs = new[]
         {
             $"country={Uri.EscapeDataString(country.ToLowerInvariant())}",
             $"autocomplete={(autocomplete ? "true" : "false")}",
-            $"limit={Math.Clamp(limit, 1, 10)}",
-            // language=cs is reasonable Czech-launch default; we'd plumb a
-            // per-request override here if/when the frontend asks for it.
+            $"limit={limit}",
+            // language=cs is the Czech-launch default; a per-request
+            // override lands when SK/PL/DE markets do.
             "language=cs",
-            $"access_token={Uri.EscapeDataString(opts.AccessToken)}",
         };
         return $"{opts.BaseUrl.TrimEnd('/')}/geocoding/v5/mapbox.places/{encoded}.json?{string.Join("&", qs)}";
     }
@@ -203,6 +231,11 @@ public sealed class MapboxAddressGeocoder(
         // parent entities labelled by id-prefix: postcode., place.,
         // region., country.). We project both into the structured
         // shape the frontend's address form binds to.
+        //
+        // Missing fields surface as empty strings rather than null
+        // (T-0031 CQ reviewer N-3): the suggestion is a wire DTO bound
+        // to a form, and `value={s.street ?? ''}` ceremony in TS is
+        // worth avoiding by normalising server-side.
         var contexts = f.Context ?? [];
         var postcode = contexts.FirstOrDefault(c => c.Id?.StartsWith("postcode", StringComparison.Ordinal) == true)?.Text ?? string.Empty;
         var city = contexts.FirstOrDefault(c => c.Id?.StartsWith("place", StringComparison.Ordinal) == true)?.Text ?? string.Empty;
@@ -242,4 +275,32 @@ public sealed class MapboxAddressGeocoder(
         [property: JsonPropertyName("id")]         string? Id,
         [property: JsonPropertyName("text")]       string? Text,
         [property: JsonPropertyName("short_code")] string? ShortCode);
+}
+
+/// <summary>
+/// Shared input guard for autocomplete requests. Lives next to the
+/// adapter that uses it (T-0031 CQ reviewer M-4) so a future
+/// MediatR-command-style controller can call the same guard without
+/// re-implementing the rules. Today the adapter is the only caller;
+/// promoting to a shared <c>Core.AppServices</c> mixin lands with the
+/// first feature that actually needs both an adapter call AND an
+/// HTTP-layer validation pass.
+/// </summary>
+internal static class AutocompleteInputGuard
+{
+    public static bool IsValid(string? query, string? countryCodeIso, out string? failedField)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            failedField = "query";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(countryCodeIso) || countryCodeIso.Length != 2)
+        {
+            failedField = "countryCodeIso";
+            return false;
+        }
+        failedField = null;
+        return true;
+    }
 }

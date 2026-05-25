@@ -35,7 +35,7 @@ public class MapboxAddressGeocoderTests
             BaseUrl = "https://api.mapbox.test",
             AutocompleteLimit = 5,
             RetryCount = 0,
-            PerCallTimeoutSeconds = 5,
+            OverallTimeoutSeconds = 5,
         });
         // Zero-retry pipeline so each test exercises exactly one HTTP call.
         var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>().Build();
@@ -140,15 +140,33 @@ public class MapboxAddressGeocoderTests
     }
 
     [Fact]
-    public async Task Geocode_request_url_includes_country_filter_and_token()
+    public async Task Geocode_request_url_includes_country_filter_and_NEVER_carries_the_access_token()
+    {
+        // T-0031 sec reviewer B-1: token is sent as Authorization: Bearer
+        // so OTel HttpClient instrumentation doesn't capture it into the
+        // url.full span attribute that ships to App Insights.
+        _handler.Response = Json(HttpStatusCode.OK, """{ "features": [] }""");
+
+        await _sut.GeocodeAsync(ValidAddress(), CancellationToken.None);
+
+        var url = _handler.LastRequest!.RequestUri!.ToString();
+        url.Should().Contain("country=cz");
+        url.Should().Contain("limit=1");
+        url.Should().NotContain("access_token", "the token MUST NOT appear in the URL");
+        url.Should().NotContain("pk.test", "the token MUST NOT appear in the URL");
+    }
+
+    [Fact]
+    public async Task Geocode_request_carries_Bearer_authorization_header()
     {
         _handler.Response = Json(HttpStatusCode.OK, """{ "features": [] }""");
 
         await _sut.GeocodeAsync(ValidAddress(), CancellationToken.None);
 
-        _handler.LastRequest!.RequestUri!.ToString().Should().Contain("country=cz");
-        _handler.LastRequest.RequestUri.ToString().Should().Contain("access_token=pk.test");
-        _handler.LastRequest.RequestUri.ToString().Should().Contain("limit=1");
+        var auth = _handler.LastRequest!.Headers.Authorization;
+        auth.Should().NotBeNull();
+        auth!.Scheme.Should().Be("Bearer");
+        auth.Parameter.Should().Be("pk.test");
     }
 
     // ---- Autocomplete ----
@@ -217,7 +235,7 @@ public class MapboxAddressGeocoderTests
     }
 
     [Fact]
-    public async Task Autocomplete_request_url_carries_limit_and_country_filter()
+    public async Task Autocomplete_request_url_carries_limit_and_country_filter_and_NEVER_carries_token()
     {
         _handler.Response = Json(HttpStatusCode.OK, """{ "features": [] }""");
 
@@ -227,6 +245,21 @@ public class MapboxAddressGeocoderTests
         url.Should().Contain("country=cz");
         url.Should().Contain("autocomplete=true");
         url.Should().Contain("limit=5");
+        url.Should().NotContain("access_token");
+        url.Should().NotContain("pk.test");
+    }
+
+    [Fact]
+    public async Task Autocomplete_request_carries_Bearer_authorization_header()
+    {
+        _handler.Response = Json(HttpStatusCode.OK, """{ "features": [] }""");
+
+        await _sut.AutocompleteAsync("Karlov", "CZ", CancellationToken.None);
+
+        var auth = _handler.LastRequest!.Headers.Authorization;
+        auth.Should().NotBeNull();
+        auth!.Scheme.Should().Be("Bearer");
+        auth.Parameter.Should().Be("pk.test");
     }
 
     [Fact]

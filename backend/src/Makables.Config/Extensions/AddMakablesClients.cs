@@ -91,14 +91,20 @@ public static class MakablesClientsExtensions
             .Bind(configuration.GetSection(MapboxOptions.SectionName))
             .Validate(o => !string.IsNullOrWhiteSpace(o.AccessToken),
                 "Mapbox:AccessToken is required.")
-            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _),
-                "Mapbox:BaseUrl must be an absolute URI.")
+            // T-0031 sec reviewer MN-2: BaseUrl must be absolute https. A
+            // compromised config that pointed Mapbox calls at an
+            // attacker-controlled host would leak typed-into-the-form PII
+            // + the bearer token. Validator enforces scheme; hostname
+            // allow-list deferred to a future hardening ticket.
+            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u)
+                        && u.Scheme == Uri.UriSchemeHttps,
+                "Mapbox:BaseUrl must be an absolute https URI.")
             .Validate(o => o.AutocompleteLimit is >= 1 and <= 10,
                 "Mapbox:AutocompleteLimit must be 1..10.")
             .Validate(o => o.RetryCount is >= 0 and <= 5,
                 "Mapbox:RetryCount must be 0..5.")
-            .Validate(o => o.PerCallTimeoutSeconds is >= 1 and <= 30,
-                "Mapbox:PerCallTimeoutSeconds must be 1..30.")
+            .Validate(o => o.OverallTimeoutSeconds is >= 1 and <= 30,
+                "Mapbox:OverallTimeoutSeconds must be 1..30.")
             .ValidateOnStart();
 
         services.AddHttpClient(MapboxAddressGeocoder.HttpClientName);

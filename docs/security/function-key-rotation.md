@@ -94,3 +94,40 @@ substitutes the value at boot. The singleton `QueueClient` is constructed
 once with that value — **rotating the connection string requires a host
 restart**, not a config reload. Document this in the same Key Vault rotation
 runbook as the function key.
+
+## T-0031 Mapbox autocomplete proxy — IP-bucket prerequisites
+
+The `addresses-autocomplete` partitioned rate-limit policy keys on the
+authenticated `sub` claim when present, falling back to remote IP for
+unauthenticated requests. **The endpoint is `[Authorize]` today**, so the IP
+path is unreachable from outside.
+
+**Before opening the endpoint to anonymous traffic** (e.g. registration form),
+two prerequisites MUST be met:
+
+1. **`UseForwardedHeaders` middleware wired in `UseMakablesPipeline`** so
+   `HttpContext.Connection.RemoteIpAddress` reflects the real client, not the
+   ingress proxy. Without this every external caller shares a single IP
+   bucket and an attacker trivially DoSes every other anonymous user. ASP.NET
+   Core's `ForwardedHeadersOptions` should restrict known proxy IP/Network so
+   header injection can't spoof the client IP.
+2. **A regression test or analyzer rule** that asserts `[Authorize]` stays on
+   `AddressAutocompleteController` until step 1 lands.
+
+Tracked as a follow-up ticket; this note is the evidence that the
+prerequisites are known + documented.
+
+## T-0031 Mapbox access token
+
+`Mapbox:AccessToken` is a Key Vault reference in production. The adapter
+sends it as `Authorization: Bearer {token}` on every request — NOT as a
+`?access_token=` query parameter — so the OTel HttpClient instrumentation
+doesn't capture it into App Insights span attributes. Rotation: cycle the
+Key Vault secret + restart the Function App / Web Apps (the named HttpClient
+caches `IOptions<MapboxOptions>.Value` at first resolve, so a config refresh
+alone won't pick up a new token).
+
+`Mapbox:BaseUrl` is validated to require `https://` scheme at `ValidateOnStart`.
+Hostname allow-list (restrict to `api.mapbox.com`) is a future hardening
+ticket; today the prod config is pinned in deploy templates and Key Vault
+reads are read-only for the running app principal.

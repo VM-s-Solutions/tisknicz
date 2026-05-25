@@ -31,7 +31,7 @@ User-chosen design at planning time:
 - `IAddressGeocoder.cs` — interface + `AddressSuggestion` record. `GeocodeAsync` returns `BusinessResult<Coordinates>`; `AutocompleteAsync` returns `BusinessResult<IReadOnlyList<AddressSuggestion>>`. No exceptions cross the boundary.
 
 ### Infra.Clients (`Mapbox/`)
-- `MapboxOptions.cs` — `Mapbox:AccessToken` (Key Vault ref in prod) + `BaseUrl` (overridable for tests) + `AutocompleteLimit` (1..10, default 5) + `RetryCount` (0..5, default 2) + `RetryBaseDelayMs` (default 200) + `PerCallTimeoutSeconds` (1..30, default 5). Every value validated with `.ValidateOnStart()`.
+- `MapboxOptions.cs` — `Mapbox:AccessToken` (Key Vault ref in prod) + `BaseUrl` (overridable for tests; **required https**) + `AutocompleteLimit` (1..10, default 5) + `RetryCount` (0..5, default 2) + `RetryBaseDelayMs` (default 200) + `OverallTimeoutSeconds` (1..30, default 5). Every value validated with `.ValidateOnStart()`.
 - `MapboxAddressGeocoder.cs` — calls Mapbox Geocoding v5 (`/geocoding/v5/mapbox.places/{q}.json`). Named HttpClient via `IHttpClientFactory`. Polly v8 `ResiliencePipeline<HttpResponseMessage>` retries 408/429/5xx. Per-call timeout via `CancellationTokenSource.CancelAfter` so a stuck connection can't pin a worker. Mapbox returns `[lng, lat]` in `feature.center` — adapter swaps to `(lat, lng)` when constructing `Coordinates.Of(...)`, which also catches out-of-range / NaN responses (sec hardening from T-0030).
 
 ### Core.AppServices
@@ -71,8 +71,30 @@ User-chosen design at planning time:
 - Frontend autocomplete component — T-0035 / order-form ticket.
 - Allowing anonymous autocomplete on the registration flow — out-of-scope by design (the registration flow can defer autocomplete to first-authenticated step, or open up later with the 5/min/IP partition).
 
+## Reviewer findings and resolutions (commit 292be2a)
+
+### Security reviewer — 1 BLOCKER + 2 MAJORs + 3 MINORs
+
+- **B-1 Mapbox access token leaks to App Insights via OTel HttpClient instrumentation** — the adapter embedded `access_token=...` in the URL query string; OTel captures `url.full` into App Insights span attributes; the SensitivePropertyMasker is Serilog-only and doesn't redact OTel attribute keys. **Fixed:** token now sent as `Authorization: Bearer {token}` header per request. `Authorization` is stripped from OTel HTTP spans by default AND is on the masker's Serilog redaction list. Pinned by `Geocode_request_url_includes_country_filter_and_NEVER_carries_the_access_token` and `Geocode_request_carries_Bearer_authorization_header` (+ matching autocomplete pair).
+- **M-1 / M-2 ForwardedHeaders + IP-bucket bypass** — not reachable today because `[Authorize]` makes the IP path dead code. **Documented** in `docs/security/function-key-rotation.md` as a hard prerequisite for the "anonymous opening" path (any future ticket that drops `[Authorize]` MUST first wire `UseForwardedHeaders` + a regression test pinning it).
+- **MN-2 `Mapbox:BaseUrl` unrestricted (PII / token leak via attacker-controlled host)** — **Fixed:** validator now requires `Uri.Scheme == "https"`. Hostname allow-list (restrict to `api.mapbox.com`) is a future hardening ticket; today the prod config is pinned in deploy templates.
+- **MN-3 `PerCallTimeoutSeconds` misleading name** — **Fixed:** renamed to `OverallTimeoutSeconds`. The linked CTS bounds the entire retry chain, not a single HTTP attempt.
+- **MN-1, N-1..N-5** — accepted as-is or already correct.
+
+### Code-quality reviewer — 0 BLOCKERs + 4 MINORs
+
+- **M-1 ADR drift (`IReadOnlyList` vs `[]` + `AddressSuggestion` shape)** — **Fixed via ADR addendum.** ADR 0010 §"Mapbox autocomplete + geocoding" gets a T-0031 implementation note documenting the two deviations: collection-return is `IReadOnlyList<T>` (project precedent — compare `PagedData<T>`), suggestion record adds `Label` + wraps coords in the T-0030 `Coordinates` value-object. Missing fields surface as empty strings rather than null so the frontend form binding doesn't need null-forgiveness ceremony.
+- **M-2 `(HttpResponseMessage?, Error?)` tuple → use `BusinessResult<HttpResponseMessage>`** — **Fixed:** `CallMapboxAsync` now returns `BusinessResult<HttpResponseMessage>`. Same discriminator the rest of the codebase uses; no tuple-of-nullables pattern at call sites.
+- **M-3 double validation of `AutocompleteLimit` (ValidateOnStart + `Math.Clamp`)** — **Fixed:** dropped the `Math.Clamp` in `BuildUrl`. Validator owns the invariant; no shadow check.
+- **M-4 input-validation in the adapter (boundary blur)** — **Fixed (partial):** extracted the blank/length guard into a `AutocompleteInputGuard` internal helper next to the adapter. The XML doc says a future MediatR-command-style controller can call the same guard from a FluentValidator. Promoting it to a shared `Core.AppServices` mixin lands with the first feature that needs both an adapter call AND an HTTP-layer validation pass (e.g. when T-0035 adds anonymous autocomplete on registration).
+- **N-3 empty-string-vs-null** — **Documented inline** on `ToSuggestion`.
+- **N-1/N-2/N-4..N-7** — accepted as-is.
+
+### Test deltas (+2 facts; 549 total = 467 unit + 82 integration)
+- `MapboxAddressGeocoderTests` — replaced "URL carries token" assertions with their inverse (URL must NOT carry token) + added two `Authorization: Bearer` header presence facts (one per endpoint).
+
 ## Acceptance criteria
-- **AC-1** Build clean; 547 tests pass (465 unit + 82 integration).
+- **AC-1** Build clean; 549 tests pass (467 unit + 82 integration).
 - **AC-2** `IAddressGeocoder.GeocodeAsync` returns `BusinessResult<Coordinates>` with [lat, lng] (correct order, swapped from Mapbox's [lng, lat]) on success; `Permanent`/`GeocoderNoMatch` on empty Mapbox response; `Transient`/`GeocoderTransientFailure` on 408/429/5xx; `Permanent`/`GeocoderPermanentFailure` on 4xx, malformed JSON, or out-of-range coords.
 - **AC-3** `IAddressGeocoder.AutocompleteAsync` rejects blank/malformed inputs with `Validation`/`GeocoderInvalidInput` WITHOUT calling Mapbox; maps Mapbox `features[]` into `AddressSuggestion` records with structured components extracted from `context[]`.
 - **AC-4** `MapboxAddressGeocoder` calls Mapbox via named `IHttpClientFactory` HttpClient + shared `ResiliencePipeline<HttpResponseMessage>`. Per-call timeout via linked `CancellationTokenSource.CancelAfter`. Caller cancellation propagates.
@@ -82,4 +104,5 @@ User-chosen design at planning time:
 - **AC-8** CLAUDE.md hygiene: `Core.Domain` unchanged regarding third-party packages; HTTP calls only inside `Infra.Clients/Mapbox/`; all error codes from `BusinessErrorMessage`; no `SaveChangesAsync` (no entity mutations in T-0031); CI seeds the new `Mapbox__AccessToken`.
 
 ## Status log
-- 2026-05-25 done. 547 tests pass. Awaiting dual reviewer (security + code-quality) per workflow.
+- 2026-05-25 initial commit 292be2a. 547 tests pass.
+- 2026-05-25 reviewer fix folded in. Sec B-1 closed (token → Authorization header); sec MN-2/MN-3 closed (https-only BaseUrl, OverallTimeoutSeconds rename); sec M-1/M-2 documented (ForwardedHeaders prereq for anonymous opening); CQ M-1 closed via ADR 0010 addendum; CQ M-2/M-3/M-4/N-3 closed. 549 tests pass (467 unit + 82 integration; +2 token-leak-regression facts).

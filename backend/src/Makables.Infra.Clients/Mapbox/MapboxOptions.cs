@@ -43,6 +43,11 @@ public sealed class MapboxOptions
     /// <summary>Polly retry base delay (ms). Exponential w/ jitter from here.</summary>
     public int RetryBaseDelayMs { get; set; } = 200;
 
-    /// <summary>Hard upper bound on one Mapbox call including retries.</summary>
-    public int PerCallTimeoutSeconds { get; set; } = 5;
+    /// <summary>
+    /// Wall-clock upper bound on a Mapbox operation INCLUDING all Polly
+    /// retries. Renamed from <c>PerCallTimeoutSeconds</c> in T-0031 sec
+    /// reviewer follow-up — the linked <c>CancellationTokenSource</c>
+    /// bounds the whole retry chain, not a single HTTP attempt.
+    /// </summary>
+    public int OverallTimeoutSeconds { get; set; } = 5;
 }
