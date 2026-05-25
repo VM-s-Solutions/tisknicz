@@ -8,14 +8,40 @@ namespace Makables.Core.Domain.Addresses;
 /// surface — a single <c>addresses</c> table, FK'd from owners (Maker
 /// legal seat in T-0033, customer shipping address in later tickets).
 ///
+/// <b>Two country fields, two responsibilities</b> (T-0030 CQ reviewer m-1/m-2):
+/// <list type="bullet">
+///   <item><description><see cref="CountryCodeIso"/> — the address's OWN country
+///     (where the parcel goes). Drives shipping-carrier selection, VAT zone,
+///     postal-format validation.</description></item>
+///   <item><description><see cref="Auditable.CountryCode"/> — the OWNER's tenant
+///     (which platform region the row is audited under). Drives row scoping,
+///     soft-delete filtering, admin visibility.</description></item>
+/// </list>
+/// They usually match (a CZ user with a CZ shipping address) but don't
+/// have to (a CZ user with a SK shipping address). The
+/// <see cref="Create"/> factory takes both as explicit parameters so a
+/// caller can't accidentally conflate them. ADR 0010's sketch shows
+/// only <c>CountryCode</c>; the rename to <c>CountryCodeIso</c> is
+/// noted at the bottom of that ADR — keep the two purposes separate in
+/// every later address-touching ticket.
+///
 /// Per-country format validation lives in <see cref="Validators.IAddressFormatValidator"/>;
-/// this entity stays a passive value carrier. Latitude / Longitude are
-/// nullable from day one — T-0031's Mapbox geocoder fills them
-/// asynchronously and the row is valid without them (ADR 0010
-/// §"Geocoding policy": non-blocking).
+/// this entity stays a passive value carrier. <see cref="Latitude"/> /
+/// <see cref="Longitude"/> are nullable from day one — T-0031's Mapbox
+/// geocoder fills them asynchronously and the row is valid without them
+/// (ADR 0010 §"Geocoding policy": non-blocking).
 /// </summary>
 public sealed class Address : Auditable
 {
+    // Length caps mirror the EF configuration (AddressConfiguration.cs)
+    // so a 100 KB Street is rejected at the boundary, not at SaveChanges
+    // time (T-0030 sec reviewer N-3).
+    private const int MaxStreetLength = 200;
+    private const int MaxHouseNumberLength = 20;
+    private const int MaxCityLength = 200;
+    private const int MaxZipLength = 16;
+    private const int MaxStateLength = 100;
+
     public string Street { get; private set; } = default!;
     public string HouseNumber { get; private set; } = default!;
     public string City { get; private set; } = default!;
@@ -28,14 +54,14 @@ public sealed class Address : Auditable
     private Address() { }
 
     /// <summary>
-    /// Factory. Trims each string field; uppercases <paramref name="countryCodeIso"/>;
-    /// rejects empty required fields and a country code that isn't the
-    /// strict ISO 3166-1 alpha-2 shape. The <paramref name="countryCodeIso"/>
-    /// argument is the address's own country (where the parcel goes), NOT
-    /// the platform-wide <see cref="Auditable.CountryCode"/> (which scopes
-    /// the row for audit / soft-delete purposes). They usually match but
-    /// don't have to: a CZ-tenanted customer can save a SK shipping address.
+    /// Factory. Trims each string field; uppercases both country codes;
+    /// rejects empty required fields, non-ISO country codes, and string
+    /// values longer than their column caps. Length caps live in the
+    /// entity so callers can't sneak a 100 KB Street past validation
+    /// only to die at SaveChanges (T-0030 sec reviewer N-3).
     /// </summary>
+    /// <param name="countryCodeIso">The address's own country (where the parcel goes).</param>
+    /// <param name="auditCountryCode">The OWNER's tenant country (see class XML doc).</param>
     public static Address Create(
         string id,
         string street,
@@ -43,22 +69,23 @@ public sealed class Address : Auditable
         string city,
         string zip,
         string countryCodeIso,
+        string auditCountryCode,
         string? state = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Id is required.", nameof(id));
-        if (string.IsNullOrWhiteSpace(street))
-            throw new ArgumentException("Street is required.", nameof(street));
-        if (string.IsNullOrWhiteSpace(houseNumber))
-            throw new ArgumentException("HouseNumber is required.", nameof(houseNumber));
-        if (string.IsNullOrWhiteSpace(city))
-            throw new ArgumentException("City is required.", nameof(city));
-        if (string.IsNullOrWhiteSpace(zip))
-            throw new ArgumentException("Zip is required.", nameof(zip));
+
+        ValidateRequiredField(street, nameof(street), MaxStreetLength);
+        ValidateRequiredField(houseNumber, nameof(houseNumber), MaxHouseNumberLength);
+        ValidateRequiredField(city, nameof(city), MaxCityLength);
+        ValidateRequiredField(zip, nameof(zip), MaxZipLength);
+        ValidateOptionalField(state, nameof(state), MaxStateLength);
+
         if (string.IsNullOrWhiteSpace(countryCodeIso) || countryCodeIso.Length != 2)
             throw new ArgumentException("CountryCodeIso must be 2 chars (ISO 3166-1 alpha-2).", nameof(countryCodeIso));
+        if (string.IsNullOrWhiteSpace(auditCountryCode) || auditCountryCode.Length != 2)
+            throw new ArgumentException("AuditCountryCode must be 2 chars (ISO 3166-1 alpha-2).", nameof(auditCountryCode));
 
-        var normalisedIso = countryCodeIso.ToUpperInvariant();
         return new Address
         {
             Id = id,
@@ -67,32 +94,43 @@ public sealed class Address : Auditable
             City = city.Trim(),
             Zip = zip.Trim(),
             State = string.IsNullOrWhiteSpace(state) ? null : state.Trim(),
-            CountryCodeIso = normalisedIso,
-            // Auditable.CountryCode mirrors the address country at create
-            // time; an admin or owner-context change can mutate it later
-            // via the Auditable surface if the row moves tenancy.
-            CountryCode = normalisedIso,
+            CountryCodeIso = countryCodeIso.ToUpperInvariant(),
+            CountryCode = auditCountryCode.ToUpperInvariant(),
         };
     }
 
     /// <summary>
-    /// Set the latitude/longitude pair (filled by T-0031's geocoder).
-    /// Both must be supplied together; passing nulls clears the pair.
+    /// Set the geocoded coordinates (filled by T-0031's Mapbox adapter).
+    /// Pass <c>null</c> to clear. The <see cref="Coordinates.Of"/> factory
+    /// already guarantees finiteness + range, so this method only
+    /// destructures.
     /// </summary>
-    public Address SetCoordinates(double? latitude, double? longitude)
+    public Address SetCoordinates(Coordinates? coordinates)
     {
-        if (latitude is null ^ longitude is null)
-            throw new ArgumentException(
-                "Latitude and Longitude must be set or cleared together.",
-                latitude is null ? nameof(latitude) : nameof(longitude));
-
-        if (latitude is { } lat && (lat < -90 || lat > 90))
-            throw new ArgumentOutOfRangeException(nameof(latitude), "Latitude must be -90..90.");
-        if (longitude is { } lng && (lng < -180 || lng > 180))
-            throw new ArgumentOutOfRangeException(nameof(longitude), "Longitude must be -180..180.");
-
-        Latitude = latitude;
-        Longitude = longitude;
+        if (coordinates is null)
+        {
+            Latitude = null;
+            Longitude = null;
+        }
+        else
+        {
+            Latitude = coordinates.Latitude;
+            Longitude = coordinates.Longitude;
+        }
         return this;
+    }
+
+    private static void ValidateRequiredField(string value, string name, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"{name} is required.", name);
+        if (value.Length > maxLength)
+            throw new ArgumentException($"{name} must be at most {maxLength} chars.", name);
+    }
+
+    private static void ValidateOptionalField(string? value, string name, int maxLength)
+    {
+        if (value is not null && value.Length > maxLength)
+            throw new ArgumentException($"{name} must be at most {maxLength} chars.", name);
     }
 }

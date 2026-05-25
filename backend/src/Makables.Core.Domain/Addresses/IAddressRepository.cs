@@ -24,6 +24,19 @@ public interface IAddressRepository
     /// Returns the address by id, or <c>null</c> if no active row exists.
     /// Active-only by virtue of the soft-delete query filter on
     /// <see cref="Common.Auditable"/>.
+    ///
+    /// <para>
+    /// <b>SECURITY (T-0030 sec reviewer M-2):</b> this is a trusted-id
+    /// primitive. The address id MUST come from a server-trusted source
+    /// (e.g. a Maker entity's <c>PickupAddressId</c> column, the
+    /// T-0031 geocoder's batch sweep, an admin tool). It MUST NOT be
+    /// passed through verbatim from a user request without an
+    /// owner/tenant check at the call site — a customer-facing endpoint
+    /// that accepts <c>addressId</c> from the request body is a textbook
+    /// IDOR primitive. A future <c>GetByOwnerAsync(addressId, ownerId)</c>
+    /// overload will land with the first user-facing address feature
+    /// (T-0035 saved-addresses); until then, scope at the call site.
+    /// </para>
     /// </summary>
     Task<Address?> GetByIdAsync(string id, CancellationToken cancellationToken);
 }
