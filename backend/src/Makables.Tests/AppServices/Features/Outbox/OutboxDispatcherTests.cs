@@ -1,10 +1,12 @@
 using FluentAssertions;
+using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Outbox;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.TestUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -27,11 +29,13 @@ public class OutboxDispatcherTests
     private readonly IOutboxQueuePublisher _queue = Substitute.For<IOutboxQueuePublisher>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly FakeClock _clock = new();
+    private readonly OutboxDispatcherOptions _opts = new() { HandoffParkMinutes = 15 };
     private readonly OutboxDispatcher _sut;
 
     public OutboxDispatcherTests()
     {
         _sut = new OutboxDispatcher(_outboxConsumer, _queue, _uow, _clock,
+            Options.Create(_opts),
             NullLogger<OutboxDispatcher>.Instance);
     }
 
@@ -62,7 +66,7 @@ public class OutboxDispatcherTests
 
         summary.Should().Be(new DispatchSummary(Loaded: 1, Routed: 1, Stalled: 0, FailedToPublish: 0));
         await _queue.Received(1).PublishSendEmailAsync("ob-1", Arg.Any<CancellationToken>());
-        evt.NextRetryAt.Should().Be(_clock.UtcNow + OutboxDispatcher.HandoffParkDuration);
+        evt.NextRetryAt.Should().Be(_clock.UtcNow + TimeSpan.FromMinutes(_opts.HandoffParkMinutes));
         evt.RetryCount.Should().Be(0, "park is not a failure");
         evt.ProcessedAt.Should().BeNull();
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -102,6 +106,29 @@ public class OutboxDispatcherTests
         evt.LastErrorCode.Should().Be(BusinessErrorMessage.OutboxQueuePublishFailed);
         // First transient backoff = 1 minute.
         evt.NextRetryAt.Should().Be(_clock.UtcNow + TimeSpan.FromMinutes(1));
+        // Two saves: one to commit the park (always), one to commit the
+        // recorded failure (only on publish failure).
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Park_is_committed_BEFORE_publish_to_eliminate_consumer_race()
+    {
+        // T-0029 sec reviewer item 8: a fast consumer must see the parked
+        // row, not the original NextRetryAt. The dispatcher MUST call
+        // SaveChanges before PublishSendEmailAsync.
+        var evt = EmailEvent("ob-race");
+        _outboxConsumer.LoadDueAsync(Arg.Any<int>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { evt });
+        var orderLog = new List<string>();
+        _uow.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(callInfo => { orderLog.Add("save"); return Task.FromResult(0); });
+        _queue.PublishSendEmailAsync("ob-race", Arg.Any<CancellationToken>())
+            .Returns(callInfo => { orderLog.Add("publish"); return Task.CompletedTask; });
+
+        await _sut.DispatchDueAsync(CancellationToken.None);
+
+        orderLog.Should().Equal("save", "publish");
     }
 
     [Fact]

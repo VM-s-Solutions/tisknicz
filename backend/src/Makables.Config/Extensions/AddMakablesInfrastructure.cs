@@ -127,9 +127,24 @@ public static class MakablesInfrastructureExtensions
         // — only the Functions host enqueues — but registering it here
         // keeps the DI surface uniform across hosts. Singleton because
         // QueueClient is thread-safe and pools connections internally.
+        // ValidateOnStart so a typo'd OutboxQueues:ConnectionString or queue
+        // name crashes the host at boot rather than silently inside a timer
+        // tick 30 s later. T-0029 sec reviewer M-4 / CQ m-3.
         services.AddOptions<OutboxQueueOptions>()
-            .Bind(configuration.GetSection(OutboxQueueOptions.SectionName));
+            .Bind(configuration.GetSection(OutboxQueueOptions.SectionName))
+            .Validate(o =>
+            {
+                var (ok, _) = OutboxQueueOptionsValidator.Validate(o);
+                return ok;
+            }, "OutboxQueues is misconfigured. ConnectionString + SendEmailQueueName are required " +
+               "and HandoffParkMinutes must be 1..360.")
+            .ValidateOnStart();
         services.AddSingleton<IOutboxQueuePublisher, StorageQueueOutboxPublisher>();
+        services.AddOptions<OutboxDispatcherOptions>()
+            .Bind(configuration.GetSection(OutboxDispatcherOptions.SectionName))
+            .Validate(o => o.HandoffParkMinutes is >= 1 and <= 360,
+                "OutboxDispatcher:HandoffParkMinutes must be 1..360.")
+            .ValidateOnStart();
         services.AddScoped<IOutboxDispatcher, OutboxDispatcher>();
         services.AddScoped<ISendEmailHandler, SendEmailHandler>();
 

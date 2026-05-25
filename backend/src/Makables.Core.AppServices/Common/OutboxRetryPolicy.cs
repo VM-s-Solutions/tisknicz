@@ -19,9 +19,12 @@ public static class OutboxRetryPolicy
     /// <summary>
     /// Backoff delays per attempt. Index 0 corresponds to the first retry
     /// (i.e. <c>RetryCount</c> just became 1 after the first failed
-    /// attempt). After the array is exhausted the row stalls.
+    /// attempt). After the list is exhausted the row stalls.
+    ///
+    /// Typed as <see cref="IReadOnlyList{T}"/> on the public surface so
+    /// nothing in-process can mutate the schedule (T-0029 CQ reviewer m-2).
     /// </summary>
-    public static readonly TimeSpan[] TransientBackoffs =
+    public static readonly IReadOnlyList<TimeSpan> TransientBackoffs =
     [
         TimeSpan.FromMinutes(1),
         TimeSpan.FromMinutes(5),

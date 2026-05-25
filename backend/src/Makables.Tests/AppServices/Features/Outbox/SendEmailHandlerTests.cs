@@ -123,6 +123,31 @@ public class SendEmailHandlerTests
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(ErrorType.Validation)]
+    [InlineData(ErrorType.Unauthorized)]
+    [InlineData(ErrorType.Forbidden)]
+    [InlineData(ErrorType.NotFound)]
+    [InlineData(ErrorType.Conflict)]
+    public async Task Request_level_error_types_from_IEmailSendService_stall_as_Permanent_with_LogError(ErrorType requestLevel)
+    {
+        // T-0029 CQ reviewer M-1: these shouldn't reach the outbox boundary
+        // (they're HTTP-handler shapes), but if they do it's a contract
+        // violation by IEmailSendService — stall the row as Permanent
+        // (not Unknown) and log an error so a future contributor sees the
+        // breadcrumb.
+        var evt = EnqueuedEvent();
+        _outboxConsumer.GetByIdAsync("ob-1", Arg.Any<CancellationToken>()).Returns(evt);
+        _emailSend.SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Failure<EmailSentReceipt>(new Error("", "x.bogus", requestLevel)));
+
+        var outcome = await _sut.HandleAsync("ob-1", CancellationToken.None);
+
+        outcome.Should().Be(HandleOutcome.Stalled);
+        evt.LastErrorKind.Should().Be(OutboxErrorKind.Permanent);
+        evt.NextRetryAt.Should().BeNull();
+    }
+
     [Fact]
     public async Task Transient_failures_keep_recording_until_max_attempts_then_stall()
     {

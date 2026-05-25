@@ -134,4 +134,19 @@ public class OutboxEventTests
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void ParkPendingConsumer_refuses_to_park_a_stalled_row()
+    {
+        // T-0029 CQ reviewer m-2 strengthening: a stalled row
+        // (NextRetryAt = null after a non-transient failure) is awaiting
+        // admin Acknowledge / RetryCount reset; parking it would silently
+        // resurrect a row that the operator hasn't reviewed.
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.RecordFailure(OutboxErrorKind.Permanent, "x.permanent", nextRetryAt: null);
+
+        var act = () => e.ParkPendingConsumer(Now.AddMinutes(15));
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

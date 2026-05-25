@@ -12,10 +12,17 @@ namespace Makables.Functions.Outbox;
 /// ADR 0020 + T-0029. Two triggers as required by the ADR:
 ///
 /// <list type="bullet">
-///   <item><description><b>Timer</b>: <c>"%ProcessOutbox:Schedule%"</c> (default every 30 s per local.settings).
-///     Combined with <c>maxConcurrentCalls = 1</c> in <c>host.json</c> this keeps the sweep single-threaded.</description></item>
-///   <item><description><b>HTTP</b>: <c>POST /api/outbox/process</c> with <c>AuthorizationLevel.Function</c>
-///     so admins can force a sweep from the ops dashboard ("Process outbox now").</description></item>
+///   <item><description><b>Timer</b>: <c>"%ProcessOutbox:Schedule%"</c>
+///     (default every 30 s per local.settings).
+///     <see cref="UseMonitorAttribute"/> is set so the schedule persists
+///     across host restarts and Premium-plan instance scale-out only
+///     fires one tick per schedule across the deployment. The dispatcher
+///     itself also commits its "park" mutation BEFORE publishing to
+///     the queue (T-0029 sec reviewer item 8) so even a pathological
+///     overlap doesn't double-publish.</description></item>
+///   <item><description><b>HTTP</b>: <c>POST /api/outbox/process</c> with
+///     <c>AuthorizationLevel.Function</c> so admins can force a sweep
+///     from the ops dashboard ("Process outbox now").</description></item>
 /// </list>
 ///
 /// All orchestration is in <see cref="IOutboxDispatcher.DispatchDueAsync"/>;
@@ -32,7 +39,7 @@ public sealed class ProcessOutboxFunction(
 
     [Function(TimerFunctionName)]
     public async Task RunTimer(
-        [TimerTrigger("%ProcessOutbox:Schedule%")] TimerInfo timer,
+        [TimerTrigger("%ProcessOutbox:Schedule%", UseMonitor = true)] TimerInfo timer,
         CancellationToken cancellationToken)
     {
         if (timer.IsPastDue)

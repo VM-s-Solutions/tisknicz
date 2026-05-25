@@ -86,11 +86,20 @@ public sealed class OutboxEvent
     /// fields — the row is still in flight, not failed. If the consumer
     /// never confirms (queue dropped / worker crashed), the park expires
     /// and the next sweep re-publishes.
+    ///
+    /// Refuses to park (1) an already-processed row, and (2) a stalled
+    /// row (<see cref="NextRetryAt"/> is null with a non-None
+    /// <see cref="LastErrorKind"/> — admin intervention is the only
+    /// legal next state). T-0029 CQ reviewer m-2 strengthening of the
+    /// state-machine contract.
     /// </summary>
     public void ParkPendingConsumer(DateTimeOffset parkedUntil)
     {
         if (ProcessedAt is not null)
             throw new InvalidOperationException("Cannot park an already-processed event.");
+        if (NextRetryAt is null && LastErrorKind != OutboxErrorKind.None)
+            throw new InvalidOperationException(
+                "Cannot park a stalled event; admin must Acknowledge or reset RetryCount first.");
         NextRetryAt = parkedUntil;
     }
 

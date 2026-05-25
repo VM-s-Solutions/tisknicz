@@ -32,8 +32,13 @@ public sealed class SendEmailFunction(
     {
         if (string.IsNullOrWhiteSpace(outboxEventId))
         {
-            logger.LogWarning("SendEmail received empty queue message; discarding.");
-            return;
+            // Throw so Azure dead-letters the message after maxDequeueCount
+            // attempts and an ops operator can inspect <send-email>-poison.
+            // T-0029 CQ reviewer n-2: silently returning would replay the
+            // bad message every visibility timeout until TTL.
+            logger.LogError("SendEmail received empty queue message; failing for poison-queue routing.");
+            throw new InvalidOperationException(
+                "SendEmail received an empty queue message; expected an OutboxEvent id.");
         }
 
         var outcome = await handler.HandleAsync(outboxEventId, cancellationToken);

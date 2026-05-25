@@ -61,8 +61,21 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
         try
         {
             if (_ensuredQueueExists) return;
-            await _sendEmailQueue.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
-            _ensuredQueueExists = true;
+            try
+            {
+                await _sendEmailQueue.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
+            }
+            finally
+            {
+                // Mark the attempt as taken even if CreateIfNotExistsAsync
+                // threw (T-0029 sec reviewer M-7). Without this, every failed
+                // sweep during a Storage outage hits the control plane in
+                // addition to the publish call, doubling the API pressure.
+                // The subsequent SendMessageAsync surfaces the real error;
+                // if the queue doesn't exist on retry it will fail loudly
+                // there too.
+                _ensuredQueueExists = true;
+            }
         }
         finally
         {

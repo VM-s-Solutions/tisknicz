@@ -80,8 +80,51 @@ User picked the **hybrid queue design** (vs inline dispatch) so the architecture
 - Additional outbox event types (invoice.generate, label.generate, notification.*) — Phase 4+ tickets. T-0029 only routes the three Phase-2 auth event types.
 - SendGrid event-webhook (bounce / complaint) — deferred per T-0028 scope.
 
+## Reviewer findings and resolutions (commit a0818fc)
+
+Two reviewers ran in parallel.
+
+### Security reviewer — 0 BLOCKERs + 4 MAJORs + minors
+
+- **MAJOR 4 / CQ m-3 (`OutboxQueueOptions` missing `ValidateOnStart`)** — **Fixed:** added `OutboxQueueOptionsValidator` + wired `.Validate(...).ValidateOnStart()` for `OutboxQueueOptions` AND new `OutboxDispatcherOptions` (the `HandoffParkMinutes` knob is in `Core.AppServices` while the queue transport config stays in `Infra.Common`). Both crash the host at boot if misconfigured. Pinned by `OutboxQueueOptionsValidatorTests`.
+- **MAJOR 7 (queue-outage `EnsureQueueAsync` storm)** — **Fixed:** `StorageQueueOutboxPublisher.EnsureQueueAsync` now marks `_ensuredQueueExists = true` in a `finally` block — even if `CreateIfNotExistsAsync` throws, we don't retry the control-plane call every sweep during a Storage outage. The subsequent `SendMessageAsync` is the canonical "did the publish work" check.
+- **MAJOR 10 (visibility timeout 1m → duplicate-email window on slow send)** — **Fixed:** `host.json` `visibilityTimeout: "00:05:00"` (5 min). Comfortably exceeds `SendGridOptions.PerSendTimeoutSeconds (10s) × RetryCount (1) + DB SaveChanges + buffer`. Worker-A's `SaveChangesAsync` commits well before the message becomes visible to another worker, so the `ProcessedAt`-is-set idempotency guard holds.
+- **MAJOR 11 (poison-queue monitoring + re-poison loop)** — **Documented** in `docs/security/function-key-rotation.md` (new). Includes the Azure Monitor alert spec, the manual remediation runbook, and the follow-up-ticket idea (poison-queue consumer that auto-stalls the row). Out-of-scope for the code change; runbook is the right artifact for ops-side work.
+- **MINOR 1 (function-key rotation runbook)** — **Documented** in the same file. 90-day rotation cadence; primary/secondary swap; SecOps audit checklist on suspected compromise.
+- **MAJOR 12 (`local.settings.json` git status)** — verified clean: `local.settings.json` is NOT git-tracked (`git ls-files` returned empty). The file lives on disk for `func start` but never lands in commits.
+- **Item 8 (park/publish race — security flagged it but said "data integrity, not security")** — **Fixed:** `OutboxDispatcher` now commits the park mutation BEFORE publishing to the queue. A fast consumer that dequeues + tries `MarkProcessed` now sees the row already-parked (NextRetryAt = future), and the consumer's write wins cleanly. Publish failures land in a second `SaveChangesAsync` with retry-per-policy. Pinned by `Park_is_committed_BEFORE_publish_to_eliminate_consumer_race` (orders mock calls in a list and asserts "save" precedes "publish").
+
+### Code-quality reviewer — 0 BLOCKERs + 2 MAJORs + minors
+
+- **M-1 (`ClassifyFailure` request-level error types silently → `Unknown` stall)** — **Fixed:** `SendEmailHandler.ClassifyFailure` now enumerates request-level `ErrorType` values (`Validation`/`Unauthorized`/`Forbidden`/`NotFound`/`Conflict`) explicitly, `LogError`s the contract violation, and stalls as `Permanent` (not `Unknown` — these are deterministic failures, not mystery ones). Pinned by a `[Theory]` covering all five request-level types.
+- **M-2 (timer singleton concurrency + lying doc-comment)** — **Fixed:** `RunTimer` now has `[TimerTrigger(..., UseMonitor = true)]` so the schedule persists across host restarts and Premium-plan scale-out fires one tick per schedule across the deployment. Doc-comment rewritten to describe the actual mechanism (UseMonitor + the park-before-publish commit) and stop claiming `maxConcurrentCalls=1` lives in `host.json`. Even with a hypothetical overlap, the park-before-publish commit eliminates the consumer race that was the original concern.
+- **m-1 (`HandoffParkDuration` hard-coded → make config-bindable)** — **Fixed:** new `OutboxDispatcherOptions.HandoffParkMinutes` (default 15; `Math.Max(1, ...)` floor for safety). Bound from `OutboxDispatcher:HandoffParkMinutes` in configuration; `local.settings.json` sets it to `1` for fast iteration in dev. Validated at startup (1..360 range).
+- **m-2 (`OutboxRetryPolicy.TransientBackoffs` mutable array surface)** — **Fixed:** typed as `IReadOnlyList<TimeSpan>` on the public surface. The underlying collection-expression init is still an array but the surface forbids `[0] = ...` mutation.
+- **m-3 (duplicate of sec MAJOR-4)** — **Fixed** with sec MAJOR-4.
+- **m-4 (`OutboxConsumerRepository` tracking comment)** — **Fixed:** xmldoc now explicitly warns "All reads here are intentionally TRACKED" so a future contributor doesn't reflexively add `.AsNoTracking()`.
+- **n-2 (`SendEmailFunction` empty-message → throw for poison routing)** — **Fixed:** empty queue message now throws `InvalidOperationException` with a clear message. After `maxDequeueCount` (5) attempts, the empty message lands in `<send-email>-poison` for ops investigation rather than replaying forever.
+- **n-4 (`ProcessOutboxFunction` doc-comment lying)** — **Fixed** with M-2.
+- **n-5 (`IsEmailEventType` private dup of `OutboxEventTypes` taxonomy)** — **Fixed:** moved to `OutboxEventTypes.IsEmailSend(string)` as a public predicate. Dispatcher calls it via the type. Adding a fourth email event is now a one-line edit in one place.
+- **n-1, n-3 (cosmetic / config-hygiene)** — accepted as-is.
+
+### Side improvements done while in the file
+- `OutboxConsumerRepository.LoadDueAsync` query tightened: previously `e.NextRetryAt == null` was treated as "due now" (every sweep would re-load stalled rows). Now `NextRetryAt != null AND NextRetryAt <= now` is the predicate — stalled rows are excluded, so they don't burn a slot in every 50-row sweep until an admin Acknowledges them. Newly-enqueued rows still pick up because `Enqueue` sets `NextRetryAt = now`.
+- `OutboxEvent.ParkPendingConsumer` now also refuses to park a stalled row (NextRetryAt is null AND non-None LastErrorKind). Closes the "park silently resurrects an unreviewed stalled row" hole.
+
+### Test deltas (+12 facts; 470 total = 388 unit + 82 integration)
+- `OutboxEventTests` — 1 new fact (refuse to park stalled row).
+- `OutboxDispatcherTests` — 2 updated facts (save count + assert publish-after-commit order); 1 new fact (`Park_is_committed_BEFORE_publish_to_eliminate_consumer_race`).
+- `SendEmailHandlerTests` — 1 new `[Theory]` × 5 request-level error types.
+- `OutboxQueueOptionsValidatorTests` — 4 facts.
+
+### Deferred to follow-up
+- HTTP-route rate-limiting (sec MINOR-1) — APIM in front of the Function App.
+- Poison-queue auto-stall consumer Function (sec MAJOR-11) — separate ticket.
+- Connection-string rotation requires host restart (sec MIN-5) — already in runbook.
+- `docs/architecture/roles/outbox.md` role file (CQ "RDD parity" note) — to be authored when the role catalog is filled out.
+
 ## Acceptance criteria
-- **AC-1** Build clean; 458 tests pass (376 unit + 82 integration).
+- **AC-1** Build clean; 470 tests pass (388 unit + 82 integration).
 - **AC-2** `OutboxDispatcher` loads up to 50 due rows ordered by `created_at ASC`, routes the 3 auth event types to `send-email` queue, stalls unknown event_types as Permanent, records queue-publish failures as Transient with next retry per `OutboxRetryPolicy`.
 - **AC-3** `SendEmailHandler` is idempotent on already-processed rows (queue at-least-once safety).
 - **AC-4** `SendEmailHandler` classifies `IEmailSendService` failures against `OutboxRetryPolicy`; never throws on classified failure.
@@ -93,4 +136,5 @@ User picked the **hybrid queue design** (vs inline dispatch) so the architecture
 - **AC-10** CLAUDE.md hygiene: no business logic in `Makables.Functions/*.cs`; no `SaveChangesAsync` outside the dedicated orchestrators; `Core.Domain` has no third-party packages.
 
 ## Status log
-- 2026-05-25 done. 458 tests pass. Awaiting dual reviewer (security + code-quality) per workflow.
+- 2026-05-25 initial commit a0818fc. 458 tests pass.
+- 2026-05-25 reviewer fix folded in. Sec 4/7/10/11 closed (11 via runbook); CQ M-1/M-2/m-1/m-2/m-3/m-4/n-2/n-4/n-5 closed. Park/publish race fixed (commit-then-publish). LoadDueAsync now excludes stalled rows. ParkPendingConsumer refuses to park stalled rows. 470 tests pass (388 unit + 82 integration; +12 facts).

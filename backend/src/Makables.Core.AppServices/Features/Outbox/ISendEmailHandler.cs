@@ -85,7 +85,8 @@ public sealed class SendEmailHandler(
             return HandleOutcome.Sent;
         }
 
-        var (kind, code) = ClassifyFailure(result.Error!);
+        var kind = ClassifyFailure(result.Error!, outboxEventId);
+        var code = result.Error!.Code;
         var newRetryCount = evt.RetryCount + 1;
         var nextRetry = OutboxRetryPolicy.NextAttempt(kind, newRetryCount, now);
 
@@ -109,18 +110,46 @@ public sealed class SendEmailHandler(
     /// <summary>
     /// Maps <see cref="IEmailSendService"/> failure shapes onto the outbox
     /// retry classification. <see cref="ErrorType.Transient"/> drives the
-    /// backoff curve; everything else stalls per
+    /// backoff curve; <see cref="ErrorType.Permanent"/> /
+    /// <see cref="ErrorType.Configuration"/> stall per
     /// <see cref="OutboxRetryPolicy"/>.
+    ///
+    /// Request-level error types (Validation, Unauthorized, Forbidden,
+    /// NotFound, Conflict) should not reach the outbox boundary — they're
+    /// HTTP-handler-shaped failures, not background-job ones. If one does
+    /// arrive, it's a contract violation by the email-send service: we
+    /// log it as an error so a future contributor sees the breadcrumb,
+    /// then stall the row as <see cref="OutboxErrorKind.Permanent"/> (not
+    /// <see cref="OutboxErrorKind.Unknown"/>) because these failures are
+    /// deterministic and retrying won't help. T-0029 CQ reviewer M-1.
     /// </summary>
-    private static (OutboxErrorKind Kind, string Code) ClassifyFailure(Error error)
+    private OutboxErrorKind ClassifyFailure(Error error, string outboxEventId)
     {
-        var kind = error.Type switch
+        switch (error.Type)
         {
-            ErrorType.Transient => OutboxErrorKind.Transient,
-            ErrorType.Permanent => OutboxErrorKind.Permanent,
-            ErrorType.Configuration => OutboxErrorKind.Configuration,
-            _ => OutboxErrorKind.Unknown,
-        };
-        return (kind, error.Code);
+            case ErrorType.Transient:
+                return OutboxErrorKind.Transient;
+            case ErrorType.Permanent:
+                return OutboxErrorKind.Permanent;
+            case ErrorType.Configuration:
+                return OutboxErrorKind.Configuration;
+            case ErrorType.Unknown:
+                return OutboxErrorKind.Unknown;
+            case ErrorType.Validation:
+            case ErrorType.Unauthorized:
+            case ErrorType.Forbidden:
+            case ErrorType.NotFound:
+            case ErrorType.Conflict:
+                logger.LogError(
+                    "OutboxEvent {OutboxEventId}: IEmailSendService returned a request-level " +
+                    "ErrorType {ErrorType} ({Code}) — contract violation, stalling as Permanent.",
+                    outboxEventId, error.Type, error.Code);
+                return OutboxErrorKind.Permanent;
+            default:
+                logger.LogError(
+                    "OutboxEvent {OutboxEventId}: unrecognised ErrorType {ErrorType} ({Code}); stalling as Unknown.",
+                    outboxEventId, error.Type, error.Code);
+                return OutboxErrorKind.Unknown;
+        }
     }
 }
