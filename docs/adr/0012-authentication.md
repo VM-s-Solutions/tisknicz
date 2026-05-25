@@ -90,7 +90,8 @@ claims: {
 
 - **Access token TTL: 15 minutes.**
 - Signing key: HS256 with a strong secret in Key Vault; key rotation supported via a `kid` claim and a key-id-to-secret map (next ADR will detail rotation).
-- Audience claim is enforced per host: `Web.Customer` accepts only `aud=customer` (or `aud=admin`); `Web.Maker` accepts only `aud=maker` (or `aud=admin`). Admins can call any audience host.
+- Audience claim is enforced per host: `Web.Customer` accepts only `aud=customer` (or `aud=admin`); `Web.Maker` accepts only `aud=maker` (or `aud=admin`); `Web.Admin` accepts only `aud=admin`; `Web.Public` accepts any of the three (it is the anonymous + any-authenticated surface — protected endpoints on Public MUST mount a named policy that checks `role` / `aud` explicitly; bare `[Authorize]` is not enough). Admins can call any audience host.
+- The **runtime source of truth** for the per-host audience table is `MakablesAuthExtensions.AcceptedAudiencesFor` in `Makables.Config` and is pinned by `JwtAuthMiddlewareTests` (T-0027). If this narrative ever disagrees with that method, the method wins.
 - A user with multiple roles (rare — only admins who are also customers/makers) gets one JWT per audience by re-authenticating against the audience-specific login endpoint. We never mint multi-audience JWTs.
 
 ### Refresh token

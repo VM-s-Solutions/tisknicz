@@ -1,4 +1,4 @@
-namespace Makables.Core.AppServices.Common;
+namespace Makables.Core.Domain.Common;
 
 /// <summary>
 /// Canonical, dot-notation error codes used across the platform. Every code
@@ -21,6 +21,9 @@ public static class BusinessErrorMessage
     public const string AuthMagicLinkInvalid = "auth.magicLinkInvalid";
     public const string AuthEmailConfirmationInvalid = "auth.emailConfirmationInvalid";
     public const string AuthPasswordResetInvalid = "auth.passwordResetInvalid";
+    public const string AuthOAuthInvalidState = "auth.oauthInvalidState";
+    public const string AuthOAuthEmailNotVerified = "auth.oauthEmailNotVerified";
+    public const string AuthOAuthExchangeFailed = "auth.oauthExchangeFailed";
 
     // === Validation ===
     public const string Required = "validation.required";
@@ -79,4 +82,20 @@ public static class BusinessErrorMessage
 
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
+
+    // === Email pipeline (T-0028) ===
+    public const string EmailTemplateNotFound = "email.templateNotFound";
+    public const string EmailTemplateTranslationMissing = "email.translationMissing";
+    public const string EmailProviderTransientFailure = "email.providerTransient";
+    public const string EmailProviderPermanentFailure = "email.providerPermanent";
+    // Split per T-0028 CQ reviewer N-4: T-0029's outbox-row triage UI needs
+    // to distinguish "decode crashed" (malformed JSON) from "decode succeeded
+    // but fields are blank" (producer wrote a partial payload).
+    public const string EmailPayloadMalformed = "email.payloadMalformed";
+    public const string EmailPayloadMissingFields = "email.payloadMissingFields";
+    public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
+
+    // === Outbox processor (T-0029) ===
+    public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
+    public const string OutboxRowNotFound = "outbox.rowNotFound";
 }

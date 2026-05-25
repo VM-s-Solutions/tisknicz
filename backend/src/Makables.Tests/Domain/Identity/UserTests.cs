@@ -195,4 +195,49 @@ public class UserTests
         u.FullName.Should().Be("Petr Novák");
         u.Phone.Should().BeNull("whitespace-only phone is normalized to null");
     }
+
+    [Fact]
+    public void New_user_has_no_preferred_language_so_resolution_falls_back_to_country_default()
+    {
+        var u = CreateValidUser();
+
+        u.PreferredLanguage.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("cs-CZ")]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    public void SetPreferredLanguage_accepts_well_formed_BCP_47_tags(string tag)
+    {
+        var u = CreateValidUser();
+
+        u.SetPreferredLanguage(tag);
+
+        u.PreferredLanguage.Should().Be(tag);
+    }
+
+    [Fact]
+    public void SetPreferredLanguage_null_clears_the_preference()
+    {
+        var u = CreateValidUser();
+        u.SetPreferredLanguage("en-US");
+
+        u.SetPreferredLanguage(null);
+
+        u.PreferredLanguage.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("cs")]
+    [InlineData("CS-cz")]
+    [InlineData("cs_CZ")]
+    public void SetPreferredLanguage_rejects_malformed_tags(string tag)
+    {
+        var u = CreateValidUser();
+
+        var act = () => u.SetPreferredLanguage(tag);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

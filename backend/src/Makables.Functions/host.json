@@ -1,4 +1,14 @@
 {
     "version": "2.0",
-    "telemetryMode": "OpenTelemetry"
+    "telemetryMode": "OpenTelemetry",
+    "extensions": {
+        "queues": {
+            "maxPollingInterval": "00:00:02",
+            "visibilityTimeout": "00:05:00",
+            "batchSize": 16,
+            "maxDequeueCount": 5,
+            "newBatchThreshold": 8
+        }
+    },
+    "_comment_visibilityTimeout": "5 min covers SendGridOptions.PerSendTimeoutSeconds * RetryCount + DB SaveChanges + comfortable buffer. T-0029 sec reviewer M-10: too-tight a window risked a second worker dequeuing while worker A was mid-SaveChanges, defeating the idempotency guard for a slow send."
 }

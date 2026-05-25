@@ -1,12 +1,78 @@
 ---
 id: 0019
-title: Email — Resend; React Email templates compiled at build time; EmailProvider role; per-template versioning
-status: accepted
+title: Email — SendGrid Dynamic Templates + DB-backed translation (originally Resend + MJML)
+status: amended
 date: 2026-05-21
-deciders: [Architect]
+amended: 2026-05-24
+deciders: [Architect, user]
 ---
 
-# 0019 — Email (Resend)
+# 0019 — Email
+
+## Amendment 2026-05-24 (T-0028)
+
+The original decision (Resend + MJML templates compiled at build time, preserved below for context) is **reversed** in favour of **SendGrid Dynamic Templates + DB-backed translation per `(template_type, language)`**.
+
+### What changed and why
+
+1. **Provider: Resend → SendGrid.** The user directive at T-0028 sprint planning explicitly chose SendGrid Dynamic Templates after reviewing the cleansia codebase (which already runs this pattern in production). Reasons:
+   - Templates live in SendGrid's editor — non-engineers can edit copy without a deploy.
+   - The Dynamic Templates engine handles HTML / dark-mode / client compatibility — we don't ship MJML toolchain to CI.
+   - Bounce / event-webhook semantics are a solved problem in SendGrid.
+   - Cleansia has already de-risked the failure modes (Polly retry shape, X-Message-Id extraction, multipart plain-text alternate).
+2. **Templates: MJML files on disk → DB rows (`EmailTemplate` + `EmailTemplateTranslation`).** One `EmailTemplate` row per `EmailTemplateType`; one `EmailTemplateTranslation` row per `(template_id, language_code)`. The translation carries subject + plain-text body (multipart alternate); the HTML is rendered by SendGrid from the dynamic-template + data dictionary. This is the cleansia pattern.
+3. **Language resolution.** Resolved at outbox-enqueue time (not at consume) inside `OneTimeTokenIssuer` via `ILanguageResolver`: `User.PreferredLanguage → CountryConfiguration.DefaultLanguageCode → LanguageCode.DefaultFallback ("cs-CZ")`. The resolved value rides on the outbox payload (`OneTimeTokenOutboxPayload.LanguageCode`). T-0029's processor doesn't re-resolve — the language the user had when they triggered the email is the language they receive.
+4. **Multi-language at launch.** cs-CZ and en-US are seeded from day one for the three Phase-2 templates (magic-link, email-confirmation, password-reset). Adding a new language is a row insert per template, not a new file in the repo.
+5. **CountryConfiguration.** CZ seed `default_email_provider` flipped `"resend"` → `"sendgrid"` in migration `20260524190759_EmailTemplates`.
+6. **Webhook for bounces.** Deferred. A follow-up ticket adds `/api/public/webhooks/sendgrid` with signature verification + `email_event` table. T-0028 ships the send pipeline only.
+
+### What stayed the same
+
+- **Outbox-mediated sends.** No handler ever calls `IEmailProvider.SendAsync` directly. The outbox is still the only chokepoint; T-0029's `ProcessOutboxFunction` is still the only consumer.
+- **`IEmailProvider` / `EmailMessage` / `EmailSentReceipt` interface.** The shape from the original ADR is honoured, with one addition: `EmailMessage` now carries `ProviderTemplateId` + `Subject` + `PlainTextBody` + `Data` (the substitution dictionary) so the adapter has everything for a single SendGrid call.
+- **No unsubscribe surface at MVP.** Transactional only. The original §"Unsubscribe / preferences" still holds.
+
+### New shape: `IEmailProvider`
+
+```csharp
+public interface IEmailProvider
+{
+    string Code { get; }   // "sendgrid"
+    Task<BusinessResult<EmailSentReceipt>> SendAsync(EmailMessage message, CancellationToken ct);
+}
+
+public sealed record EmailMessage(
+    string ProviderTemplateId,             // SendGrid d-... id from EmailTemplate
+    string LanguageCode,                   // BCP-47, e.g. "cs-CZ"
+    string ToAddress, string? ToName,
+    string FromAddress, string? FromName,  // empty → SendGridOptions.DefaultFromAddress
+    string? ReplyToAddress,
+    string Subject,
+    string PlainTextBody,
+    IReadOnlyDictionary<string, object> Data);   // dynamic-template substitutions
+```
+
+### Implementation pointers
+
+- Adapter: `Makables.Infra.Clients/SendGrid/SendGridEmailProvider.cs` (Polly v8 retry on 408 / 429 / 5xx; constructed `SendGridClient` singleton; X-Message-Id extracted from response headers as the receipt id).
+- Composer: `Makables.Core.AppServices/Features/Email/IEmailSendService.cs` (decodes payload → loads template → loads translation with one-step fallback to `LanguageCode.DefaultFallback` → builds the `action_url` from `PublicAppUrlsOptions` → substitutes plain-text placeholders → dispatches).
+- Resolver: `Makables.Core.AppServices/Common/ILanguageResolver.cs`.
+- Entities: `Makables.Core.Domain/Email/EmailTemplate.cs`, `EmailTemplateTranslation.cs`, `EmailTemplateType.cs`, `IEmailProvider.cs`, `IEmailTemplateRepository.cs`, `IEmailTemplateTranslationRepository.cs`.
+- Language tag validation + constants: `Makables.Core.Domain/Common/LanguageCode.cs`.
+
+### What the original decision below is now wrong about
+
+- §"Where templates live" (templates/<code>/<locale>/ folder structure with MJML) — **replaced** by the two DB tables.
+- §"Template rendering" (Handlebars.Net substitution at runtime against MJML-compiled HTML) — **replaced** by SendGrid's dynamic-template engine. The plain-text alternate is the only place we still do server-side substitution, and that's a tiny `{{key}}` replace in `EmailSendService`.
+- §"Resend adapter" — **replaced** by `SendGridEmailProvider`.
+- §"Configuration" (`Resend:ApiKey` etc.) — **replaced** by `SendGrid:ApiKey` / `SendGrid:DefaultFromAddress` / `SendGrid:DefaultFromName` / `SendGrid:RetryCount` / `SendGrid:RetryBaseDelayMs`.
+- §"Bounces / complaints" — deferred (see point 6 above).
+
+The rest of the original ADR — outbox mediation, locale resolution rule, multi-country posture, no-marketing-at-launch — still holds.
+
+---
+
+# 0019 — Email (Resend) [ORIGINAL, PRESERVED]
 
 ## Context
 

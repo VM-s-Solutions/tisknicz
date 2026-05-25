@@ -66,6 +66,11 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
                     ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
                     ["Jwt:Issuer"] = "https://makables.test",
                     ["Jwt:SigningKeyBase64"] = Convert.ToBase64String(new byte[32]),
+                    // T-0028: SendGrid + PublicAppUrls Options are now
+                    // ValidateOnStart per sec reviewer M-3 / B-2.
+                    ["SendGrid:ApiKey"] = "SG.integration-test-stub",
+                    ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
+                    ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                 });
             });
 

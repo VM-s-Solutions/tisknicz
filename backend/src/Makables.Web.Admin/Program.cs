@@ -4,8 +4,9 @@
 
 using Makables.Config;
 using Makables.Config.Extensions;
+using Makables.Core.Domain.Identity;
 
-const string Audience = "admin";
+const string Audience = MakablesHosts.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 

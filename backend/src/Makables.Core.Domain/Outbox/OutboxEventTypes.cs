@@ -20,4 +20,15 @@ public static class OutboxEventTypes
 
     /// <summary>Password-reset email (T-0025 §RequestPasswordReset).</summary>
     public const string AuthPasswordResetSend = "auth.passwordReset.send";
+
+    /// <summary>
+    /// True when <paramref name="eventType"/> routes to the
+    /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
+    /// routing table is one place — adding a fourth email event type
+    /// is a one-line edit here, not two places.
+    /// </summary>
+    public static bool IsEmailSend(string eventType) =>
+        eventType is AuthMagicLinkSend
+                  or AuthEmailConfirmationSend
+                  or AuthPasswordResetSend;
 }

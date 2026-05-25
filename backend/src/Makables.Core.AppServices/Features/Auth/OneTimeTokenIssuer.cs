@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Outbox;
@@ -59,12 +60,19 @@ public sealed class OneTimeTokenIssuer(
     IOneTimeTokenRepository tokens,
     IOutbox outbox,
     IClock clock,
+    ILanguageResolver languageResolver,
     ILogger<OneTimeTokenIssuer> logger) : IOneTimeTokenIssuer
 {
     // Sentinel user id used for the rate-limit round-trip when no user
     // exists. Identical SQL shape and cost as the known-user case; no
     // row will match this id, so the count is always 0.
     private const string NoSuchUserSentinel = "__no-such-user__";
+
+    // Country code used when probing the language resolver on the
+    // unknown-user branch so it pays the same country-lookup roundtrip
+    // as the known-user branch (timing-equalization invariant T-0023 B-1).
+    // The resolved value is discarded — no email is sent.
+    private const string ProbeCountryCode = "CZ";
 
     public async Task<IssueOutcome> IssueAsync(IssueRequest request, CancellationToken cancellationToken)
     {
@@ -85,12 +93,23 @@ public sealed class OneTimeTokenIssuer(
         // Step 3: mint + serialize — paid unconditionally.
         var (raw, hash) = OpaqueTokenFactory.GenerateUrlSafe32();
         var expiresAt = now + request.TokenLifetime;
+        // Resolve language unconditionally so the no-user branch pays the
+        // same DB-roundtrip cost as the known-user branch (timing-equalization
+        // invariant T-0023 B-1). On the no-user branch we pass null + the
+        // launch country code so the resolver performs the same country
+        // lookup the known-user case does; the value is unused because no
+        // email will be sent.
+        var languageCode = await languageResolver.ResolveAsync(
+            preferredLanguage: user?.PreferredLanguage,
+            countryCode: user?.CountryCodePrimary ?? ProbeCountryCode,
+            cancellationToken);
         var payloadJson = JsonSerializer.Serialize(
             new OneTimeTokenOutboxPayload(
                 UserId: user?.Id ?? string.Empty,
                 Email: user?.Email ?? string.Empty,
                 RawToken: raw,
-                ExpiresAt: expiresAt));
+                ExpiresAt: expiresAt,
+                LanguageCode: languageCode));
 
         // Step 4: eligibility.
         var willSend = user is not null

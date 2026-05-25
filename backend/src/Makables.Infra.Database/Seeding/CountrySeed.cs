@@ -7,9 +7,11 @@ namespace Makables.Infra.Database.Seeding;
 /// Called by the initial migration to populate both rows. Per ADR 0004
 /// (CountryConfiguration is seeded via migration; admin UI edits later).
 ///
-/// Provider codes ("comgate", "packeta", "ares", "resend") are the
-/// keyed-service codes the adapter tickets will register. Until then,
-/// runtime lookups via <c>IPaymentProviderFactory</c> etc. throw —
+/// Provider codes ("comgate", "packeta", "ares", "sendgrid") are the
+/// keyed-service codes the adapter tickets will register. The email
+/// provider was switched from Resend → SendGrid in T-0028 (see
+/// ADR 0019 §"Amendment 2026-05-24"). Until each Phase-2/4 adapter
+/// lands, runtime lookups via the per-provider factories throw —
 /// expected, because no concrete adapter exists yet.
 /// </summary>
 public static class CountrySeed
@@ -47,7 +49,7 @@ public static class CountrySeed
                 defaultPaymentProvider: "comgate",
                 defaultShippingCarrier: "packeta",
                 defaultRegistry: "ares",
-                defaultEmailProvider: "resend")
+                defaultEmailProvider: "sendgrid")
             .MarkCreatedAs("seed", seededAt);
     }
 

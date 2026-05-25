@@ -7,6 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Google.Apis.Auth" />
+    <PackageReference Include="SendGrid" />
+    <PackageReference Include="Polly" />
   </ItemGroup>
 
 </Project>

@@ -1,12 +1,17 @@
+using Makables.Core.AppServices.Common;
+using Makables.Core.AppServices.Features.Email;
+using Makables.Core.AppServices.Features.Outbox;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Common.Identifiers;
+using Makables.Infra.Common.Outbox;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
 using Makables.Infra.Database.Auditing;
@@ -47,6 +52,14 @@ public static class MakablesInfrastructureExtensions
             .Bind(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IJwtIssuer, JwtIssuer>();
 
+        // Shared HMAC-signed OAuth state signer (T-0026).
+        services.AddSingleton<IOAuthStateSigner, OAuthStateSigner>();
+
+        // Default country for OAuth-created accounts (T-0026 CQ M-1).
+        services.AddOptions<Makables.Core.AppServices.Features.Auth.AuthDefaultCountryOptions>()
+            .Bind(configuration.GetSection(
+                Makables.Core.AppServices.Features.Auth.AuthDefaultCountryOptions.SectionName));
+
         // === Auth policy (T-0022) ===
         services.AddOptions<LockoutOptions>()
             .Bind(configuration.GetSection(LockoutOptions.SectionName));
@@ -86,9 +99,54 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
         services.AddScoped<IOneTimeTokenRepository, OneTimeTokenRepository>();
 
+        // === Email templates + send pipeline (T-0028) ===
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
+        services.AddScoped<IEmailTemplateTranslationRepository, EmailTemplateTranslationRepository>();
+        services.AddScoped<ILanguageResolver, LanguageResolver>();
+        // Validated on start so a misconfigured WebBaseUrl (e.g. "javascript:")
+        // or a path template missing the {token} placeholder crashes the host
+        // at boot, not on the first email send. T-0028 sec reviewer B-2 / M-1.
+        services.AddOptions<PublicAppUrlsOptions>()
+            .Bind(configuration.GetSection(PublicAppUrlsOptions.SectionName))
+            .Validate(o =>
+            {
+                var (ok, _) = PublicAppUrlsOptionsValidator.Validate(o);
+                return ok;
+            }, "PublicAppUrls is misconfigured. WebBaseUrl must be absolute https (or http on loopback for dev) " +
+               "and every path template must start with '/' and contain the literal '{token}' placeholder.")
+            .ValidateOnStart();
+        services.AddScoped<IEmailSendService, EmailSendService>();
+
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();
+        services.AddScoped<IOutboxConsumerRepository, OutboxConsumerRepository>();
         services.AddScoped<IAdminAuditLogWriter, AdminAuditLogWriter>();
+
+        // === T-0029 outbox queue publisher (used by Makables.Functions
+        // ProcessOutboxFunction). The Web hosts don't strictly need this
+        // — only the Functions host enqueues — but registering it here
+        // keeps the DI surface uniform across hosts. Singleton because
+        // QueueClient is thread-safe and pools connections internally.
+        // ValidateOnStart so a typo'd OutboxQueues:ConnectionString or queue
+        // name crashes the host at boot rather than silently inside a timer
+        // tick 30 s later. T-0029 sec reviewer M-4 / CQ m-3.
+        services.AddOptions<OutboxQueueOptions>()
+            .Bind(configuration.GetSection(OutboxQueueOptions.SectionName))
+            .Validate(o =>
+            {
+                var (ok, _) = OutboxQueueOptionsValidator.Validate(o);
+                return ok;
+            }, "OutboxQueues is misconfigured. ConnectionString + SendEmailQueueName are required " +
+               "and HandoffParkMinutes must be 1..360.")
+            .ValidateOnStart();
+        services.AddSingleton<IOutboxQueuePublisher, StorageQueueOutboxPublisher>();
+        services.AddOptions<OutboxDispatcherOptions>()
+            .Bind(configuration.GetSection(OutboxDispatcherOptions.SectionName))
+            .Validate(o => o.HandoffParkMinutes is >= 1 and <= 360,
+                "OutboxDispatcher:HandoffParkMinutes must be 1..360.")
+            .ValidateOnStart();
+        services.AddScoped<IOutboxDispatcher, OutboxDispatcher>();
+        services.AddScoped<ISendEmailHandler, SendEmailHandler>();
 
         return services;
     }

@@ -64,3 +64,16 @@
   - Lean on the ASP.NET RateLimiter at the endpoint level keyed by email (request body parsing in the limiter is awkward) — covers DoS but does not match the ADR's per-email semantics.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0005 — Google OAuth PKCE
+- **From:** dotnet-backend (T-0026 reviewer)
+- **Ticket / context:** T-0026 Google OAuth, deferred
+- **Asked:** 2026-05-25
+- **Blocking:** no — confidential client + client secret already binds the token-exchange leg
+- **Question:** Should the Google OAuth flow add PKCE (RFC 7636) on top of the existing confidential-client + signed-state pattern? Google recommends it; ADR 0012 doesn't mandate it; the current state binding (redirect URI + CSRF cookie hash, HKDF-derived signing key) already covers the headline OAuth login-CSRF and code-injection vectors PKCE was designed against. PKCE adds one server-side `code_verifier` table or cookie + an extra round-trip.
+- **Options the agent has considered:**
+  - Add PKCE before launch — defense-in-depth against future client-secret leak.
+  - Defer to post-launch hardening — accept the residual risk because the secret is Key-Vault-only.
+  - Skip permanently — confidential clients with rotating secrets are sufficient per OAuth 2.1 draft.
+- **Status:** open
+- **Answer (filled by user):**

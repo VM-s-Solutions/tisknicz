@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;

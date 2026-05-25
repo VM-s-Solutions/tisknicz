@@ -28,6 +28,15 @@ public sealed class User : Auditable
     public int FailedLoginCount { get; private set; }
     public DateTimeOffset? LockedUntil { get; private set; }
 
+    /// <summary>
+    /// User's preferred UI / email language as a BCP-47 tag (e.g. <c>"cs-CZ"</c>,
+    /// <c>"en-US"</c>). Null means "no preference set" — language resolution
+    /// (T-0028 <c>ILanguageResolver</c>) falls back to the country's
+    /// <see cref="Configuration.CountryConfiguration.DefaultLanguageCode"/> and
+    /// finally to <c>"cs-CZ"</c>. Settable via <see cref="SetPreferredLanguage"/>.
+    /// </summary>
+    public string? PreferredLanguage { get; private set; }
+
     private User() { }
 
     /// <summary>
@@ -115,6 +124,26 @@ public sealed class User : Auditable
         ArgumentException.ThrowIfNullOrWhiteSpace(fullName);
         FullName = fullName.Trim();
         Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
+        return this;
+    }
+
+    /// <summary>
+    /// Set or clear the user's preferred language. <paramref name="bcp47"/> must
+    /// match <c>{lang}-{REGION}</c> (e.g. <c>"cs-CZ"</c>); pass <c>null</c> to
+    /// clear (silent fallback to country default).
+    /// </summary>
+    public User SetPreferredLanguage(string? bcp47)
+    {
+        if (bcp47 is null)
+        {
+            PreferredLanguage = null;
+            return this;
+        }
+        if (!LanguageCode.IsValid(bcp47))
+            throw new ArgumentException(
+                $"Preferred language '{bcp47}' is not a recognised BCP-47 tag. Expected e.g. 'cs-CZ' or 'en-US'.",
+                nameof(bcp47));
+        PreferredLanguage = bcp47;
         return this;
     }
 
