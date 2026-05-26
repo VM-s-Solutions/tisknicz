@@ -107,6 +107,7 @@ jobs:
           OutboxQueues__SendEmailQueueName: 'send-email'
           OutboxDispatcher__HandoffParkMinutes: '15'
           Mapbox__AccessToken: 'pk.ci-spec-parity-stub'
+          Ares__BaseUrl: 'https://ares.ci-spec-parity.local'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs

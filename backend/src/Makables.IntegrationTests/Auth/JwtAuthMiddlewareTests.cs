@@ -65,6 +65,8 @@ public sealed class JwtAuthMiddlewareTests
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                     // T-0031: Mapbox ValidateOnStart.
                     ["Mapbox:AccessToken"] = "pk.integration-test-stub",
+                    // T-0032: ARES BaseUrl ValidateOnStart.
+                    ["Ares:BaseUrl"] = "https://ares.integration-test.local",
                 });
             });
 
@@ -318,6 +320,7 @@ public sealed class JwtAuthMiddlewareTests
                         ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                         ["Mapbox:AccessToken"] = "pk.integration-test-stub",
+                        ["Ares:BaseUrl"] = "https://ares.integration-test.local",
                     });
                 });
                 builder.ConfigureServices(services =>

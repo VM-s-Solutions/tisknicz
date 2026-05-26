@@ -53,8 +53,17 @@ public static class BusinessErrorMessage
     public const string MakerAlreadyVerified = "maker.alreadyVerified";
     public const string MakerIcoAlreadyRegistered = "maker.icoAlreadyRegistered";
 
-    // === Company registry ===
+    // === Company registry (T-0032) ===
     public const string CompanyNotFound = "company.notFound";
+    public const string CompanyRegistryTransient = "company.registryTransient";
+    public const string CompanyRegistryPermanent = "company.registryPermanent";
+
+    /// <summary>
+    /// Alias for <see cref="InvalidIcoFormat"/>. Kept under the
+    /// company-registry block so a future contributor reading the
+    /// registry adapter doesn't grep "ico" and miss the validation code.
+    /// </summary>
+    public const string IcoFormatInvalid = InvalidIcoFormat;
 
     // === Country / config ===
     public const string CountryNotServiced = "country.notServiced";

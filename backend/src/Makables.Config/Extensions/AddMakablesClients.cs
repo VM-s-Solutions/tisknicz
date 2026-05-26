@@ -1,6 +1,8 @@
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Registry;
+using Makables.Infra.Clients.Ares;
 using Makables.Infra.Clients.Google;
 using Makables.Infra.Clients.Mapbox;
 using Makables.Infra.Clients.SendGrid;
@@ -8,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.Registry;
 using Polly.Retry;
 using SendGrid;
 
@@ -115,30 +118,79 @@ public static class MakablesClientsExtensions
 
         services.AddHttpClient(MapboxAddressGeocoder.HttpClientName);
 
-        // Polly v8 ResiliencePipeline<HttpResponseMessage>. Same shape as
-        // the SendGrid one: retry on transient HTTP statuses with
-        // exponential backoff + jitter, bounded by MapboxOptions.RetryCount.
-        services.AddSingleton<ResiliencePipeline<HttpResponseMessage>>(sp =>
-        {
-            var opts = sp.GetRequiredService<IOptions<MapboxOptions>>().Value;
-            return new ResiliencePipelineBuilder<HttpResponseMessage>()
-                .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
-                {
-                    MaxRetryAttempts = Math.Max(0, opts.RetryCount),
-                    Delay = TimeSpan.FromMilliseconds(Math.Max(50, opts.RetryBaseDelayMs)),
-                    BackoffType = DelayBackoffType.Exponential,
-                    UseJitter = true,
-                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                        .Handle<HttpRequestException>()
-                        .Handle<TaskCanceledException>()
-                        .HandleResult(static r =>
-                            (int)r.StatusCode is 408 or 429 or >= 500 and <= 599),
-                })
-                .Build();
-        });
-
         services.AddScoped<IAddressGeocoder, MapboxAddressGeocoder>();
+
+        // === ARES (T-0032) ===
+        // No API key — ARES is a public registry. We still validate the
+        // BaseUrl is absolute https (same shape as T-0031 sec MN-2) and
+        // crash the host at boot on any misconfig so deploys don't ship
+        // a quietly broken registry path.
+        services.AddOptions<AresOptions>()
+            .Bind(configuration.GetSection(AresOptions.SectionName))
+            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u)
+                        && u.Scheme == Uri.UriSchemeHttps,
+                "Ares:BaseUrl must be an absolute https URI.")
+            .Validate(o => o.RetryCount is >= 0 and <= 5,
+                "Ares:RetryCount must be 0..5.")
+            .Validate(o => o.OverallTimeoutSeconds is >= 1 and <= 60,
+                "Ares:OverallTimeoutSeconds must be 1..60.")
+            .Validate(o => o.InMemoryCacheTtlMinutes is >= 1 and <= 1440,
+                "Ares:InMemoryCacheTtlMinutes must be 1..1440.")
+            .Validate(o => o.DbCacheTtlHours is >= 1 and <= 168,
+                "Ares:DbCacheTtlHours must be 1..168.")
+            .Validate(o => o.StaleFallbackDays is >= 1 and <= 30,
+                "Ares:StaleFallbackDays must be 1..30.")
+            .ValidateOnStart();
+
+        services.AddHttpClient(AresCompanyRegistry.HttpClientName);
+
+        services.AddScoped<ICompanyRegistry, AresCompanyRegistry>();
+
+        // === Shared Polly registry for every HttpResponseMessage-typed
+        // pipeline across adapters (T-0032 follow-up to a latent T-0031
+        // collision: two adapters registering ResiliencePipeline<HttpResponseMessage>
+        // as singleton overwrote each other in the container). Polly v8's
+        // ResiliencePipelineRegistry<string> is the canonical multi-pipeline
+        // primitive — keyed by adapter name so each adapter resolves its
+        // own pipeline.
+        services.AddSingleton<ResiliencePipelineRegistry<string>>(sp =>
+        {
+            var registry = new ResiliencePipelineRegistry<string>();
+
+            var mapboxOpts = sp.GetRequiredService<IOptions<MapboxOptions>>().Value;
+            registry.TryAddBuilder<HttpResponseMessage>(
+                MapboxAddressGeocoder.HttpClientName,
+                (builder, _) => builder.AddRetry(HttpRetryStrategy(
+                    mapboxOpts.RetryCount, mapboxOpts.RetryBaseDelayMs)));
+
+            var aresOpts = sp.GetRequiredService<IOptions<AresOptions>>().Value;
+            registry.TryAddBuilder<HttpResponseMessage>(
+                AresCompanyRegistry.HttpClientName,
+                (builder, _) => builder.AddRetry(HttpRetryStrategy(
+                    aresOpts.RetryCount, aresOpts.RetryBaseDelayMs)));
+
+            return registry;
+        });
 
         return services;
     }
+
+    /// <summary>
+    /// Shared retry-strategy factory for any <see cref="HttpResponseMessage"/>
+    /// pipeline: handles transient HTTP exceptions + 408/429/5xx with
+    /// exponential backoff + jitter, bounded by the supplied retry count.
+    /// </summary>
+    private static RetryStrategyOptions<HttpResponseMessage> HttpRetryStrategy(int retryCount, int baseDelayMs) =>
+        new()
+        {
+            MaxRetryAttempts = Math.Max(0, retryCount),
+            Delay = TimeSpan.FromMilliseconds(Math.Max(50, baseDelayMs)),
+            BackoffType = DelayBackoffType.Exponential,
+            UseJitter = true,
+            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                .Handle<HttpRequestException>()
+                .Handle<TaskCanceledException>()
+                .HandleResult(static r =>
+                    (int)r.StatusCode is 408 or 429 or >= 500 and <= 599),
+        };
 }

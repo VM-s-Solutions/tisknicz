@@ -6,6 +6,7 @@ using Makables.Core.Domain.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.Registry;
 
 namespace Makables.Infra.Clients.Mapbox;
 
@@ -42,12 +43,15 @@ namespace Makables.Infra.Clients.Mapbox;
 /// </summary>
 public sealed class MapboxAddressGeocoder(
     IHttpClientFactory httpClientFactory,
-    ResiliencePipeline<HttpResponseMessage> retryPipeline,
+    ResiliencePipelineRegistry<string> pipelineRegistry,
     IOptions<MapboxOptions> options,
     ILogger<MapboxAddressGeocoder> logger) : IAddressGeocoder
 {
     /// <summary>Named HttpClient registered by the wiring extension.</summary>
     public const string HttpClientName = "Makables.Infra.Clients.Mapbox";
+
+    private ResiliencePipeline<HttpResponseMessage> RetryPipeline =>
+        pipelineRegistry.GetPipeline<HttpResponseMessage>(HttpClientName);
 
     public async Task<BusinessResult<Coordinates>> GeocodeAsync(
         Address address,
@@ -161,7 +165,7 @@ public sealed class MapboxAddressGeocoder(
         HttpResponseMessage response;
         try
         {
-            response = await retryPipeline.ExecuteAsync(
+            response = await RetryPipeline.ExecuteAsync(
                 async ct =>
                 {
                     // Build a fresh HttpRequestMessage per attempt — a request

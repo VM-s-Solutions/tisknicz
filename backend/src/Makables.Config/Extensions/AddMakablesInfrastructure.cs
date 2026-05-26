@@ -10,6 +10,7 @@ using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
+using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Addresses;
 using Makables.Infra.Common.Auth;
@@ -22,6 +23,7 @@ using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
+using Makables.Infra.Database.Registry;
 using Makables.Infra.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -110,6 +112,13 @@ public static class MakablesInfrastructureExtensions
         // static ConcurrentDictionary on the type, so cache state survives
         // across scopes anyway.
         services.AddScoped<IAddressFormatValidator, ConfigurationDrivenAddressFormatValidator>();
+
+        // === Company registry cache (T-0032) ===
+        services.AddScoped<ICompanyRegistryCacheRepository, CompanyRegistryCacheRepository>();
+        // IMemoryCache backs the in-process hot layer used by
+        // AresCompanyRegistry. Singleton + thread-safe; entries TTL out
+        // via MemoryCacheEntryOptions set per-call.
+        services.AddMemoryCache();
 
         // === Email templates + send pipeline (T-0028) ===
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();

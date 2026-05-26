@@ -12,6 +12,7 @@
     <PackageReference Include="Google.Apis.Auth" />
     <PackageReference Include="SendGrid" />
     <PackageReference Include="Polly" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>
 
 </Project>
