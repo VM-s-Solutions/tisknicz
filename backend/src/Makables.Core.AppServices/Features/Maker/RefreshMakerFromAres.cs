@@ -29,6 +29,21 @@ namespace Makables.Core.AppServices.Features.Maker;
 /// invoices. This handler does not need to do anything special — the
 /// invoice-time snapshot lives outside the Maker entity.
 /// </para>
+///
+/// <para>
+/// <b>Authorization.</b> The handler does NOT verify the caller is an
+/// admin. The host that wires this controller MUST gate the endpoint
+/// with <c>[Authorize(Roles = "Admin")]</c>. T-0034 security reviewer M-1.
+/// </para>
+///
+/// <para>
+/// <b>Audit-log gap.</b> The audit pipeline snapshots the Maker target
+/// only; the linked Address row's mutation is NOT captured in the
+/// before/after JSONB (T-0034 sec reviewer m-2). For an action named
+/// "refresh from ARES" the seat change is implicit, but a follow-up
+/// ticket should either widen the audit snapshot or append a second
+/// audit row keyed on the Address.
+/// </para>
 /// </summary>
 public static class RefreshMakerFromAres
 {
@@ -49,6 +64,14 @@ public static class RefreshMakerFromAres
             RuleFor(c => c.MakerId)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .MaximumLength(40).WithErrorCode(BusinessErrorMessage.MaxLength);
+
+            // Cap Notes at the audit-log column width. T-0034 sec
+            // reviewer m-3.
+            When(c => c.Notes is not null, () =>
+            {
+                RuleFor(c => c.Notes!)
+                    .MaximumLength(2000).WithErrorCode(BusinessErrorMessage.MaxLength);
+            });
         }
     }
 

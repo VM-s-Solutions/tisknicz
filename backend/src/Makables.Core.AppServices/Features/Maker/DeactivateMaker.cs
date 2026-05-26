@@ -23,6 +23,12 @@ namespace Makables.Core.AppServices.Features.Maker;
 /// would be a hard delete anyway). The handler passes the admin's user
 /// id + the clock's <c>UtcNow</c> explicitly.
 /// </para>
+///
+/// <para>
+/// <b>Authorization.</b> The handler does NOT verify the caller is an
+/// admin. The host that wires this controller MUST gate the endpoint
+/// with <c>[Authorize(Roles = "Admin")]</c>. T-0034 security reviewer M-1.
+/// </para>
 /// </summary>
 public static class DeactivateMaker
 {
@@ -41,6 +47,14 @@ public static class DeactivateMaker
             RuleFor(c => c.MakerId)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .MaximumLength(40).WithErrorCode(BusinessErrorMessage.MaxLength);
+
+            // Cap Notes at the audit-log column width. T-0034 sec
+            // reviewer m-3.
+            When(c => c.Notes is not null, () =>
+            {
+                RuleFor(c => c.Notes!)
+                    .MaximumLength(2000).WithErrorCode(BusinessErrorMessage.MaxLength);
+            });
         }
     }
 
@@ -52,19 +66,26 @@ public static class DeactivateMaker
     {
         public async Task<BusinessResult> Handle(Command command, CancellationToken cancellationToken)
         {
+            // Fail-closed if the caller has no session. The host-level
+            // [Authorize] gate should make this unreachable, but
+            // attributing destructive actions to a "system" pseudo-user
+            // would mask a misconfigured endpoint. T-0034 sec reviewer m-1.
+            var adminUserId = session.GetUserId();
+            if (string.IsNullOrEmpty(adminUserId))
+            {
+                return BusinessResult.Failure(Error.Unauthorized());
+            }
+
+            // IMakerRepository.GetByIdAsync is filtered by the global
+            // soft-delete query filter, so an already-deactivated maker
+            // surfaces as NotFound. T-0034 sec reviewer n-1: no
+            // additional IsActive check needed here.
             var maker = await makers.GetByIdAsync(command.MakerId, cancellationToken);
             if (maker is null)
             {
                 return BusinessResult.Failure(Error.NotFound("maker"));
             }
 
-            if (!maker.IsActive)
-            {
-                return BusinessResult.Failure(
-                    Error.Conflict("maker", BusinessErrorMessage.MakerNotActive));
-            }
-
-            var adminUserId = session.GetUserId() ?? "system";
             maker.MarkDeactivated(adminUserId, clock.UtcNow);
 
             return BusinessResult.Success();

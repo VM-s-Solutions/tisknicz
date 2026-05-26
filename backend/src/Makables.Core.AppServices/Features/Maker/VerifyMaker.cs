@@ -17,6 +17,14 @@ namespace Makables.Core.AppServices.Features.Maker;
 /// <see cref="ErrorType.Conflict"/> — the handler checks before calling
 /// the entity's mutator (which would throw on double-verify).
 /// </para>
+///
+/// <para>
+/// <b>Authorization.</b> The handler does NOT verify the caller is an
+/// admin. The host that wires this controller MUST gate the endpoint
+/// with <c>[Authorize(Roles = "Admin")]</c> (or the equivalent JWT-audience
+/// scope on <c>Web.Admin</c>). Wiring this on a non-admin host is a
+/// privilege-escalation vulnerability. T-0034 security reviewer M-1.
+/// </para>
 /// </summary>
 public static class VerifyMaker
 {
@@ -35,6 +43,15 @@ public static class VerifyMaker
             RuleFor(c => c.MakerId)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .MaximumLength(40).WithErrorCode(BusinessErrorMessage.MaxLength);
+
+            // Cap Notes at the audit-log column width. T-0034 sec
+            // reviewer m-3 — without this an oversize Notes payload
+            // dies at SaveChanges as a raw 500 instead of a clean 400.
+            When(c => c.Notes is not null, () =>
+            {
+                RuleFor(c => c.Notes!)
+                    .MaximumLength(2000).WithErrorCode(BusinessErrorMessage.MaxLength);
+            });
         }
     }
 

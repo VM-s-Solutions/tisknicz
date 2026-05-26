@@ -66,17 +66,33 @@ public class DeactivateMakerHandlerTests
     }
 
     [Fact]
-    public async Task Rejects_re_deactivation_with_MakerNotActive()
+    public async Task Already_deactivated_surfaces_as_NotFound_via_soft_delete_query_filter()
     {
-        var maker = ExistingMaker();
-        maker.MarkDeactivated("earlier-admin", DeactivatedAt.AddDays(-1));
-        _makers.GetByIdAsync("maker-1", Arg.Any<CancellationToken>()).Returns(maker);
+        // GetByIdAsync respects the global soft-delete filter, so an
+        // already-deactivated maker is invisible to the admin command.
+        // T-0034 sec reviewer n-1: the previous "MakerNotActive" branch
+        // in the handler was unreachable.
+        _makers.GetByIdAsync("maker-1", Arg.Any<CancellationToken>()).Returns((Makables.Core.Domain.Makers.Maker?)null);
 
         var result = await _sut.Handle(new DeactivateMaker.Command("maker-1", null), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(BusinessErrorMessage.MakerNotActive);
-        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error!.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task Returns_Unauthorized_when_session_has_no_user()
+    {
+        // Fail-closed if the [Authorize] gate misfires — destructive
+        // actions must never be attributed to a "system" pseudo-user.
+        // T-0034 sec reviewer m-1.
+        _session.GetUserId().Returns((string?)null);
+
+        var result = await _sut.Handle(new DeactivateMaker.Command("maker-1", null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Unauthorized);
+        await _makers.DidNotReceive().GetByIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

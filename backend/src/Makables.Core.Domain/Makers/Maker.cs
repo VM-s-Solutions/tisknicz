@@ -195,8 +195,13 @@ public sealed class Maker : Auditable
         if (bio is not null)
         {
             var trimmed = bio.Trim();
+            // 500-char cap is enforced by UpdateMakerProfile.Validator on
+            // the trimmed length; this is a defensive invariant for direct
+            // domain callers (seed data, future internal use). T-0034 cq
+            // reviewer M-2 — single canonical boundary in the validator,
+            // entity asserts as a precondition.
             if (trimmed.Length > 500)
-                throw new ArgumentException("Bio must be 500 chars or fewer.", nameof(bio));
+                throw new ArgumentException("Bio must be 500 chars or fewer (post-trim).", nameof(bio));
             Bio = trimmed.Length == 0 ? null : trimmed;
         }
 

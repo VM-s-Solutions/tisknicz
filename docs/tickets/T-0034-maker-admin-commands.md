@@ -67,3 +67,13 @@ The four mutators that activate the Maker entity after T-0033 ships its read-onl
 
 ## Status log
 - 2026-05-26 done. 669 tests pass. Awaiting dual reviewer (security + code-quality) per workflow.
+- 2026-05-26 reviewer fixes folded into one commit. 670 tests pass (588 unit + 82 integration).
+  - **Code-quality M-1** (Validator `RuleFor(c => c.Bio!.Length)` produces `PropertyName="Bio.Length"` on the wire) — closed. Switched to `RuleFor(c => c.Bio!).Must(b => b.Trim().Length <= 500)`. Same fix on `PickupNote`.
+  - **Code-quality M-2** (Bio cap split between validator-raw and entity-trimmed) — closed. Validator now caps post-trim length (single canonical boundary); the entity still guards as a defensive precondition with a clarifying comment.
+  - **Security m-1** (`?? "system"` fallback in `DeactivateMaker` masks misconfigured authorization) — closed. Handler now fail-closes with `Error.Unauthorized()` and a new test pins the behaviour.
+  - **Security m-3** (Notes had no length cap) — closed. All three admin commands (`VerifyMaker`, `DeactivateMaker`, `RefreshMakerFromAres`) now cap Notes at 2000 chars (the audit-log column width).
+  - **Security m-4** (BankAccount allocation amplification before ČNB rule) — closed. Validator now applies `.MaximumLength(50)` before `.Must(IsValid)`.
+  - **Security n-1** (unreachable `IsActive` check in `DeactivateMaker`) — closed. The check is dropped (global soft-delete filter already makes already-deactivated rows invisible). Test updated to assert the NotFound surface.
+  - **Security M-1** (admin role enforcement deferred to host wiring) — documented in XML doc on each of the three admin commands. Tracked as a hard prerequisite for the Web.Admin host-wiring ticket; integration tests there MUST assert 403 for non-admin callers.
+  - **Security m-2** (Address mutation not in audit JSONB on `RefreshMakerFromAres`) — documented in XML doc; widening the audit snapshot is a follow-up ticket.
+  - **Code-quality / security minors deferred**: Response shape for `RefreshMakerFromAres` carrying an `AddressRefreshed` flag (cq N-1); Address.Update conditional coordinate clear (cq N-2); MakerId magic-40 (cq N-3); `IMakerRepository.GetByUserIdAsync` tracked-vs-AsNoTracking doc (cq N-5); BankAccount audit-log redaction decision (sec m-5); `Maker` optimistic-concurrency token (sec n-2). All five are tracked for the admin-frontend ticket or a follow-up.

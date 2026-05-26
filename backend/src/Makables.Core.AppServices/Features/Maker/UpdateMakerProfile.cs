@@ -43,28 +43,32 @@ public static class UpdateMakerProfile
     {
         public Validator()
         {
-            // Bio: only enforce length here; null means "leave alone".
+            // Bio: enforce post-trim length so the boundary matches what
+            // Maker.UpdateProfile stores (T-0034 cq reviewer M-2 — single
+            // canonical limit, no double-guard divergence). Null = leave
+            // alone; empty string = clear.
             When(c => c.Bio is not null, () =>
             {
-                RuleFor(c => c.Bio!.Length)
-                    .LessThanOrEqualTo(500)
+                RuleFor(c => c.Bio!)
+                    .Must(b => b.Trim().Length <= 500)
                     .WithErrorCode(BusinessErrorMessage.MaxLength);
             });
 
-            // BankAccount: format check via the Czech ČNB rule. Empty
-            // string is allowed (clears the value); a non-empty string
-            // must pass the validator.
+            // BankAccount: cap length first (T-0034 sec reviewer m-4 —
+            // 10MB BankAccount allocates 10MB before structural checks),
+            // then run the ČNB rule. Empty string is allowed (clears).
             When(c => !string.IsNullOrEmpty(c.BankAccount), () =>
             {
                 RuleFor(c => c.BankAccount!)
+                    .MaximumLength(50).WithErrorCode(BusinessErrorMessage.MaxLength)
                     .Must(CzechBankAccountValidator.IsValid)
                     .WithErrorCode(BusinessErrorMessage.InvalidBankAccountFormat);
             });
 
             When(c => c.PickupNote is not null, () =>
             {
-                RuleFor(c => c.PickupNote!.Length)
-                    .LessThanOrEqualTo(500)
+                RuleFor(c => c.PickupNote!)
+                    .Must(p => p.Trim().Length <= 500)
                     .WithErrorCode(BusinessErrorMessage.MaxLength);
             });
         }
