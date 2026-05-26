@@ -33,7 +33,7 @@ public static class BusinessErrorMessage
     public const string InvalidEmailFormat = "validation.invalidEmail";
     public const string InvalidPhoneFormat = "validation.invalidPhone";
     public const string InvalidZipFormat = "validation.invalidZip";
-    public const string InvalidIcoFormat = "validation.icoFormat";
+    public const string IcoFormatInvalid = "validation.icoFormat";
     public const string InvalidBankAccountFormat = "validation.bankAccountFormat";
     public const string ValidationFailed = "validation.failed";
 
@@ -57,13 +57,6 @@ public static class BusinessErrorMessage
     public const string CompanyNotFound = "company.notFound";
     public const string CompanyRegistryTransient = "company.registryTransient";
     public const string CompanyRegistryPermanent = "company.registryPermanent";
-
-    /// <summary>
-    /// Alias for <see cref="InvalidIcoFormat"/>. Kept under the
-    /// company-registry block so a future contributor reading the
-    /// registry adapter doesn't grep "ico" and miss the validation code.
-    /// </summary>
-    public const string IcoFormatInvalid = InvalidIcoFormat;
 
     // === Country / config ===
     public const string CountryNotServiced = "country.notServiced";

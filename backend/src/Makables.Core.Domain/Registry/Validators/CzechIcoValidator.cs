@@ -10,7 +10,7 @@ namespace Makables.Core.Domain.Registry.Validators;
 /// <list type="number">
 ///   <item><description>Reject anything that isn't exactly 8 digits (whitespace trimmed beforehand).</description></item>
 ///   <item><description>Take digits d1..d8 (d8 is the checksum).</description></item>
-///   <item><description>Compute <c>s = sum(d_i * (9 - i))</c> for i = 1..7 (so weights 8, 7, 6, 5, 4, 3, 2).</description></item>
+///   <item><description>Compute <c>s = sum(d_i * w_i)</c> for i = 1..7 with weights 8, 7, 6, 5, 4, 3, 2 (in code: 0-indexed loop i=0..6 with weight <c>8 - i</c>).</description></item>
 ///   <item><description>Compute <c>m = s mod 11</c>.</description></item>
 ///   <item><description>Expected checksum c:
 ///     <list type="bullet">

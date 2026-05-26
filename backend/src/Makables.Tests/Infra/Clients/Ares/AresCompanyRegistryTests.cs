@@ -2,17 +2,14 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
-using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Registry;
-using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Clients.Ares;
 using Makables.TestUtilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Polly;
 using Polly.Registry;
 
 namespace Makables.Tests.Infra.Clients.Ares;
@@ -28,9 +25,8 @@ public class AresCompanyRegistryTests
     private const string ValidIco = "27074358";
 
     private readonly StubHttpMessageHandler _handler = new();
-    private readonly ICompanyRegistryCacheRepository _cacheRepo =
-        Substitute.For<ICompanyRegistryCacheRepository>();
-    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly ICompanyRegistryCacheStore _cacheStore =
+        Substitute.For<ICompanyRegistryCacheStore>();
     private readonly IMemoryCache _memoryCache = new MemoryCache(new MemoryCacheOptions());
     private readonly FakeClock _clock = new();
     private readonly AresCompanyRegistry _sut;
@@ -57,7 +53,7 @@ public class AresCompanyRegistryTests
             (builder, _) => { /* no-op: no retry */ });
 
         _sut = new AresCompanyRegistry(
-            factory, registry, _cacheRepo, _uow, _memoryCache, _clock, opts,
+            factory, registry, _cacheStore, _memoryCache, _clock, opts,
             NullLogger<AresCompanyRegistry>.Instance);
     }
 
@@ -132,7 +128,7 @@ public class AresCompanyRegistryTests
         result.Error!.Code.Should().Be(BusinessErrorMessage.IcoFormatInvalid);
         result.Error.Type.Should().Be(ErrorType.Validation);
         _handler.CallCount.Should().Be(0);
-        await _cacheRepo.DidNotReceive().GetAsync(default!, default!, default);
+        await _cacheStore.DidNotReceive().GetAsync(default!, default!, default);
     }
 
     // ---- happy paths ----
@@ -140,7 +136,7 @@ public class AresCompanyRegistryTests
     [Fact]
     public async Task Happy_path_fetches_from_ARES_then_writes_to_DB_and_memory_caches()
     {
-        _cacheRepo.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
             .Returns((CompanyRegistryCacheEntry?)null);
         _handler.Response = Json(HttpStatusCode.OK, ValidAresPayload());
 
@@ -158,8 +154,10 @@ public class AresCompanyRegistryTests
         r.RegisteredAddress.Zip.Should().Be("14000");
         r.RegisteredAddress.CountryCodeIso.Should().Be("CZ");
 
-        _cacheRepo.Received(1).Add(Arg.Any<CompanyRegistryCacheEntry>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _cacheStore.Received(1).UpsertAsync(
+            AresCompanyRegistry.ProviderCode, ValidIco,
+            Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            Arg.Any<CancellationToken>());
 
         // Promoted into memory cache — second call must NOT hit HTTP again.
         _handler.CallCount.Should().Be(1);
@@ -172,7 +170,7 @@ public class AresCompanyRegistryTests
     public async Task Fresh_DB_cache_row_is_served_without_HTTP()
     {
         var dbEntry = ExistingDbEntry(_clock.UtcNow.AddHours(-1), _clock.UtcNow.AddHours(23));
-        _cacheRepo.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
             .Returns(dbEntry);
 
         var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
@@ -180,7 +178,9 @@ public class AresCompanyRegistryTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.IsStale.Should().BeFalse();
         _handler.CallCount.Should().Be(0);
-        _cacheRepo.DidNotReceive().Add(Arg.Any<CompanyRegistryCacheEntry>());
+        await _cacheStore.DidNotReceive().UpsertAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     // ---- HTTP failure paths ----
@@ -188,14 +188,16 @@ public class AresCompanyRegistryTests
     [Fact]
     public async Task ARES_404_returns_NotFound_without_writing_caches()
     {
-        _cacheRepo.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
         _handler.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
 
         var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.NotFound);
-        _cacheRepo.DidNotReceive().Add(Arg.Any<CompanyRegistryCacheEntry>());
+        await _cacheStore.DidNotReceive().UpsertAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -204,7 +206,7 @@ public class AresCompanyRegistryTests
     [InlineData(429)]
     public async Task ARES_5xx_or_429_without_DB_cache_returns_Transient(int status)
     {
-        _cacheRepo.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
         _handler.Response = new HttpResponseMessage((HttpStatusCode)status);
 
         var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
@@ -214,10 +216,61 @@ public class AresCompanyRegistryTests
         result.Error.Type.Should().Be(ErrorType.Transient);
     }
 
+    [Theory]
+    [InlineData("missing nazevObce", """
+    { "ico": "27074358", "obchodniJmeno": "X", "sidlo": { "nazevUlice": "Pikrtova", "cisloDomovni": 1, "psc": 14000 } }
+    """)]
+    [InlineData("missing psc", """
+    { "ico": "27074358", "obchodniJmeno": "X", "sidlo": { "nazevUlice": "Pikrtova", "cisloDomovni": 1, "nazevObce": "Praha" } }
+    """)]
+    [InlineData("missing both nazevUlice and cisloDomovni", """
+    { "ico": "27074358", "obchodniJmeno": "X", "sidlo": { "nazevObce": "Praha", "psc": 14000 } }
+    """)]
+    [InlineData("missing sidlo entirely", """
+    { "ico": "27074358", "obchodniJmeno": "X" }
+    """)]
+    public async Task ARES_response_with_incomplete_sidlo_is_Permanent_failure(string scenario, string body)
+    {
+        // T-0032 CQ reviewer M-1: incomplete ARES sidlo is "unexpected
+        // shape" per ADR 0018 §"Error classification" — must surface as
+        // Permanent so admin can investigate, not silently flow into the
+        // Maker snapshot as literal "unknown" / "0" / "00000" placeholders.
+        _ = scenario;
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _handler.Response = Json(HttpStatusCode.OK, body);
+
+        var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.CompanyRegistryPermanent);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+    }
+
+    [Fact]
+    public async Task ARES_response_with_only_city_and_psc_succeeds_with_city_as_street_fallback()
+    {
+        // Mapper-allowed special case: a small-village or OSVČ-at-home
+        // entity may omit `nazevUlice`. We still construct the Address
+        // by using the city name as the street label. House number
+        // can be 0 when ARES omits cisloDomovni.
+        var body = """
+        { "ico": "27074358", "obchodniJmeno": "X",
+          "sidlo": { "cisloDomovni": 1, "nazevObce": "Praha", "psc": 14000 } }
+        """;
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _handler.Response = Json(HttpStatusCode.OK, body);
+
+        var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.RegisteredAddress.Street.Should().Be("Praha");
+        result.Value.RegisteredAddress.HouseNumber.Should().Be("1");
+    }
+
     [Fact]
     public async Task Malformed_ARES_response_is_Permanent_failure()
     {
-        _cacheRepo.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
         _handler.Response = Json(HttpStatusCode.OK, "{not valid json");
 
         var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
@@ -237,7 +290,7 @@ public class AresCompanyRegistryTests
         var staleEntry = ExistingDbEntry(
             fetchedAt: _clock.UtcNow.AddDays(-3),
             expiresAt: _clock.UtcNow.AddHours(-1));
-        _cacheRepo.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
             .Returns(staleEntry);
         _handler.Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
 
@@ -254,7 +307,7 @@ public class AresCompanyRegistryTests
         var tooOld = ExistingDbEntry(
             fetchedAt: _clock.UtcNow.AddDays(-10),   // outside the 7-day window
             expiresAt: _clock.UtcNow.AddDays(-9));
-        _cacheRepo.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
             .Returns(tooOld);
         _handler.Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
 
@@ -273,7 +326,7 @@ public class AresCompanyRegistryTests
         var staleEntry = ExistingDbEntry(
             fetchedAt: _clock.UtcNow.AddDays(-3),
             expiresAt: _clock.UtcNow.AddHours(-1));
-        _cacheRepo.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
             .Returns(staleEntry);
         _handler.Response = Json(HttpStatusCode.OK, "{not valid json");
 
@@ -286,7 +339,7 @@ public class AresCompanyRegistryTests
     [Fact]
     public async Task Cancellation_during_lookup_propagates()
     {
-        _cacheRepo.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
+        _cacheStore.GetAsync(default!, default!, default!).ReturnsForAnyArgs((CompanyRegistryCacheEntry?)null);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
         _handler.OnSend = (_, ct) => throw new OperationCanceledException(ct);

@@ -57,6 +57,30 @@ public record CompanyRecord(
 );
 ```
 
+> **T-0032 implementation note.** Two deviations from the sketch above:
+>
+> 1. `bool IsActive` shipped as `bool IsActiveInRegistry` — the name leaves
+>    room for a separate platform-level "is active for our purposes" flag
+>    on the future `Maker` aggregate without collision.
+> 2. `CompanyRecord` carries an extra `bool IsStale = false` property — set
+>    `true` when the adapter served the 7-day stale-cache fallback (see
+>    §"Caching policy"). T-0033 `RegisterMaker` reads it to surface a
+>    "registry data may be outdated" warning while still allowing the user
+>    to complete registration.
+>
+> **Cache persistence isolation.** The cache store is built on
+> `IDbContextFactory<MakablesDbContext>`, NOT the request-scoped
+> `IUnitOfWork`. T-0032 sec reviewer M-1: a mid-command `ICompanyRegistry`
+> call (T-0033 RegisterMaker is the trigger) must NOT flush the caller's
+> tracked-but-uncommitted aggregates via the adapter's cache write. The
+> dedicated DbContext scope decouples the two commits.
+>
+> **Incomplete `sidlo` is Permanent.** The adapter rejects ARES responses
+> missing required address fields (`nazevObce`, `psc`, AND either
+> `nazevUlice` or `cisloDomovni`) as `Error.Permanent` per §"Error
+> classification". The earlier behaviour of substituting literal
+> "unknown" / "0" / "00000" was caught in code review and corrected.
+
 ### ARES adapter
 
 Lives in `Makables.Infra.Clients/Ares/AresCompanyRegistry.cs`.

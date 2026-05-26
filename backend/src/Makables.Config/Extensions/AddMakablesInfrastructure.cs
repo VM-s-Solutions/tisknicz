@@ -73,7 +73,12 @@ public static class MakablesInfrastructureExtensions
         // === EF Core DbContext + interceptor + UoW alias ===
         services.AddScoped<AuditableSaveChangesInterceptor>();
 
-        services.AddDbContext<MakablesDbContext>((sp, options) =>
+        // Reusable per-call DbContext configurator. Used both for the
+        // request-scoped DbContext (the UoW the MediatR pipeline commits)
+        // and the IDbContextFactory (used by side-effect adapters that
+        // need an isolated DbContext scope — see ICompanyRegistryCacheStore
+        // / T-0032 sec reviewer M-1).
+        void ConfigureMakablesDbContext(IServiceProvider sp, DbContextOptionsBuilder options)
         {
             var connectionString = configuration.GetConnectionString("Postgres");
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -89,7 +94,16 @@ public static class MakablesInfrastructureExtensions
 
             options.UseNpgsql(connectionString);
             options.AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>());
-        });
+        }
+
+        services.AddDbContext<MakablesDbContext>(ConfigureMakablesDbContext);
+
+        // IDbContextFactory<MakablesDbContext> for adapters that need to
+        // run side-effect commits OUTSIDE the request-scoped UoW.
+        // T-0032 sec reviewer M-1: the ARES cache store uses this so a
+        // cache write can't flush a calling command's tracked-but-uncommitted
+        // aggregates.
+        services.AddDbContextFactory<MakablesDbContext>(ConfigureMakablesDbContext);
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MakablesDbContext>());
 
@@ -114,7 +128,11 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IAddressFormatValidator, ConfigurationDrivenAddressFormatValidator>();
 
         // === Company registry cache (T-0032) ===
-        services.AddScoped<ICompanyRegistryCacheRepository, CompanyRegistryCacheRepository>();
+        // ICompanyRegistryCacheStore uses IDbContextFactory<MakablesDbContext>
+        // so cache reads/writes never touch the request-scoped UoW
+        // (T-0032 sec reviewer M-1). Scoped lifetime is fine — the
+        // factory itself is the singleton, the store just holds a reference.
+        services.AddScoped<ICompanyRegistryCacheStore, CompanyRegistryCacheStore>();
         // IMemoryCache backs the in-process hot layer used by
         // AresCompanyRegistry. Singleton + thread-safe; entries TTL out
         // via MemoryCacheEntryOptions set per-call.
