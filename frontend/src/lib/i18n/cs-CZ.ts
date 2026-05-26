@@ -85,6 +85,7 @@ export const messages = {
   'auth.verify.resend': 'Poslat odkaz znovu',
   'auth.verify.banner': 'Váš e-mail dosud nebyl potvrzen.',
   'auth.verify.banner_action': 'Poslat znovu',
+  'auth.verify.banner_sent': 'Odesláno',
 
   // Auth — password reset
   'auth.reset.request_title': 'Obnova hesla',
@@ -106,6 +107,7 @@ export const messages = {
   'auth.magic.failed_title': 'Přihlášení se nezdařilo',
   'auth.magic.failed_body': 'Odkaz je neplatný nebo už vypršel.',
   'auth.magic.missing_token': 'V odkazu chybí přihlašovací kód.',
+  'auth.magic.request_done_body': 'Pokud k zadanému e-mailu existuje účet, právě jsme tam poslali přihlašovací odkaz.',
 
   // Auth — common
   'auth.common.session_pending': 'Pokračujeme…',

@@ -37,7 +37,7 @@ export function EmailConfirmationBanner({ email, host = 'customer' }: EmailConfi
     <Alert variant="warning" className="flex items-center justify-between gap-4">
       <span>{t('auth.verify.banner')}</span>
       <Button variant="outline" size="sm" disabled={busy || sent} onClick={handleResend}>
-        {sent ? t('auth.verify.success_title') : t('auth.verify.banner_action')}
+        {sent ? t('auth.verify.banner_sent') : t('auth.verify.banner_action')}
       </Button>
     </Alert>
   );

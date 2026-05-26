@@ -87,11 +87,13 @@ export async function apiFetch<TValue>(
   let response: Response;
   try {
     response = await fetch(url, {
-      // include cookies on cross-origin requests so the audience-scoped
-      // session cookies (set by the .NET AuthController per ADR 0012)
-      // ride along. T-0035.
-      credentials: options.credentials ?? 'include',
       ...options,
+      // Include cookies on cross-origin requests so the audience-scoped
+      // session cookies (set by the .NET AuthController per ADR 0012)
+      // ride along. T-0035 cq reviewer m5: this overrides the spread so
+      // a caller passing `credentials: undefined` still gets 'include',
+      // and an explicit 'omit'/'same-origin' is honoured.
+      credentials: options.credentials ?? 'include',
       body,
       headers,
       signal,

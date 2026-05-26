@@ -46,7 +46,7 @@ function RequestLink() {
   if (done) {
     return (
       <Card padding="lg" className="flex flex-col gap-3">
-        <p className="text-sm text-zinc-300">{t('auth.reset.request_done_body')}</p>
+        <p className="text-sm text-zinc-300">{t('auth.magic.request_done_body')}</p>
       </Card>
     );
   }

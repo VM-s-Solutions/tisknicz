@@ -61,7 +61,7 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
             Email: body.Email,
             Password: body.Password,
             Audience: hostAudience.Value,
-            UserAgent: Request.Headers.UserAgent.ToString(),
+            UserAgent: NormalizedUserAgent(),
             IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
 
         if (result.IsSuccess && result.Value is not null)
@@ -76,12 +76,29 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var refreshToken = AuthCookies.ReadRefreshCookie(Request, hostAudience.Value);
-        if (!string.IsNullOrEmpty(refreshToken))
+        try
         {
-            await Mediator.Send(new Logout.Command(refreshToken), ct);
+            if (!string.IsNullOrEmpty(refreshToken))
+            {
+                // Logout is idempotent — failures (e.g. token already revoked)
+                // are not propagated; the cookies are still cleared below.
+                _ = await Mediator.Send(new Logout.Command(refreshToken), ct);
+            }
         }
-        AuthCookies.ClearSessionCookies(Response, hostAudience.Value);
+        finally
+        {
+            // T-0035 sec reviewer m4: cookies MUST be cleared regardless of
+            // command outcome so an infra exception doesn't leave the user
+            // half-logged-in.
+            AuthCookies.ClearSessionCookies(Response, hostAudience.Value);
+        }
         return NoContent();
+    }
+
+    private string? NormalizedUserAgent()
+    {
+        var ua = Request.Headers.UserAgent.ToString();
+        return string.IsNullOrEmpty(ua) ? null : ua;
     }
 
     [HttpPost("refresh")]
@@ -97,7 +114,7 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
         var result = await Mediator.Send(new Refresh.Command(
             RawRefreshToken: refreshToken,
             Audience: hostAudience.Value,
-            UserAgent: Request.Headers.UserAgent.ToString(),
+            UserAgent: NormalizedUserAgent(),
             IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
 
         if (result.IsSuccess && result.Value is not null)
@@ -158,7 +175,7 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
         var result = await Mediator.Send(new ConsumeMagicLink.Command(
             RawToken: body.Token,
             Audience: hostAudience.Value,
-            UserAgent: Request.Headers.UserAgent.ToString(),
+            UserAgent: NormalizedUserAgent(),
             IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
 
         if (result.IsSuccess && result.Value is not null)
