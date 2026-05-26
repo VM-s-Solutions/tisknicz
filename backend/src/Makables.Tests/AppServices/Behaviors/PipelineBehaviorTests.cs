@@ -59,7 +59,9 @@ public class PipelineBehaviorTests
 
     // === Pipeline scaffolding ===
 
-    private static (ISender sender, IUnitOfWork uow) BuildPipeline(bool registerValidators = true)
+    private static (ISender sender, IUnitOfWork uow) BuildPipeline(
+        bool registerValidators = true,
+        IUniqueConstraintTranslator? translator = null)
     {
         var services = new ServiceCollection();
 
@@ -80,6 +82,7 @@ public class PipelineBehaviorTests
 
         var uow = Substitute.For<IUnitOfWork>();
         services.AddSingleton(uow);
+        services.AddSingleton(translator ?? Substitute.For<IUniqueConstraintTranslator>());
 
         var provider = services.BuildServiceProvider();
         return (provider.GetRequiredService<ISender>(), uow);
@@ -172,6 +175,7 @@ public class PipelineBehaviorTests
 
         var uow = Substitute.For<IUnitOfWork>();
         services.AddSingleton(uow);
+        services.AddSingleton(Substitute.For<IUniqueConstraintTranslator>());
 
         var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -205,6 +209,7 @@ public class PipelineBehaviorTests
 
         var uow = Substitute.For<IUnitOfWork>();
         services.AddSingleton(uow);
+        services.AddSingleton(Substitute.For<IUniqueConstraintTranslator>());
 
         var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -246,5 +251,70 @@ public class PipelineBehaviorTests
 
         result.IsSuccess.Should().BeTrue();
         await uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    // === Unique-constraint race translation (T-0033 sec M-1) ===
+
+    [Fact]
+    public async Task UoW_Translates_UniqueConstraintViolation_To_Typed_BusinessResult_Failure()
+    {
+        // A handler's uniqueness pre-check can lose a TOCTOU race against a
+        // concurrent insert; the loser's SaveChangesAsync throws
+        // UniqueConstraintViolationException. The pipeline must translate
+        // that into the same typed Conflict the pre-check would have returned.
+        var translator = Substitute.For<IUniqueConstraintTranslator>();
+        var conflictError = Error.Conflict("email", "auth.emailAlreadyExists");
+        translator.Translate("IX_users_email_normalized").Returns(conflictError);
+
+        var (sender, uow) = BuildPipeline(translator: translator);
+        uow.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new UniqueConstraintViolationException(
+                "IX_users_email_normalized", new Exception("23505")));
+
+        var result = await sender.Send(new DoThingTyped(Name: "Widget"));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("auth.emailAlreadyExists");
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UoW_Rethrows_UniqueConstraintViolation_When_Constraint_Is_Unmapped()
+    {
+        // An unknown constraint name is a bug worth surfacing — don't swallow it.
+        var translator = Substitute.For<IUniqueConstraintTranslator>();
+        translator.Translate(Arg.Any<string>()).Returns((Error?)null);
+
+        var (sender, uow) = BuildPipeline(translator: translator);
+        uow.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new UniqueConstraintViolationException(
+                "ix_never_heard_of_it", new Exception("23505")));
+
+        var act = async () => await sender.Send(new DoThingTyped(Name: "Widget"));
+
+        await act.Should().ThrowAsync<UniqueConstraintViolationException>()
+            .Where(ex => ex.ConstraintName == "ix_never_heard_of_it");
+    }
+
+    [Fact]
+    public async Task UoW_Translates_UniqueConstraintViolation_For_NonTyped_Command()
+    {
+        // Same race-translation must work for the non-generic BusinessResult
+        // branch in BuildFailureResponse (no <T> reflection path).
+        var translator = Substitute.For<IUniqueConstraintTranslator>();
+        translator.Translate("ix_makers_registration_number")
+            .Returns(Error.Conflict("registrationNumber", "maker.icoAlreadyRegistered"));
+
+        var (sender, uow) = BuildPipeline(translator: translator);
+        uow.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new UniqueConstraintViolationException(
+                "ix_makers_registration_number", new Exception("23505")));
+
+        var result = await sender.Send(new DoThing(Name: "Widget"));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("maker.icoAlreadyRegistered");
+        result.Error.Type.Should().Be(ErrorType.Conflict);
     }
 }

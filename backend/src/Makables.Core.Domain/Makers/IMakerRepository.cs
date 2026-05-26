@@ -28,7 +28,19 @@ public interface IMakerRepository
 
     /// <summary>
     /// Load the Maker by its linked <see cref="Maker.UserId"/>. Null if
-    /// the user has no maker row (i.e. they're a customer). Active-only.
+    /// the user has no maker row (i.e. they're a customer). Active-only
+    /// (the global soft-delete query filter on <see cref="Common.Auditable"/>
+    /// applies — soft-deleted rows are invisible).
+    ///
+    /// <para>
+    /// <b>IDOR warning.</b> Callers MUST resolve <paramref name="userId"/>
+    /// from the authenticated principal (<c>HttpContext.User</c> /
+    /// <c>IUserSessionProvider</c>), NEVER from a request param or path
+    /// segment. The repository does not check caller context — it returns
+    /// the Maker for whatever userId the caller passes in. Same warning
+    /// applies to <see cref="Addresses.IAddressRepository.GetByIdAsync"/>
+    /// (T-0030 reviewer M-2 precedent).
+    /// </para>
     /// </summary>
     Task<Maker?> GetByUserIdAsync(string userId, CancellationToken cancellationToken);
 }

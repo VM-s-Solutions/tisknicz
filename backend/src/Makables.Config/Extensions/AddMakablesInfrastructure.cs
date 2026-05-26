@@ -116,6 +116,11 @@ public static class MakablesInfrastructureExtensions
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MakablesDbContext>());
 
+        // T-0033 reviewer security M-1: maps Postgres SQLSTATE 23505 constraint
+        // names → BusinessErrorMessage so a TOCTOU race on a uniqueness
+        // pre-check surfaces as a typed Conflict, not a 500.
+        services.AddSingleton<IUniqueConstraintTranslator, UniqueConstraintTranslator>();
+
         // === Numbering ===
         services.AddScoped<IOrderNumberGenerator, OrderNumberGenerator>();
         services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
