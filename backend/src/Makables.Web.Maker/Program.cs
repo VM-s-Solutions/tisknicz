@@ -14,6 +14,7 @@ builder.AddMakablesObservability("makables-maker-api");
 builder.Services.AddMakablesInfrastructure(builder.Configuration);
 builder.Services.AddMakablesMediator();
 builder.Services.AddMakablesAuth(builder.Configuration, Audience);
+builder.Services.AddMakablesHostAudience(Audience);
 builder.Services.AddMakablesCors(builder.Configuration, Audience);
 builder.Services.AddMakablesRateLimiting(Audience);
 builder.Services.AddMakablesClients(builder.Configuration);

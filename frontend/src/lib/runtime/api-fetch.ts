@@ -86,7 +86,16 @@ export async function apiFetch<TValue>(
 
   let response: Response;
   try {
-    response = await fetch(url, { ...options, body, headers, signal });
+    response = await fetch(url, {
+      // include cookies on cross-origin requests so the audience-scoped
+      // session cookies (set by the .NET AuthController per ADR 0012)
+      // ride along. T-0035.
+      credentials: options.credentials ?? 'include',
+      ...options,
+      body,
+      headers,
+      signal,
+    });
   } catch (cause) {
     return err(transientError(cause));
   }
