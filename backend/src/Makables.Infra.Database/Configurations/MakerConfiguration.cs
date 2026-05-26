@@ -50,6 +50,12 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.SnapshotFetchedAt).HasColumnName("snapshot_fetched_at").IsRequired();
         builder.Property(m => m.SnapshotIsStale).HasColumnName("snapshot_is_stale").IsRequired();
 
+        // T-0034 maker-editable profile fields.
+        builder.Property(m => m.Bio).HasColumnName("bio").HasMaxLength(500);
+        builder.Property(m => m.BankAccount).HasColumnName("bank_account").HasMaxLength(40);
+        builder.Property(m => m.PersonalPickupEnabled).HasColumnName("personal_pickup_enabled").IsRequired();
+        builder.Property(m => m.PickupNote).HasColumnName("pickup_note").HasMaxLength(500);
+
         ConfigureAuditable(builder);
     }
 

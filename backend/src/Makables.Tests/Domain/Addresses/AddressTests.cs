@@ -194,4 +194,49 @@ public class AddressTests
 
         a.State.Should().BeNull();
     }
+
+    // === T-0034 Update mutator ===
+
+    [Fact]
+    public void Update_replaces_fields_and_clears_coordinates()
+    {
+        var a = ValidDefaults();
+        a.SetCoordinates(Coordinates.Of(50.0875, 14.4213));
+
+        a.Update(
+            street: "Nová", houseNumber: "10", city: "Brno",
+            zip: "60200", countryCodeIso: "cz", state: null);
+
+        a.Street.Should().Be("Nová");
+        a.City.Should().Be("Brno");
+        a.Zip.Should().Be("60200");
+        a.CountryCodeIso.Should().Be("CZ");
+        a.Latitude.Should().BeNull("address moved — coordinates reset for the geocoder sweep");
+        a.Longitude.Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_does_not_change_audit_country_code()
+    {
+        var a = ValidDefaults(countryCodeIso: "cz", auditCountryCode: "cz");
+
+        a.Update(
+            street: "Nová", houseNumber: "10", city: "Brno",
+            zip: "60200", countryCodeIso: "sk");
+
+        a.CountryCodeIso.Should().Be("SK");
+        a.CountryCode.Should().Be("CZ", "audit tenancy is set at creation and never mutated");
+    }
+
+    [Fact]
+    public void Update_rejects_blank_required_fields()
+    {
+        var a = ValidDefaults();
+
+        var act = () => a.Update(
+            street: "   ", houseNumber: "10", city: "Brno",
+            zip: "60200", countryCodeIso: "CZ");
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

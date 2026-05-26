@@ -40,4 +40,11 @@ public sealed class MakerRepository(MakablesDbContext db) : IMakerRepository
         return db.Set<Maker>()
             .FirstOrDefaultAsync(m => m.UserId == userId, cancellationToken);
     }
+
+    public Task<Maker?> GetByIdAsync(string id, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Maker?>(null);
+        return db.Set<Maker>()
+            .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+    }
 }
