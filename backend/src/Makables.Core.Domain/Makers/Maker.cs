@@ -79,6 +79,33 @@ public sealed class Maker : Auditable
     /// </summary>
     public bool SnapshotIsStale { get; private set; }
 
+    // === Maker-editable profile fields (T-0034) ===
+
+    /// <summary>
+    /// Free-text bio shown on the public maker profile. Max 500 chars
+    /// per US-maker-0003 AC-1. Null until the maker fills it in.
+    /// </summary>
+    public string? Bio { get; private set; }
+
+    /// <summary>
+    /// Czech bank account in <c>123456789/0100</c> format. Validated
+    /// by <c>CzechBankAccountValidator</c> at command time. Required
+    /// for payouts; null until the maker provides it.
+    /// </summary>
+    public string? BankAccount { get; private set; }
+
+    /// <summary>
+    /// True when the maker offers personal pickup (US-maker-0015).
+    /// Defaults to false on registration. The pickup address itself
+    /// is wired in a follow-up ticket (T-0034 only ships the toggle +
+    /// note; pickup-address management lives with the address-graph
+    /// work).
+    /// </summary>
+    public bool PersonalPickupEnabled { get; private set; }
+
+    /// <summary>Free-text pickup instructions shown to customers (e.g. opening hours, doorbell name).</summary>
+    public string? PickupNote { get; private set; }
+
     private Maker() { }
 
     public static Maker Create(
@@ -142,6 +169,59 @@ public sealed class Maker : Auditable
         if (IsVerified)
             throw new InvalidOperationException("Maker is already verified.");
         IsVerified = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Maker self-service profile patch (T-0034 <c>UpdateMakerProfile</c>).
+    /// Null arguments mean "don't change this field"; an explicit empty
+    /// string clears an optional value. <see cref="BankAccount"/> format
+    /// is enforced by the caller (the FluentValidation rule on the
+    /// command) — the entity treats the string as opaque.
+    ///
+    /// <para>
+    /// Does NOT touch any snapshot field, the registry flags, or
+    /// <see cref="IsVerified"/>. ARES-snapshot fields are read-only for
+    /// makers (US-maker-0003 AC-2: legal requirement, invoices can't
+    /// change silently).
+    /// </para>
+    /// </summary>
+    public Maker UpdateProfile(
+        string? bio,
+        string? bankAccount,
+        bool? personalPickupEnabled,
+        string? pickupNote)
+    {
+        if (bio is not null)
+        {
+            var trimmed = bio.Trim();
+            // 500-char cap is enforced by UpdateMakerProfile.Validator on
+            // the trimmed length; this is a defensive invariant for direct
+            // domain callers (seed data, future internal use). T-0034 cq
+            // reviewer M-2 — single canonical boundary in the validator,
+            // entity asserts as a precondition.
+            if (trimmed.Length > 500)
+                throw new ArgumentException("Bio must be 500 chars or fewer (post-trim).", nameof(bio));
+            Bio = trimmed.Length == 0 ? null : trimmed;
+        }
+
+        if (bankAccount is not null)
+        {
+            var trimmed = bankAccount.Trim();
+            BankAccount = trimmed.Length == 0 ? null : trimmed;
+        }
+
+        if (personalPickupEnabled.HasValue)
+        {
+            PersonalPickupEnabled = personalPickupEnabled.Value;
+        }
+
+        if (pickupNote is not null)
+        {
+            var trimmed = pickupNote.Trim();
+            PickupNote = trimmed.Length == 0 ? null : trimmed;
+        }
+
         return this;
     }
 

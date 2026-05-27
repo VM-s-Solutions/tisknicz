@@ -100,6 +100,42 @@ public sealed class Address : Auditable
     }
 
     /// <summary>
+    /// Replace the postal fields in-place. Used by T-0034
+    /// <c>RefreshMakerFromAres</c> to update the legal-seat row when
+    /// ARES returns a moved company. <see cref="CountryCode"/> (the
+    /// owner's audit tenancy) is NEVER changed — refreshing the seat
+    /// doesn't migrate the maker between tenants. Coordinates are
+    /// cleared because the new address may have moved; the geocoder
+    /// sweep refills them.
+    /// </summary>
+    public Address Update(
+        string street,
+        string houseNumber,
+        string city,
+        string zip,
+        string countryCodeIso,
+        string? state = null)
+    {
+        ValidateRequiredField(street, nameof(street), MaxStreetLength);
+        ValidateRequiredField(houseNumber, nameof(houseNumber), MaxHouseNumberLength);
+        ValidateRequiredField(city, nameof(city), MaxCityLength);
+        ValidateRequiredField(zip, nameof(zip), MaxZipLength);
+        ValidateOptionalField(state, nameof(state), MaxStateLength);
+        if (string.IsNullOrWhiteSpace(countryCodeIso) || countryCodeIso.Length != 2)
+            throw new ArgumentException("CountryCodeIso must be 2 chars (ISO 3166-1 alpha-2).", nameof(countryCodeIso));
+
+        Street = street.Trim();
+        HouseNumber = houseNumber.Trim();
+        City = city.Trim();
+        Zip = zip.Trim();
+        State = string.IsNullOrWhiteSpace(state) ? null : state.Trim();
+        CountryCodeIso = countryCodeIso.ToUpperInvariant();
+        Latitude = null;
+        Longitude = null;
+        return this;
+    }
+
+    /// <summary>
     /// Set the geocoded coordinates (filled by T-0031's Mapbox adapter).
     /// Pass <c>null</c> to clear. The <see cref="Coordinates.Of"/> factory
     /// already guarantees finiteness + range, so this method only

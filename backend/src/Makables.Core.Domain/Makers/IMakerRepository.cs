@@ -43,4 +43,13 @@ public interface IMakerRepository
     /// </para>
     /// </summary>
     Task<Maker?> GetByUserIdAsync(string userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load the Maker by its primary key. Used by the T-0034 admin
+    /// commands (<c>VerifyMaker</c>, <c>DeactivateMaker</c>,
+    /// <c>RefreshMakerFromAres</c>) which receive the target id from
+    /// the admin UI. Active-only — soft-deleted rows are invisible.
+    /// Returns a tracked instance because all admin commands mutate.
+    /// </summary>
+    Task<Maker?> GetByIdAsync(string id, CancellationToken cancellationToken);
 }

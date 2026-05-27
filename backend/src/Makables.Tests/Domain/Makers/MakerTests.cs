@@ -150,4 +150,72 @@ public class MakerTests
 
         act.Should().Throw<ArgumentException>();
     }
+
+    // === T-0034 maker-editable profile fields ===
+
+    [Fact]
+    public void Create_defaults_maker_editable_fields_to_null_or_false()
+    {
+        var m = ValidDefaults();
+
+        m.Bio.Should().BeNull();
+        m.BankAccount.Should().BeNull();
+        m.PersonalPickupEnabled.Should().BeFalse();
+        m.PickupNote.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateProfile_patches_only_supplied_fields()
+    {
+        var m = ValidDefaults();
+        m.UpdateProfile(bio: "Initial bio", bankAccount: "123456789/0100", personalPickupEnabled: true, pickupNote: "Po dohodě");
+
+        // Patch only Bio; rest must remain.
+        m.UpdateProfile(bio: "Updated bio", bankAccount: null, personalPickupEnabled: null, pickupNote: null);
+
+        m.Bio.Should().Be("Updated bio");
+        m.BankAccount.Should().Be("123456789/0100");
+        m.PersonalPickupEnabled.Should().BeTrue();
+        m.PickupNote.Should().Be("Po dohodě");
+    }
+
+    [Fact]
+    public void UpdateProfile_empty_string_clears_optional_value()
+    {
+        var m = ValidDefaults();
+        m.UpdateProfile(bio: "Initial bio", bankAccount: "123456789/0100", personalPickupEnabled: null, pickupNote: "Note");
+
+        m.UpdateProfile(bio: "", bankAccount: "", personalPickupEnabled: null, pickupNote: "");
+
+        m.Bio.Should().BeNull();
+        m.BankAccount.Should().BeNull();
+        m.PickupNote.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateProfile_rejects_bio_over_500_chars()
+    {
+        var m = ValidDefaults();
+
+        var act = () => m.UpdateProfile(
+            bio: new string('x', 501),
+            bankAccount: null, personalPickupEnabled: null, pickupNote: null);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateProfile_does_not_touch_snapshot_or_admin_state()
+    {
+        var m = ValidDefaults();
+        m.MarkVerified();
+        var originalCompany = m.CompanyName;
+        var originalIco = m.RegistrationNumber;
+
+        m.UpdateProfile(bio: "Bio", bankAccount: "123456789/0100", personalPickupEnabled: true, pickupNote: "Note");
+
+        m.CompanyName.Should().Be(originalCompany, "snapshot fields are read-only for makers");
+        m.RegistrationNumber.Should().Be(originalIco);
+        m.IsVerified.Should().BeTrue("admin verification is independent of profile edits");
+    }
 }
