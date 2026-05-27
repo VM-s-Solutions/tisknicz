@@ -67,6 +67,11 @@ public sealed class JwtAuthMiddlewareTests
                     ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                     // T-0032: ARES BaseUrl ValidateOnStart.
                     ["Ares:BaseUrl"] = "https://ares.integration-test.local",
+                    // T-0035 sec reviewer B1: CORS fail-closed outside Development.
+                    ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
+                    ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",
+                    ["Cors:AllowedOrigins:admin:0"] = "https://admin.makables.test",
+                    ["Cors:AllowedOrigins:public:0"] = "https://makables.test",
                 });
             });
 
@@ -321,6 +326,10 @@ public sealed class JwtAuthMiddlewareTests
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                         ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                         ["Ares:BaseUrl"] = "https://ares.integration-test.local",
+                        ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
+                        ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",
+                        ["Cors:AllowedOrigins:admin:0"] = "https://admin.makables.test",
+                        ["Cors:AllowedOrigins:public:0"] = "https://makables.test",
                     });
                 });
                 builder.ConfigureServices(services =>
