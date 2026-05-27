@@ -52,6 +52,13 @@ public static class BusinessErrorMessage
     public const string CategoryNotActive = "category.notActive";
     public const string CategorySlugAlreadyExists = "category.slugAlreadyExists";
 
+    // === Blob storage (T-0042) ===
+    public const string BlobNotFound = "blob.notFound";
+    public const string BlobUploadFailed = "blob.uploadFailed";
+    public const string BlobDownloadFailed = "blob.downloadFailed";
+    public const string BlobInvalidContainer = "blob.invalidContainer";
+    public const string BlobInvalidPath = "blob.invalidPath";
+
     // === Maker ===
     public const string MakerNotFound = "maker.notFound";
     public const string MakerNotActive = "maker.notActive";

@@ -27,6 +27,9 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+    <!-- T-0042: AddMakablesBlobStorage constructs BlobServiceClient + DefaultAzureCredential directly. -->
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="Azure.Identity" />
   </ItemGroup>
 
 </Project>
