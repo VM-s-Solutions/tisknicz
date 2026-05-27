@@ -33,7 +33,7 @@ public static class BusinessErrorMessage
     public const string InvalidEmailFormat = "validation.invalidEmail";
     public const string InvalidPhoneFormat = "validation.invalidPhone";
     public const string InvalidZipFormat = "validation.invalidZip";
-    public const string InvalidIcoFormat = "validation.icoFormat";
+    public const string IcoFormatInvalid = "validation.icoFormat";
     public const string InvalidBankAccountFormat = "validation.bankAccountFormat";
     public const string ValidationFailed = "validation.failed";
 
@@ -53,8 +53,10 @@ public static class BusinessErrorMessage
     public const string MakerAlreadyVerified = "maker.alreadyVerified";
     public const string MakerIcoAlreadyRegistered = "maker.icoAlreadyRegistered";
 
-    // === Company registry ===
+    // === Company registry (T-0032) ===
     public const string CompanyNotFound = "company.notFound";
+    public const string CompanyRegistryTransient = "company.registryTransient";
+    public const string CompanyRegistryPermanent = "company.registryPermanent";
 
     // === Country / config ===
     public const string CountryNotServiced = "country.notServiced";

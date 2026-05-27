@@ -10,6 +10,7 @@ using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
+using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Addresses;
 using Makables.Infra.Common.Auth;
@@ -22,6 +23,7 @@ using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
+using Makables.Infra.Database.Registry;
 using Makables.Infra.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -71,7 +73,12 @@ public static class MakablesInfrastructureExtensions
         // === EF Core DbContext + interceptor + UoW alias ===
         services.AddScoped<AuditableSaveChangesInterceptor>();
 
-        services.AddDbContext<MakablesDbContext>((sp, options) =>
+        // Reusable per-call DbContext configurator. Used both for the
+        // request-scoped DbContext (the UoW the MediatR pipeline commits)
+        // and the IDbContextFactory (used by side-effect adapters that
+        // need an isolated DbContext scope — see ICompanyRegistryCacheStore
+        // / T-0032 sec reviewer M-1).
+        void ConfigureMakablesDbContext(IServiceProvider sp, DbContextOptionsBuilder options)
         {
             var connectionString = configuration.GetConnectionString("Postgres");
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -87,7 +94,21 @@ public static class MakablesInfrastructureExtensions
 
             options.UseNpgsql(connectionString);
             options.AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>());
-        });
+        }
+
+        services.AddDbContext<MakablesDbContext>(ConfigureMakablesDbContext);
+
+        // IDbContextFactory<MakablesDbContext> for adapters that need to
+        // run side-effect commits OUTSIDE the request-scoped UoW.
+        // T-0032 sec reviewer M-1: the ARES cache store uses this so a
+        // cache write can't flush a calling command's tracked-but-uncommitted
+        // aggregates. Lifetime must be Scoped (not the default Singleton)
+        // because AddDbContext above already registers DbContextOptions<T>
+        // as Scoped; mixing a singleton factory with scoped options trips
+        // ValidateScopes on host build. T-0032 CI fix.
+        services.AddDbContextFactory<MakablesDbContext>(
+            ConfigureMakablesDbContext,
+            lifetime: ServiceLifetime.Scoped);
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MakablesDbContext>());
 
@@ -110,6 +131,17 @@ public static class MakablesInfrastructureExtensions
         // static ConcurrentDictionary on the type, so cache state survives
         // across scopes anyway.
         services.AddScoped<IAddressFormatValidator, ConfigurationDrivenAddressFormatValidator>();
+
+        // === Company registry cache (T-0032) ===
+        // ICompanyRegistryCacheStore uses IDbContextFactory<MakablesDbContext>
+        // so cache reads/writes never touch the request-scoped UoW
+        // (T-0032 sec reviewer M-1). Scoped lifetime is fine — the
+        // factory itself is the singleton, the store just holds a reference.
+        services.AddScoped<ICompanyRegistryCacheStore, CompanyRegistryCacheStore>();
+        // IMemoryCache backs the in-process hot layer used by
+        // AresCompanyRegistry. Singleton + thread-safe; entries TTL out
+        // via MemoryCacheEntryOptions set per-call.
+        services.AddMemoryCache();
 
         // === Email templates + send pipeline (T-0028) ===
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();

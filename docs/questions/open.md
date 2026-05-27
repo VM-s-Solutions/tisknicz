@@ -77,3 +77,16 @@
   - Skip permanently — confidential clients with rotating secrets are sufficient per OAuth 2.1 draft.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0006 — Czech ČSÚ právní-forma číselník — full mirror, on-demand, or pass-through?
+- **From:** dotnet-backend (T-0032 CQ reviewer n-4)
+- **Ticket / context:** T-0032 — `Makables.Infra.Common.Czech.CzechLegalForms`
+- **Asked:** 2026-05-25
+- **Blocking:** no — unknown codes already fall through as the trimmed numeric, so launch is safe.
+- **Question:** The map currently covers 12 of the most common ARES `pravniForma` codes. The Czech ČSÚ číselník has roughly 100 entries (with revisions). What should the source of truth be?
+- **Options the agent has considered:**
+  - Mirror the full list now from the ČSÚ open-data CSV. Pro: any registered Czech entity renders correctly. Con: pulls 100 entries into source for a UX nicety; revisions become a code-change.
+  - On-demand: extend the map only when production traffic surfaces an unknown code (current behaviour). Pro: no premature work. Con: occasional ugly "611" appearing in the UI until backfilled.
+  - Pass-through always: drop the resolver, surface the raw code, let the frontend render its own translation. Pro: zero domain-knowledge here. Con: same ugly-code problem, plus loses the server-side rendering hook for invoices / labels.
+- **Status:** open
+- **Answer (filled by user):**

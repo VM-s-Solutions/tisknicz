@@ -37,9 +37,13 @@ public class MapboxAddressGeocoderTests
             RetryCount = 0,
             OverallTimeoutSeconds = 5,
         });
-        // Zero-retry pipeline so each test exercises exactly one HTTP call.
-        var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>().Build();
-        _sut = new MapboxAddressGeocoder(factory, pipeline, opts, NullLogger<MapboxAddressGeocoder>.Instance);
+        // Zero-retry registry pipeline so each test exercises exactly one
+        // HTTP call. Registered under the same key the adapter looks up.
+        var registry = new Polly.Registry.ResiliencePipelineRegistry<string>();
+        registry.TryAddBuilder<HttpResponseMessage>(
+            MapboxAddressGeocoder.HttpClientName,
+            (builder, _) => { /* no-op: no retry */ });
+        _sut = new MapboxAddressGeocoder(factory, registry, opts, NullLogger<MapboxAddressGeocoder>.Instance);
     }
 
     private static Address ValidAddress() => Address.Create(
