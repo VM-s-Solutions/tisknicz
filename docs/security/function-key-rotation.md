@@ -97,10 +97,12 @@ runbook as the function key.
 
 ## T-0031 Mapbox autocomplete proxy — IP-bucket prerequisites
 
-The `addresses-autocomplete` partitioned rate-limit policy keys on the
-authenticated `sub` claim when present, falling back to remote IP for
-unauthenticated requests. **The endpoint is `[Authorize]` today**, so the IP
-path is unreachable from outside.
+The `addresses-autocomplete` partitioned rate-limit policy keys on
+`ClaimTypes.NameIdentifier` when present (Makables's JWT issuer mirrors
+the OAuth `sub` claim into `NameIdentifier`, so "per `sub`" and "per
+`NameIdentifier`" are equivalent here), falling back to remote IP for
+unauthenticated requests. **The endpoint is `[Authorize]` today**, so the
+IP path is unreachable from outside.
 
 **Before opening the endpoint to anonymous traffic** (e.g. registration form),
 two prerequisites MUST be met:

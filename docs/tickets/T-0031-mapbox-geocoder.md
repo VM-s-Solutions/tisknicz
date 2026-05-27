@@ -31,7 +31,7 @@ User-chosen design at planning time:
 - `IAddressGeocoder.cs` — interface + `AddressSuggestion` record. `GeocodeAsync` returns `BusinessResult<Coordinates>`; `AutocompleteAsync` returns `BusinessResult<IReadOnlyList<AddressSuggestion>>`. No exceptions cross the boundary.
 
 ### Infra.Clients (`Mapbox/`)
-- `MapboxOptions.cs` — `Mapbox:AccessToken` (Key Vault ref in prod) + `BaseUrl` (overridable for tests; **required https**) + `AutocompleteLimit` (1..10, default 5) + `RetryCount` (0..5, default 2) + `RetryBaseDelayMs` (default 200) + `OverallTimeoutSeconds` (1..30, default 5). Every value validated with `.ValidateOnStart()`.
+- `MapboxOptions.cs` — `Mapbox:AccessToken` (Key Vault ref in prod) + `BaseUrl` (overridable for tests; **required https**) + `AutocompleteLimit` (1..10, default 5) + `RetryCount` (0..5, default 2) + `RetryBaseDelayMs` (0..5000, default 200 — capped per Copilot review so an accidental large value can't stretch the retry chain past `OverallTimeoutSeconds`) + `OverallTimeoutSeconds` (1..30, default 5). Every value validated with `.ValidateOnStart()`.
 - `MapboxAddressGeocoder.cs` — calls Mapbox Geocoding v5 (`/geocoding/v5/mapbox.places/{q}.json`). Named HttpClient via `IHttpClientFactory`. Polly v8 `ResiliencePipeline<HttpResponseMessage>` retries 408/429/5xx. Per-call timeout via `CancellationTokenSource.CancelAfter` so a stuck connection can't pin a worker. Mapbox returns `[lng, lat]` in `feature.center` — adapter swaps to `(lat, lng)` when constructing `Coordinates.Of(...)`, which also catches out-of-range / NaN responses (sec hardening from T-0030).
 
 ### Core.AppServices

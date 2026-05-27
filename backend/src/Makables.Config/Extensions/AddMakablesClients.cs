@@ -103,6 +103,12 @@ public static class MakablesClientsExtensions
                 "Mapbox:AutocompleteLimit must be 1..10.")
             .Validate(o => o.RetryCount is >= 0 and <= 5,
                 "Mapbox:RetryCount must be 0..5.")
+            // T-0031 Copilot review: cap RetryBaseDelayMs so an
+            // accidental huge value can't stretch the retry chain past
+            // OverallTimeoutSeconds (5s default) and silently turn every
+            // autocomplete call into a 5s wait.
+            .Validate(o => o.RetryBaseDelayMs is >= 0 and <= 5000,
+                "Mapbox:RetryBaseDelayMs must be 0..5000.")
             .Validate(o => o.OverallTimeoutSeconds is >= 1 and <= 30,
                 "Mapbox:OverallTimeoutSeconds must be 1..30.")
             .ValidateOnStart();

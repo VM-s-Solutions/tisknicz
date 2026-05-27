@@ -18,8 +18,10 @@ namespace Makables.Core.Domain.Addresses;
 ///   <item><description><see cref="AutocompleteAsync"/> — turns a partial
 ///     query string into a small list of <see cref="AddressSuggestion"/>s
 ///     scoped to the given country. The frontend hits the proxy endpoint
-///     (<c>POST /api/v1/{customer|maker}/addresses/autocomplete</c>) which
-///     calls this method.</description></item>
+///     (<c>GET /api/v{version}/addresses/autocomplete?q={...}&amp;country={...}</c>)
+///     which calls this method. The controller is shared across the
+///     Customer and Maker hosts via the Config MVC application part;
+///     audience is enforced by JWT validation, not by route prefix.</description></item>
 /// </list>
 ///
 /// Both methods return <see cref="BusinessResult{T}"/> so callers don't

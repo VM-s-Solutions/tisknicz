@@ -69,6 +69,12 @@ public static class MakablesRateLimitingExtensions
 
     private static RateLimitPartition<string> PartitionAutocomplete(HttpContext http)
     {
+        // The JWT issuer mirrors the OAuth `sub` claim into
+        // ClaimTypes.NameIdentifier (see Makables.Infra.Common/Auth/JwtIssuer.cs)
+        // so partitioning here is equivalent to "per authenticated user".
+        // T-0031 Copilot review: documenting the mirror so the policy
+        // name (`addresses-autocomplete`) and the audited claim match
+        // future readers' expectations.
         var sub = http.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!string.IsNullOrWhiteSpace(sub))
         {

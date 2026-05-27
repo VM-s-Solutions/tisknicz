@@ -135,7 +135,7 @@ public record AddressSuggestion(string Street, string HouseNumber, string City, 
 
 ### Frontend integration
 
-The order form and maker registration form call `/api/customer/addresses/autocomplete?q=...&country=CZ` (or maker host equivalent), which proxies to Mapbox. The backend rate-limits the proxy per user.
+The order form and maker registration form call `GET /api/v1/addresses/autocomplete?q=...&country=CZ` (against the Customer or Maker host — the shared controller in `Makables.Config` is mounted on both via the MVC application part; audience is enforced by JWT validation, not by route prefix). The backend proxies to Mapbox and rate-limits per authenticated user.
 
 The form binds to the structured fields. When the user picks a suggestion, all five fields populate at once. Manual edits remain possible.
 
