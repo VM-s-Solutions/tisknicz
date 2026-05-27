@@ -52,6 +52,15 @@ public static class BusinessErrorMessage
     public const string MakerNotActive = "maker.notActive";
     public const string MakerAlreadyVerified = "maker.alreadyVerified";
     public const string MakerIcoAlreadyRegistered = "maker.icoAlreadyRegistered";
+    /// <summary>
+    /// ARES reports the company as no longer trading (dissolved /
+    /// terminated). T-0033 <c>RegisterMaker</c> refuses to register a
+    /// dissolved entity as a platform maker. Distinct from
+    /// <see cref="MakerIcoAlreadyRegistered"/>: that means the IČO is
+    /// already on Makables; this means the IČO is not active in the
+    /// state registry at all.
+    /// </summary>
+    public const string MakerCompanyDissolved = "maker.companyDissolved";
 
     // === Company registry (T-0032) ===
     public const string CompanyNotFound = "company.notFound";

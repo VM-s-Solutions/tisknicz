@@ -25,8 +25,22 @@ namespace Makables.Core.AppServices.Behaviors;
 ///     security state (failed-login counters, family-wide revocation,
 ///     logout revoke) MUST survive a failure response — reviewer T-0022
 ///     BLOCKER B-1.
+///
+/// Unique-violation race translation:
+///   <see cref="UniqueConstraintViolationException"/> from
+///   <see cref="IUnitOfWork.SaveChangesAsync"/> is mapped via
+///   <see cref="IUniqueConstraintTranslator"/> to a typed
+///   <see cref="BusinessResult"/> failure. A handler's pre-check on
+///   uniqueness (e.g. <c>EmailExistsAsync</c>) can lose a TOCTOU race
+///   against a concurrent insert; without this catch the loser sees a
+///   raw 500 instead of the same <c>Conflict</c> the pre-check would
+///   have returned. Constraint names not in the translator's table
+///   bubble as-is (a brand-new index nobody mapped is a bug worth
+///   surfacing). T-0033 reviewer security M-1.
 /// </summary>
-public sealed class UnitOfWorkPipelineBehavior<TRequest, TResponse>(IUnitOfWork unitOfWork)
+public sealed class UnitOfWorkPipelineBehavior<TRequest, TResponse>(
+    IUnitOfWork unitOfWork,
+    IUniqueConstraintTranslator constraintTranslator)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : ICommandMarker
     where TResponse : BusinessResult
@@ -39,11 +53,49 @@ public sealed class UnitOfWorkPipelineBehavior<TRequest, TResponse>(IUnitOfWork 
         var response = await next(cancellationToken);
 
         var commit = response.IsSuccess || request is IPersistOnFailureCommand;
-        if (commit)
+        if (!commit)
         {
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return response;
         }
 
-        return response;
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return response;
+        }
+        catch (UniqueConstraintViolationException ex)
+        {
+            var translated = constraintTranslator.Translate(ex.ConstraintName);
+            if (translated is null)
+            {
+                throw;
+            }
+            return BuildFailureResponse(translated);
+        }
+    }
+
+    /// <summary>
+    /// TResponse is constrained to <see cref="BusinessResult"/>; runtime
+    /// it's either the non-generic base (rare) or
+    /// <see cref="BusinessResult{T}"/>. The generic case calls the
+    /// typed factory via reflection — same shape as
+    /// <c>ValidationPipelineBehavior</c>.
+    /// </summary>
+    private static TResponse BuildFailureResponse(Error error)
+    {
+        BusinessResult failure;
+        if (typeof(TResponse) == typeof(BusinessResult))
+        {
+            failure = BusinessResult.Failure(error);
+        }
+        else
+        {
+            var valueType = typeof(TResponse).GetGenericArguments()[0];
+            var factory = typeof(BusinessResult)
+                .GetMethod(nameof(BusinessResult.Failure), 1, new[] { typeof(Error) })!
+                .MakeGenericMethod(valueType);
+            failure = (BusinessResult)factory.Invoke(null, new object[] { error })!;
+        }
+        return (TResponse)failure;
     }
 }

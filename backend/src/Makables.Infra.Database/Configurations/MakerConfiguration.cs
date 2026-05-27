@@ -1,0 +1,67 @@
+using Makables.Core.Domain.Makers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Makables.Infra.Database.Configurations;
+
+internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
+{
+    public void Configure(EntityTypeBuilder<Maker> builder)
+    {
+        builder.ToTable("makers");
+
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).HasColumnName("id").HasMaxLength(40).IsRequired();
+
+        builder.Property(m => m.UserId).HasColumnName("user_id").HasMaxLength(40).IsRequired();
+        // One Maker row per User. Partial unique index gates this on
+        // active rows so an admin GDPR purge can leave a soft-deleted
+        // row behind without blocking a future re-registration.
+        builder.HasIndex(m => m.UserId)
+            .IsUnique()
+            .HasDatabaseName("ix_makers_user_id")
+            .HasFilter("is_active");
+
+        // Czech IČO — 8 digits, but reserve 32 chars for future SK / PL
+        // registration numbers that may be longer or include letters.
+        builder.Property(m => m.RegistrationNumber)
+            .HasColumnName("registration_number").HasMaxLength(32).IsRequired();
+        builder.HasIndex(m => m.RegistrationNumber)
+            .IsUnique()
+            .HasDatabaseName("ix_makers_registration_number")
+            .HasFilter("is_active");
+
+        builder.Property(m => m.VatId).HasColumnName("vat_id").HasMaxLength(32);
+        builder.Property(m => m.CompanyName).HasColumnName("company_name").HasMaxLength(300).IsRequired();
+        builder.Property(m => m.LegalForm).HasColumnName("legal_form").HasMaxLength(200);
+
+        builder.Property(m => m.RegisteredAddressId)
+            .HasColumnName("registered_address_id").HasMaxLength(40).IsRequired();
+        // FK reference is informational; we keep the addresses table
+        // independent (an Address row can be referenced by orders,
+        // customer-saved-addresses, etc. as Makables grows).
+        builder.HasIndex(m => m.RegisteredAddressId)
+            .HasDatabaseName("ix_makers_registered_address_id");
+
+        builder.Property(m => m.IncorporatedOn).HasColumnName("incorporated_on");
+        builder.Property(m => m.IsActiveInRegistry).HasColumnName("is_active_in_registry").IsRequired();
+        builder.Property(m => m.IsVerified).HasColumnName("is_verified").IsRequired();
+        builder.Property(m => m.SourceRegistry).HasColumnName("source_registry").HasMaxLength(20).IsRequired();
+        builder.Property(m => m.SnapshotFetchedAt).HasColumnName("snapshot_fetched_at").IsRequired();
+        builder.Property(m => m.SnapshotIsStale).HasColumnName("snapshot_is_stale").IsRequired();
+
+        ConfigureAuditable(builder);
+    }
+
+    private static void ConfigureAuditable(EntityTypeBuilder<Maker> b)
+    {
+        b.Property(m => m.CountryCode).HasColumnName("country_code").HasMaxLength(2).IsRequired();
+        b.Property(m => m.IsActive).HasColumnName("is_active").IsRequired();
+        b.Property(m => m.CreatedBy).HasColumnName("created_by").HasMaxLength(200);
+        b.Property(m => m.CreatedAt).HasColumnName("created_at");
+        b.Property(m => m.UpdatedBy).HasColumnName("updated_by").HasMaxLength(200);
+        b.Property(m => m.UpdatedAt).HasColumnName("updated_at");
+        b.Property(m => m.DeactivatedBy).HasColumnName("deactivated_by").HasMaxLength(200);
+        b.Property(m => m.DeactivatedAt).HasColumnName("deactivated_at");
+    }
+}

@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.SeedWork;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Makables.Infra.Database;
 
@@ -27,6 +28,31 @@ public class MakablesDbContext(DbContextOptions<MakablesDbContext> options)
 
         ApplyEntityConfigurationsFromAssembly(modelBuilder);
         ApplySoftDeleteQueryFilters(modelBuilder);
+    }
+
+    /// <summary>
+    /// Translate a Postgres unique-violation race (SQLSTATE <c>23505</c>)
+    /// into <see cref="UniqueConstraintViolationException"/> so the
+    /// <c>UnitOfWorkPipelineBehavior</c> can return a typed
+    /// <c>BusinessResult</c> failure instead of bubbling a raw
+    /// <c>DbUpdateException</c> as a 500. T-0033 reviewer security M-1.
+    ///
+    /// <para>Any other <c>DbUpdateException</c> (FK violation, deadlock,
+    /// etc.) keeps propagating — those are still bugs / infra incidents
+    /// and SHOULD surface as 500s for ops visibility.</para>
+    /// </summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx
+            && pgEx.SqlState == PostgresErrorCodes.UniqueViolation
+            && !string.IsNullOrEmpty(pgEx.ConstraintName))
+        {
+            throw new UniqueConstraintViolationException(pgEx.ConstraintName, ex);
+        }
     }
 
     /// <summary>

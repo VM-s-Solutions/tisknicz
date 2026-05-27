@@ -8,6 +8,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Registry;
@@ -21,6 +22,7 @@ using Makables.Infra.Database;
 using Makables.Infra.Database.Addresses;
 using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
+using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
 using Makables.Infra.Database.Registry;
@@ -102,15 +104,22 @@ public static class MakablesInfrastructureExtensions
         // run side-effect commits OUTSIDE the request-scoped UoW.
         // T-0032 sec reviewer M-1: the ARES cache store uses this so a
         // cache write can't flush a calling command's tracked-but-uncommitted
-        // aggregates. Lifetime must be Scoped (not the default Singleton)
-        // because AddDbContext above already registers DbContextOptions<T>
-        // as Scoped; mixing a singleton factory with scoped options trips
-        // ValidateScopes on host build. T-0032 CI fix.
+        // aggregates. Lifetime is Scoped (not the default Singleton)
+        // because AddDbContext already registers DbContextOptions<T> as
+        // Scoped; mixing a singleton factory with scoped options trips
+        // ValidateScopes on host build (T-0032 CI fix — the explicit
+        // lifetime was missing on the T-0032 branch and only landed in
+        // T-0033, so the T-0032 PR alone crashed at boot during NSwag CI).
         services.AddDbContextFactory<MakablesDbContext>(
             ConfigureMakablesDbContext,
             lifetime: ServiceLifetime.Scoped);
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MakablesDbContext>());
+
+        // T-0033 reviewer security M-1: maps Postgres SQLSTATE 23505 constraint
+        // names → BusinessErrorMessage so a TOCTOU race on a uniqueness
+        // pre-check surfaces as a typed Conflict, not a 500.
+        services.AddSingleton<IUniqueConstraintTranslator, UniqueConstraintTranslator>();
 
         // === Numbering ===
         services.AddScoped<IOrderNumberGenerator, OrderNumberGenerator>();
@@ -123,6 +132,9 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
         services.AddScoped<IOneTimeTokenRepository, OneTimeTokenRepository>();
+
+        // === Makers (T-0033) ===
+        services.AddScoped<IMakerRepository, MakerRepository>();
 
         // === Addresses (T-0030) ===
         services.AddScoped<IAddressRepository, AddressRepository>();
