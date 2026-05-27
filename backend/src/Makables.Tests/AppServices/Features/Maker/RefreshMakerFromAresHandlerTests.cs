@@ -19,12 +19,14 @@ public class RefreshMakerFromAresHandlerTests
     private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
     private readonly IAddressRepository _addresses = Substitute.For<IAddressRepository>();
     private readonly ICompanyRegistry _registry = Substitute.For<ICompanyRegistry>();
+    private readonly IUserSessionProvider _session = Substitute.For<IUserSessionProvider>();
     private readonly RefreshMakerFromAres.Handler _sut;
 
     public RefreshMakerFromAresHandlerTests()
     {
+        _session.GetUserId().Returns("admin-1");
         _sut = new RefreshMakerFromAres.Handler(
-            _makers, _addresses, _registry, NullLogger<RefreshMakerFromAres.Handler>.Instance);
+            _makers, _addresses, _registry, _session, NullLogger<RefreshMakerFromAres.Handler>.Instance);
     }
 
     private static Makables.Core.Domain.Makers.Maker ExistingMaker() =>
@@ -147,6 +149,24 @@ public class RefreshMakerFromAresHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         maker.CompanyName.Should().Be("Avast Software s.r.o. v likvidaci");
+    }
+
+    [Fact]
+    public async Task Returns_Unauthorized_when_session_has_no_user()
+    {
+        // Fail-closed shape — host-level [Authorize] should make this
+        // unreachable, but attributing the refresh to "system" via the
+        // audit pipeline would mask a misconfigured endpoint. The
+        // registry MUST NOT be hit on the unauthorized branch.
+        // T-0034 Copilot review.
+        _session.GetUserId().Returns((string?)null);
+
+        var result = await _sut.Handle(new RefreshMakerFromAres.Command("maker-1", null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Unauthorized);
+        await _makers.DidNotReceive().GetByIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _registry.DidNotReceive().LookupByRegistrationNumberAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

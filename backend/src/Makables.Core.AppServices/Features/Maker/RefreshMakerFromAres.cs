@@ -79,11 +79,23 @@ public static class RefreshMakerFromAres
         IMakerRepository makers,
         IAddressRepository addresses,
         ICompanyRegistry companyRegistry,
+        IUserSessionProvider session,
         ILogger<Handler> logger)
         : IRequestHandler<Command, BusinessResult<Response>>
     {
         public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken cancellationToken)
         {
+            // T-0034 Copilot review: fail-closed when there's no session
+            // user. The host-level [Authorize(Roles="Admin")] gate should
+            // make this unreachable, but attributing a privileged state
+            // change to "system" via AdminAuditPipelineBehavior would
+            // mask a misconfigured endpoint. Matches DeactivateMaker /
+            // VerifyMaker shape.
+            if (string.IsNullOrEmpty(session.GetUserId()))
+            {
+                return BusinessResult.Failure<Response>(Error.Unauthorized());
+            }
+
             var maker = await makers.GetByIdAsync(command.MakerId, cancellationToken);
             if (maker is null)
             {

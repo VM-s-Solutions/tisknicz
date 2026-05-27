@@ -56,11 +56,15 @@ public static class UpdateMakerProfile
 
             // BankAccount: cap length first (T-0034 sec reviewer m-4 —
             // 10MB BankAccount allocates 10MB before structural checks),
-            // then run the ČNB rule. Empty string is allowed (clears).
+            // then run the ČNB rule. Cap matches the EF column length
+            // (MakerConfiguration: bank_account VARCHAR(40)) so an
+            // oversize input fails as a clean 400 rather than dying at
+            // SaveChanges with EF's max-length violation. T-0034 Copilot
+            // review. Empty string is allowed (clears the value).
             When(c => !string.IsNullOrEmpty(c.BankAccount), () =>
             {
                 RuleFor(c => c.BankAccount!)
-                    .MaximumLength(50).WithErrorCode(BusinessErrorMessage.MaxLength)
+                    .MaximumLength(40).WithErrorCode(BusinessErrorMessage.MaxLength)
                     .Must(CzechBankAccountValidator.IsValid)
                     .WithErrorCode(BusinessErrorMessage.InvalidBankAccountFormat);
             });

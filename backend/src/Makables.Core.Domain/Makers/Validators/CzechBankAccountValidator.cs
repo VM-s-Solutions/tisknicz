@@ -50,10 +50,19 @@ public static class CzechBankAccountValidator
         else
         {
             if (dash != accountPart.LastIndexOf('-')) return false;
+            // T-0034 Copilot review: when a dash is present, BOTH sides
+            // must carry digits. Inputs like "-2000145399/0100" (empty
+            // prefix) or "19-/0100" (empty number) previously slipped
+            // past because IsAllDigits("") returns true. Reject them up
+            // front so the prefix/number length rules below are reached
+            // only for the well-formed "X-Y" shape.
+            if (dash == 0 || dash == accountPart.Length - 1) return false;
             prefix = accountPart[..dash];
             number = accountPart[(dash + 1)..];
         }
 
+        // Prefix length: 0 when no dash is present (accepted), 1..6
+        // when a dash is present (the dash == 0 guard above rules out 0).
         if (prefix.Length > 6 || !IsAllDigits(prefix)) return false;
         if (number.Length is < 2 or > 10 || !IsAllDigits(number)) return false;
 

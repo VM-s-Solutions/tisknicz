@@ -55,11 +55,24 @@ public static class VerifyMaker
         }
     }
 
-    public sealed class Handler(IMakerRepository makers)
+    public sealed class Handler(
+        IMakerRepository makers,
+        IUserSessionProvider session)
         : IRequestHandler<Command, BusinessResult>
     {
         public async Task<BusinessResult> Handle(Command command, CancellationToken cancellationToken)
         {
+            // T-0034 Copilot review: fail-closed when there's no session
+            // user. The host-level [Authorize(Roles="Admin")] gate should
+            // make this unreachable, but attributing a privileged state
+            // change to "system" via AdminAuditPipelineBehavior would
+            // mask a misconfigured endpoint. Matches DeactivateMaker's
+            // shape (T-0034 sec reviewer m-1).
+            if (string.IsNullOrEmpty(session.GetUserId()))
+            {
+                return BusinessResult.Failure(Error.Unauthorized());
+            }
+
             var maker = await makers.GetByIdAsync(command.MakerId, cancellationToken);
             if (maker is null)
             {

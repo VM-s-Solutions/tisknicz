@@ -35,6 +35,8 @@ public class CzechBankAccountValidatorTests
     [InlineData("1234567-2000145399/0800")] // prefix too long (> 6)
     [InlineData("19/2000145399/0800")]      // multiple slashes
     [InlineData("19-20-001/0800")]          // multiple dashes
+    [InlineData("-2000145399/0100")]        // T-0034 Copilot: dash at index 0 (empty prefix)
+    [InlineData("19-/0100")]                // T-0034 Copilot: dash at end (empty number)
     public void Invalid_inputs_are_rejected(string? value)
     {
         CzechBankAccountValidator.IsValid(value).Should().BeFalse();

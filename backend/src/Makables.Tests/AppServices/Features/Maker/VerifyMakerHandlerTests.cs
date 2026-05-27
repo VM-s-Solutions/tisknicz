@@ -12,11 +12,13 @@ public class VerifyMakerHandlerTests
     private static readonly DateTimeOffset SnapshotAt = new(2026, 5, 25, 12, 0, 0, TimeSpan.Zero);
 
     private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
+    private readonly IUserSessionProvider _session = Substitute.For<IUserSessionProvider>();
     private readonly VerifyMaker.Handler _sut;
 
     public VerifyMakerHandlerTests()
     {
-        _sut = new VerifyMaker.Handler(_makers);
+        _session.GetUserId().Returns("admin-1");
+        _sut = new VerifyMaker.Handler(_makers, _session);
     }
 
     private static Makables.Core.Domain.Makers.Maker ExistingMaker() =>
@@ -70,6 +72,22 @@ public class VerifyMakerHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.MakerAlreadyVerified);
         result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public async Task Returns_Unauthorized_when_session_has_no_user()
+    {
+        // Fail-closed shape — host-level [Authorize] should make this
+        // unreachable, but attributing the verify action to "system" via
+        // the audit pipeline would mask a misconfigured endpoint.
+        // T-0034 Copilot review.
+        _session.GetUserId().Returns((string?)null);
+
+        var result = await _sut.Handle(new VerifyMaker.Command("maker-1", null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Unauthorized);
+        await _makers.DidNotReceive().GetByIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
