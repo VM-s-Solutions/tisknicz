@@ -45,6 +45,11 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             ["ix_makers_registration_number"] =
                 Error.Conflict("registrationNumber", BusinessErrorMessage.MakerIcoAlreadyRegistered),
 
+            // CreateCategory pre-checks SlugExistsAsync; the race-losing
+            // insert surfaces here (T-0040).
+            ["ix_categories_slug"] =
+                Error.Conflict("slug", BusinessErrorMessage.CategorySlugAlreadyExists),
+
             // Intentionally unmapped (T-0033 Copilot review):
             //   ix_makers_user_id — one Maker row per User. The handler
             //   adds exactly one Maker per RegisterMaker call, so a 23505

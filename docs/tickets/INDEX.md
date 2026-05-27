@@ -70,7 +70,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
 |---|---|---|---|---|---|---|---|
-| T-0040 | Category entity + ICategoryRepository + seed (6 launch categories) + maker_category join; admin CRUD commands | 3 | M | draft | T-0010 | US-admin-0013 | 0014 |
+| T-0040 | Category entity (Auditable + Slugify NFD-decompose Czech diacritics) + ICategoryRepository (Add / GetByIdAsync / SlugExistsAsync) + partial unique index ix_categories_slug WHERE is_active + UniqueConstraintTranslator race-translation; migration seeds 6 launch categories (cat-3d-tisk, cat-klasicky-tisk, cat-potisk-textilu, cat-laser-cnc, cat-velkoformat, cat-handmade) + maker_categories join (composite PK, no domain entity); admin CreateCategory / UpdateCategory (rename without touching slug per US-admin-0013 AC-2) / DeactivateCategory (all IAdminAuditableCommand, fail-closed on missing session). | 3 | M | done | T-0010 | US-admin-0013 | 0014 |
 | T-0041 | Product entity + IProductRepository; CreateProduct / UpdateProduct / DeleteProduct commands; image upload via backend (validation + Blob storage to `product-images`) | 3 | L | draft | T-0040, T-0028 (blob storage adapter implied) | US-maker-0004 | 0003, 0011 |
 | T-0042 | IBlobStorageClient + AzureBlobStorageClient; per-container access policy (`product-images` public read, others private); file-streaming endpoints | 3 | M | draft | T-0001 | US-customer-0017; US-maker-0009, 0013; US-admin-0012 | 0011 |
 | T-0043 | Catalog query: GetPagedMakers with filters (category, city, rating) + Specification; OrderSort | 3 | M | draft | T-0033, T-0041 | US-customer-0007 | — |

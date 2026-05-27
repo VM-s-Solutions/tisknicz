@@ -47,6 +47,11 @@ public static class BusinessErrorMessage
     public const string ProductNotFound = "product.notFound";
     public const string ProductNotActive = "product.notActive";
 
+    // === Category (T-0040) ===
+    public const string CategoryNotFound = "category.notFound";
+    public const string CategoryNotActive = "category.notActive";
+    public const string CategorySlugAlreadyExists = "category.slugAlreadyExists";
+
     // === Maker ===
     public const string MakerNotFound = "maker.notFound";
     public const string MakerNotActive = "maker.notActive";

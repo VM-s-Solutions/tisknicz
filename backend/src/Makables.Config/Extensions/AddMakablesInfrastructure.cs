@@ -8,6 +8,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
@@ -22,6 +23,7 @@ using Makables.Infra.Database;
 using Makables.Infra.Database.Addresses;
 using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
+using Makables.Infra.Database.Categories;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
@@ -135,6 +137,9 @@ public static class MakablesInfrastructureExtensions
 
         // === Makers (T-0033) ===
         services.AddScoped<IMakerRepository, MakerRepository>();
+
+        // === Categories (T-0040) ===
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
 
         // === Addresses (T-0030) ===
         services.AddScoped<IAddressRepository, AddressRepository>();
