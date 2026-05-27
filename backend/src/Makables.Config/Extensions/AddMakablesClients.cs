@@ -1,6 +1,8 @@
+using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Infra.Clients.Google;
+using Makables.Infra.Clients.Mapbox;
 using Makables.Infra.Clients.SendGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,6 +82,62 @@ public static class MakablesClientsExtensions
         });
 
         services.AddSingleton<IEmailProvider, SendGridEmailProvider>();
+
+        // === Mapbox (T-0031) ===
+        // ValidateOnStart so a missing/typo'd Mapbox:AccessToken crashes
+        // the host at boot. The autocomplete proxy is hot-path UX; we want
+        // the misconfig caught in deploy logs, not in user-facing 503s.
+        services.AddOptions<MapboxOptions>()
+            .Bind(configuration.GetSection(MapboxOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.AccessToken),
+                "Mapbox:AccessToken is required.")
+            // T-0031 sec reviewer MN-2: BaseUrl must be absolute https. A
+            // compromised config that pointed Mapbox calls at an
+            // attacker-controlled host would leak typed-into-the-form PII
+            // + the bearer token. Validator enforces scheme; hostname
+            // allow-list deferred to a future hardening ticket.
+            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u)
+                        && u.Scheme == Uri.UriSchemeHttps,
+                "Mapbox:BaseUrl must be an absolute https URI.")
+            .Validate(o => o.AutocompleteLimit is >= 1 and <= 10,
+                "Mapbox:AutocompleteLimit must be 1..10.")
+            .Validate(o => o.RetryCount is >= 0 and <= 5,
+                "Mapbox:RetryCount must be 0..5.")
+            // T-0031 Copilot review: cap RetryBaseDelayMs so an
+            // accidental huge value can't stretch the retry chain past
+            // OverallTimeoutSeconds (5s default) and silently turn every
+            // autocomplete call into a 5s wait.
+            .Validate(o => o.RetryBaseDelayMs is >= 0 and <= 5000,
+                "Mapbox:RetryBaseDelayMs must be 0..5000.")
+            .Validate(o => o.OverallTimeoutSeconds is >= 1 and <= 30,
+                "Mapbox:OverallTimeoutSeconds must be 1..30.")
+            .ValidateOnStart();
+
+        services.AddHttpClient(MapboxAddressGeocoder.HttpClientName);
+
+        // Polly v8 ResiliencePipeline<HttpResponseMessage>. Same shape as
+        // the SendGrid one: retry on transient HTTP statuses with
+        // exponential backoff + jitter, bounded by MapboxOptions.RetryCount.
+        services.AddSingleton<ResiliencePipeline<HttpResponseMessage>>(sp =>
+        {
+            var opts = sp.GetRequiredService<IOptions<MapboxOptions>>().Value;
+            return new ResiliencePipelineBuilder<HttpResponseMessage>()
+                .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+                {
+                    MaxRetryAttempts = Math.Max(0, opts.RetryCount),
+                    Delay = TimeSpan.FromMilliseconds(Math.Max(50, opts.RetryBaseDelayMs)),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,
+                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                        .Handle<HttpRequestException>()
+                        .Handle<TaskCanceledException>()
+                        .HandleResult(static r =>
+                            (int)r.StatusCode is 408 or 429 or >= 500 and <= 599),
+                })
+                .Build();
+        });
+
+        services.AddScoped<IAddressGeocoder, MapboxAddressGeocoder>();
 
         return services;
     }

@@ -111,9 +111,31 @@ public record AddressSuggestion(string Street, string HouseNumber, string City, 
 // Infra.Clients/Mapbox/MapboxAddressGeocoder.cs implements both.
 ```
 
+> **T-0031 implementation note.** Two deviations from the sketch above:
+>
+> 1. `AutocompleteAsync` returns `BusinessResult<IReadOnlyList<AddressSuggestion>>`
+>    rather than `BusinessResult<AddressSuggestion[]>` — `IReadOnlyList<T>` is
+>    the project's idiomatic collection-return shape (compare `PagedData<T>`)
+>    and keeps the contract a read surface.
+> 2. `AddressSuggestion` is `(string Label, string Street, string HouseNumber,
+>    string City, string Zip, string CountryCodeIso, Coordinates? Coordinates)`
+>    — wraps the lat/lng pair in the T-0030 `Coordinates` value-object (which
+>    enforces finite/range at construction) and adds a `Label` for the
+>    dropdown UI line ("Karlovarská 1, 150 00 Praha, Česko" — Mapbox's
+>    `place_name`). Missing fields surface as empty strings rather than null
+>    so the frontend form binding doesn't need null-forgiveness ceremony.
+>
+> **Token transport.** The Mapbox access token is sent as an
+> `Authorization: Bearer` header, not as a `?access_token=` query
+> parameter. The OTel HttpClient instrumentation captures `url.full`
+> into App Insights span attributes; sending the token in the URL would
+> leak it to anyone with App Insights read access. The `Authorization`
+> header is stripped from OTel HTTP spans by default and is on the
+> `SensitivePropertyMasker` Serilog redaction list.
+
 ### Frontend integration
 
-The order form and maker registration form call `/api/customer/addresses/autocomplete?q=...&country=CZ` (or maker host equivalent), which proxies to Mapbox. The backend rate-limits the proxy per user.
+The order form and maker registration form call `GET /api/v1/addresses/autocomplete?q=...&country=CZ` (against the Customer or Maker host — the shared controller in `Makables.Config` is mounted on both via the MVC application part; audience is enforced by JWT validation, not by route prefix). The backend proxies to Mapbox and rate-limits per authenticated user.
 
 The form binds to the structured fields. When the user picks a suggestion, all five fields populate at once. Manual edits remain possible.
 

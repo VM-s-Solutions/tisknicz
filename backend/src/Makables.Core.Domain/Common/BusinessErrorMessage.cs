@@ -98,4 +98,10 @@ public static class BusinessErrorMessage
     // === Outbox processor (T-0029) ===
     public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
     public const string OutboxRowNotFound = "outbox.rowNotFound";
+
+    // === Geocoder (T-0031) ===
+    public const string GeocoderInvalidInput = "geocoder.invalidInput";
+    public const string GeocoderNoMatch = "geocoder.noMatch";
+    public const string GeocoderTransientFailure = "geocoder.transientFailure";
+    public const string GeocoderPermanentFailure = "geocoder.permanentFailure";
 }
