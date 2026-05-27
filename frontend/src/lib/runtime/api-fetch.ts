@@ -60,7 +60,15 @@ export async function apiFetch<TValue>(
   options: ApiFetchOptions = {},
 ): Promise<Result<TValue, ApiError>> {
   const baseUrl = HOST_BASE_URLS[host];
-  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+  // Belt-and-braces: helper modules pass paths starting with "/" (and
+  // a Copilot reviewer would catch one that doesn't), but a missing
+  // slash on either side would silently glue host + path into
+  // `http://localhost:5001api/v1/...`. Strip trailing slashes off the
+  // base and leading slashes off the path, then join with exactly one.
+  // T-0036 Copilot review.
+  const url = path.startsWith('http')
+    ? path
+    : `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 
   const headers: Record<string, string> = {
     Accept: 'application/json',

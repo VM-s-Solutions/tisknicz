@@ -20,8 +20,12 @@
 import { type ApiHost, apiFetch } from '../runtime/api-fetch';
 import { type ApiError, type Result, ok } from '../runtime/result';
 
-const Base = 'api/v1/auth';
-const PublicBase = 'api/v1/makers';
+// Leading slash matters: apiFetch concatenates `${baseUrl}${path}`
+// against host URLs that have no trailing slash (e.g. http://localhost:5001),
+// so an unrooted "api/v1/auth" would produce http://localhost:5001api/v1/auth.
+// T-0036 Copilot review (same fix applied to profile.ts).
+const Base = '/api/v1/auth';
+const PublicBase = '/api/v1/makers';
 
 // ---- Register (customer) ----
 
