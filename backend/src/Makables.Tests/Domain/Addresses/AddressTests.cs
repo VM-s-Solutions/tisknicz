@@ -133,4 +133,65 @@ public class AddressTests
         a.Latitude.Should().BeNull();
         a.Longitude.Should().BeNull();
     }
+
+    // === T-0030 Copilot review: length validation matches what's persisted ===
+
+    [Fact]
+    public void Required_field_with_trailing_whitespace_is_validated_post_trim()
+    {
+        // City has 200-char cap. A 197-char base value with 5 trailing
+        // spaces totals 202 chars — but Create stores only the trimmed
+        // 197 chars, so validation must accept it.
+        var baseValue = new string('x', 197);
+        var withTrailingSpaces = baseValue + "     ";
+
+        var a = Address.Create(
+            id: "addr-01",
+            street: "Karlovarská třída",
+            houseNumber: "123",
+            city: withTrailingSpaces,
+            zip: "150 00",
+            countryCodeIso: "cz",
+            auditCountryCode: "cz");
+
+        a.City.Should().Be(baseValue);
+    }
+
+    [Fact]
+    public void Required_field_still_rejects_when_post_trim_exceeds_cap()
+    {
+        // 201 chars of non-whitespace must still throw.
+        var oversized = new string('x', 201);
+
+        var act = () => Address.Create(
+            id: "addr-01",
+            street: "Karlovarská třída",
+            houseNumber: "123",
+            city: oversized,
+            zip: "150 00",
+            countryCodeIso: "cz",
+            auditCountryCode: "cz");
+
+        act.Should().Throw<ArgumentException>().WithMessage("*city*");
+    }
+
+    [Fact]
+    public void Optional_field_whitespace_only_normalises_to_null_without_throwing()
+    {
+        // A 600-char whitespace string for State would previously throw
+        // (MaxStateLength=100). It should be treated as absent.
+        var whitespaceOnly = new string(' ', 600);
+
+        var a = Address.Create(
+            id: "addr-01",
+            street: "Karlovarská třída",
+            houseNumber: "123",
+            city: "Praha",
+            zip: "150 00",
+            countryCodeIso: "cz",
+            auditCountryCode: "cz",
+            state: whitespaceOnly);
+
+        a.State.Should().BeNull();
+    }
 }

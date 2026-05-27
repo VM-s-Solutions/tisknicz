@@ -122,15 +122,26 @@ public sealed class Address : Auditable
 
     private static void ValidateRequiredField(string value, string name, int maxLength)
     {
+        // Trim before length-check so validation matches what Create
+        // persists. Without this, "Karel   " (4 chars + 3 trailing
+        // spaces) would be length-checked at 7 even though Create stores
+        // only "Karel" (T-0030 Copilot review).
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException($"{name} is required.", name);
-        if (value.Length > maxLength)
+        if (value.Trim().Length > maxLength)
             throw new ArgumentException($"{name} must be at most {maxLength} chars.", name);
     }
 
     private static void ValidateOptionalField(string? value, string name, int maxLength)
     {
-        if (value is not null && value.Length > maxLength)
+        // Whitespace-only optional inputs are normalised to null by
+        // Create, so a 600-char string of spaces must not throw. Trim
+        // first, treat empty-after-trim as absent, then enforce the cap
+        // (T-0030 Copilot review).
+        if (value is null) return;
+        var trimmed = value.Trim();
+        if (trimmed.Length == 0) return;
+        if (trimmed.Length > maxLength)
             throw new ArgumentException($"{name} must be at most {maxLength} chars.", name);
     }
 }
