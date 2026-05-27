@@ -132,6 +132,12 @@ public static class MakablesClientsExtensions
                 "Ares:BaseUrl must be an absolute https URI.")
             .Validate(o => o.RetryCount is >= 0 and <= 5,
                 "Ares:RetryCount must be 0..5.")
+            // T-0032 Copilot review: cap RetryBaseDelayMs like the
+            // Mapbox option (T-0031) so an accidental large value can't
+            // stretch the retry chain past OverallTimeoutSeconds or
+            // effectively disable retries.
+            .Validate(o => o.RetryBaseDelayMs is >= 0 and <= 5000,
+                "Ares:RetryBaseDelayMs must be 0..5000.")
             .Validate(o => o.OverallTimeoutSeconds is >= 1 and <= 60,
                 "Ares:OverallTimeoutSeconds must be 1..60.")
             .Validate(o => o.InMemoryCacheTtlMinutes is >= 1 and <= 1440,

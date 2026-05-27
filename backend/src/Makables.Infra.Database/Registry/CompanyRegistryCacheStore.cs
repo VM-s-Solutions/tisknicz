@@ -44,26 +44,25 @@ public sealed class CompanyRegistryCacheStore(
         DateTimeOffset expiresAt,
         CancellationToken cancellationToken)
     {
+        // T-0032 Copilot review: atomic upsert via "ON CONFLICT DO UPDATE"
+        // so two concurrent lookups for the same (registry, IČO) don't both
+        // observe `existing is null` and then race on INSERT — the loser
+        // would otherwise bubble a DbUpdateException out of the adapter
+        // and break the "no exceptions cross the boundary" contract.
+        //
+        // Both Postgres and SQLite (used by integration tests) support the
+        // ON CONFLICT … DO UPDATE syntax with identical semantics for the
+        // EXCLUDED pseudo-row, so a single SQL works for both providers.
         await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var existing = await db.Set<CompanyRegistryCacheEntry>()
-            .FirstOrDefaultAsync(
-                e => e.RegistryCode == registryCode && e.RegistrationNumber == registrationNumber,
-                cancellationToken);
-
-        if (existing is null)
-        {
-            db.Set<CompanyRegistryCacheEntry>().Add(CompanyRegistryCacheEntry.Create(
-                registryCode: registryCode,
-                registrationNumber: registrationNumber,
-                payloadJson: payloadJson,
-                fetchedAt: fetchedAt,
-                expiresAt: expiresAt));
-        }
-        else
-        {
-            existing.Refresh(payloadJson, fetchedAt, expiresAt);
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO company_registry_cache
+                (registry_code, registration_number, payload, fetched_at, expires_at)
+            VALUES
+                ({registryCode}, {registrationNumber}, {payloadJson}, {fetchedAt}, {expiresAt})
+            ON CONFLICT (registry_code, registration_number) DO UPDATE SET
+                payload = EXCLUDED.payload,
+                fetched_at = EXCLUDED.fetched_at,
+                expires_at = EXCLUDED.expires_at
+        ", cancellationToken);
     }
 }

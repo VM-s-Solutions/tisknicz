@@ -199,7 +199,13 @@ public sealed class AresCompanyRegistry(
             AresEkonomickySubjekt? payload;
             try
             {
-                payload = await response.Content.ReadFromJsonAsync<AresEkonomickySubjekt>(cancellationToken);
+                // T-0032 Copilot review: deserialise under the linked
+                // timeoutCts so a stalled body stream can't push the
+                // overall call past OverallTimeoutSeconds. The HTTP
+                // send above already uses timeoutCts.Token; without
+                // matching it here the body read becomes an unbounded
+                // tail on top of the timeout budget.
+                payload = await response.Content.ReadFromJsonAsync<AresEkonomickySubjekt>(timeoutCts.Token);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -266,13 +272,29 @@ public sealed class AresCompanyRegistry(
     /// failure or post-deserialise <see cref="Address.Create"/>
     /// validation failure — both surface to the caller as a fall-through
     /// to HTTP, but the caller's LogWarning explicitly disambiguates.
+    ///
+    /// <para>
+    /// T-0032 Copilot review: the <paramref name="ico"/> parameter
+    /// now sanity-checks the cached payload against the requested IČO.
+    /// A mismatch (cache corruption or accidental row tampering) is
+    /// treated as "no cache hit" so the caller falls through to a fresh
+    /// fetch rather than serving a different company's snapshot.
+    /// </para>
     /// </summary>
     private static CompanyRecord? Deserialize(string payloadJson, string ico)
     {
         try
         {
             var cached = JsonSerializer.Deserialize<CachedCompanyRecord>(payloadJson, PayloadSerializerOptions);
-            return cached?.ToRecord();
+            var record = cached?.ToRecord();
+            if (record is null) return null;
+            if (!string.Equals(record.RegistrationNumber, ico, StringComparison.Ordinal))
+            {
+                // Defence-in-depth: don't serve a different company's
+                // snapshot if a row's IČO has drifted from its primary key.
+                return null;
+            }
+            return record;
         }
         catch
         {

@@ -102,8 +102,13 @@ public static class MakablesInfrastructureExtensions
         // run side-effect commits OUTSIDE the request-scoped UoW.
         // T-0032 sec reviewer M-1: the ARES cache store uses this so a
         // cache write can't flush a calling command's tracked-but-uncommitted
-        // aggregates.
-        services.AddDbContextFactory<MakablesDbContext>(ConfigureMakablesDbContext);
+        // aggregates. Lifetime must be Scoped (not the default Singleton)
+        // because AddDbContext above already registers DbContextOptions<T>
+        // as Scoped; mixing a singleton factory with scoped options trips
+        // ValidateScopes on host build. T-0032 CI fix.
+        services.AddDbContextFactory<MakablesDbContext>(
+            ConfigureMakablesDbContext,
+            lifetime: ServiceLifetime.Scoped);
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MakablesDbContext>());
 

@@ -8,7 +8,7 @@ namespace Makables.Core.Domain.Registry.Validators;
 ///
 /// Algorithm (mod-11 weighted sum):
 /// <list type="number">
-///   <item><description>Reject anything that isn't exactly 8 digits (whitespace trimmed beforehand).</description></item>
+///   <item><description>Reject anything that is not already exactly 8 ASCII digits. The validator does NOT trim — callers MUST trim before calling (RegisterMaker does this; the FluentValidation rule on the Command runs <c>Trim().Length == 8 && all-digits</c> first). T-0032 Copilot review: the prior doc claimed trim-beforehand but the code is strict; the strict shape is correct (callers shouldn't be able to sneak whitespace into an IČO).</description></item>
 ///   <item><description>Take digits d1..d8 (d8 is the checksum).</description></item>
 ///   <item><description>Compute <c>s = sum(d_i * w_i)</c> for i = 1..7 with weights 8, 7, 6, 5, 4, 3, 2 (in code: 0-indexed loop i=0..6 with weight <c>8 - i</c>).</description></item>
 ///   <item><description>Compute <c>m = s mod 11</c>.</description></item>
