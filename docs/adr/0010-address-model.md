@@ -45,6 +45,20 @@ public class Address : Auditable
 
 `Address` inherits `Auditable` so the same row can be reused across orders and savedAddresses (when that lands).
 
+> **T-0030 implementation note.** The field shown above as `CountryCode` is
+> implemented as `CountryCodeIso` on the concrete `Address` entity to
+> disambiguate from the inherited `Auditable.CountryCode` (which represents
+> the OWNER's tenant, not the parcel's destination). Both are required at
+> `Address.Create` time as separate parameters; they usually match but
+> don't have to (a CZ user with a SK shipping address). See the entity
+> XML doc for the full rationale.
+>
+> Coordinates are wrapped in the `Coordinates` value-object (defined in
+> the geocoder section below). `Address.SetCoordinates(Coordinates?)`
+> accepts the value-object; pass `null` to clear. The value-object
+> validates lat/lng finiteness and range at construction so callers can't
+> persist NaN.
+
 ### Per-country format validation
 
 `CountryConfiguration` stores a ZIP regex per country (already present per ADR 0004):

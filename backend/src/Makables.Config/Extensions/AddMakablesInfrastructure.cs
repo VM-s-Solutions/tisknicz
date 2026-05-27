@@ -1,6 +1,8 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.AppServices.Features.Outbox;
+using Makables.Core.Domain.Addresses;
+using Makables.Core.Domain.Addresses.Validators;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
@@ -9,11 +11,13 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
+using Makables.Infra.Common.Addresses;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Common.Identifiers;
 using Makables.Infra.Common.Outbox;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
+using Makables.Infra.Database.Addresses;
 using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Numbering;
@@ -98,6 +102,14 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ILoginAttemptBucketRepository, LoginAttemptBucketRepository>();
         services.AddScoped<IOneTimeTokenRepository, OneTimeTokenRepository>();
+
+        // === Addresses (T-0030) ===
+        services.AddScoped<IAddressRepository, AddressRepository>();
+        // Scoped because it depends on ICountryConfigurationRepository
+        // (which holds the per-request DbContext). The regex cache is a
+        // static ConcurrentDictionary on the type, so cache state survives
+        // across scopes anyway.
+        services.AddScoped<IAddressFormatValidator, ConfigurationDrivenAddressFormatValidator>();
 
         // === Email templates + send pipeline (T-0028) ===
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
