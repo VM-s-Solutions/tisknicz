@@ -19,7 +19,7 @@ phase: 3
 Per ADR 0011. Storage adapter pattern + the four launch containers (`product-images` public-read, `order-attachments` / `invoices` / `maker-documents` private). No HTTP file-streaming endpoints in this ticket — those land per-feature (T-0041 product images, T-0061+ order attachments, etc.).
 
 ### Core.Domain (`Storage/`)
-- `IBlobStorageClient.cs` — adapter interface per the role doc shape: `UploadAsync`, `DownloadAsync` (returns `BlobDownload` wrapping the stream + headers), `DeleteAsync`, `ExistsAsync`. All return `BusinessResult<T>` — no exceptions cross the boundary (same shape as T-0031 / T-0032 adapters).
+- `IBlobStorageClient.cs` — adapter interface: `UploadAsync`, `DownloadAsync` (returns `BlobDownload` wrapping the stream + headers), `DeleteAsync`, `ExistsAsync`. All return `BusinessResult<T>` — no exceptions cross the boundary (same shape as T-0031 / T-0032 adapters). The role doc `blob-storage.md` was updated in this ticket to reflect the `BlobDownload` return (the original sketch returned a bare `Stream`; the record carries the content-type/length/ETag the streaming controller needs).
 - `BlobDownload` record — `Stream`, `ContentType`, `ContentLength`, `ETag?`. The CALLER owns disposal of `Stream` (the controller writes it through the HTTP response and disposes after).
 - `BlobContainer` constants — `ProductImages`, `OrderAttachments`, `Invoices`, `MakerDocuments` + `All` array + `IsPublicRead(container)` helper.
 

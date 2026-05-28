@@ -32,11 +32,4 @@ public sealed class AzureBlobStorageOptions
     /// Used with <c>DefaultAzureCredential</c> in staging / production.
     /// </summary>
     public string? ServiceUri { get; set; }
-
-    /// <summary>
-    /// Caller-supplied identifier injected into <c>x-ms-client-request-id</c>
-    /// so blob ops can be correlated with backend request logs. Defaults
-    /// to the host name; overridable per environment.
-    /// </summary>
-    public string ClientApplicationId { get; set; } = "makables-backend";
 }

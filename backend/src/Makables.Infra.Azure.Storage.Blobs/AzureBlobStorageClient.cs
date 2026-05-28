@@ -123,7 +123,7 @@ public sealed class AzureBlobStorageClient(
             logger.LogWarning(ex,
                 "Blob delete failed (container {Container}, path {Path}, status {Status}).",
                 container, path, ex.Status);
-            return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobDownloadFailed));
+            return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
         }
     }
 
@@ -148,7 +148,7 @@ public sealed class AzureBlobStorageClient(
             logger.LogWarning(ex,
                 "Blob exists-check failed (container {Container}, path {Path}, status {Status}).",
                 container, path, ex.Status);
-            return BusinessResult.Failure<bool>(Error.Transient(BusinessErrorMessage.BlobDownloadFailed));
+            return BusinessResult.Failure<bool>(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
         }
     }
 
