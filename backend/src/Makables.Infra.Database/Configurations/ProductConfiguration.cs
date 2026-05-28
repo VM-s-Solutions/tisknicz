@@ -38,9 +38,11 @@ internal sealed class ProductEntityConfiguration : IEntityTypeConfiguration<Prod
 
         builder.Property(p => p.WeightGrams).HasColumnName("weight_grams").IsRequired();
 
-        // Owned collection: product_images. Cascade-deleted with the
-        // parent product per ADR 0011 (images live in blob storage too;
-        // the controller cascades blob deletes on DeleteProduct).
+        // Owned collection: product_images in a separate table. The DB
+        // FK is cascade-delete (the rows go when the product row is hard-
+        // deleted). NOTE: blob cleanup is NOT performed here and is NOT
+        // implied by soft-delete — DeleteProduct only flips IsActive and
+        // leaves the blobs addressable (T-0041 Copilot review).
         builder.OwnsMany(p => p.Images, image =>
         {
             image.ToTable("product_images");
@@ -53,6 +55,13 @@ internal sealed class ProductEntityConfiguration : IEntityTypeConfiguration<Prod
             image.Property(i => i.BlobPath).HasColumnName("blob_path").HasMaxLength(1024).IsRequired();
             image.Property(i => i.SortOrder).HasColumnName("sort_order").IsRequired();
         });
+
+        // Always load images with the product: the image-cap check and
+        // RemoveImage both depend on Images being populated, and a
+        // partially-loaded aggregate would let >10 images through or
+        // 404 an existing image. AutoInclude makes every GetByIdAsync
+        // eager-load the collection (T-0041 Copilot review High).
+        builder.Navigation(p => p.Images).AutoInclude();
 
         ConfigureAuditable(builder);
     }

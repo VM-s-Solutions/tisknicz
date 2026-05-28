@@ -72,3 +72,11 @@ Per role/product.md + US-maker-0004. The catalog write path: a maker creates/edi
 
 ## Status log
 - 2026-05-27 done. Build clean, 797 tests pass. Stacked on T-0042 (rebased onto 18965cb so BlobOperationFailed is available). Awaiting dual reviewer per workflow.
+- 2026-05-27 Copilot review folded in. 799 tests pass (717 unit + 82 integration; +2 AutoInclude round-trip tests).
+  - **High — owned images not guaranteed loaded.** Added `Navigation(p => p.Images).AutoInclude()` to `ProductConfiguration` so the cap check + RemoveImage always see a populated collection. New `ProductImagesAutoIncludeTests` round-trips through SQLite to prove a no-Include load has images.
+  - **High — orphan blob on attach failure.** `ProductController.UploadImage` now best-effort `blobs.DeleteAsync` the just-uploaded blob when `AddProductImage` returns NotFound/Conflict, so a rejected upload (wrong maker, cap reached) leaves no storage residue.
+  - **Medium — SortOrder reshuffle.** `Product.RemoveImage` now compacts by ordering on the persisted `SortOrder` first (EF doesn't guarantee loaded-collection order).
+  - **Medium — wrong error code.** `RemoveProductImage` unknown-image now returns the canonical `BusinessErrorMessage.ProductImageNotFound` (`product.imageNotFound`) instead of `Error.NotFound("productImage")` (`productimage.notFound`). Test strengthened to assert the code.
+  - **Medium — 304 never returned.** `ProductImageController` now checks `If-None-Match` against the blob ETag and returns 304 (disposing the stream) on a match.
+  - **Medium — misleading WeightGrams code.** New `BusinessErrorMessage.MinValue` (`validation.minValue`); both Create/Update validators use it for the `>= 0` rule instead of `Required`.
+  - **Medium — misleading config comment.** `ProductConfiguration` comment corrected to say blob cleanup is NOT implied by soft-delete.

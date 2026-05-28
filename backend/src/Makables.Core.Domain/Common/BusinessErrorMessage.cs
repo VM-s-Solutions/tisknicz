@@ -29,6 +29,7 @@ public static class BusinessErrorMessage
     public const string Required = "validation.required";
     public const string MinLength = "validation.minLength";
     public const string MaxLength = "validation.maxLength";
+    public const string MinValue = "validation.minValue";
     public const string InvalidEnumValue = "validation.invalidEnumValue";
     public const string InvalidEmailFormat = "validation.invalidEmail";
     public const string InvalidPhoneFormat = "validation.invalidPhone";

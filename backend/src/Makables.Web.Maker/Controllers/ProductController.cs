@@ -137,8 +137,17 @@ public sealed class ProductController(
             return HandleResult(upload);
         }
 
-        // Attach the blob path to the aggregate (IDOR-checked in the handler).
+        // Attach the blob path to the aggregate (IDOR-checked + cap-checked
+        // in the handler). If the attach fails — wrong maker/product
+        // (NotFound) or the 10-image cap (Conflict) — the blob we just
+        // uploaded would be orphaned and could be abused to consume
+        // storage. Best-effort delete it on failure so a rejected upload
+        // leaves no residue. T-0041 Copilot review High.
         var attach = await Mediator.Send(new AddProductImage.Command(productId, blobPath), ct);
+        if (!attach.IsSuccess)
+        {
+            await blobs.DeleteAsync(BlobContainer.ProductImages, blobPath, ct);
+        }
         return HandleResult(attach);
     }
 

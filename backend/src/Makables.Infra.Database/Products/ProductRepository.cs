@@ -31,8 +31,10 @@ public sealed class ProductRepository(MakablesDbContext db) : IProductRepository
     public Task<Product?> GetByIdAsync(string id, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Product?>(null);
-        // Owned collections are loaded with the principal in EF Core by
-        // default (they're treated as table-split); no Include needed.
+        // Images are eager-loaded via Navigation(p => p.Images).AutoInclude()
+        // in ProductConfiguration — the cap check + RemoveImage depend on
+        // a fully-populated collection, so no explicit Include here would
+        // be a latent bug (T-0041 Copilot review).
         return db.Set<Product>()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }

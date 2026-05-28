@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.Domain.Storage;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Makables.Web.Public.Controllers;
@@ -41,12 +42,37 @@ public sealed class ProductImageController(IBlobStorageClient blobs) : MakablesA
         // Public, day-cached, with the blob's strong ETag so a repeat
         // fetch can 304. next/image caches at the edge on top of this
         // (ADR 0011 §"Caching").
+        Response.Headers.CacheControl = "public, max-age=86400";
         if (!string.IsNullOrEmpty(download.ETag))
         {
             Response.Headers.ETag = download.ETag;
+
+            // Conditional GET: if the client's cached ETag matches, skip
+            // the body and 304. Must dispose the download stream here —
+            // a 304 has no body, so nothing else will (T-0041 Copilot
+            // review). Match any of the (possibly comma-separated)
+            // If-None-Match values.
+            var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+            if (!string.IsNullOrEmpty(ifNoneMatch) && ETagMatches(ifNoneMatch, download.ETag))
+            {
+                await download.Content.DisposeAsync();
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
         }
-        Response.Headers.CacheControl = "public, max-age=86400";
 
         return File(download.Content, download.ContentType, enableRangeProcessing: true);
+    }
+
+    private static bool ETagMatches(string ifNoneMatchHeader, string etag)
+    {
+        if (ifNoneMatchHeader.Trim() == "*") return true;
+        foreach (var candidate in ifNoneMatchHeader.Split(','))
+        {
+            if (string.Equals(candidate.Trim(), etag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -189,11 +189,15 @@ public sealed class Product : Auditable
         if (existing is null) return null;
         _images.Remove(existing);
         // Compact the SortOrder so a UI rendering by SortOrder doesn't
-        // get holes. This is a pure in-memory rewrite — EF will detect
-        // the property change on each surviving image.
-        for (var i = 0; i < _images.Count; i++)
+        // get holes. Order by the PERSISTED SortOrder first — EF Core
+        // doesn't guarantee the loaded collection's order, so compacting
+        // by raw list position could reshuffle the gallery (T-0041
+        // Copilot review). Pure in-memory rewrite; EF detects each
+        // surviving image's property change.
+        var ordered = _images.OrderBy(i => i.SortOrder).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
-            _images[i].Reorder(i);
+            ordered[i].Reorder(i);
         }
         return existing;
     }

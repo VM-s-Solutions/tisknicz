@@ -189,6 +189,8 @@ public class ProductMutationHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.NotFound);
+        // Canonical code (not the auto-derived "productimage.notFound").
+        result.Error.Code.Should().Be(BusinessErrorMessage.ProductImageNotFound);
         await _blobs.DidNotReceive().DeleteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 

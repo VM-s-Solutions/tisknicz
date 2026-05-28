@@ -72,8 +72,12 @@ public static class RemoveProductImage
             var removed = product.RemoveImage(command.ImageId);
             if (removed is null)
             {
+                // Use the canonical product.imageNotFound code (NOT
+                // Error.NotFound("productImage"), which would emit
+                // "productimage.notFound" and miss the frontend i18n key).
+                // T-0041 Copilot review.
                 return BusinessResult.Failure(
-                    Error.NotFound("productImage"));
+                    new Error("imageId", BusinessErrorMessage.ProductImageNotFound, ErrorType.NotFound));
             }
 
             // Best-effort blob delete. The entity removal already

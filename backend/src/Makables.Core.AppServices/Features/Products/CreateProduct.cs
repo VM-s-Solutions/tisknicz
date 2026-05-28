@@ -68,7 +68,7 @@ public static class CreateProduct
                 .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.ProductPriceNegative);
 
             RuleFor(c => c.WeightGrams)
-                .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.Required);
+                .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.MinValue);
         }
     }
 
