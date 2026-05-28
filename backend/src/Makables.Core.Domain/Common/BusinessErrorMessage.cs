@@ -46,6 +46,11 @@ public static class BusinessErrorMessage
     // === Product ===
     public const string ProductNotFound = "product.notFound";
     public const string ProductNotActive = "product.notActive";
+    public const string ProductImageLimitReached = "product.imageLimitReached";
+    public const string ProductImageNotFound = "product.imageNotFound";
+    public const string ProductPriceNegative = "product.priceNegative";
+    public const string ProductFreeRequiresOnRequest = "product.freeRequiresOnRequest";
+    public const string ProductCurrencyMismatch = "product.currencyMismatch";
 
     // === Category (T-0040) ===
     public const string CategoryNotFound = "category.notFound";
@@ -103,6 +108,7 @@ public static class BusinessErrorMessage
     // === File ===
     public const string FileInvalid = "file.invalid";
     public const string FileTooLarge = "file.tooLarge";
+    public const string FileUnsupportedType = "file.unsupportedType";
 
     // === Payout batch ===
     public const string PayoutBatchEmpty = "payoutBatch.empty";
