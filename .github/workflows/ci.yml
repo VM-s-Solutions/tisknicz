@@ -108,6 +108,11 @@ jobs:
           OutboxDispatcher__HandoffParkMinutes: '15'
           Mapbox__AccessToken: 'pk.ci-spec-parity-stub'
           Ares__BaseUrl: 'https://ares.ci-spec-parity.local'
+          # T-0042: AddMakablesBlobStorage.ValidateOnStart requires either
+          # ConnectionString or ServiceUri. The spec-parity host never
+          # touches blob storage at startup — supply the dev-storage stub
+          # so the validator passes and /openapi/v1.json becomes reachable.
+          AzureBlobStorage__ConnectionString: 'UseDevelopmentStorage=true'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs

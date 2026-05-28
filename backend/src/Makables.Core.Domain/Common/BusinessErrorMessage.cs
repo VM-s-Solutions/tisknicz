@@ -52,6 +52,17 @@ public static class BusinessErrorMessage
     public const string CategoryNotActive = "category.notActive";
     public const string CategorySlugAlreadyExists = "category.slugAlreadyExists";
 
+    // === Blob storage (T-0042) ===
+    public const string BlobNotFound = "blob.notFound";
+    public const string BlobUploadFailed = "blob.uploadFailed";
+    public const string BlobDownloadFailed = "blob.downloadFailed";
+    // Generic operation failure for delete / exists probes so a caller
+    // (and logs/metrics keyed off the code) can tell them apart from a
+    // download failure. T-0042 Copilot review.
+    public const string BlobOperationFailed = "blob.operationFailed";
+    public const string BlobInvalidContainer = "blob.invalidContainer";
+    public const string BlobInvalidPath = "blob.invalidPath";
+
     // === Maker ===
     public const string MakerNotFound = "maker.notFound";
     public const string MakerNotActive = "maker.notActive";

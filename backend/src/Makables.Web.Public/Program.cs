@@ -18,6 +18,7 @@ builder.Services.AddMakablesHostAudience(Audience);
 builder.Services.AddMakablesCors(builder.Configuration, builder.Environment, Audience);
 builder.Services.AddMakablesRateLimiting(Audience);
 builder.Services.AddMakablesClients(builder.Configuration);
+builder.Services.AddMakablesBlobStorage(builder.Configuration);
 builder.Services.AddMakablesApiVersioning();
 
 builder.Services.AddMakablesControllers();

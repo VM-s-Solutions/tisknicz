@@ -30,10 +30,17 @@ Store, retrieve, and stream files (product images, order attachments, invoice PD
 
 ```csharp
 Task<BusinessResult> UploadAsync(string container, string path, Stream content, string contentType, CancellationToken ct)
-Task<BusinessResult<Stream>> DownloadAsync(string container, string path, CancellationToken ct)
+Task<BusinessResult<BlobDownload>> DownloadAsync(string container, string path, CancellationToken ct)
 Task<BusinessResult> DeleteAsync(string container, string path, CancellationToken ct)
 Task<BusinessResult<bool>> ExistsAsync(string container, string path, CancellationToken ct)
 ```
+
+`DownloadAsync` returns `BlobDownload` (T-0042) — a record wrapping the
+read `Stream` plus the `ContentType` / `ContentLength` / `ETag?` the
+streaming controller needs to set HTTP response headers. The caller
+owns disposal of the stream. (The original sketch returned a bare
+`Stream`; the record was added so the controller doesn't have to
+re-probe the blob for its content type and length.)
 
 ## Implementations
 

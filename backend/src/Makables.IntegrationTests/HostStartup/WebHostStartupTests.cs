@@ -73,6 +73,10 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                     ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                     ["Ares:BaseUrl"] = "https://ares.integration-test.local",
+                    // T-0042: AddMakablesBlobStorage requires either
+                    // ConnectionString (dev/CI) or ServiceUri (Managed
+                    // Identity). Stub connection string for tests.
+                    ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
                     // T-0035 sec reviewer B1: AddMakablesCors now fails-closed
                     // outside Development when allowed-origins is unconfigured.
                     // Supply explicit origins per audience for the test host.
