@@ -44,4 +44,20 @@ public sealed class CatalogController : MakablesApiController
             PageSize: pageSize), cancellationToken);
         return HandleResult(result);
     }
+
+    /// <summary>Public maker profile by slug (US-customer-0008).</summary>
+    [HttpGet("makers/{slug}")]
+    public async Task<IActionResult> GetMakerProfile(string slug, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new GetMakerBySlug.Query(slug), cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>Public product detail by id (US-customer-0009).</summary>
+    [HttpGet("products/{productId}")]
+    public async Task<IActionResult> GetProduct(string productId, CancellationToken cancellationToken)
+    {
+        var result = await Mediator.Send(new GetProductById.Query(productId), cancellationToken);
+        return HandleResult(result);
+    }
 }

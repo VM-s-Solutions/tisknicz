@@ -4,6 +4,7 @@ using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Makers;
+using Makables.Core.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace Makables.Infra.Database.Catalog;
@@ -103,5 +104,107 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
             .ToListAsync(cancellationToken);
 
         return new PagedData<MakerListItem>(items, filter.Page, filter.PageSize, totalCount);
+    }
+
+    public async Task<MakerProfile?> GetMakerBySlugAsync(
+        string slug,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return null;
+        var normalised = slug.Trim();
+
+        // Same publicly-listable gate as the list: active maker + active
+        // user + confirmed email. The slug is unique across active makers
+        // (partial index), so FirstOrDefault is the single row or null.
+        var header = await (
+            from m in db.Set<Maker>().AsNoTracking()
+            join u in db.Set<User>().AsNoTracking() on m.UserId equals u.Id
+            join a in db.Set<Address>().AsNoTracking() on m.RegisteredAddressId equals a.Id
+            where m.Slug == normalised && u.EmailConfirmedAt != null
+            select new
+            {
+                m.Id, m.Slug, m.CompanyName, m.Bio, m.LegalForm,
+                a.City, m.IsVerified, m.PersonalPickupEnabled, m.PickupNote,
+                m.RatingAverageBp, m.RatingCount, m.TotalOrders,
+            }).FirstOrDefaultAsync(cancellationToken);
+
+        if (header is null) return null;
+
+        // Active products for this maker. Owned images are auto-included
+        // (T-0041), so the primary image is the lowest-sort-order one.
+        var products = await db.Set<Product>().AsNoTracking()
+            .Where(p => p.MakerId == header.Id)
+            // Order by Id descending — product ids are ULIDs (time-
+            // ordered), so this is "newest first" without an ORDER BY on
+            // a DateTimeOffset (which SQLite can't translate; keeps the
+            // query provider-portable for the test harness).
+            .OrderByDescending(p => p.Id)
+            .Select(p => new MakerProductItem(
+                p.Id,
+                p.Title,
+                p.PriceAmountMinor,
+                p.PriceCurrency,
+                p.PriceType.ToString(),
+                p.Images
+                    .OrderBy(i => i.SortOrder)
+                    .Select(i => i.BlobPath)
+                    .FirstOrDefault()))
+            .ToListAsync(cancellationToken);
+
+        return new MakerProfile(
+            MakerId: header.Id,
+            Slug: header.Slug,
+            CompanyName: header.CompanyName,
+            Bio: header.Bio,
+            LegalForm: header.LegalForm,
+            City: header.City,
+            IsVerified: header.IsVerified,
+            PersonalPickupEnabled: header.PersonalPickupEnabled,
+            PickupNote: header.PickupNote,
+            RatingAverageBp: header.RatingAverageBp,
+            RatingCount: header.RatingCount,
+            TotalOrders: header.TotalOrders,
+            Products: products,
+            // Reviews deferred to T-0050 — empty list keeps the contract
+            // stable so the frontend/NSwag client don't change later.
+            Reviews: Array.Empty<MakerReviewItem>());
+    }
+
+    public async Task<ProductDetail?> GetProductByIdAsync(
+        string productId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(productId)) return null;
+
+        // Active product whose owning maker is publicly-listable (active
+        // maker + active user + confirmed email). The global soft-delete
+        // filter handles the active checks; we add the email gate. A
+        // product hidden behind an unconfirmed/inactive maker returns
+        // null so it isn't probeable by id.
+        var detail = await (
+            from p in db.Set<Product>().AsNoTracking()
+            join m in db.Set<Maker>().AsNoTracking() on p.MakerId equals m.Id
+            join u in db.Set<User>().AsNoTracking() on m.UserId equals u.Id
+            where p.Id == productId && u.EmailConfirmedAt != null
+            select new ProductDetail(
+                p.Id,
+                p.Title,
+                p.Description,
+                p.PriceAmountMinor,
+                p.PriceCurrency,
+                p.PriceType.ToString(),
+                p.WeightGrams,
+                p.CategoryId,
+                m.Id,
+                m.Slug,
+                m.CompanyName,
+                m.IsVerified,
+                p.Images
+                    .OrderBy(i => i.SortOrder)
+                    .Select(i => new ProductImageItem(i.Id, i.BlobPath, i.SortOrder))
+                    .ToList()))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return detail;
     }
 }
