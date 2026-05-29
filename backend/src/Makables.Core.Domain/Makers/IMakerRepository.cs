@@ -52,4 +52,12 @@ public interface IMakerRepository
     /// Returns a tracked instance because all admin commands mutate.
     /// </summary>
     Task<Maker?> GetByIdAsync(string id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// True when an ACTIVE maker already uses the given slug. Drives the
+    /// slug-disambiguation in <c>RegisterMaker</c> (T-0043) — on a
+    /// collision the handler appends the IČO to keep the public URL
+    /// unique. Active-only via the global soft-delete query filter.
+    /// </summary>
+    Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken);
 }

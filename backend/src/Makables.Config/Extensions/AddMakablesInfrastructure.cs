@@ -8,6 +8,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Products;
@@ -24,6 +25,7 @@ using Makables.Infra.Database;
 using Makables.Infra.Database.Addresses;
 using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
+using Makables.Infra.Database.Catalog;
 using Makables.Infra.Database.Categories;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.Products;
@@ -145,6 +147,9 @@ public static class MakablesInfrastructureExtensions
 
         // === Products (T-0041) ===
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        // === Catalog read-side (T-0043) ===
+        services.AddScoped<ICatalogQueries, CatalogQueries>();
 
         // === Addresses (T-0030) ===
         services.AddScoped<IAddressRepository, AddressRepository>();

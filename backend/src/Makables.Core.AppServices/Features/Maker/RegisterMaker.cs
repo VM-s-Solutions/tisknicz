@@ -194,6 +194,22 @@ public static class RegisterMaker
                 state: aresAddress.State);
             addresses.Add(legalSeat);
 
+            // Derive the public-profile slug from the ARES company name.
+            // On a collision with an existing active maker, append the
+            // IČO so the URL stays unique (T-0043). The IČO is itself
+            // unique across active makers (pre-checked above), so the
+            // fallback is collision-free.
+            var baseSlug = SlugGenerator.Slugify(company.CompanyName);
+            if (baseSlug.Length == 0)
+            {
+                baseSlug = company.RegistrationNumber;
+            }
+            var slug = baseSlug;
+            if (await makers.SlugExistsAsync(slug, cancellationToken))
+            {
+                slug = $"{baseSlug}-{company.RegistrationNumber}";
+            }
+
             var maker = Makables.Core.Domain.Makers.Maker.Create(
                 id: ids.Next(),
                 userId: user.Id,
@@ -207,7 +223,8 @@ public static class RegisterMaker
                 sourceRegistry: company.SourceRegistry,
                 snapshotFetchedAt: company.FetchedAt,
                 snapshotIsStale: company.IsStale,
-                countryCode: command.CountryCodePrimary);
+                countryCode: command.CountryCodePrimary,
+                slug: slug);
             makers.Add(maker);
 
             // 6. Email-confirmation token (same pipeline as customer Register).
