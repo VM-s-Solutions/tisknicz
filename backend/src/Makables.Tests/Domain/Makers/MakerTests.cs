@@ -265,6 +265,39 @@ public class MakerTests
     }
 
     [Fact]
+    public void Create_truncates_long_derived_slug_to_max_length()
+    {
+        // 200-char company name → slug would be 200 chars without the cap.
+        // T-0043 Copilot review: must not pass validation and then fail
+        // at SaveChanges against the 120-char column.
+        var longName = new string('a', 200);
+        var m = Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: longName, legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false, countryCode: "CZ");
+
+        m.Slug.Length.Should().BeLessThanOrEqualTo(Maker.MaxSlugLength);
+    }
+
+    [Fact]
+    public void Create_rejects_explicit_slug_exceeding_max_length()
+    {
+        var oversized = new string('x', Maker.MaxSlugLength + 1);
+
+        var act = () => Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: "Co", legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false,
+            countryCode: "CZ", slug: oversized);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
     public void UpdateSnapshot_does_not_change_slug()
     {
         var m = ValidDefaults();

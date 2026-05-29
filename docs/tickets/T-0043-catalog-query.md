@@ -63,3 +63,9 @@ T-0033/T-0034 deferred these; T-0043 adds them because the catalog query depends
 
 ## Status log
 - 2026-05-28 done. Build clean, 816 tests pass. Awaiting dual reviewer per workflow.
+- 2026-05-30 Copilot review folded in. 832 tests pass (750 unit + 82 integration; +5 new).
+  - **Snapshot desync.** Added `MakerCategory` shadow `created_by` as `IsRequired()` to match T-0040's `NOT NULL` column. Generated `20260529224101_MapMakerCategoryEntity` migration whose Up/Down are intentionally no-ops (the table already exists from T-0040); its only purpose is to sync the `MakablesDbContextModelSnapshot` so the next `migrations add` doesn't try to re-create the table.
+  - **Slug length bound.** `SlugGenerator.Slugify` accepts an optional `maxLength` (truncates + trims a trailing dash); `Maker.Create` passes `Maker.MaxSlugLength = 120` so a long ARES company name can't produce a slug that passes validation but overflows the column. Explicit slug override is rejected if >120 chars.
+  - **Slug fallback ladder.** `RegisterMaker` now disambiguates: base → `{base}-{ico}` (both pre-checked + length-bounded) → bare `{ico}` (globally unique among active makers).
+  - **`ix_makers_slug` race translation.** Added `BusinessErrorMessage.MakerSlugAlreadyExists` + wired it into `UniqueConstraintTranslator`. A concurrent registration that loses the slug race surfaces as a typed Conflict instead of a raw 500 (same pattern as `ix_makers_registration_number` + `ix_categories_slug`).
+  - **Page overflow guard.** `GetPagedMakers.Validator` now caps `Page` at `int.MaxValue / MaxPageSize` so `(Page-1)*PageSize` can't overflow Int32 into a negative Skip offset.

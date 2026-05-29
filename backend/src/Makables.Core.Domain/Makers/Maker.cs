@@ -34,6 +34,9 @@ namespace Makables.Core.Domain.Makers;
 /// </summary>
 public sealed class Maker : Auditable
 {
+    /// <summary>Matches the <c>slug</c> column width in MakerConfiguration.</summary>
+    public const int MaxSlugLength = 120;
+
     /// <summary>FK to <c>User</c>. Unique — one Maker row per user.</summary>
     public string UserId { get; private set; } = default!;
 
@@ -172,11 +175,17 @@ public sealed class Maker : Auditable
         // collisions by appending the IČO); otherwise derive from the
         // company name. A company name like "***" slugifies to empty —
         // fall back to the IČO so we always have a usable URL segment.
+        // Both the derived and the override path are bounded to
+        // MaxSlugLength so a long ARES name can't produce a slug that
+        // passes validation but overflows the column (T-0043 Copilot
+        // review).
         var resolvedSlug = string.IsNullOrWhiteSpace(slug)
-            ? SlugGenerator.Slugify(companyName)
+            ? SlugGenerator.Slugify(companyName, MaxSlugLength)
             : slug.Trim();
         if (resolvedSlug.Length == 0)
             resolvedSlug = registrationNumber.Trim();
+        if (resolvedSlug.Length > MaxSlugLength)
+            throw new ArgumentException($"Slug must be at most {MaxSlugLength} chars.", nameof(slug));
         if (!SlugGenerator.IsValid(resolvedSlug))
             throw new ArgumentException("Slug must match [a-z0-9-]+ (no leading/trailing/double dashes).", nameof(slug));
 

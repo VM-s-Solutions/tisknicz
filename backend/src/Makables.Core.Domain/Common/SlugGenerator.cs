@@ -23,7 +23,14 @@ namespace Makables.Core.Domain.Common;
 /// </summary>
 public static class SlugGenerator
 {
-    public static string Slugify(string value)
+    /// <param name="maxLength">
+    /// When &gt; 0, truncates the slug to at most this many characters
+    /// (then trims a trailing dash a mid-word cut might leave). Callers
+    /// pass their column limit so a long source string can't produce a
+    /// slug that passes domain validation but fails at SaveChanges
+    /// (T-0043 Copilot review). 0 = no limit.
+    /// </param>
+    public static string Slugify(string value, int maxLength = 0)
     {
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
 
@@ -49,6 +56,10 @@ public static class SlugGenerator
         }
 
         var result = sb.ToString();
+        if (maxLength > 0 && result.Length > maxLength)
+        {
+            result = result[..maxLength];
+        }
         return result.EndsWith('-') ? result[..^1] : result;
     }
 

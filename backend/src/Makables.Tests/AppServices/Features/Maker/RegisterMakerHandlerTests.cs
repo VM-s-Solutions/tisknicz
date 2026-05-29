@@ -219,4 +219,44 @@ public class RegisterMakerHandlerTests
         result.Value!.SnapshotIsStale.Should().BeTrue("ADR 0018 — stale snapshot must not block onboarding");
         _makers.Received(1).Add(Arg.Is<Makables.Core.Domain.Makers.Maker>(m => m.SnapshotIsStale));
     }
+
+    // ---- slug disambiguation ladder (T-0043 Copilot review) ----
+
+    [Fact]
+    public async Task Slug_collision_falls_back_to_base_dash_ico()
+    {
+        _companyRegistry.LookupByRegistrationNumberAsync(ValidIco, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(AresRecord()));
+        _users.EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _makers.IcoExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        // Base slug "avast-software-s-r-o" already taken; the
+        // {base}-{ico} fallback is free.
+        _makers.SlugExistsAsync("avast-software-s-r-o", Arg.Any<CancellationToken>()).Returns(true);
+        _makers.SlugExistsAsync($"avast-software-s-r-o-{ValidIco}", Arg.Any<CancellationToken>()).Returns(false);
+
+        var result = await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _makers.Received(1).Add(Arg.Is<Makables.Core.Domain.Makers.Maker>(m =>
+            m.Slug == $"avast-software-s-r-o-{ValidIco}"));
+    }
+
+    [Fact]
+    public async Task Slug_double_collision_falls_back_to_bare_ico()
+    {
+        _companyRegistry.LookupByRegistrationNumberAsync(ValidIco, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(AresRecord()));
+        _users.EmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _makers.IcoExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        // BOTH base and {base}-{ico} taken → fall back to bare IČO
+        // (globally unique among active makers, IČO uniqueness was
+        // pre-checked).
+        _makers.SlugExistsAsync("avast-software-s-r-o", Arg.Any<CancellationToken>()).Returns(true);
+        _makers.SlugExistsAsync($"avast-software-s-r-o-{ValidIco}", Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        _makers.Received(1).Add(Arg.Is<Makables.Core.Domain.Makers.Maker>(m => m.Slug == ValidIco));
+    }
 }

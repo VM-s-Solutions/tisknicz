@@ -67,4 +67,15 @@ public class GetPagedMakersHandlerTests
         var v = new GetPagedMakers.Validator();
         v.Validate(new GetPagedMakers.Query("CZ", "3d-tisk", "Praha", 3, 2, 24)).IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void Validator_rejects_page_that_would_overflow_skip_offset()
+    {
+        // (Page - 1) * MaxPageSize would overflow Int32 — reject with a
+        // typed validation failure instead of letting Skip go negative
+        // (T-0043 Copilot review).
+        var v = new GetPagedMakers.Validator();
+        v.Validate(new GetPagedMakers.Query("CZ", null, null, null, int.MaxValue, 24))
+            .IsValid.Should().BeFalse();
+    }
 }

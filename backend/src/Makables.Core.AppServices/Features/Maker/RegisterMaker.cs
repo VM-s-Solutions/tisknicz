@@ -194,20 +194,42 @@ public static class RegisterMaker
                 state: aresAddress.State);
             addresses.Add(legalSeat);
 
-            // Derive the public-profile slug from the ARES company name.
-            // On a collision with an existing active maker, append the
-            // IČO so the URL stays unique (T-0043). The IČO is itself
-            // unique across active makers (pre-checked above), so the
-            // fallback is collision-free.
-            var baseSlug = SlugGenerator.Slugify(company.CompanyName);
+            // Derive the public-profile slug from the ARES company name,
+            // bounded to the column width. Disambiguation ladder
+            // (T-0043 Copilot review — the {base}-{ico} fallback isn't
+            // inherently collision-free, so each rung is pre-checked):
+            //   1. base slug
+            //   2. {base}-{ico}
+            //   3. bare {ico} — globally unique among active makers (the
+            //      IČO uniqueness was pre-checked above), so this rung
+            //      always resolves.
+            // If even that races a concurrent insert, ix_makers_slug +
+            // the UniqueConstraintTranslator turn it into a typed
+            // MakerSlugAlreadyExists conflict rather than a 500.
+            var ico = company.RegistrationNumber.Trim();
+            var baseSlug = SlugGenerator.Slugify(
+                company.CompanyName, Makables.Core.Domain.Makers.Maker.MaxSlugLength);
             if (baseSlug.Length == 0)
             {
-                baseSlug = company.RegistrationNumber;
+                baseSlug = ico;
             }
+
             var slug = baseSlug;
             if (await makers.SlugExistsAsync(slug, cancellationToken))
             {
-                slug = $"{baseSlug}-{company.RegistrationNumber}";
+                // Truncate the composed candidate to the column width
+                // (the base + "-" + IČO can exceed it for long names),
+                // trimming a trailing dash a mid-name cut might leave.
+                var composed = $"{baseSlug}-{ico}";
+                if (composed.Length > Makables.Core.Domain.Makers.Maker.MaxSlugLength)
+                {
+                    composed = composed[..Makables.Core.Domain.Makers.Maker.MaxSlugLength].TrimEnd('-');
+                }
+                slug = composed;
+                if (await makers.SlugExistsAsync(slug, cancellationToken))
+                {
+                    slug = ico;
+                }
             }
 
             var maker = Makables.Core.Domain.Makers.Maker.Create(

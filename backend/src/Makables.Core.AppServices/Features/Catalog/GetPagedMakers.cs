@@ -40,8 +40,11 @@ public static class GetPagedMakers
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .Length(2).WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
 
+            // Upper-bound Page so (Page-1)*PageSize can't overflow Int32
+            // into a negative Skip offset (T-0043 Copilot review). The
+            // cap is far beyond any real catalog depth.
             RuleFor(q => q.Page)
-                .GreaterThanOrEqualTo(1).WithErrorCode(BusinessErrorMessage.MinValue);
+                .InclusiveBetween(1, int.MaxValue / MaxPageSize).WithErrorCode(BusinessErrorMessage.MinValue);
 
             RuleFor(q => q.PageSize)
                 .InclusiveBetween(1, MaxPageSize).WithErrorCode(BusinessErrorMessage.MinValue);
