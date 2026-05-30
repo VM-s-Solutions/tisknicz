@@ -1,7 +1,7 @@
 {
-  "_comment": "OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022. Until backend endpoints exist with real DTOs, these are empty placeholders. T-0013 establishes the file; CI parity check lands in T-0016's pipeline definitions.",
+  "_comment": "OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022.",
   "customer-api.v1": null,
   "maker-api.v1": null,
   "admin-api.v1": null,
-  "public-api.v1": null
+  "public-api.v1": "3dd1ccee4afde41a1b85f6a5ad25963542cdcbe9513926c922f2feab749ed273"
 }

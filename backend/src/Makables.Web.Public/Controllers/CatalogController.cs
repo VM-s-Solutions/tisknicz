@@ -1,7 +1,10 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Catalog;
+using Makables.Core.Domain.Catalog;
+using Makables.Core.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Makables.Web.Public.Controllers;
@@ -25,7 +28,15 @@ public sealed class CatalogController : MakablesApiController
     /// <paramref name="pageSize"/> defaults to 24 and is capped at 48 by
     /// the handler.
     /// </summary>
+    // No [ProducesResponseType(..., 400)] here: under [ApiController] the
+    // framework rejects malformed query values (page/pageSize/minRating
+    // not parseable as int) with a ValidationProblemDetails (RFC 7807)
+    // body before the handler runs — that shape is NOT our domain Error.
+    // The handler's own FluentValidation 400 IS the Error shape, but
+    // declaring 400 -> Error would mislead generated clients about the
+    // model-binding path. T-0046b Copilot review.
     [HttpGet("makers")]
+    [ProducesResponseType(typeof(PagedData<MakerListItem>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMakers(
         [FromQuery] string country = "CZ",
         [FromQuery] string? category = null,
@@ -47,6 +58,8 @@ public sealed class CatalogController : MakablesApiController
 
     /// <summary>Public maker profile by slug (US-customer-0008).</summary>
     [HttpGet("makers/{slug}")]
+    [ProducesResponseType(typeof(MakerProfile), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMakerProfile(string slug, CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetMakerBySlug.Query(slug), cancellationToken);
@@ -55,6 +68,8 @@ public sealed class CatalogController : MakablesApiController
 
     /// <summary>Public product detail by id (US-customer-0009).</summary>
     [HttpGet("products/{productId}")]
+    [ProducesResponseType(typeof(ProductDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProduct(string productId, CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetProductById.Query(productId), cancellationToken);

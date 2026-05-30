@@ -15,7 +15,7 @@ touch generated files without a matching `.spec-hashes.json` update.
 | `customer-api.v1.ts` | `http://localhost:5001/openapi/v1.json` | `Makables.Web.Customer` |
 | `maker-api.v1.ts` | `http://localhost:5002/openapi/v1.json` | `Makables.Web.Maker` |
 | `admin-api.v1.ts` | `http://localhost:5003/openapi/v1.json` | `Makables.Web.Admin` |
-| `public-api.v1.ts` | `http://localhost:5004/openapi/v1.json` | `Makables.Web.Public` |
+| `public-api.v1.ts` | `http://localhost:5104/openapi/v1.json` | `Makables.Web.Public` |
 
 ## How to regenerate
 
