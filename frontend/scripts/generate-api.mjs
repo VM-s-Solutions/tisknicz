@@ -39,7 +39,19 @@ const hostFilter = (() => {
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 const documents = config.documentGenerator.fromDocuments;
-const hashes = existsSync(hashesPath) ? JSON.parse(readFileSync(hashesPath, 'utf8')) : { _comment: '' };
+// T-0046b Copilot review: this file's _comment describes the HASHES file
+// (per-host SHA256 of the OpenAPI spec — CI uses it for the parity
+// check). It is NOT the nswag/config.json _comment; the previous version
+// of this script clobbered the hashes _comment with config's on every
+// run. Keep the hashes _comment stable; only mutate per-host entries.
+const HASHES_DEFAULT_COMMENT =
+  'OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022.';
+const hashes = existsSync(hashesPath)
+  ? JSON.parse(readFileSync(hashesPath, 'utf8'))
+  : { _comment: HASHES_DEFAULT_COMMENT };
+if (typeof hashes._comment !== 'string' || hashes._comment.length === 0) {
+  hashes._comment = HASHES_DEFAULT_COMMENT;
+}
 
 let okCount = 0;
 let skipCount = 0;
@@ -82,7 +94,6 @@ for (const doc of documents) {
   okCount++;
 }
 
-hashes._comment = config._comment;
 writeFileSync(hashesPath, JSON.stringify(hashes, null, 2) + '\n', 'utf8');
 
 console.log('');

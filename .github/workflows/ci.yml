@@ -119,11 +119,11 @@ jobs:
           dotnet run --project Makables.Web.Customer --configuration Release --no-build --urls http://localhost:5001 > /tmp/host-logs/customer.log 2>&1 &
           dotnet run --project Makables.Web.Maker    --configuration Release --no-build --urls http://localhost:5002 > /tmp/host-logs/maker.log    2>&1 &
           dotnet run --project Makables.Web.Admin    --configuration Release --no-build --urls http://localhost:5003 > /tmp/host-logs/admin.log    2>&1 &
-          dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5004 > /tmp/host-logs/public.log   2>&1 &
+          dotnet run --project Makables.Web.Public   --configuration Release --no-build --urls http://localhost:5104 > /tmp/host-logs/public.log   2>&1 &
           # Wait for the OpenAPI documents to be reachable. EF Core's connection
           # is lazy, so a placeholder Postgres connection string is enough for
           # hosts to serve /openapi/v1.json (no DB query happens at startup).
-          for port in 5001 5002 5003 5004; do
+          for port in 5001 5002 5003 5104; do
             ready=0
             for i in {1..60}; do
               if curl -sf http://localhost:$port/openapi/v1.json -o /dev/null; then
@@ -139,7 +139,7 @@ jobs:
                 5001) cat /tmp/host-logs/customer.log ;;
                 5002) cat /tmp/host-logs/maker.log    ;;
                 5003) cat /tmp/host-logs/admin.log    ;;
-                5004) cat /tmp/host-logs/public.log   ;;
+                5104) cat /tmp/host-logs/public.log   ;;
               esac
               exit 1
             fi

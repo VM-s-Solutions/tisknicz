@@ -4,7 +4,9 @@ import { type ApiError, type ErrorType, type Result, err, ok } from './result';
  * Hostname identifiers for the four .NET Web hosts. The matching base URL
  * comes from `NEXT_PUBLIC_API_<HOST>_BASE_URL` env vars; in development
  * each host has a fixed port per ADR 0005 (Customer=5001, Maker=5002,
- * Admin=5003, Public=5004).
+ * Admin=5003, Public=5104). Public moved off 5004 in T-0046b because the
+ * default collided with an unrelated local project on dev machines —
+ * launchSettings, nswag/config.json and this fallback all track 5104.
  */
 export type ApiHost = 'customer' | 'maker' | 'admin' | 'public';
 
@@ -12,7 +14,7 @@ const HOST_BASE_URLS: Record<ApiHost, string> = {
   customer: process.env.NEXT_PUBLIC_API_CUSTOMER_BASE_URL ?? 'http://localhost:5001',
   maker: process.env.NEXT_PUBLIC_API_MAKER_BASE_URL ?? 'http://localhost:5002',
   admin: process.env.NEXT_PUBLIC_API_ADMIN_BASE_URL ?? 'http://localhost:5003',
-  public: process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL ?? 'http://localhost:5004',
+  public: process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL ?? 'http://localhost:5104',
 };
 
 export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {

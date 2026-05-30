@@ -28,9 +28,15 @@ public sealed class CatalogController : MakablesApiController
     /// <paramref name="pageSize"/> defaults to 24 and is capped at 48 by
     /// the handler.
     /// </summary>
+    // No [ProducesResponseType(..., 400)] here: under [ApiController] the
+    // framework rejects malformed query values (page/pageSize/minRating
+    // not parseable as int) with a ValidationProblemDetails (RFC 7807)
+    // body before the handler runs — that shape is NOT our domain Error.
+    // The handler's own FluentValidation 400 IS the Error shape, but
+    // declaring 400 -> Error would mislead generated clients about the
+    // model-binding path. T-0046b Copilot review.
     [HttpGet("makers")]
     [ProducesResponseType(typeof(PagedData<MakerListItem>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetMakers(
         [FromQuery] string country = "CZ",
         [FromQuery] string? category = null,

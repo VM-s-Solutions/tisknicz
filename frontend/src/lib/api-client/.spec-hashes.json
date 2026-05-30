@@ -1,7 +1,7 @@
 {
-  "_comment": "NSwag configuration per ADR 0022. Generates one TypeScript client per Web host per version. Run via `npm run generate:api` from /frontend/. The backend host must be running locally on the configured port — see scripts/generate-api.mjs for how the script orchestrates startup.",
+  "_comment": "OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022.",
   "customer-api.v1": null,
   "maker-api.v1": null,
   "admin-api.v1": null,
-  "public-api.v1": "62bd7a3b999e633994436d0cf290ac6439014a76f5776b3b8a9767a8a8362942"
+  "public-api.v1": "3dd1ccee4afde41a1b85f6a5ad25963542cdcbe9513926c922f2feab749ed273"
 }

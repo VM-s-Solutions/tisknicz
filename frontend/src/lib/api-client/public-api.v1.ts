@@ -192,13 +192,6 @@ export class PublicApi implements IPublicApi {
             result200 = PagedDataOfMakerListItem.fromJS(resultData200);
             return result200;
             });
-        } else if (status === 400) {
-            return response.text().then((_responseText) => {
-            let result400: any = null;
-            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ErrorDto.fromJS(resultData400);
-            return throwException("Bad Request", status, _responseText, _headers, result400);
-            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
