@@ -83,6 +83,7 @@ public static class BusinessErrorMessage
     /// state registry at all.
     /// </summary>
     public const string MakerCompanyDissolved = "maker.companyDissolved";
+    public const string MakerSlugAlreadyExists = "maker.slugAlreadyExists";
 
     // === Company registry (T-0032) ===
     public const string CompanyNotFound = "company.notFound";

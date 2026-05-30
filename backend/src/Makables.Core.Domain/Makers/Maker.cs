@@ -34,6 +34,9 @@ namespace Makables.Core.Domain.Makers;
 /// </summary>
 public sealed class Maker : Auditable
 {
+    /// <summary>Matches the <c>slug</c> column width in MakerConfiguration.</summary>
+    public const int MaxSlugLength = 120;
+
     /// <summary>FK to <c>User</c>. Unique — one Maker row per user.</summary>
     public string UserId { get; private set; } = default!;
 
@@ -106,6 +109,35 @@ public sealed class Maker : Auditable
     /// <summary>Free-text pickup instructions shown to customers (e.g. opening hours, doorbell name).</summary>
     public string? PickupNote { get; private set; }
 
+    // === Catalog fields (T-0043) ===
+
+    /// <summary>
+    /// URL slug for the public maker profile (<c>/katalog/{slug}</c>),
+    /// derived from <see cref="CompanyName"/> at registration. Unique
+    /// across active makers. Stable across company-name refreshes from
+    /// ARES — <see cref="UpdateSnapshot"/> does NOT change it (a public
+    /// URL that silently changes breaks every external link).
+    /// </summary>
+    public string Slug { get; private set; } = default!;
+
+    /// <summary>
+    /// Denormalized average review rating in basis points of a star
+    /// (0..50000 = 0.0..5.0 stars), kept so the catalog sort doesn't
+    /// aggregate reviews per query. Populated by the review-creation
+    /// flow (T-0050); 0 until the maker has reviews.
+    /// </summary>
+    public int RatingAverageBp { get; private set; }
+
+    /// <summary>Number of reviews backing <see cref="RatingAverageBp"/>. 0 until reviewed.</summary>
+    public int RatingCount { get; private set; }
+
+    /// <summary>
+    /// Denormalized count of completed orders, the secondary catalog
+    /// sort key (US-customer-0007 AC-1). Maintained by the order-
+    /// completion flow (future ticket); 0 at registration.
+    /// </summary>
+    public int TotalOrders { get; private set; }
+
     private Maker() { }
 
     public static Maker Create(
@@ -121,7 +153,8 @@ public sealed class Maker : Auditable
         string sourceRegistry,
         DateTimeOffset snapshotFetchedAt,
         bool snapshotIsStale,
-        string countryCode)
+        string countryCode,
+        string? slug = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Id is required.", nameof(id));
@@ -137,6 +170,24 @@ public sealed class Maker : Auditable
             throw new ArgumentException("SourceRegistry is required.", nameof(sourceRegistry));
         if (string.IsNullOrWhiteSpace(countryCode) || countryCode.Length != 2)
             throw new ArgumentException("CountryCode must be 2 chars (ISO 3166-1 alpha-2).", nameof(countryCode));
+
+        // Slug: caller may supply one (RegisterMaker disambiguates
+        // collisions by appending the IČO); otherwise derive from the
+        // company name. A company name like "***" slugifies to empty —
+        // fall back to the IČO so we always have a usable URL segment.
+        // Both the derived and the override path are bounded to
+        // MaxSlugLength so a long ARES name can't produce a slug that
+        // passes validation but overflows the column (T-0043 Copilot
+        // review).
+        var resolvedSlug = string.IsNullOrWhiteSpace(slug)
+            ? SlugGenerator.Slugify(companyName, MaxSlugLength)
+            : slug.Trim();
+        if (resolvedSlug.Length == 0)
+            resolvedSlug = registrationNumber.Trim();
+        if (resolvedSlug.Length > MaxSlugLength)
+            throw new ArgumentException($"Slug must be at most {MaxSlugLength} chars.", nameof(slug));
+        if (!SlugGenerator.IsValid(resolvedSlug))
+            throw new ArgumentException("Slug must match [a-z0-9-]+ (no leading/trailing/double dashes).", nameof(slug));
 
         return new Maker
         {
@@ -154,6 +205,10 @@ public sealed class Maker : Auditable
             SnapshotFetchedAt = snapshotFetchedAt,
             SnapshotIsStale = snapshotIsStale,
             CountryCode = countryCode.ToUpperInvariant(),
+            Slug = resolvedSlug,
+            RatingAverageBp = 0,
+            RatingCount = 0,
+            TotalOrders = 0,
         };
     }
 
@@ -169,6 +224,27 @@ public sealed class Maker : Auditable
         if (IsVerified)
             throw new InvalidOperationException("Maker is already verified.");
         IsVerified = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Refresh the denormalized catalog stats. Called by the review-
+    /// creation flow (T-0050, supplies new rating average + count) and
+    /// the order-completion flow (bumps total orders). T-0043 ships the
+    /// fields + this setter; the producers wire it up in their tickets.
+    /// </summary>
+    public Maker SetCatalogStats(int ratingAverageBp, int ratingCount, int totalOrders)
+    {
+        if (ratingAverageBp is < 0 or > 50_000)
+            throw new ArgumentOutOfRangeException(nameof(ratingAverageBp), "Rating average must be 0..50000 bp (0..5.0 stars).");
+        if (ratingCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(ratingCount), "Rating count cannot be negative.");
+        if (totalOrders < 0)
+            throw new ArgumentOutOfRangeException(nameof(totalOrders), "Total orders cannot be negative.");
+
+        RatingAverageBp = ratingAverageBp;
+        RatingCount = ratingCount;
+        TotalOrders = totalOrders;
         return this;
     }
 

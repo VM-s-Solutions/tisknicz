@@ -47,4 +47,12 @@ public sealed class MakerRepository(MakablesDbContext db) : IMakerRepository
         return db.Set<Maker>()
             .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
+
+    public Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) return Task.FromResult(false);
+        var trimmed = slug.Trim();
+        return db.Set<Maker>()
+            .AnyAsync(m => m.Slug == trimmed, cancellationToken);
+    }
 }

@@ -56,6 +56,25 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.PersonalPickupEnabled).HasColumnName("personal_pickup_enabled").IsRequired();
         builder.Property(m => m.PickupNote).HasColumnName("pickup_note").HasMaxLength(500);
 
+        // T-0043 catalog fields.
+        builder.Property(m => m.Slug).HasColumnName("slug").HasMaxLength(120).IsRequired();
+        // Partial unique index WHERE is_active so a soft-deleted maker
+        // frees its slug for re-registration (matches the user_id + IČO
+        // index policy on this table).
+        builder.HasIndex(m => m.Slug)
+            .IsUnique()
+            .HasDatabaseName("ix_makers_slug")
+            .HasFilter("is_active");
+
+        builder.Property(m => m.RatingAverageBp).HasColumnName("rating_average_bp").IsRequired();
+        builder.Property(m => m.RatingCount).HasColumnName("rating_count").IsRequired();
+        builder.Property(m => m.TotalOrders).HasColumnName("total_orders").IsRequired();
+        // Composite index backing the default catalog sort
+        // (rating_average_bp DESC, total_orders DESC) over active rows.
+        builder.HasIndex(m => new { m.RatingAverageBp, m.TotalOrders })
+            .HasDatabaseName("ix_makers_catalog_sort")
+            .HasFilter("is_active");
+
         ConfigureAuditable(builder);
     }
 

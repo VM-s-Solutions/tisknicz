@@ -3,6 +3,7 @@ using System;
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    partial class MakablesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528222420_MakerCatalogFields")]
+    partial class MakerCatalogFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1138,41 +1141,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasFilter("is_active");
 
                     b.ToTable("makers", (string)null);
-                });
-
-            modelBuilder.Entity("Makables.Core.Domain.Makers.MakerCategory", b =>
-                {
-                    b.Property<string>("MakerId")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("maker_id");
-
-                    b.Property<string>("CategoryId")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("category_id");
-
-                    b.Property<string>("CountryCode")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)")
-                        .HasColumnName("country_code");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("created_by")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasDefaultValue("system")
-                        .HasColumnName("created_by");
-
-                    b.HasKey("MakerId", "CategoryId");
-
-                    b.ToTable("maker_categories", (string)null);
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.Numbering.NumberingSequence", b =>

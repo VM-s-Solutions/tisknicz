@@ -218,4 +218,96 @@ public class MakerTests
         m.RegistrationNumber.Should().Be(originalIco);
         m.IsVerified.Should().BeTrue("admin verification is independent of profile edits");
     }
+
+    // === T-0043 catalog fields ===
+
+    [Fact]
+    public void Create_derives_slug_from_company_name()
+    {
+        var m = ValidDefaults();
+        m.Slug.Should().Be("avast-software-s-r-o");
+    }
+
+    [Fact]
+    public void Create_accepts_explicit_slug_override()
+    {
+        var m = Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: "Avast Software s.r.o.", legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false,
+            countryCode: "CZ", slug: "avast-software-s-r-o-27074358");
+
+        m.Slug.Should().Be("avast-software-s-r-o-27074358");
+    }
+
+    [Fact]
+    public void Create_falls_back_to_ico_when_company_name_has_no_sluggable_chars()
+    {
+        var m = Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: "***", legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false, countryCode: "CZ");
+
+        m.Slug.Should().Be("27074358");
+    }
+
+    [Fact]
+    public void Create_defaults_catalog_stats_to_zero()
+    {
+        var m = ValidDefaults();
+        m.RatingAverageBp.Should().Be(0);
+        m.RatingCount.Should().Be(0);
+        m.TotalOrders.Should().Be(0);
+    }
+
+    [Fact]
+    public void Create_truncates_long_derived_slug_to_max_length()
+    {
+        // 200-char company name → slug would be 200 chars without the cap.
+        // T-0043 Copilot review: must not pass validation and then fail
+        // at SaveChanges against the 120-char column.
+        var longName = new string('a', 200);
+        var m = Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: longName, legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false, countryCode: "CZ");
+
+        m.Slug.Length.Should().BeLessThanOrEqualTo(Maker.MaxSlugLength);
+    }
+
+    [Fact]
+    public void Create_rejects_explicit_slug_exceeding_max_length()
+    {
+        var oversized = new string('x', Maker.MaxSlugLength + 1);
+
+        var act = () => Maker.Create(
+            id: "maker-1", userId: "user-1", registrationNumber: "27074358",
+            vatId: null, companyName: "Co", legalForm: null,
+            registeredAddressId: "addr-1", incorporatedOn: null,
+            isActiveInRegistry: true, sourceRegistry: "ares",
+            snapshotFetchedAt: SnapshotAt, snapshotIsStale: false,
+            countryCode: "CZ", slug: oversized);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateSnapshot_does_not_change_slug()
+    {
+        var m = ValidDefaults();
+        var originalSlug = m.Slug;
+
+        m.UpdateSnapshot(
+            companyName: "Avast Software a.s.", vatId: null, legalForm: null,
+            incorporatedOn: null, isActiveInRegistry: true,
+            snapshotFetchedAt: SnapshotAt.AddDays(30), snapshotIsStale: false);
+
+        m.Slug.Should().Be(originalSlug, "a public URL must survive a company-name refresh from ARES");
+    }
 }
