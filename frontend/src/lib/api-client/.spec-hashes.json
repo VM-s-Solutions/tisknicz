@@ -1,7 +1,7 @@
 {
-  "_comment": "OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022. Until backend endpoints exist with real DTOs, these are empty placeholders. T-0013 establishes the file; CI parity check lands in T-0016's pipeline definitions.",
+  "_comment": "NSwag configuration per ADR 0022. Generates one TypeScript client per Web host per version. Run via `npm run generate:api` from /frontend/. The backend host must be running locally on the configured port — see scripts/generate-api.mjs for how the script orchestrates startup.",
   "customer-api.v1": null,
   "maker-api.v1": null,
   "admin-api.v1": null,
-  "public-api.v1": null
+  "public-api.v1": "62bd7a3b999e633994436d0cf290ac6439014a76f5776b3b8a9767a8a8362942"
 }

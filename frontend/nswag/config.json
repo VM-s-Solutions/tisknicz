@@ -23,7 +23,7 @@
         "host": "admin"
       },
       {
-        "url": "http://localhost:5004/openapi/v1.json",
+        "url": "http://localhost:5104/openapi/v1.json",
         "output": "../src/lib/api-client/public-api.v1.ts",
         "className": "PublicApi",
         "host": "public"

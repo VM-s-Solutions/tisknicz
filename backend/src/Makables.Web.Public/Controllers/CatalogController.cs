@@ -1,7 +1,10 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Catalog;
+using Makables.Core.Domain.Catalog;
+using Makables.Core.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Makables.Web.Public.Controllers;
@@ -26,6 +29,8 @@ public sealed class CatalogController : MakablesApiController
     /// the handler.
     /// </summary>
     [HttpGet("makers")]
+    [ProducesResponseType(typeof(PagedData<MakerListItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetMakers(
         [FromQuery] string country = "CZ",
         [FromQuery] string? category = null,
@@ -47,6 +52,8 @@ public sealed class CatalogController : MakablesApiController
 
     /// <summary>Public maker profile by slug (US-customer-0008).</summary>
     [HttpGet("makers/{slug}")]
+    [ProducesResponseType(typeof(MakerProfile), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMakerProfile(string slug, CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetMakerBySlug.Query(slug), cancellationToken);
@@ -55,6 +62,8 @@ public sealed class CatalogController : MakablesApiController
 
     /// <summary>Public product detail by id (US-customer-0009).</summary>
     [HttpGet("products/{productId}")]
+    [ProducesResponseType(typeof(ProductDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProduct(string productId, CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetProductById.Query(productId), cancellationToken);
