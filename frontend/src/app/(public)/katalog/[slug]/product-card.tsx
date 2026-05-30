@@ -6,7 +6,7 @@ import {
   buildProductImageUrl,
   type MakerProductItem,
 } from '@/lib/api-client-helpers/catalog';
-import { assertCzkCurrency, formatCzk } from '@/lib/money/formatter';
+import { formatCzk } from '@/lib/money/formatter';
 
 interface ProductCardProps {
   readonly item: MakerProductItem;
@@ -62,10 +62,15 @@ export function ProductCard({ item }: ProductCardProps) {
 }
 
 function ProductPrice({ item }: ProductCardProps) {
-  if (item.priceType === 'OnRequest') {
+  if (item.priceType === 'OnRequest' || item.priceCurrency !== 'CZK') {
+    // Non-CZK shouldn't reach the frontend during MVP (the backend
+    // snapshots prices in CountryConfiguration's CZK), but a single
+    // contract-violating row must not 500 the whole profile route.
+    // Fall back to the "ask the maker" copy and let the rest of the
+    // grid render. The formatter still asserts on direct calls, so
+    // dev/CI surfaces the drift loudly. T-0047 Copilot review.
     return <>{t('catalog.product.price.on_request')}</>;
   }
-  assertCzkCurrency(item.priceCurrency);
   const formatted = formatCzk(item.priceAmountMinor);
   if (item.priceType === 'From') {
     return <>{t('catalog.product.price.from', { price: formatted })}</>;
