@@ -165,8 +165,52 @@ export const messages = {
   'nav.dashboard': 'Přehled',
   'nav.logout': 'Odhlásit se',
 
-  // Catalog
+  // Catalog — page
   'catalog.title': 'Katalog výrobců',
+  'catalog.subtitle': 'Najděte si výrobce ve svém okolí. Filtrujte podle kategorie, města nebo hodnocení.',
+
+  // Catalog — filters
+  'catalog.filter.heading': 'Filtry',
+  'catalog.filter.category': 'Kategorie',
+  'catalog.filter.category_any': 'Všechny kategorie',
+  'catalog.filter.city': 'Město',
+  'catalog.filter.city_placeholder': 'např. Praha',
+  'catalog.filter.min_rating': 'Minimální hodnocení',
+  'catalog.filter.min_rating_any': 'Bez omezení',
+  'catalog.filter.min_rating_stars': '{stars}+ hvězd',
+  'catalog.filter.apply': 'Použít filtry',
+  'catalog.filter.reset': 'Vymazat filtry',
+
+  // Catalog — category labels (T-0040 launch slugs)
+  'catalog.category.cat-3d-tisk': '3D tisk',
+  'catalog.category.cat-klasicky-tisk': 'Klasický tisk',
+  'catalog.category.cat-potisk-textilu': 'Potisk textilu',
+  'catalog.category.cat-laser-cnc': 'Laser & CNC',
+  'catalog.category.cat-velkoformat': 'Velkoformát',
+  'catalog.category.cat-handmade': 'Handmade',
+
+  // Catalog — card
+  'catalog.card.verified': 'Ověřený výrobce',
+  'catalog.card.orders': '{count} objednávek',
+  'catalog.card.rating_none': 'Bez hodnocení',
+  'catalog.card.rating_count': '({count})',
+
+  // Catalog — empty
+  'catalog.empty.title': 'Žádní výrobci neodpovídají vašemu filtru',
+  'catalog.empty.description': 'Zkuste rozšířit kritéria nebo vymazat filtry.',
+  'catalog.empty.reset': 'Vymazat filtry',
+
+  // Catalog — error
+  'catalog.error.title': 'Katalog se nepodařilo načíst',
+  'catalog.error.retry': 'Zkusit znovu',
+
+  // Catalog — pagination
+  'catalog.pagination.previous': 'Předchozí',
+  'catalog.pagination.next': 'Další',
+  'catalog.pagination.page_of': 'Stránka {page} z {total}',
+  'catalog.pagination.results': '{count} výrobců',
+
+  // Legacy short keys kept for backward compatibility
   'catalog.empty': 'Žádní výrobci neodpovídají vašemu filtru.',
 
   // Orders
