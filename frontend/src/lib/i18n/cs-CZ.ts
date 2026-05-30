@@ -213,6 +213,31 @@ export const messages = {
   // Legacy short keys kept for backward compatibility
   'catalog.empty': 'Žádní výrobci neodpovídají vašemu filtru.',
 
+  // Catalog — maker profile page (T-0047, US-customer-0008)
+  'catalog.maker.verified': 'Ověřený výrobce',
+  'catalog.maker.personal_pickup_badge': 'Osobní odběr',
+  'catalog.maker.stats.rating': '{rating} ({count} hodnocení)',
+  'catalog.maker.stats.rating_none': 'Bez hodnocení',
+  'catalog.maker.stats.orders': '{count} dokončených objednávek',
+  'catalog.maker.pickup.heading': 'Osobní odběr',
+  'catalog.maker.products.heading': 'Produkty',
+  'catalog.maker.products.empty': 'Tento výrobce zatím nemá žádné aktivní produkty.',
+  'catalog.maker.reviews.heading': 'Hodnocení zákazníků',
+  'catalog.maker.reviews.empty': 'Tento výrobce zatím nemá žádná hodnocení.',
+  'catalog.maker.error.title': 'Profil se nepodařilo načíst',
+  'catalog.maker.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
+  'catalog.maker.not_found.title': 'Výrobce nenalezen',
+  'catalog.maker.not_found.body': 'Tento profil neexistuje nebo už není dostupný.',
+  'catalog.maker.not_found.back_to_catalog': 'Zpět do katalogu',
+  'catalog.maker.metadata.fallback_description': 'Profil výrobce na Makables.',
+  'catalog.maker.metadata.title_suffix': 'Makables',
+
+  // Catalog — product card (T-0047)
+  'catalog.product.price.from': 'od {price}',
+  'catalog.product.price.on_request': 'Na poptávku',
+  'catalog.product.image_alt': 'Fotografie produktu {title}',
+  'catalog.product.no_image': 'Bez fotografie',
+
   // Orders
   'order.state.pending_payment': 'Čeká na platbu',
   'order.state.paid': 'Zaplaceno',

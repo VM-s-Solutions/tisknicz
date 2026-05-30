@@ -53,6 +53,55 @@ export interface MakerListItem {
   readonly totalOrders: number;
 }
 
+/**
+ * Mirror of <c>MakerProductItem</c> — an active product as shown on the
+ * maker's profile and (forward-compat) other product-list surfaces.
+ * <c>priceType</c> is <c>"Fixed" | "From" | "OnRequest"</c>;
+ * <c>primaryImageBlobPath</c> is the blob storage path (use
+ * <see cref="buildProductImageUrl"/> to build a renderable URL).
+ */
+export interface MakerProductItem {
+  readonly productId: string;
+  readonly title: string;
+  readonly priceAmountMinor: number;
+  readonly priceCurrency: string;
+  readonly priceType: 'Fixed' | 'From' | 'OnRequest';
+  readonly primaryImageBlobPath: string | null;
+}
+
+/**
+ * Mirror of <c>MakerReviewItem</c>. Empty list until T-0050 ships the
+ * review producer; kept on the contract so the maker-profile page is
+ * forward-compatible.
+ */
+export interface MakerReviewItem {
+  readonly reviewId: string;
+  readonly ratingStars: number;
+  readonly comment: string | null;
+  readonly createdAt: string;
+}
+
+/**
+ * Mirror of <c>MakerProfile</c> (US-customer-0008). Header fields +
+ * active products newest-first + (deferred) recent reviews.
+ */
+export interface MakerProfile {
+  readonly makerId: string;
+  readonly slug: string;
+  readonly companyName: string;
+  readonly bio: string | null;
+  readonly legalForm: string | null;
+  readonly city: string;
+  readonly isVerified: boolean;
+  readonly personalPickupEnabled: boolean;
+  readonly pickupNote: string | null;
+  readonly ratingAverageBp: number;
+  readonly ratingCount: number;
+  readonly totalOrders: number;
+  readonly products: readonly MakerProductItem[];
+  readonly reviews: readonly MakerReviewItem[];
+}
+
 // ---- Input ----
 
 /**
@@ -79,10 +128,12 @@ export interface CatalogFilterInput {
 export const CATALOG_DEFAULT_PAGE_SIZE = 24;
 export const CATALOG_MAX_PAGE_SIZE = 48;
 
+// ---- Endpoints ----
+
 /**
- * Paged maker list for the public catalog. Anonymous — no session
- * required. Backend filters inactive / unconfirmed makers; do not
- * re-filter on the client.
+ * Paged maker list for the public catalog (US-customer-0007). Anonymous
+ * — no session required. Backend filters inactive / unconfirmed makers;
+ * do not re-filter on the client.
  */
 export async function getPagedMakers(
   input: CatalogFilterInput,
@@ -102,4 +153,48 @@ export async function getPagedMakers(
     `${Base}/makers?${params.toString()}`,
     { method: 'GET' },
   );
+}
+
+/**
+ * Public maker profile by slug (US-customer-0008). The backend returns
+ * 404 for inactive / unconfirmed makers and unknown slugs alike — the
+ * caller decides whether to <c>notFound()</c> or render a soft error.
+ */
+export async function getMakerBySlug(
+  slug: string,
+): Promise<Result<MakerProfile, ApiError>> {
+  return apiFetch<MakerProfile>(
+    'public',
+    `${Base}/makers/${encodeURIComponent(slug)}`,
+    { method: 'GET' },
+  );
+}
+
+/**
+ * Build the public image URL for a product's primary image. The blob
+ * path on the DTO is <c>{country}/products/{productId}/{filename}</c>;
+ * the controller route is
+ * <c>/api/v1/files/products/{country}/{productId}/{filename}</c>
+ * (see <c>Makables.Web.Public.Controllers.ProductImageController</c>) —
+ * the blob path already carries the <c>products/</c> segment so we
+ * strip it once to avoid doubling.
+ *
+ * Returns <c>null</c> for missing paths so callers can render a
+ * placeholder.
+ */
+export function buildProductImageUrl(blobPath: string | null | undefined): string | null {
+  if (!blobPath) return null;
+  // Defense-in-depth: reject any path segment that could traverse out
+  // of /products/ (T-0047 security review — non-exploitable because
+  // next/image anchors on remotePatterns.hostname, but better to refuse
+  // a suspicious blob path than emit a URL the optimizer will normalize
+  // to a same-host 404).
+  if (/(^|\/)\.\.(\/|$)/.test(blobPath)) return null;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL?.replace(/\/+$/, '') ??
+    'http://localhost:5104';
+  const normalised = blobPath
+    .replace(/^\/+/, '')
+    .replace(/^([^/]+)\/products\//, '$1/');
+  return `${baseUrl}/api/v1/files/products/${normalised}`;
 }

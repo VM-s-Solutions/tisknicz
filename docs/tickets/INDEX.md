@@ -76,8 +76,8 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0043 | GetPagedMakers catalog query (ICatalogQueries read-side interface in Core.Domain + AsNoTracking projection in Infra; Maker→User→Address join; publicly-listable gate = active + email-confirmed; category/city(partial,ci)/min-rating filters; rating-desc→orders-desc sort; PagedData<T>). Adds deferred Maker fields: Slug (SlugGenerator, immutable across ARES refresh, unique partial index) + RatingAverageBp/RatingCount/TotalOrders (denormalized, SetCatalogStats) + ix_makers_catalog_sort. MakerCategory join entity maps the T-0040 table. RegisterMaker slug disambiguation. Web.Public CatalogController. | 3 | M | done | T-0033, T-0041 | US-customer-0007 | — |
 | T-0044 | GetMakerBySlug query (ICatalogQueries; MakerProfile DTO = header + active products newest-first w/ primary image + empty Reviews deferred to T-0050; same publicly-listable gate as the list so hidden makers arent probeable by slug). Web.Public GET /api/v1/catalog/makers/{slug}. | 3 | M | done | T-0033, T-0041, T-0043 | US-customer-0008 | — |
 | T-0045 | GetProductById query (ICatalogQueries; ProductDetail DTO = product fields + ordered images + owning-maker display info; null when product inactive or maker not listable). Web.Public GET /api/v1/catalog/products/{productId}. | 3 | S | done | T-0041, T-0043 | US-customer-0009 | — |
-| T-0046 | Frontend: /katalog page (filters, list, pagination) | 3 | M | **ready** (frontend) | T-0043 | US-customer-0007 | — |
-| T-0047 | Frontend: /katalog/[slug] maker profile page | 3 | M | draft | T-0044 | US-customer-0008 | — |
+| T-0046 | Frontend: /katalog page (filters, list, pagination) | 3 | M | done | T-0043, T-0046b | US-customer-0007 | — |
+| T-0047 | Frontend: /katalog/[slug] maker profile page | 3 | M | **in_progress** (frontend) | T-0044, T-0046, T-0046b | US-customer-0008 | — |
 | T-0048 | Frontend: /produkt/[id] product detail page | 3 | M | draft | T-0045 | US-customer-0009 | — |
 | T-0049 | Frontend: /dashboard/maker/produkty (CRUD UI; image picker; price/weight forms) | 3 | L | draft | T-0041, T-0042 | US-maker-0004 | — |
 
