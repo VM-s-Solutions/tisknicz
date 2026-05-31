@@ -15,8 +15,11 @@ interface ProductGalleryProps {
 
 const PRIMARY_WIDTH = 600;
 const PRIMARY_HEIGHT = 600;
-const THUMB_WIDTH = 96;
-const THUMB_HEIGHT = 96;
+// Keep these in sync with the Tailwind h-20 w-20 (5rem = 80 px) on the
+// thumbnail button below. Drifting the intrinsic dims above the rendered
+// size makes next/image fetch a larger source than the layout uses.
+const THUMB_WIDTH = 80;
+const THUMB_HEIGHT = 80;
 
 /**
  * Client-side gallery for the product detail page (T-0048 AC-2). The
@@ -90,9 +93,13 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
                   }`}
                 >
                   {url ? (
+                    // Decorative — the wrapping <button> already carries
+                    // a localised aria-label ("Náhled N"). Duplicating
+                    // the product title on every thumbnail's alt makes
+                    // screen readers announce it N+1 times.
                     <Image
                       src={url}
-                      alt={t('catalog.product.image_alt', { title })}
+                      alt=""
                       width={THUMB_WIDTH}
                       height={THUMB_HEIGHT}
                       className="h-full w-full object-cover"

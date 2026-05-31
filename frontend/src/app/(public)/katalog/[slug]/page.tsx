@@ -11,6 +11,7 @@ import {
   RATING_BP_PER_STAR,
   type MakerProfile,
 } from '@/lib/api-client-helpers/catalog';
+import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { PickupNote } from './pickup-note';
 import { ProductCard } from './product-card';
 import { ReviewsSection } from './reviews-section';
@@ -20,14 +21,6 @@ interface PageProps {
   readonly params: Promise<{ slug: string }>;
 }
 
-/** Truncate to a sentence-safe slice without breaking mid-word. */
-function truncateForMeta(text: string, max = 160): string {
-  const collapsed = text.replace(/\s+/g, ' ').trim();
-  if (collapsed.length <= max) return collapsed;
-  const slice = collapsed.slice(0, max);
-  const lastSpace = slice.lastIndexOf(' ');
-  return (lastSpace > 80 ? slice.slice(0, lastSpace) : slice).trimEnd() + '…';
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
