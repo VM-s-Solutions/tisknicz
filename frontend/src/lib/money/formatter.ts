@@ -17,12 +17,22 @@
 const SUPPORTED_CURRENCY = 'CZK';
 
 /**
- * Format a CZK minor-unit amount (haléře) as the display string
+ * Format a money amount as the Czech-locale display string
  * <c>"1 234 Kč"</c>. Drops the haléř fraction per the Czech CZK display
  * convention. The thousands separator is a NBSP (U+00A0) emitted by
  * <c>Intl.NumberFormat('cs-CZ')</c>.
+ *
+ * <para>
+ * <paramref name="currency"/> is a guard, not a switch — only CZK is
+ * supported at launch. Any non-CZK input throws via
+ * <see cref="assertCzkCurrency"/> so callers can't silently render the
+ * wrong currency. Callers that may receive non-CZK (display-only paths
+ * where a fallback is acceptable, e.g. <c>ProductCard</c>) check the
+ * currency themselves and route around the formatter.
+ * </para>
  */
-export function formatCzk(amountMinor: number): string {
+export function formatCzk(amountMinor: number, currency: string): string {
+  assertCzkCurrency(currency);
   const whole = Math.trunc(amountMinor / 100);
   const formatted = new Intl.NumberFormat('cs-CZ', {
     style: 'decimal',
@@ -32,10 +42,12 @@ export function formatCzk(amountMinor: number): string {
 }
 
 /**
- * Currency guard for the formatters above. Keeps the launch invariant
- * loud: any non-CZK price reaching the frontend during MVP is a contract
- * violation worth surfacing in dev — backend price snapshots are CZK
- * per CountryConfiguration.
+ * Currency guard for <see cref="formatCzk"/>. Keeps the launch invariant
+ * loud: any non-CZK price reaching the formatter during MVP is a
+ * contract violation worth surfacing in dev — backend price snapshots
+ * are CZK per CountryConfiguration. Exported so callers that perform
+ * their own currency routing (and want to skip the formatter) can still
+ * share the predicate.
  */
 export function assertCzkCurrency(currency: string): void {
   if (currency !== SUPPORTED_CURRENCY) {

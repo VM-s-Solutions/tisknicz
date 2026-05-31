@@ -10,7 +10,7 @@ import { t } from '@/lib/i18n';
  */
 export default function MakerNotFound() {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-64px)] max-w-3xl flex-col items-center justify-center px-4 py-10 text-center sm:px-6 lg:px-8">
+    <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-3xl flex-col items-center justify-center px-4 py-10 text-center sm:px-6 lg:px-8">
       <p className="text-7xl font-bold tracking-tight text-zinc-800">404</p>
       <h1 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
         {t('catalog.maker.not_found.title')}
@@ -25,6 +25,6 @@ export default function MakerNotFound() {
           {t('catalog.maker.not_found.back_to_catalog')}
         </Link>
       </div>
-    </main>
+    </section>
   );
 }

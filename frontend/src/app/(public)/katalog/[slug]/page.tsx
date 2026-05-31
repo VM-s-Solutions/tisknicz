@@ -60,12 +60,12 @@ export default async function MakerProfilePage({ params }: PageProps) {
       notFound();
     }
     return (
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
         <Alert variant="error">
           <p className="font-semibold">{t('catalog.maker.error.title')}</p>
           <p className="mt-1">{t('catalog.maker.error.body')}</p>
         </Alert>
-      </main>
+      </section>
     );
   }
 
@@ -73,7 +73,7 @@ export default async function MakerProfilePage({ params }: PageProps) {
   const ratingDisplay = (profile.ratingAverageBp / 1000).toFixed(1);
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <ProfileHeader profile={profile} ratingDisplay={ratingDisplay} />
       <PickupNote enabled={profile.personalPickupEnabled} note={profile.pickupNote ?? null} />
       <ProductsGrid profile={profile} />
@@ -87,7 +87,7 @@ export default async function MakerProfilePage({ params }: PageProps) {
           {t('catalog.maker.not_found.back_to_catalog')}
         </Link>
       </div>
-    </main>
+    </section>
   );
 }
 

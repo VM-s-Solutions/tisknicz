@@ -67,11 +67,12 @@ function ProductPrice({ item }: ProductCardProps) {
     // snapshots prices in CountryConfiguration's CZK), but a single
     // contract-violating row must not 500 the whole profile route.
     // Fall back to the "ask the maker" copy and let the rest of the
-    // grid render. The formatter still asserts on direct calls, so
-    // dev/CI surfaces the drift loudly. T-0047 Copilot review.
+    // grid render. formatCzk's own assertCzkCurrency would throw if a
+    // non-CZK amount reached it, so this guard keeps the formatter
+    // honest while letting the card boundary stay forgiving.
     return <>{t('catalog.product.price.on_request')}</>;
   }
-  const formatted = formatCzk(item.priceAmountMinor);
+  const formatted = formatCzk(item.priceAmountMinor, item.priceCurrency);
   if (item.priceType === 'From') {
     return <>{t('catalog.product.price.from', { price: formatted })}</>;
   }
