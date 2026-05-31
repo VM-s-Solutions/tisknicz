@@ -88,7 +88,7 @@ export default async function MakerProfilePage({ params }: PageProps) {
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
         >
           <Icon name="arrowLeft" size={16} />
-          {t('catalog.maker.not_found.back_to_catalog')}
+          {t('catalog.maker.back_to_catalog')}
         </Link>
       </div>
     </section>

@@ -22,7 +22,7 @@ export default function MakerNotFound() {
           className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-6 py-3 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/10 hover:border-brand-400"
         >
           <Icon name="arrowLeft" size={16} />
-          {t('catalog.maker.not_found.back_to_catalog')}
+          {t('catalog.maker.back_to_catalog')}
         </Link>
       </div>
     </section>

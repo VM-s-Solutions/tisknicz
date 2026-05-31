@@ -190,8 +190,13 @@ export const messages = {
   'catalog.category.cat-handmade': 'Handmade',
 
   // Catalog — card
+  // Czech plural-neutral phrasing (T-0047 Copilot review): the count
+  // interpolation skips the genitive-plural trap (1 → one, 2-4 → few,
+  // 0/5+ → many, fractional → other). Until t() learns Intl.PluralRules
+  // every {count} label takes a "Label: N" shape that's grammatical for
+  // every count.
   'catalog.card.verified': 'Ověřený výrobce',
-  'catalog.card.orders': '{count} objednávek',
+  'catalog.card.orders': 'Objednávek: {count}',
   'catalog.card.rating_none': 'Bez hodnocení',
   'catalog.card.rating_count': '({count})',
 
@@ -208,7 +213,7 @@ export const messages = {
   'catalog.pagination.previous': 'Předchozí',
   'catalog.pagination.next': 'Další',
   'catalog.pagination.page_of': 'Stránka {page} z {total}',
-  'catalog.pagination.results': '{count} výrobců',
+  'catalog.pagination.results': 'Výrobců: {count}',
 
   // Legacy short keys kept for backward compatibility
   'catalog.empty': 'Žádní výrobci neodpovídají vašemu filtru.',
@@ -216,9 +221,9 @@ export const messages = {
   // Catalog — maker profile page (T-0047, US-customer-0008)
   'catalog.maker.verified': 'Ověřený výrobce',
   'catalog.maker.personal_pickup_badge': 'Osobní odběr',
-  'catalog.maker.stats.rating': '{rating} ({count} hodnocení)',
+  'catalog.maker.stats.rating': '{rating} (hodnocení: {count})',
   'catalog.maker.stats.rating_none': 'Bez hodnocení',
-  'catalog.maker.stats.orders': '{count} dokončených objednávek',
+  'catalog.maker.stats.orders': 'Dokončených objednávek: {count}',
   'catalog.maker.pickup.heading': 'Osobní odběr',
   'catalog.maker.products.heading': 'Produkty',
   'catalog.maker.products.empty': 'Tento výrobce zatím nemá žádné aktivní produkty.',
@@ -228,7 +233,10 @@ export const messages = {
   'catalog.maker.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
   'catalog.maker.not_found.title': 'Výrobce nenalezen',
   'catalog.maker.not_found.body': 'Tento profil neexistuje nebo už není dostupný.',
-  'catalog.maker.not_found.back_to_catalog': 'Zpět do katalogu',
+  // Shared by the not-found page and the happy-path profile footer, so
+  // it lives at the maker namespace root rather than under not_found.*
+  // (T-0047 Copilot review).
+  'catalog.maker.back_to_catalog': 'Zpět do katalogu',
   'catalog.maker.metadata.fallback_description': 'Profil výrobce na Makables.',
   'catalog.maker.metadata.title_suffix': 'Makables',
 
