@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import type { MakerListItem } from '@/lib/api-client-helpers/catalog';
+import { RATING_BP_PER_STAR, type MakerListItem } from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
 
 interface MakerCardProps {
@@ -16,8 +16,9 @@ interface MakerCardProps {
  */
 export function MakerCard({ item }: MakerCardProps) {
   const hasRating = item.ratingCount > 0;
-  // RatingAverageBp is 0..50000 basis points → 0.0-5.0 stars.
-  const ratingValue = hasRating ? (item.ratingAverageBp / 1000) : 0;
+  // RatingAverageBp is 0..50_000 basis points (10 000 bp per star, per
+  // CatalogQueries.BpPerStar) → 0.0–5.0 stars.
+  const ratingValue = hasRating ? item.ratingAverageBp / RATING_BP_PER_STAR : 0;
   const ratingDisplay = hasRating ? ratingValue.toFixed(1) : null;
 
   return (

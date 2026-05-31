@@ -13,17 +13,18 @@
 | T-0043 | done | (merged) | `GetPagedMakers` query + Maker.Slug / catalog-stats fields + ix_makers_catalog_sort |
 | T-0044 | done | (merged) | `GetMakerBySlug` query — header + active products + empty Reviews |
 | T-0045 | done | (merged) | `GetProductById` query — product + images + owning-maker display info |
+| T-0046b | done | (merged) | Public catalog `[ProducesResponseType]` annotations + canonical dev port 5104; typed NSwag regen |
 
-All six are on `master`. The public `CatalogController` (`/api/v1/catalog/makers`, `/makers/{slug}`, `/products/{productId}`) is the contract surface the Phase-3 frontend ticks light up.
+All seven are on `master`. The public `CatalogController` (`/api/v1/catalog/makers`, `/makers/{slug}`, `/products/{productId}`) is the contract surface the Phase-3 frontend tickets light up.
 
-## Phase 3 frontend — STARTING
+## Phase 3 frontend — IN PROGRESS
 
 Sequencing: **T-0046 → T-0047 → T-0048 → T-0049**. The customer flow `/katalog → /katalog/{slug} → /produkt/{id}` is built in the order callers appear, so each downstream page already has linkers when it ships. T-0049 (maker dashboard CRUD UI) is independent and slots in after T-0048 — it's a separate audience and doesn't unblock the public flow.
 
 | Ticket | State | Owner | Notes |
 |---|---|---|---|
-| T-0046 | **ready** | frontend | `/katalog` list + filters + pagination. Full ticket at `docs/tickets/T-0046-frontend-catalog.md`. Triggers first NSwag regen of `public-api.v1.ts`. |
-| T-0047 | draft | — | `/katalog/[slug]` profile page. Will be expanded when T-0046 in_review. |
+| T-0046 | done | (merged) | `/katalog` list + filters + URL-state pagination. Triggered first NSwag regen of `public-api.v1.ts`. |
+| T-0047 | **in_progress** | frontend | `/katalog/[slug]` profile page. Full ticket at `docs/tickets/T-0047-frontend-maker-profile.md`. Adds `getMakerBySlug` + `buildProductImageUrl` to the catalog helper; adds `lib/money/formatter.ts` (CZK display). |
 | T-0048 | draft | — | `/produkt/[id]` product detail. Will be expanded when T-0047 in_review. |
 | T-0049 | draft | — | `/dashboard/maker/produkty` CRUD UI + image picker. Will be expanded in parallel with T-0048 since it shares image-handling primitives with T-0041. |
 
@@ -38,7 +39,7 @@ None. All four frontend tickets' dependencies are `done`.
 ## Definition of done (sprint level)
 
 - [x] Phase 3 backend merged
-- [ ] T-0046 merged
+- [x] T-0046 merged
 - [ ] T-0047 merged
 - [ ] T-0048 merged
 - [ ] T-0049 merged

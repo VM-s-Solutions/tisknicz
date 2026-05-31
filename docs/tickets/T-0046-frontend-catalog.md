@@ -31,7 +31,7 @@ T-0043 shipped the public catalog read-side: `GET /api/v1/catalog/makers` return
 ### Page
 - `frontend/src/app/(public)/katalog/page.tsx` — Server Component. Reads `searchParams` (`category`, `city`, `minRating`, `page`), calls the helper server-side, renders the layout shell (h1, filter sidebar slot, results grid, pagination). 24/page default. Renders empty/error/loading states inline (loading via `loading.tsx`).
 - `frontend/src/app/(public)/katalog/filters-client.tsx` — `'use client'`. Form with: category select, city text input (debounced 300ms before push), min-rating radio (1–5 stars + "any"), submit button + "Vymazat filtry" reset. On change, updates URL search params via `useRouter().replace()` so back-button restores state. Submitting resets `page` to 1.
-- `frontend/src/app/(public)/katalog/maker-card.tsx` — Server Component card per `MakerListItem`: company name, verified badge, city, rating stars (from `RatingAverageBp / 1000`), order count, bio truncate to 2 lines. Links to `/katalog/{slug}` (T-0047 target).
+- `frontend/src/app/(public)/katalog/maker-card.tsx` — Server Component card per `MakerListItem`: company name, verified badge, city, rating stars (from `RatingAverageBp / RATING_BP_PER_STAR`, 10 000 bp per star — see `CatalogQueries.BpPerStar`), order count, bio truncate to 2 lines. Links to `/katalog/{slug}` (T-0047 target).
 - `frontend/src/app/(public)/katalog/pagination.tsx` — Server Component. Renders prev/next + page numbers as `<Link>` to same path with updated `?page=`. `HasNext` / `HasPrevious` from `PagedData`.
 - `frontend/src/app/(public)/katalog/loading.tsx` — skeleton grid.
 
@@ -60,7 +60,7 @@ T-0043 shipped the public catalog read-side: `GET /api/v1/catalog/makers` return
 
 ## Technical notes
 - Backend contract is fully in place — see `backend/src/Makables.Core.Domain/Catalog/ICatalogQueries.cs` (`CatalogFilter`, `MakerListItem`, `PagedData<T>`) and `backend/src/Makables.Web.Public/Controllers/CatalogController.cs` (`GET /api/v1/catalog/makers`).
-- `RatingAverageBp` is basis-points (0..50000). Convert to 0.0–5.0 stars by dividing by 1000 for display; round to one decimal.
+- `RatingAverageBp` is basis-points (0..50 000) at 10 000 bp per star — see `CatalogQueries.BpPerStar`. Convert to 0.0–5.0 stars by dividing by `RATING_BP_PER_STAR` (exported from `lib/api-client-helpers/catalog.ts`) for display; round to one decimal.
 - `PagedData<T>` exposes `Items`, `Page`, `PageSize`, `TotalCount`, `TotalPages`, `HasNext`, `HasPrevious` — use those directly; do not recompute.
 - `pageSize` is capped server-side at 48; do not expose a page-size picker yet.
 - City filter is partial + case-insensitive on the backend — no client normalisation needed.
