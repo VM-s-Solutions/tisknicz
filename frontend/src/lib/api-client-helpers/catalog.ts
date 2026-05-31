@@ -128,6 +128,17 @@ export interface CatalogFilterInput {
 export const CATALOG_DEFAULT_PAGE_SIZE = 24;
 export const CATALOG_MAX_PAGE_SIZE = 48;
 
+/**
+ * Basis-points-per-star scale used by the backend's denormalized
+ * <c>Maker.RatingAverageBp</c> field. Mirrors
+ * <c>CatalogQueries.BpPerStar</c> (Infra/Catalog) — one star = 10 000
+ * basis points, so the 0..5-star display value is
+ * <c>RatingAverageBp / RATING_BP_PER_STAR</c>. Centralised here so
+ * every catalog surface (list cards, profile header, future product
+ * detail) computes the display the same way.
+ */
+export const RATING_BP_PER_STAR = 10_000;
+
 // ---- Endpoints ----
 
 /**

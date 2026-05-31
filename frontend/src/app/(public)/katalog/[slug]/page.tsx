@@ -6,7 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
-import { getMakerBySlug, type MakerProfile } from '@/lib/api-client-helpers/catalog';
+import {
+  getMakerBySlug,
+  RATING_BP_PER_STAR,
+  type MakerProfile,
+} from '@/lib/api-client-helpers/catalog';
 import { PickupNote } from './pickup-note';
 import { ProductCard } from './product-card';
 import { ReviewsSection } from './reviews-section';
@@ -70,7 +74,7 @@ export default async function MakerProfilePage({ params }: PageProps) {
   }
 
   const profile = result.value;
-  const ratingDisplay = (profile.ratingAverageBp / 1000).toFixed(1);
+  const ratingDisplay = (profile.ratingAverageBp / RATING_BP_PER_STAR).toFixed(1);
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -123,7 +127,7 @@ function ProfileHeader({
           </span>
           {profile.legalForm ? <span>{profile.legalForm}</span> : null}
           <span className="inline-flex items-center gap-2">
-            <Stars value={profile.ratingAverageBp / 1000} />
+            <Stars value={profile.ratingAverageBp / RATING_BP_PER_STAR} />
             {profile.ratingCount > 0 ? (
               <span>
                 {t('catalog.maker.stats.rating', {
