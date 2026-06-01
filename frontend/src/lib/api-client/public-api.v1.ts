@@ -1160,7 +1160,7 @@ export interface IConsumeMagicLinkRequest {
 export class ErrorDto implements IErrorDto {
     field!: string;
     code!: string;
-    type?: number;
+    type?: ErrorType;
     details?: any;
 
     [key: string]: any;
@@ -1211,10 +1211,22 @@ export class ErrorDto implements IErrorDto {
 export interface IErrorDto {
     field: string;
     code: string;
-    type?: number;
+    type?: ErrorType;
     details?: any;
 
     [key: string]: any;
+}
+
+export enum ErrorType {
+    Validation = "Validation",
+    Unauthorized = "Unauthorized",
+    Forbidden = "Forbidden",
+    NotFound = "NotFound",
+    Conflict = "Conflict",
+    Transient = "Transient",
+    Permanent = "Permanent",
+    Configuration = "Configuration",
+    Unknown = "Unknown",
 }
 
 export class LoginRequest implements ILoginRequest {
