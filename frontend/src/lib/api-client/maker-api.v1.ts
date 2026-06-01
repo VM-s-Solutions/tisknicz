@@ -1325,7 +1325,7 @@ export class CreateProductRequest implements ICreateProductRequest {
     title!: string;
     description!: string | undefined;
     priceAmountMinor!: number;
-    priceType!: number;
+    priceType!: PriceType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -1382,7 +1382,7 @@ export interface ICreateProductRequest {
     title: string;
     description: string | undefined;
     priceAmountMinor: number;
-    priceType: number;
+    priceType: PriceType;
     weightGrams: number;
 
     [key: string]: any;
@@ -1439,7 +1439,7 @@ export interface ICreateProductResponse {
 export class ErrorDto implements IErrorDto {
     field!: string;
     code!: string;
-    type?: number;
+    type?: ErrorType;
     details?: any;
 
     [key: string]: any;
@@ -1490,10 +1490,22 @@ export class ErrorDto implements IErrorDto {
 export interface IErrorDto {
     field: string;
     code: string;
-    type?: number;
+    type?: ErrorType;
     details?: any;
 
     [key: string]: any;
+}
+
+export enum ErrorType {
+    Validation = "Validation",
+    Unauthorized = "Unauthorized",
+    Forbidden = "Forbidden",
+    NotFound = "NotFound",
+    Conflict = "Conflict",
+    Transient = "Transient",
+    Permanent = "Permanent",
+    Configuration = "Configuration",
+    Unknown = "Unknown",
 }
 
 export class LoginRequest implements ILoginRequest {
@@ -1818,6 +1830,12 @@ export interface IPagedDataOfMakerProductListItem {
     [key: string]: any;
 }
 
+export enum PriceType {
+    Fixed = "Fixed",
+    From = "From",
+    OnRequest = "OnRequest",
+}
+
 export class ProductImageItem implements IProductImageItem {
     imageId!: string;
     blobPath!: string;
@@ -2095,7 +2113,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
     title!: string;
     description!: string | undefined;
     priceAmountMinor!: number;
-    priceType!: number;
+    priceType!: PriceType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -2152,7 +2170,7 @@ export interface IUpdateProductRequest {
     title: string;
     description: string | undefined;
     priceAmountMinor: number;
-    priceType: number;
+    priceType: PriceType;
     weightGrams: number;
 
     [key: string]: any;

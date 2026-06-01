@@ -118,7 +118,9 @@ public class MakerProductQueriesTests
     public async Task GetMyProducts_sorts_active_first_then_newest_created()
     {
         // Active products lead so the dashboard surfaces live items
-        // first; within each IsActive bucket, newest first by CreatedAt.
+        // first; within each IsActive bucket, newest first by Id desc
+        // (ULID time-proxy — see the projection's class-level remark
+        // and the file summary for the SQLite reason).
         using var h = TestDbHarness.Create();
         SeedMaker(h, "1");
 

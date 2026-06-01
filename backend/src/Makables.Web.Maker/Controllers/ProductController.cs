@@ -95,15 +95,17 @@ public sealed class ProductController(
         return HandleResult(result);
     }
 
-    // No [ProducesResponseType(..., 400)] on the four [FromBody] mutations
-    // (Create / Update / Delete / RemoveImage) or the multipart UploadImage
-    // below: under [ApiController] the framework emits a
-    // ValidationProblemDetails (RFC 7807) for model-binding / multipart
-    // parse failures BEFORE HandleResult runs — that body is NOT the
-    // domain Error shape. The handlers' own FluentValidation 400s ARE
-    // Error-shaped, but declaring one schema for "400" would mislead
-    // generated clients about the other. Same pattern as CatalogController
-    // GetMakers (T-0046b). T-0049b.
+    // No [ProducesResponseType(..., 400)] on the two [FromBody] mutations
+    // (Create / Update) or the multipart UploadImage below: under
+    // [ApiController] the framework emits a ValidationProblemDetails
+    // (RFC 7807) for model-binding / multipart parse failures BEFORE
+    // HandleResult runs — that body is NOT the domain Error shape. The
+    // handlers' own FluentValidation 400s ARE Error-shaped, but declaring
+    // one schema for "400" would mislead generated clients about the
+    // other. Same pattern as CatalogController GetMakers (T-0046b). The
+    // Delete / RemoveImage actions take only path params so they don't
+    // trip model-binding 400s; their failure surface is just the 401/404
+    // declared inline. T-0049b.
     [HttpPost]
     [ProducesResponseType(typeof(CreateProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
