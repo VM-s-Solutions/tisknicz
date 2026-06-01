@@ -179,6 +179,13 @@ export class MakerApi implements IMakerApi {
             result200 = PagedDataOfMakerProductListItem.fromJS(resultData200);
             return result200;
             });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
@@ -280,6 +287,13 @@ export class MakerApi implements IMakerApi {
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result200 = MakerProductDetail.fromJS(resultData200);
             return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -2277,5 +2291,6 @@ function throwException(message: string, status: number, response: string, heade
 /** Multipart helper type referenced by NSwag-generated multipart
  * client methods. Injected by scripts/generate-api.mjs because the
  * Fetch template uses the identifier but does not emit the
- * declaration. T-0049b. */
-export interface FileParameter { data: any; fileName: string; }
+ * declaration. `fileName` is optional to match the template's
+ * fallback to "file" when omitted. T-0049b. */
+export interface FileParameter { data: any; fileName?: string; }

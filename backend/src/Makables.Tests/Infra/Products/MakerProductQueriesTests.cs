@@ -14,8 +14,10 @@ namespace Makables.Tests.Infra.Products;
 /// DB round-trip tests for the T-0049a maker dashboard projection
 /// (<see cref="MakerProductQueries"/>) against the SQLite harness.
 /// Exercises the deliberate soft-delete filter bypass, the IDOR shield
-/// at the predicate layer, ordering (IsActive desc, CreatedAt desc) and
-/// the image-list ordering on the detail query.
+/// at the predicate layer, ordering (<c>IsActive</c> desc, then <c>Id</c>
+/// desc as the time-ordered ULID proxy — SQLite can't ORDER BY
+/// <c>DateTimeOffset</c>) and the image-list ordering on the detail
+/// query.
 /// </summary>
 public class MakerProductQueriesTests
 {

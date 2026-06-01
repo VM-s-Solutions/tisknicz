@@ -16,11 +16,15 @@ namespace Makables.Core.Domain.Products;
 ///     (active maker + active user + confirmed email). The maker is the
 ///     authenticated owner; whether their public profile is gated has no
 ///     bearing on whether they can see their own dashboard.</description></item>
-///   <item><description>Every method is <b>maker-scoped</b> — the caller resolves
-///     <paramref name="makerId"/> from
-///     <see cref="IUserSessionProvider"/> + <see cref="Makers.IMakerRepository"/>
-///     BEFORE calling. The interface stays session-free so it's trivially
-///     testable. The handler is the IDOR shield.</description></item>
+///   <item><description>Every method is <b>maker-scoped</b>: the caller resolves
+///     <paramref name="makerId"/> from <see cref="IUserSessionProvider"/> +
+///     <see cref="Makers.IMakerRepository"/> before calling, and implementations
+///     MUST enforce maker scoping in the underlying predicate
+///     (e.g. <c>p.MakerId == makerId</c>) so cross-maker probes surface as
+///     <c>NotFound</c> rather than leaking another maker's data. The
+///     interface stays session-free so it's trivially testable, and the
+///     IDOR shield is a contract obligation of every implementation —
+///     not just the caller.</description></item>
 /// </list>
 ///
 /// <para>

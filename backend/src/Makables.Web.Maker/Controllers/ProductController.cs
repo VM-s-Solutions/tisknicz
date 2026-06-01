@@ -67,6 +67,7 @@ public sealed class ProductController(
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedData<MakerProductListItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> List(
         [FromQuery] int? page,
@@ -86,6 +87,7 @@ public sealed class ProductController(
     /// </summary>
     [HttpGet("{productId}")]
     [ProducesResponseType(typeof(MakerProductDetail), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(string productId, CancellationToken ct)
     {
@@ -162,6 +164,14 @@ public sealed class ProductController(
     [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UploadImage(string productId, IFormFile file, CancellationToken ct)
     {
+        // The OpenAPI spec marks the multipart body required at the
+        // requestBody level, but ASP.NET's emitter doesn't propagate
+        // [Required] to the individual property — so NSwag still
+        // generates `file: FileParameter | undefined`. The defensive
+        // null/zero-length check below is the contract enforcement.
+        // T-0049b Copilot review M3 acknowledged the gap; a real fix
+        // needs an IOperationFilter / explicit MultipartFormDataContent
+        // schema override, which is bigger than this PR's scope.
         if (file is null || file.Length == 0)
         {
             return BadRequest(Error.Validation("file", BusinessErrorMessage.FileInvalid));

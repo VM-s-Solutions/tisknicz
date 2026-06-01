@@ -102,12 +102,18 @@ for (const doc of documents) {
   const outputPath = resolve(frontendDir, doc.output.replace(/^\.\.\//, ''));
   const generated = readFileSync(outputPath, 'utf8');
   if (generated.includes('FileParameter') && !/(interface|type)\s+FileParameter\b/.test(generated)) {
+    // `fileName` is optional because the NSwag-generated multipart code
+    // falls back to the literal "file" when it's falsy
+    // (`content_.append("file", file.data, file.fileName ? file.fileName : "file")`).
+    // Marking it required would lie about the runtime contract and
+    // force every caller to invent a name. T-0049b Copilot review.
     const appendix =
       '\n/** Multipart helper type referenced by NSwag-generated multipart\n' +
       ' * client methods. Injected by scripts/generate-api.mjs because the\n' +
       ' * Fetch template uses the identifier but does not emit the\n' +
-      ' * declaration. T-0049b. */\n' +
-      'export interface FileParameter { data: any; fileName: string; }\n';
+      ' * declaration. `fileName` is optional to match the template\'s\n' +
+      ' * fallback to "file" when omitted. T-0049b. */\n' +
+      'export interface FileParameter { data: any; fileName?: string; }\n';
     writeFileSync(outputPath, generated + appendix, 'utf8');
   }
 
