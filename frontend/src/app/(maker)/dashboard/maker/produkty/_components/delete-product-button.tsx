@@ -94,6 +94,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
           role="dialog"
           aria-modal="true"
           aria-labelledby={`delete-${productId}-title`}
+          aria-describedby={`delete-${productId}-description`}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           <button
@@ -111,7 +112,10 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
             >
               {t('dashboard.maker.products.delete.confirm.title')}
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p
+              id={`delete-${productId}-description`}
+              className="mt-2 text-sm text-zinc-400"
+            >
               {t('dashboard.maker.products.delete.confirm.body')}
             </p>
             {errorMessage ? (
@@ -120,11 +124,16 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
               </div>
             ) : null}
             <div className="mt-6 flex items-center justify-end gap-3">
+              {/* autoFocus lands keyboard focus on the safe action when
+                  the dialog opens, so the user is inside the modal
+                  (and one Tab away from Confirm) rather than stranded
+                  behind the overlay. T-0049 Copilot review M2. */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={submitting}
+                autoFocus
               >
                 {t('dashboard.maker.products.delete.confirm.cancel_button')}
               </Button>
