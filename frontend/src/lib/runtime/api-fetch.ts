@@ -177,30 +177,39 @@ async function parseErrorResponse(
       // ASP.NET framework errors (model-binding, 404, etc.) that bypass
       // our pipeline.
       //
-      // Native `details` is normally
-      // `IReadOnlyList<ValidationDetail>` (one row per failing field)
-      // when `type === 'Validation'`, but it can be `null`, an opaque
-      // object, or absent. We flatten it into the typed
-      // `fields: Record<string, readonly string[]>` shape that callers
-      // (forms in particular) consume, so a form can render inline
-      // errors keyed by field name. Field names from FluentValidation
-      // are PascalCase; we let the caller normalise to camelCase if it
-      // needs to match its state keys (see product-form.tsx). T-0049
-      // Copilot review H1.
+      // The backend ships validation errors in two flavours:
+      //   1. Multi-field via FluentValidation → `details:
+      //      IReadOnlyList<ValidationDetail>` (one row per failing field;
+      //      the top-level `field`/`code` mirror the first row).
+      //   2. Single-field via `Error.Validation(field, code)` → the top-
+      //      level `field`/`code` are the entire payload and `details`
+      //      is null.
+      //
+      // We collapse both into `fields: Record<string, readonly string[]>`
+      // (display copy) so the form can render inline errors keyed by
+      // field name without caring which shape arrived. Field names from
+      // FluentValidation are PascalCase; the caller normalises to
+      // camelCase if it needs to match its state keys (see
+      // product-form.tsx). T-0049 Copilot review H1+M2.
       const payload = (await response.json()) as Partial<{
         code: string;
         message: string;
+        field: string;
         type: ErrorType;
         details: unknown;
         title: string;
         detail: string;
       }>;
 
+      const code = payload.code ?? `http.${response.status}`;
+      const message = payload.message ?? payload.detail ?? payload.title ?? defaultMessage(response.status);
+      const type = payload.type ?? mapStatusToErrorType(response.status);
+
       return {
-        code: payload.code ?? `http.${response.status}`,
-        message: payload.message ?? payload.detail ?? payload.title ?? defaultMessage(response.status),
-        type: payload.type ?? mapStatusToErrorType(response.status),
-        fields: flattenValidationDetails(payload.details),
+        code,
+        message,
+        type,
+        fields: collectValidationFields(payload.details, payload.field, code, message, type),
         correlationId,
       };
     } catch {
@@ -217,27 +226,67 @@ async function parseErrorResponse(
 }
 
 /**
- * Fold the backend's <c>ValidationDetail[]</c> shape into a
- * map of field-name → ordered error codes. Returns <c>undefined</c>
- * when the payload's <c>details</c> isn't a recognisable validation
- * list — keeps the helper honest for the non-validation paths where
- * <c>details</c> carries opaque transient/permanent payloads.
+ * Collapse the backend's two validation-error shapes (multi-field
+ * <c>details: ValidationDetail[]</c> + single-field top-level
+ * <c>field</c>+<c>code</c>) into a unified
+ * <c>Record&lt;field, display strings&gt;</c>. Returns <c>undefined</c>
+ * when neither shape is present so non-validation paths stay clean
+ * (their <c>details</c> can carry opaque transient/permanent
+ * payloads).
+ *
+ * <para>
+ * Each entry carries the row's <c>message</c> when present, falling
+ * back to the <c>code</c> — Copilot review M2: the form renders these
+ * strings verbatim under inputs, so user-readable text wins over
+ * machine keys. A future i18n-aware form can still <c>t()</c> the
+ * code; the top-level <c>ApiError.code</c> is always present.
+ * </para>
+ *
+ * <para>
+ * The single-field fallback only kicks in for
+ * <c>type === 'Validation'</c> when <c>details</c> didn't supply
+ * anything — a <c>NotFound</c> with a top-level <c>field</c> is the
+ * entity name, not a form input, and shouldn't surface inline.
+ * </para>
  */
-function flattenValidationDetails(details: unknown): Record<string, readonly string[]> | undefined {
-  if (!Array.isArray(details) || details.length === 0) {
-    return undefined;
-  }
+function collectValidationFields(
+  details: unknown,
+  topField: string | undefined,
+  topCode: string,
+  topMessage: string,
+  type: ErrorType,
+): Record<string, readonly string[]> | undefined {
   const grouped: Record<string, string[]> = {};
   let matched = 0;
-  for (const raw of details as readonly unknown[]) {
-    if (raw === null || typeof raw !== 'object') continue;
-    const detail = raw as BackendValidationDetail;
-    if (typeof detail.field !== 'string' || typeof detail.code !== 'string') continue;
-    const bucket = grouped[detail.field] ?? (grouped[detail.field] = []);
-    bucket.push(detail.code);
-    matched++;
+
+  if (Array.isArray(details) && details.length > 0) {
+    for (const raw of details as readonly unknown[]) {
+      if (raw === null || typeof raw !== 'object') continue;
+      const detail = raw as BackendValidationDetail;
+      if (typeof detail.field !== 'string') continue;
+      const text = pickDisplay(detail.message, detail.code);
+      if (text === null) continue;
+      const bucket = grouped[detail.field] ?? (grouped[detail.field] = []);
+      bucket.push(text);
+      matched++;
+    }
   }
+
+  if (matched === 0 && type === 'Validation' && typeof topField === 'string' && topField !== '') {
+    const text = pickDisplay(topMessage, topCode);
+    if (text !== null) {
+      grouped[topField] = [text];
+      matched++;
+    }
+  }
+
   return matched > 0 ? grouped : undefined;
+}
+
+function pickDisplay(message: string | undefined, code: string | undefined): string | null {
+  if (typeof message === 'string' && message.trim() !== '') return message;
+  if (typeof code === 'string' && code !== '') return code;
+  return null;
 }
 
 /**

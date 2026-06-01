@@ -154,15 +154,18 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   ) {
     if (errorType === 'Validation' && fields && Object.keys(fields).length > 0) {
       const mapped: Record<string, string> = {};
-      for (const [name, codes] of Object.entries(fields)) {
-        // Field names from the backend are camelCase (matches the
-        // request DTO). Take the first code per field — the dashboard
-        // displays one error per input.
-        const first = codes[0];
+      for (const [name, messages] of Object.entries(fields)) {
+        // The strings here are display copy (the backend's message,
+        // falling back to its code when the message is empty — see
+        // collectValidationFields in lib/runtime/api-fetch.ts). Take
+        // the first per field; the dashboard surfaces one error per
+        // input.
+        const first = messages[0];
         if (first) {
-          // Normalize the first character to lowercase so the backend's
-          // PascalCase property name (FluentValidation default) maps to
-          // our state keys (CategoryId → categoryId, etc.).
+          // FluentValidation emits property names as PascalCase
+          // (CategoryId, Title, ...); the form's state keys are
+          // camelCase (matching the request DTO). Normalise the first
+          // character so CategoryId → categoryId, etc.
           const normalized = name.charAt(0).toLowerCase() + name.slice(1);
           mapped[normalized] = first;
         }

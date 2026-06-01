@@ -30,7 +30,15 @@ export interface ApiError {
   readonly message: string;
   /** Coarse category — drives status code mapping and i18n fallback. */
   readonly type: ErrorType;
-  /** Optional field-level details for validation errors. Keyed by field name. */
+  /**
+   * Optional field-level details for validation errors. Keyed by field
+   * name (PascalCase from FluentValidation; the form normalises to
+   * camelCase). Each entry carries the row's <b>display</b> string —
+   * the backend's <c>message</c> when present, falling back to the
+   * <c>code</c>. The form renders these verbatim under the matching
+   * input; the top-level <c>code</c> stays available for i18n-aware
+   * consumers that prefer machine keys. (T-0049 Copilot review.)
+   */
   readonly fields?: Readonly<Record<string, readonly string[]>>;
   /** Backend-issued correlation id (echoed via `x-correlation-id` response header). */
   readonly correlationId?: string;
