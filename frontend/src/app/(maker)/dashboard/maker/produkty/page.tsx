@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import {
   getMyProducts,
   MAKER_PRODUCTS_DEFAULT_PAGE_SIZE,
+  MAKER_PRODUCTS_MAX_PAGE_SIZE,
   type MakerProductsPage,
 } from '@/lib/api-client-helpers/maker-products';
 import { t } from '@/lib/i18n';
@@ -32,20 +33,25 @@ function readString(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
-function parsePositiveInt(raw: string, fallback: number): number {
+function parsePositiveInt(raw: string, fallback: number, max: number = Number.MAX_SAFE_INTEGER): number {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return parsed;
+  return Math.min(parsed, max);
 }
 
 export default async function MakerProductsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const page = parsePositiveInt(readString(sp.page), 1);
+  // Honor a URL-provided pageSize (clamped to the backend's
+  // MaxPageSize) so deep-linking, share-links and pagination URLs all
+  // round-trip cleanly. T-0049 Copilot review M2.
+  const pageSize = parsePositiveInt(
+    readString(sp.pageSize),
+    MAKER_PRODUCTS_DEFAULT_PAGE_SIZE,
+    MAKER_PRODUCTS_MAX_PAGE_SIZE,
+  );
 
-  const result = await getMyProducts({
-    page,
-    pageSize: MAKER_PRODUCTS_DEFAULT_PAGE_SIZE,
-  });
+  const result = await getMyProducts({ page, pageSize });
 
   return (
     <section className="bg-surface-primary py-12 lg:py-16">
@@ -107,6 +113,8 @@ function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
         totalPages={totalPages}
         hasNext={hasNext}
         hasPrevious={hasPrevious}
+        pageSize={data.pageSize}
+        defaultPageSize={MAKER_PRODUCTS_DEFAULT_PAGE_SIZE}
       />
     </>
   );

@@ -286,7 +286,6 @@ export const messages = {
   'dashboard.maker.products.card.image_count': 'Fotografií: {count}',
   'dashboard.maker.products.card.weight': 'Hmotnost: {value}',
   'dashboard.maker.products.card.created': 'Vytvořeno {date}',
-  'dashboard.maker.products.card.category_unknown': 'Bez kategorie',
   'dashboard.maker.products.badge.active': 'Aktivní',
   'dashboard.maker.products.badge.inactive': 'Neaktivní',
   'dashboard.maker.products.actions.edit': 'Upravit',

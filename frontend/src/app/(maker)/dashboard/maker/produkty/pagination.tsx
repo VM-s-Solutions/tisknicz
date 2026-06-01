@@ -7,6 +7,16 @@ interface PaginationProps {
   readonly totalPages: number;
   readonly hasNext: boolean;
   readonly hasPrevious: boolean;
+  /**
+   * Forward-roundtripped from the page's <c>searchParams.pageSize</c>
+   * so deep-links and share-links preserve the chosen window size. The
+   * page passes the resolved value (post-default, post-clamp) so the
+   * link always reflects what's actually rendered, not what the user
+   * originally typed. T-0049 Copilot review M2.
+   */
+  readonly pageSize: number;
+  /** The default the page falls back to — only emitted when different. */
+  readonly defaultPageSize: number;
 }
 
 /**
@@ -16,7 +26,7 @@ interface PaginationProps {
  * disabled state uses a non-link span for keyboard/screen-reader
  * semantics.
  */
-export function Pagination({ page, totalPages, hasNext, hasPrevious }: PaginationProps) {
+export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, defaultPageSize }: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
@@ -24,6 +34,11 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
   const hrefFor = (target: number): string => {
     const sp = new URLSearchParams();
     sp.set('page', String(target));
+    // Only emit pageSize when it diverges from the default so canonical
+    // URLs stay clean (`?page=2` not `?page=2&pageSize=24`).
+    if (pageSize !== defaultPageSize) {
+      sp.set('pageSize', String(pageSize));
+    }
     return `/dashboard/maker/produkty?${sp.toString()}`;
   };
 

@@ -158,6 +158,12 @@ export async function apiFetch<TValue>(
   return err(await parseErrorResponse(response, correlationId));
 }
 
+interface BackendValidationDetail {
+  readonly field?: string;
+  readonly code?: string;
+  readonly message?: string;
+}
+
 async function parseErrorResponse(
   response: Response,
   correlationId: string | undefined,
@@ -165,16 +171,27 @@ async function parseErrorResponse(
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
     try {
-      // The wrapper accepts both Makables-native `BusinessResult` (code +
-      // message + type + fields) and RFC 7807 ProblemDetails (title +
-      // detail). The native shape always wins when present; ProblemDetails
-      // covers ASP.NET framework errors (model-binding, 404, etc.) that
-      // bypass our pipeline.
+      // The wrapper accepts both Makables-native `Error` (field + code +
+      // type + details) and RFC 7807 ProblemDetails (title + detail).
+      // The native shape always wins when present; ProblemDetails covers
+      // ASP.NET framework errors (model-binding, 404, etc.) that bypass
+      // our pipeline.
+      //
+      // Native `details` is normally
+      // `IReadOnlyList<ValidationDetail>` (one row per failing field)
+      // when `type === 'Validation'`, but it can be `null`, an opaque
+      // object, or absent. We flatten it into the typed
+      // `fields: Record<string, readonly string[]>` shape that callers
+      // (forms in particular) consume, so a form can render inline
+      // errors keyed by field name. Field names from FluentValidation
+      // are PascalCase; we let the caller normalise to camelCase if it
+      // needs to match its state keys (see product-form.tsx). T-0049
+      // Copilot review H1.
       const payload = (await response.json()) as Partial<{
         code: string;
         message: string;
         type: ErrorType;
-        fields: Record<string, string[]>;
+        details: unknown;
         title: string;
         detail: string;
       }>;
@@ -183,7 +200,7 @@ async function parseErrorResponse(
         code: payload.code ?? `http.${response.status}`,
         message: payload.message ?? payload.detail ?? payload.title ?? defaultMessage(response.status),
         type: payload.type ?? mapStatusToErrorType(response.status),
-        fields: payload.fields,
+        fields: flattenValidationDetails(payload.details),
         correlationId,
       };
     } catch {
@@ -197,6 +214,30 @@ async function parseErrorResponse(
     type: mapStatusToErrorType(response.status),
     correlationId,
   };
+}
+
+/**
+ * Fold the backend's <c>ValidationDetail[]</c> shape into a
+ * map of field-name → ordered error codes. Returns <c>undefined</c>
+ * when the payload's <c>details</c> isn't a recognisable validation
+ * list — keeps the helper honest for the non-validation paths where
+ * <c>details</c> carries opaque transient/permanent payloads.
+ */
+function flattenValidationDetails(details: unknown): Record<string, readonly string[]> | undefined {
+  if (!Array.isArray(details) || details.length === 0) {
+    return undefined;
+  }
+  const grouped: Record<string, string[]> = {};
+  let matched = 0;
+  for (const raw of details as readonly unknown[]) {
+    if (raw === null || typeof raw !== 'object') continue;
+    const detail = raw as BackendValidationDetail;
+    if (typeof detail.field !== 'string' || typeof detail.code !== 'string') continue;
+    const bucket = grouped[detail.field] ?? (grouped[detail.field] = []);
+    bucket.push(detail.code);
+    matched++;
+  }
+  return matched > 0 ? grouped : undefined;
 }
 
 /**

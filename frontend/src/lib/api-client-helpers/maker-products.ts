@@ -123,6 +123,8 @@ export type MakerProductsPage = Readonly<
 // Re-stated here so URL builders stay typed without a round-trip; the
 // backend remains the source of truth.
 export const MAKER_PRODUCTS_DEFAULT_PAGE_SIZE = 24;
+/** Matches the backend's <c>GetMyProducts.MaxPageSize</c>. */
+export const MAKER_PRODUCTS_MAX_PAGE_SIZE = 48;
 
 // ---- Endpoints ----
 
@@ -174,8 +176,9 @@ export async function createProduct(
 }
 
 /**
- * Update an existing product. Returns 204 on success → helper folds to
- * <c>ok(undefined)</c>.
+ * Update an existing product. The backend returns 200 OK with no
+ * meaningful body (handlers without a typed Response use <c>Ok()</c>);
+ * <c>apiFetch</c> folds the empty-but-OK response to <c>ok(undefined)</c>.
  */
 export async function updateProduct(
   productId: string,
@@ -190,7 +193,8 @@ export async function updateProduct(
 }
 
 /**
- * Soft-delete a product. Returns 204 on success → helper folds to
+ * Soft-delete a product. The backend returns 200 OK with no
+ * meaningful body; <c>apiFetch</c> folds the empty-but-OK response to
  * <c>ok(undefined)</c>. The product still appears in
  * <see cref="getMyProducts"/> (the dashboard shows drafts and
  * recently-deactivated items) with <c>isActive === false</c>.
@@ -237,8 +241,9 @@ export async function uploadProductImage(
 }
 
 /**
- * Remove a product image by id. Returns 204 on success → helper folds
- * to <c>ok(undefined)</c>.
+ * Remove a product image by id. The backend returns 200 OK with no
+ * meaningful body; <c>apiFetch</c> folds the empty-but-OK response to
+ * <c>ok(undefined)</c>.
  */
 export async function removeProductImage(
   productId: string,
