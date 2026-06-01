@@ -27,7 +27,9 @@ const IMAGE_HEIGHT = 240;
  * Categories: <c>MakerProductListItem.categoryId</c> is the slug; we
  * look it up in <c>CATALOG_CATEGORIES</c> for the i18n label. If the
  * slug isn't in the launch list (admin added a category after launch),
- * we render a friendly "no category" copy rather than the raw slug.
+ * we fall back to rendering the raw slug — better to show the maker
+ * exactly what's attached to their product than hide it behind a
+ * placeholder (T-0049 review M1).
  *
  * Soft-deleted rows render with reduced opacity and the
  * <c>inactive</c> badge — the dashboard surfaces drafts and
@@ -92,17 +94,15 @@ export function MakerProductCard({ item }: ProductCardProps) {
           <ProductPrice item={item} />
         </p>
 
-        <dl className="flex flex-col gap-1 text-xs text-zinc-400">
-          <div className="flex items-center justify-between gap-2">
-            <dt>{t('dashboard.maker.products.card.weight', { value: formatWeight(item.weightGrams) })}</dt>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt>{t('dashboard.maker.products.card.image_count', { count: item.imageCount })}</dt>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt>{t('dashboard.maker.products.card.created', { date: createdDate })}</dt>
-          </div>
-        </dl>
+        {/* Each row is a single "Label: value" string already (the i18n
+            keys interpolate the value), so semantically these are list
+            items, not <dt>/<dd> pairs — switched off <dl>. T-0049
+            Copilot review L3. */}
+        <ul className="flex flex-col gap-1 text-xs text-zinc-400">
+          <li>{t('dashboard.maker.products.card.weight', { value: formatWeight(item.weightGrams) })}</li>
+          <li>{t('dashboard.maker.products.card.image_count', { count: item.imageCount })}</li>
+          <li>{t('dashboard.maker.products.card.created', { date: createdDate })}</li>
+        </ul>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <Link

@@ -102,8 +102,13 @@ export async function apiFetch<TValue>(
   //
   // Public host stays anonymous — never forwarded. A caller-supplied
   // Cookie header wins (test rigs / hand-rolled callers stay in
-  // control).
-  if (host !== 'public' && typeof window === 'undefined' && headers['Cookie'] === undefined) {
+  // control). The casing-agnostic check matters because HTTP header
+  // names are case-insensitive but `Record<string, string>` is not;
+  // sending both `cookie` and `Cookie` is RFC 6265 ill-defined and
+  // some servers will reject or silently merge them.
+  // T-0049 Copilot review M1.
+  const callerSetCookie = Object.keys(headers).some((h) => h.toLowerCase() === 'cookie');
+  if (host !== 'public' && typeof window === 'undefined' && !callerSetCookie) {
     const cookieHeader = await readAudienceCookieHeader(host);
     if (cookieHeader) {
       headers['Cookie'] = cookieHeader;

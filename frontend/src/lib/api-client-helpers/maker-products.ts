@@ -75,7 +75,7 @@ export { PriceTypeEnum as PriceTypeValues };
  * parsing, so typing this as <c>Date</c> would lie about the runtime
  * shape and crash any consumer that calls <c>Intl.DateTimeFormat.format()</c>
  * directly. Display helpers wrap <c>new Date(createdOn)</c> themselves
- * (see <c>lib/format/date.ts</c>). T-0049 code-quality review B1.
+ * (see <c>lib/utils/dates.ts</c>'s <c>formatDate</c>). T-0049 code-quality review B1.
  * </para>
  */
 export type MakerProductListItem = Readonly<IMakerProductListItem>;
