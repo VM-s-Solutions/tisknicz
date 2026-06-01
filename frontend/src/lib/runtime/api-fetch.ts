@@ -1,4 +1,5 @@
 import { type ApiError, type ErrorType, type Result, err, ok } from './result';
+import { ACCESS_COOKIE_PREFIX, REFRESH_COOKIE_PREFIX } from '../auth/session';
 
 /**
  * Hostname identifiers for the four .NET Web hosts. The matching base URL
@@ -87,6 +88,28 @@ export async function apiFetch<TValue>(
     headers['Authorization'] = `Bearer ${options.accessToken}`;
   }
 
+  // SSR cookie forwarding (T-0049 review B1).
+  //
+  // `credentials: 'include'` below tells the browser to ride along with
+  // the cookie jar on cross-origin requests, but Server Components run
+  // on the Node runtime and have no implicit cookie jar — they need the
+  // session cookie attached explicitly via the `Cookie` request header.
+  // Read the audience-scoped cookies (`makables_access_<host>` +
+  // `makables_refresh_<host>`) from `next/headers` and forward only
+  // those that belong to this host's audience, so a server render on
+  // /dashboard/maker/* doesn't also leak the customer session cookie to
+  // the Maker host.
+  //
+  // Public host stays anonymous — never forwarded. A caller-supplied
+  // Cookie header wins (test rigs / hand-rolled callers stay in
+  // control).
+  if (host !== 'public' && typeof window === 'undefined' && headers['Cookie'] === undefined) {
+    const cookieHeader = await readAudienceCookieHeader(host);
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+  }
+
   // Compose any caller-supplied signal with our 8 s timeout so the request
   // aborts on whichever fires first (T-0015 reviewer M1).
   const timeoutSignal = AbortSignal.timeout(8000);
@@ -169,6 +192,35 @@ async function parseErrorResponse(
     type: mapStatusToErrorType(response.status),
     correlationId,
   };
+}
+
+/**
+ * Server-only cookie reader for SSR auth forwarding. `cookies()` is
+ * dynamic-imported so this module stays consumable from Client
+ * Components (which would never call apiFetch directly today, but the
+ * import shape stays portable). The audience-scoped pair
+ * (`makables_access_<host>` + `makables_refresh_<host>`) is forwarded
+ * verbatim; any other cookie in the store stays put so the Maker host
+ * doesn't see the Customer session.
+ */
+async function readAudienceCookieHeader(host: ApiHost): Promise<string | null> {
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    const accessName = `${ACCESS_COOKIE_PREFIX}${host}`;
+    const refreshName = `${REFRESH_COOKIE_PREFIX}${host}`;
+    const parts: string[] = [];
+    const access = store.get(accessName);
+    if (access) parts.push(`${accessName}=${access.value}`);
+    const refresh = store.get(refreshName);
+    if (refresh) parts.push(`${refreshName}=${refresh.value}`);
+    return parts.length > 0 ? parts.join('; ') : null;
+  } catch {
+    // Outside a request scope (e.g. unit tests, build-time prefetch) the
+    // import throws — that's fine; the request goes unauthenticated and
+    // the backend returns 401 the helper folds to a typed error.
+    return null;
+  }
 }
 
 function transientError(cause: unknown): ApiError {

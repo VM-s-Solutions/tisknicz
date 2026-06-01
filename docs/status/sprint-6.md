@@ -25,8 +25,8 @@ Sequencing: **T-0046 → T-0047 → T-0048 → T-0049**. The customer flow `/kat
 |---|---|---|---|
 | T-0046 | done | (merged) | `/katalog` list + filters + URL-state pagination. Triggered first NSwag regen of `public-api.v1.ts`. |
 | T-0047 | done | frontend | `/katalog/[slug]` profile page merged (`54ffcd2`). Full ticket at `docs/tickets/T-0047-frontend-maker-profile.md`. Added `getMakerBySlug` + `buildProductImageUrl` + `RATING_BP_PER_STAR` to the catalog helper; added `lib/money/formatter.ts` (`formatCzk(amountMinor, currency)`); established `<section>`-not-`<main>` and plural-neutral i18n conventions. |
-| T-0048 | **ready** | frontend | `/produkt/[productId]` product detail. Full ticket at `docs/tickets/T-0048-frontend-product-detail.md`. Extends `catalog.ts` with `ProductDetail` + `getProductById`; one Client Component (`product-gallery.tsx`) for thumbnail swap; reuses `buildProductImageUrl` + `formatCzk` from T-0047. |
-| T-0049 | draft | — | `/dashboard/maker/produkty` CRUD UI + image picker. Will be expanded in parallel with T-0048 since it shares image-handling primitives with T-0041. |
+| T-0048 | done | frontend | `/produkt/[productId]` product detail merged. Full ticket at `docs/tickets/T-0048-frontend-product-detail.md`. Extended `catalog.ts` with `ProductDetail` + `getProductById`; one Client Component (`product-gallery.tsx`) for thumbnail swap; reuses `buildProductImageUrl` + `formatCzk` from T-0047. Promoted `truncateForMeta` to `lib/seo/`. |
+| T-0049 | **ready** | frontend | `/dashboard/maker/produkty` CRUD UI + image manager. Full ticket at `docs/tickets/T-0049-frontend-maker-products.md`. L-sized — maker's first authoring surface. Depends on T-0049a/b backend prep (read queries + typed `maker-api.v1.ts`). Adds new helper module `lib/api-client-helpers/maker-products.ts` (multipart upload through `apiFetch`); separate audience from T-0046/47/48 (Maker host, not Public). |
 
 ## Open blockers
 

@@ -6,31 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 import { getProductById, type ProductDetail } from '@/lib/api-client-helpers/catalog';
+import { formatWeight } from '@/lib/format/weight';
 import { formatCzk } from '@/lib/money/formatter';
 import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { ProductGallery } from './product-gallery';
 
 interface PageProps {
   readonly params: Promise<{ productId: string }>;
-}
-
-/**
- * Format a product weight for display (T-0048 AC-6). Czech locale:
- * <c>&lt;1000</c> g shows the integer with " g"; <c>&gt;=1000</c> g
- * shows kg to one decimal with a Czech comma decimal separator
- * (<c>Intl.NumberFormat('cs-CZ')</c> handles both the comma and the
- * thousands NBSP if we ever hit four-digit kg values).
- */
-function formatWeight(grams: number): string {
-  if (grams < 1000) {
-    return `${grams} g`;
-  }
-  const kg = grams / 1000;
-  const formatted = new Intl.NumberFormat('cs-CZ', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(kg);
-  return `${formatted} kg`;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

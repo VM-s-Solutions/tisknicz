@@ -1,0 +1,145 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { deleteProduct } from '@/lib/api-client-helpers/maker-products';
+import { t } from '@/lib/i18n';
+
+interface DeleteProductButtonProps {
+  readonly productId: string;
+  /**
+   * <c>card</c>: compact action used inside the product card row on
+   * the index.
+   * <c>page</c>: full-width destructive action on the edit page; on
+   * success the user is sent back to the index instead of refreshing
+   * in place (the resource they were editing no longer matches the
+   * "active" filter).
+   */
+  readonly variant?: 'card' | 'page';
+}
+
+/**
+ * Confirm-then-delete control for a maker product (T-0049 AC-8). Opens
+ * a lightweight inline modal — we don't have a shared <c>Dialog</c>
+ * primitive yet, and <c>window.confirm</c> is explicitly off-limits per
+ * the ticket spec. On confirm, calls <c>deleteProduct</c>; on success,
+ * the card variant <c>router.refresh()</c>es the index (the row stays
+ * but renders as inactive); the page variant pushes back to the index.
+ */
+export function DeleteProductButton({ productId, variant = 'card' }: DeleteProductButtonProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Esc-to-close + lock background scroll while the modal is open. Both
+  // run only on the client (this whole component is 'use client') so
+  // gating on `open` keeps the body-scroll restore symmetric.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !submitting) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open, submitting]);
+
+  async function handleConfirm() {
+    setErrorMessage(null);
+    setSubmitting(true);
+    const result = await deleteProduct(productId);
+    setSubmitting(false);
+    if (!result.success) {
+      setErrorMessage(t('dashboard.maker.products.delete.error'));
+      return;
+    }
+    setOpen(false);
+    if (variant === 'page') {
+      router.push('/dashboard/maker/produkty');
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <>
+      {variant === 'page' ? (
+        <Button variant="danger" type="button" onClick={() => setOpen(true)}>
+          <Icon name="trash" size={16} />
+          {t('dashboard.maker.products.delete.button')}
+        </Button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-red-900/50 bg-red-950/40 px-3.5 py-1.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+        >
+          <Icon name="trash" size={14} />
+          {t('dashboard.maker.products.actions.delete')}
+        </button>
+      )}
+
+      {open ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`delete-${productId}-title`}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <button
+            type="button"
+            aria-label={t('common.cancel')}
+            onClick={() => {
+              if (!submitting) setOpen(false);
+            }}
+            className="absolute inset-0 bg-black/70"
+          />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
+            <h2
+              id={`delete-${productId}-title`}
+              className="text-lg font-semibold text-white"
+            >
+              {t('dashboard.maker.products.delete.confirm.title')}
+            </h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              {t('dashboard.maker.products.delete.confirm.body')}
+            </p>
+            {errorMessage ? (
+              <div className="mt-4">
+                <Alert variant="error">{errorMessage}</Alert>
+              </div>
+            ) : null}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={submitting}
+              >
+                {t('dashboard.maker.products.delete.confirm.cancel_button')}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleConfirm}
+                loading={submitting}
+              >
+                {t('dashboard.maker.products.delete.confirm.confirm_button')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

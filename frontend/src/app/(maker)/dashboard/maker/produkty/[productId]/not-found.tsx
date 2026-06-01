@@ -1,0 +1,33 @@
+import Link from 'next/link';
+import { Icon } from '@/components/ui/icon';
+import { t } from '@/lib/i18n';
+
+/**
+ * 404 surface for the maker product edit page (T-0049 AC-7). Renders
+ * when <c>notFound()</c> fires — the helper returns <c>ApiError</c>
+ * of type <c>NotFound</c> on either an unknown product id or a product
+ * owned by a different maker. The backend collapses both to 404 (IDOR
+ * shield) so this page must not lean on either reason in its copy.
+ */
+export default function MakerProductNotFound() {
+  return (
+    <section className="mx-auto flex min-h-[calc(100vh-64px)] max-w-3xl flex-col items-center justify-center px-4 py-10 text-center sm:px-6 lg:px-8">
+      <p className="text-7xl font-bold tracking-tight text-zinc-800">404</p>
+      <h1 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+        {t('dashboard.maker.products.edit.not_found.title')}
+      </h1>
+      <p className="mt-3 text-base text-zinc-500">
+        {t('dashboard.maker.products.edit.not_found.body')}
+      </p>
+      <div className="mt-8">
+        <Link
+          href="/dashboard/maker/produkty"
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-6 py-3 text-sm font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/10 hover:border-brand-400"
+        >
+          <Icon name="arrowLeft" size={16} />
+          {t('dashboard.maker.products.edit.back')}
+        </Link>
+      </div>
+    </section>
+  );
+}
