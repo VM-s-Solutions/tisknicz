@@ -24,8 +24,8 @@ Sequencing: **T-0046 → T-0047 → T-0048 → T-0049**. The customer flow `/kat
 | Ticket | State | Owner | Notes |
 |---|---|---|---|
 | T-0046 | done | (merged) | `/katalog` list + filters + URL-state pagination. Triggered first NSwag regen of `public-api.v1.ts`. |
-| T-0047 | **in_progress** | frontend | `/katalog/[slug]` profile page. Full ticket at `docs/tickets/T-0047-frontend-maker-profile.md`. Adds `getMakerBySlug` + `buildProductImageUrl` to the catalog helper; adds `lib/money/formatter.ts` (CZK display). |
-| T-0048 | draft | — | `/produkt/[id]` product detail. Will be expanded when T-0047 in_review. |
+| T-0047 | done | frontend | `/katalog/[slug]` profile page merged (`54ffcd2`). Full ticket at `docs/tickets/T-0047-frontend-maker-profile.md`. Added `getMakerBySlug` + `buildProductImageUrl` + `RATING_BP_PER_STAR` to the catalog helper; added `lib/money/formatter.ts` (`formatCzk(amountMinor, currency)`); established `<section>`-not-`<main>` and plural-neutral i18n conventions. |
+| T-0048 | **ready** | frontend | `/produkt/[productId]` product detail. Full ticket at `docs/tickets/T-0048-frontend-product-detail.md`. Extends `catalog.ts` with `ProductDetail` + `getProductById`; one Client Component (`product-gallery.tsx`) for thumbnail swap; reuses `buildProductImageUrl` + `formatCzk` from T-0047. |
 | T-0049 | draft | — | `/dashboard/maker/produkty` CRUD UI + image picker. Will be expanded in parallel with T-0048 since it shares image-handling primitives with T-0041. |
 
 ## Open blockers
@@ -40,7 +40,7 @@ None. All four frontend tickets' dependencies are `done`.
 
 - [x] Phase 3 backend merged
 - [x] T-0046 merged
-- [ ] T-0047 merged
+- [x] T-0047 merged
 - [ ] T-0048 merged
 - [ ] T-0049 merged
 - [ ] Sprint 6 retrospective added to this file

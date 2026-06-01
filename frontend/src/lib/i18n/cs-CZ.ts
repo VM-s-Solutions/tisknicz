@@ -246,6 +246,22 @@ export const messages = {
   'catalog.product.image_alt': 'Fotografie produktu {title}',
   'catalog.product.no_image': 'Bez fotografie',
 
+  // Catalog — product detail page (T-0048, US-customer-0009).
+  // Plural-neutral phrasing rule from the catalog card block above
+  // applies here too — keep any future {count} keys in the "Label: N"
+  // shape until t() learns Intl.PluralRules.
+  'catalog.product_detail.heading.by_maker': 'Vyrobeno {maker}',
+  'catalog.product_detail.cta.order': 'Objednat',
+  'catalog.product_detail.weight': 'Hmotnost: {value}',
+  'catalog.product_detail.description.heading': 'Popis',
+  'catalog.product_detail.gallery.thumbnail_aria': 'Náhled {n}',
+  'catalog.product_detail.gallery.no_image': 'Bez fotografie',
+  'catalog.product_detail.error.title': 'Produkt se nepodařilo načíst',
+  'catalog.product_detail.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
+  'catalog.product_detail.not_found.title': 'Produkt nenalezen',
+  'catalog.product_detail.not_found.body': 'Tento produkt neexistuje nebo už není dostupný.',
+  'catalog.product_detail.metadata.fallback_description': 'Detail produktu na Makables.',
+
   // Orders
   'order.state.pending_payment': 'Čeká na platbu',
   'order.state.paid': 'Zaplaceno',

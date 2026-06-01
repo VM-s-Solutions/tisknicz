@@ -102,6 +102,41 @@ export interface MakerProfile {
   readonly reviews: readonly MakerReviewItem[];
 }
 
+/**
+ * Mirror of <c>ProductImageItem</c>. One image on the product detail
+ * page; the backend orders the list by <c>sortOrder</c> ascending, so
+ * the consumer renders the list as-is (initial index 0 = primary).
+ */
+export interface ProductImageItem {
+  readonly imageId: string;
+  readonly blobPath: string;
+  readonly sortOrder: number;
+}
+
+/**
+ * Mirror of <c>ProductDetail</c> (US-customer-0009). Product fields +
+ * all images + the owning maker's display info ("by {maker}" link back
+ * to the profile page). The backend gates inactive products and
+ * non-publicly-listable makers at the query level — a 404 from the
+ * controller maps to <see cref="ApiError"/> with <c>type === 'NotFound'</c>
+ * regardless of which condition failed (no oracle leakage).
+ */
+export interface ProductDetail {
+  readonly productId: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly priceAmountMinor: number;
+  readonly priceCurrency: string;
+  readonly priceType: 'Fixed' | 'From' | 'OnRequest';
+  readonly weightGrams: number;
+  readonly categoryId: string;
+  readonly makerId: string;
+  readonly makerSlug: string;
+  readonly makerCompanyName: string;
+  readonly makerIsVerified: boolean;
+  readonly images: readonly ProductImageItem[];
+}
+
 // ---- Input ----
 
 /**
@@ -177,6 +212,24 @@ export async function getMakerBySlug(
   return apiFetch<MakerProfile>(
     'public',
     `${Base}/makers/${encodeURIComponent(slug)}`,
+    { method: 'GET' },
+  );
+}
+
+/**
+ * Public product detail by id (US-customer-0009). The backend returns
+ * 404 for inactive products and products whose owning maker isn't
+ * publicly-listable alike — the caller decides whether to
+ * <c>notFound()</c> or render a soft error. <paramref name="productId"/>
+ * is URL-encoded before being placed on the path; the backend route
+ * accepts the raw id (no slug shape).
+ */
+export async function getProductById(
+  productId: string,
+): Promise<Result<ProductDetail, ApiError>> {
+  return apiFetch<ProductDetail>(
+    'public',
+    `${Base}/products/${encodeURIComponent(productId)}`,
     { method: 'GET' },
   );
 }

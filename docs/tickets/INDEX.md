@@ -78,7 +78,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0045 | GetProductById query (ICatalogQueries; ProductDetail DTO = product fields + ordered images + owning-maker display info; null when product inactive or maker not listable). Web.Public GET /api/v1/catalog/products/{productId}. | 3 | S | done | T-0041, T-0043 | US-customer-0009 | — |
 | T-0046 | Frontend: /katalog page (filters, list, pagination) | 3 | M | done | T-0043, T-0046b | US-customer-0007 | — |
 | T-0047 | Frontend: /katalog/[slug] maker profile page | 3 | M | **in_progress** (frontend) | T-0044, T-0046, T-0046b | US-customer-0008 | — |
-| T-0048 | Frontend: /produkt/[id] product detail page | 3 | M | draft | T-0045 | US-customer-0009 | — |
+| T-0048 | Frontend: /produkt/[id] product detail page | 3 | M | **ready** | T-0045, T-0047 | US-customer-0009 | — |
 | T-0049 | Frontend: /dashboard/maker/produkty (CRUD UI; image picker; price/weight forms) | 3 | L | draft | T-0041, T-0042 | US-maker-0004 | — |
 
 **Phase 3 total:** 10 tickets.
