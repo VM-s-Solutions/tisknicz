@@ -89,6 +89,28 @@ for (const doc of documents) {
     process.exit(result.status ?? 1);
   }
 
+  // T-0049b: NSwag's Fetch template emits `FileParameter` references for
+  // multipart endpoints (e.g. Maker host POST /products/{id}/images) but
+  // doesn't include the interface declaration itself — the type is just
+  // referenced unbound, which makes `tsc --noEmit` fail. Append the
+  // canonical NSwag shape to the bottom of the generated file when the
+  // identifier appears. The shape (`data: any; fileName: string`) is
+  // baked into how the template constructs the FormData payload (see the
+  // `content_.append("file", file.data, file.fileName ? file.fileName :
+  // "file")` line in the generated client), so this declaration is the
+  // contract — not an ad-hoc patch.
+  const outputPath = resolve(frontendDir, doc.output.replace(/^\.\.\//, ''));
+  const generated = readFileSync(outputPath, 'utf8');
+  if (generated.includes('FileParameter') && !/(interface|type)\s+FileParameter\b/.test(generated)) {
+    const appendix =
+      '\n/** Multipart helper type referenced by NSwag-generated multipart\n' +
+      ' * client methods. Injected by scripts/generate-api.mjs because the\n' +
+      ' * Fetch template uses the identifier but does not emit the\n' +
+      ' * declaration. T-0049b. */\n' +
+      'export interface FileParameter { data: any; fileName: string; }\n';
+    writeFileSync(outputPath, generated + appendix, 'utf8');
+  }
+
   const specName = `${doc.host}-api.v1`;
   hashes[specName] = hash;
   okCount++;
