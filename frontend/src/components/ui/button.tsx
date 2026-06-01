@@ -1,11 +1,18 @@
 'use client';
 
-import { type ButtonHTMLAttributes } from 'react';
+import { type ButtonHTMLAttributes, type Ref } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  /**
+   * React 19 lets function components accept `ref` as a regular prop
+   * (no `forwardRef` indirection). Threaded through to the underlying
+   * <c>&lt;button&gt;</c> so callers can imperatively focus / measure
+   * — e.g. the delete-modal's focus trap (T-0049).
+   */
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {

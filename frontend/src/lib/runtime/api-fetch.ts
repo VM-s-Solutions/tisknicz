@@ -1,4 +1,5 @@
 import { type ApiError, type ErrorType, type Result, err, ok } from './result';
+import { ACCESS_COOKIE_PREFIX, REFRESH_COOKIE_PREFIX } from '../auth/session';
 
 /**
  * Hostname identifiers for the four .NET Web hosts. The matching base URL
@@ -87,6 +88,33 @@ export async function apiFetch<TValue>(
     headers['Authorization'] = `Bearer ${options.accessToken}`;
   }
 
+  // SSR cookie forwarding (T-0049 review B1).
+  //
+  // `credentials: 'include'` below tells the browser to ride along with
+  // the cookie jar on cross-origin requests, but Server Components run
+  // on the Node runtime and have no implicit cookie jar — they need the
+  // session cookie attached explicitly via the `Cookie` request header.
+  // Read the audience-scoped cookies (`makables_access_<host>` +
+  // `makables_refresh_<host>`) from `next/headers` and forward only
+  // those that belong to this host's audience, so a server render on
+  // /dashboard/maker/* doesn't also leak the customer session cookie to
+  // the Maker host.
+  //
+  // Public host stays anonymous — never forwarded. A caller-supplied
+  // Cookie header wins (test rigs / hand-rolled callers stay in
+  // control). The casing-agnostic check matters because HTTP header
+  // names are case-insensitive but `Record<string, string>` is not;
+  // sending both `cookie` and `Cookie` is RFC 6265 ill-defined and
+  // some servers will reject or silently merge them.
+  // T-0049 Copilot review M1.
+  const callerSetCookie = Object.keys(headers).some((h) => h.toLowerCase() === 'cookie');
+  if (host !== 'public' && typeof window === 'undefined' && !callerSetCookie) {
+    const cookieHeader = await readAudienceCookieHeader(host);
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+  }
+
   // Compose any caller-supplied signal with our 8 s timeout so the request
   // aborts on whichever fires first (T-0015 reviewer M1).
   const timeoutSignal = AbortSignal.timeout(8000);
@@ -130,32 +158,69 @@ export async function apiFetch<TValue>(
   return err(await parseErrorResponse(response, correlationId));
 }
 
+interface BackendValidationDetail {
+  readonly field?: string;
+  readonly code?: string;
+  readonly message?: string;
+}
+
 async function parseErrorResponse(
   response: Response,
   correlationId: string | undefined,
 ): Promise<ApiError> {
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
+  // ASP.NET's ProblemDetails / ValidationProblemDetails responses use
+  // `application/problem+json` per RFC 7807. Without this branch the
+  // model-binding 400s (and any other framework-level errors that
+  // bypass our pipeline) would fall through to the text fallback and
+  // we'd lose the `title` / `detail` fields. T-0049 Copilot review M1.
+  if (contentType.includes('application/json') || contentType.includes('application/problem+json')) {
     try {
-      // The wrapper accepts both Makables-native `BusinessResult` (code +
-      // message + type + fields) and RFC 7807 ProblemDetails (title +
-      // detail). The native shape always wins when present; ProblemDetails
-      // covers ASP.NET framework errors (model-binding, 404, etc.) that
-      // bypass our pipeline.
+      // The wrapper accepts both Makables-native `Error` (field + code +
+      // type + details) and RFC 7807 ProblemDetails (title + detail).
+      // The native shape always wins when present; ProblemDetails covers
+      // ASP.NET framework errors (model-binding, 404, etc.) that bypass
+      // our pipeline.
+      //
+      // The backend ships validation errors in two flavours:
+      //   1. Multi-field via FluentValidation → `details:
+      //      IReadOnlyList<ValidationDetail>` (one row per failing field;
+      //      the top-level `field`/`code` mirror the first row).
+      //   2. Single-field via `Error.Validation(field, code)` → the top-
+      //      level `field`/`code` are the entire payload and `details`
+      //      is null.
+      //
+      // We collapse both into `fields: Record<string, readonly string[]>`
+      // (display copy) so the form can render inline errors keyed by
+      // field name without caring which shape arrived. Field names from
+      // FluentValidation are PascalCase; the caller normalises to
+      // camelCase if it needs to match its state keys (see
+      // product-form.tsx). T-0049 Copilot review H1+M2.
       const payload = (await response.json()) as Partial<{
         code: string;
         message: string;
+        field: string;
         type: ErrorType;
-        fields: Record<string, string[]>;
+        details: unknown;
         title: string;
         detail: string;
       }>;
 
+      const code = payload.code ?? `http.${response.status}`;
+      const message = payload.message ?? payload.detail ?? payload.title ?? defaultMessage(response.status);
+      const type = payload.type ?? mapStatusToErrorType(response.status);
+
       return {
-        code: payload.code ?? `http.${response.status}`,
-        message: payload.message ?? payload.detail ?? payload.title ?? defaultMessage(response.status),
-        type: payload.type ?? mapStatusToErrorType(response.status),
-        fields: payload.fields,
+        code,
+        message,
+        type,
+        // Pass the RAW backend message — not the substituted-with-
+        // defaultMessage version above — so collectValidationFields'
+        // pickDisplay can fall through to the code when the backend
+        // didn't ship a message. Otherwise the inline field error
+        // would read "Server je momentálně nedostupný…" for a vanilla
+        // `Error.Validation(field, code)`. T-0049 Copilot review M1.
+        fields: collectValidationFields(payload.details, payload.field, code, payload.message, type),
         correlationId,
       };
     } catch {
@@ -169,6 +234,99 @@ async function parseErrorResponse(
     type: mapStatusToErrorType(response.status),
     correlationId,
   };
+}
+
+/**
+ * Collapse the backend's two validation-error shapes (multi-field
+ * <c>details: ValidationDetail[]</c> + single-field top-level
+ * <c>field</c>+<c>code</c>) into a unified
+ * <c>Record&lt;field, display strings&gt;</c>. Returns <c>undefined</c>
+ * when neither shape is present so non-validation paths stay clean
+ * (their <c>details</c> can carry opaque transient/permanent
+ * payloads).
+ *
+ * <para>
+ * Each entry carries the row's <c>message</c> when present, falling
+ * back to the <c>code</c> — Copilot review M2: the form renders these
+ * strings verbatim under inputs, so user-readable text wins over
+ * machine keys. A future i18n-aware form can still <c>t()</c> the
+ * code; the top-level <c>ApiError.code</c> is always present.
+ * </para>
+ *
+ * <para>
+ * The single-field fallback only kicks in for
+ * <c>type === 'Validation'</c> when <c>details</c> didn't supply
+ * anything — a <c>NotFound</c> with a top-level <c>field</c> is the
+ * entity name, not a form input, and shouldn't surface inline.
+ * </para>
+ */
+function collectValidationFields(
+  details: unknown,
+  topField: string | undefined,
+  topCode: string,
+  topMessage: string | undefined,
+  type: ErrorType,
+): Record<string, readonly string[]> | undefined {
+  const grouped: Record<string, string[]> = {};
+  let matched = 0;
+
+  if (Array.isArray(details) && details.length > 0) {
+    for (const raw of details as readonly unknown[]) {
+      if (raw === null || typeof raw !== 'object') continue;
+      const detail = raw as BackendValidationDetail;
+      if (typeof detail.field !== 'string') continue;
+      const text = pickDisplay(detail.message, detail.code);
+      if (text === null) continue;
+      const bucket = grouped[detail.field] ?? (grouped[detail.field] = []);
+      bucket.push(text);
+      matched++;
+    }
+  }
+
+  if (matched === 0 && type === 'Validation' && typeof topField === 'string' && topField !== '') {
+    const text = pickDisplay(topMessage, topCode);
+    if (text !== null) {
+      grouped[topField] = [text];
+      matched++;
+    }
+  }
+
+  return matched > 0 ? grouped : undefined;
+}
+
+function pickDisplay(message: string | undefined, code: string | undefined): string | null {
+  if (typeof message === 'string' && message.trim() !== '') return message;
+  if (typeof code === 'string' && code !== '') return code;
+  return null;
+}
+
+/**
+ * Server-only cookie reader for SSR auth forwarding. `cookies()` is
+ * dynamic-imported so this module stays consumable from Client
+ * Components (which would never call apiFetch directly today, but the
+ * import shape stays portable). The audience-scoped pair
+ * (`makables_access_<host>` + `makables_refresh_<host>`) is forwarded
+ * verbatim; any other cookie in the store stays put so the Maker host
+ * doesn't see the Customer session.
+ */
+async function readAudienceCookieHeader(host: ApiHost): Promise<string | null> {
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    const accessName = `${ACCESS_COOKIE_PREFIX}${host}`;
+    const refreshName = `${REFRESH_COOKIE_PREFIX}${host}`;
+    const parts: string[] = [];
+    const access = store.get(accessName);
+    if (access) parts.push(`${accessName}=${access.value}`);
+    const refresh = store.get(refreshName);
+    if (refresh) parts.push(`${refreshName}=${refresh.value}`);
+    return parts.length > 0 ? parts.join('; ') : null;
+  } catch {
+    // Outside a request scope (e.g. unit tests, build-time prefetch) the
+    // import throws — that's fine; the request goes unauthenticated and
+    // the backend returns 401 the helper folds to a typed error.
+    return null;
+  }
 }
 
 function transientError(cause: unknown): ApiError {
