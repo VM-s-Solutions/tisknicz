@@ -209,7 +209,13 @@ async function parseErrorResponse(
         code,
         message,
         type,
-        fields: collectValidationFields(payload.details, payload.field, code, message, type),
+        // Pass the RAW backend message — not the substituted-with-
+        // defaultMessage version above — so collectValidationFields'
+        // pickDisplay can fall through to the code when the backend
+        // didn't ship a message. Otherwise the inline field error
+        // would read "Server je momentálně nedostupný…" for a vanilla
+        // `Error.Validation(field, code)`. T-0049 Copilot review M1.
+        fields: collectValidationFields(payload.details, payload.field, code, payload.message, type),
         correlationId,
       };
     } catch {
@@ -253,7 +259,7 @@ function collectValidationFields(
   details: unknown,
   topField: string | undefined,
   topCode: string,
-  topMessage: string,
+  topMessage: string | undefined,
   type: ErrorType,
 ): Record<string, readonly string[]> | undefined {
   const grouped: Record<string, string[]> = {};

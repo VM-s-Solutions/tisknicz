@@ -87,19 +87,22 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
 
     // Parse numeric inputs once. NaN protection only — the backend
     // validates the real rules (range, positivity, etc.).
+    const isOnRequest = priceType === PriceTypeValues.OnRequest;
     const priceKcParsed = Number.parseFloat(priceKc);
     const weightParsed = Number.parseInt(weightGrams, 10);
-    const priceAmountMinor = Number.isFinite(priceKcParsed)
-      ? Math.round(priceKcParsed * 100)
-      : 0;
+    // OnRequest pins priceAmountMinor to 0 regardless of what the price
+    // input currently holds — the input is disabled in this mode, so a
+    // stale value left over from a Fixed/From session would otherwise
+    // ride the wire invisibly. Domain rule (Product.Create): amount=0
+    // requires OnRequest, so this is the safe canonical shape. T-0049
+    // Copilot review M2.
+    const priceAmountMinor = isOnRequest
+      ? 0
+      : Number.isFinite(priceKcParsed)
+        ? Math.round(priceKcParsed * 100)
+        : 0;
     const weight = Number.isFinite(weightParsed) ? weightParsed : 0;
 
-    // OnRequest products legitimately submit priceAmountMinor = 0 — the
-    // domain rule (Product.Create) requires PriceType.OnRequest exactly
-    // when the amount is zero, and an OnRequest product with any non-zero
-    // amount is treated as an "informational from" price. The disabled-
-    // input + zero-default flow here matches that. T-0049 review M2.
-    //
     // `description: undefined` is intentional: JSON.stringify drops
     // undefined properties on objects, so the wire payload omits the
     // field entirely. Don't change to `null` — the backend's optional
