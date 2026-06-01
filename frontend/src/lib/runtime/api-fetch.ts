@@ -169,7 +169,12 @@ async function parseErrorResponse(
   correlationId: string | undefined,
 ): Promise<ApiError> {
   const contentType = response.headers.get('content-type') ?? '';
-  if (contentType.includes('application/json')) {
+  // ASP.NET's ProblemDetails / ValidationProblemDetails responses use
+  // `application/problem+json` per RFC 7807. Without this branch the
+  // model-binding 400s (and any other framework-level errors that
+  // bypass our pipeline) would fall through to the text fallback and
+  // we'd lose the `title` / `detail` fields. T-0049 Copilot review M1.
+  if (contentType.includes('application/json') || contentType.includes('application/problem+json')) {
     try {
       // The wrapper accepts both Makables-native `Error` (field + code +
       // type + details) and RFC 7807 ProblemDetails (title + detail).

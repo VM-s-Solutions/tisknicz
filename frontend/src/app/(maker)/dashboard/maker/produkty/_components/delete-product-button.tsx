@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -34,6 +34,13 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Focus-trap anchors: the Tab key cycles forward off the last button
+  // into `endSentinelRef`, which redirects to the first interactive
+  // (Cancel) via `firstFocusableRef`; Shift+Tab off the first cycles
+  // backward through `startSentinelRef` to the last (Confirm) via
+  // `lastFocusableRef`. T-0049 Copilot review M3.
+  const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
+  const lastFocusableRef = useRef<HTMLButtonElement | null>(null);
 
   // Esc-to-close + lock background scroll while the modal is open. Both
   // run only on the client (this whole component is 'use client') so
@@ -97,13 +104,22 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
           aria-describedby={`delete-${productId}-description`}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
-          <button
-            type="button"
-            aria-label={t('common.cancel')}
+          {/* Backdrop: non-focusable, hidden from a11y tree. The
+              accessible close path is the Cancel button + Esc; the
+              click-outside is a mouse-only convenience. T-0049 Copilot
+              review M2. */}
+          <div
+            aria-hidden="true"
             onClick={() => {
               if (!submitting) setOpen(false);
             }}
             className="absolute inset-0 bg-black/70"
+          />
+          {/* Start sentinel: Shift+Tab off Cancel lands here, redirects
+              to the last interactive (Confirm). T-0049 Copilot review M3. */}
+          <div
+            tabIndex={0}
+            onFocus={() => lastFocusableRef.current?.focus()}
           />
           <div className="relative z-10 w-full max-w-md rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
             <h2
@@ -129,6 +145,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
                   (and one Tab away from Confirm) rather than stranded
                   behind the overlay. T-0049 Copilot review M2. */}
               <Button
+                ref={firstFocusableRef}
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
@@ -138,6 +155,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
                 {t('dashboard.maker.products.delete.confirm.cancel_button')}
               </Button>
               <Button
+                ref={lastFocusableRef}
                 type="button"
                 variant="danger"
                 onClick={handleConfirm}
@@ -147,6 +165,12 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
               </Button>
             </div>
           </div>
+          {/* End sentinel: Tab off Confirm lands here, redirects to the
+              first interactive (Cancel). T-0049 Copilot review M3. */}
+          <div
+            tabIndex={0}
+            onFocus={() => firstFocusableRef.current?.focus()}
+          />
         </div>
       ) : null}
     </>
