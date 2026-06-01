@@ -69,28 +69,37 @@ export { PriceTypeEnum as PriceTypeValues };
  * yet.
  *
  * <para>
- * <c>createdOn</c> stays a <c>string</c> (ISO 8601) — the wire shape.
- * <c>apiFetch</c> returns <c>await response.json()</c> as the value type
- * without instantiating the NSwag class or running its <c>init</c> Date
- * parsing, so typing this as <c>Date</c> would lie about the runtime
- * shape and crash any consumer that calls <c>Intl.DateTimeFormat.format()</c>
- * directly. Display helpers wrap <c>new Date(createdOn)</c> themselves
- * (see <c>lib/utils/dates.ts</c>'s <c>formatDate</c>). T-0049 code-quality review B1.
+ * <c>createdOn</c> is overridden to <c>string</c> (ISO 8601) — the
+ * wire shape. The generated NSwag interface types it as <c>Date</c>
+ * because the C# source is <c>DateTimeOffset</c> and NSwag's class
+ * constructor would have parsed it to a real <c>Date</c>, but
+ * <c>apiFetch</c> returns <c>await response.json()</c> as the value
+ * type without instantiating that class, so at runtime it's still a
+ * string. Aliasing to <c>I…</c> verbatim would re-create the type lie
+ * round 1 of this PR tried to fix. Display helpers wrap
+ * <c>new Date(createdOn)</c> themselves (see
+ * <c>lib/utils/dates.ts</c>'s <c>formatDate</c>). T-0049 code-quality
+ * review B1 + Copilot round-6 M1.
  * </para>
  */
-export type MakerProductListItem = Readonly<IMakerProductListItem>;
+export type MakerProductListItem = Readonly<
+  Omit<IMakerProductListItem, 'createdOn'>
+> & {
+  readonly createdOn: string;
+};
 
 /**
  * Mirror of <c>MakerProductDetail</c> — the maker-scoped product-detail
  * view for the dashboard edit form. Includes <c>isActive</c> so the edit
  * UI can show a "this product is deactivated" banner.
  *
- * <para><c>createdOn</c> stays a wire-shape <c>string</c> — see the
- * <c>MakerProductListItem</c> remark for the rationale.</para>
+ * <para><c>createdOn</c> is overridden to wire-shape <c>string</c> — see
+ * the <c>MakerProductListItem</c> remark for the rationale.</para>
  */
 export type MakerProductDetail = Readonly<
-  Omit<IMakerProductDetail, 'images'>
+  Omit<IMakerProductDetail, 'createdOn' | 'images'>
 > & {
+  readonly createdOn: string;
   readonly images: readonly ProductImageItem[];
 };
 

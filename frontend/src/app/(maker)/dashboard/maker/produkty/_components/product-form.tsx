@@ -56,8 +56,13 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   const [priceType, setPriceType] = useState<PriceType>(
     (initial?.priceType as PriceType | undefined) ?? PriceTypeValues.Fixed,
   );
+  // Initial Kč uses Math.trunc to mirror lib/money/formatter.ts's
+  // formatCzk (whole-CZK display, haléře dropped). Math.round here
+  // would silently bump prices ending in ≥50 haléř upward — and an
+  // unedited submit would persist the rounded value back to the
+  // backend. T-0049 Copilot round-6 M2.
   const [priceKc, setPriceKc] = useState<string>(
-    initial ? String(Math.round(initial.priceAmountMinor / 100)) : '',
+    initial ? String(Math.trunc(initial.priceAmountMinor / 100)) : '',
   );
   const [weightGrams, setWeightGrams] = useState<string>(
     initial ? String(initial.weightGrams) : '',
