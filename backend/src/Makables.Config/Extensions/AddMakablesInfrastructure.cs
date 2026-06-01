@@ -151,6 +151,12 @@ public static class MakablesInfrastructureExtensions
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
 
+        // === Maker dashboard product reads (T-0049a) ===
+        // Separate from ICatalogQueries because it bypasses the
+        // soft-delete filter and the email-confirmed gate — owner sees
+        // their own drafts and deactivated items.
+        services.AddScoped<IMakerProductQueries, MakerProductQueries>();
+
         // === Addresses (T-0030) ===
         services.AddScoped<IAddressRepository, AddressRepository>();
         // Scoped because it depends on ICountryConfigurationRepository

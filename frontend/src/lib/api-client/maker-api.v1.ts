@@ -7,38 +7,45 @@
 /* eslint-disable */
 // ReSharper disable InconsistentNaming
 
-export interface IPublicApi {
+export interface IMakerApi {
 
     /**
-     * @param country (optional) 
-     * @param category (optional) 
-     * @param city (optional) 
-     * @param minRating (optional) 
      * @param page (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
+    productsGET(page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerProductListItem>;
 
     /**
      * @return OK
      */
-    makers2(slug: string): Promise<MakerProfile>;
+    productsPOST(body: CreateProductRequest): Promise<CreateProductResponse>;
 
     /**
      * @return OK
      */
-    products(productId: string): Promise<ProductDetail>;
+    productsGET2(productId: string): Promise<MakerProductDetail>;
 
     /**
      * @return OK
      */
-    products2(country: string, productId: string, filename: string): Promise<void>;
+    productsPUT(productId: string, body: UpdateProductRequest): Promise<void>;
 
     /**
      * @return OK
      */
-    register(body: RegisterMakerRequest): Promise<void>;
+    productsDELETE(productId: string): Promise<void>;
+
+    /**
+     * @param file (optional) 
+     * @return OK
+     */
+    imagesPOST(productId: string, file: FileParameter | undefined): Promise<UploadProductImageResponse>;
+
+    /**
+     * @return OK
+     */
+    imagesDELETE(productId: string, imageId: string): Promise<void>;
 
     /**
      * @return OK
@@ -68,7 +75,7 @@ export interface IPublicApi {
     /**
      * @return OK
      */
-    register2(body: RegisterRequest): Promise<void>;
+    register(body: RegisterRequest): Promise<void>;
 
     /**
      * @return OK
@@ -123,43 +130,23 @@ export interface IPublicApi {
     anonymous(): Promise<string>;
 }
 
-export class PublicApi implements IPublicApi {
+export class MakerApi implements IMakerApi {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
     constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
         this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "http://localhost:5104/";
+        this.baseUrl = baseUrl ?? "http://localhost:5002/";
     }
 
     /**
-     * @param country (optional) 
-     * @param category (optional) 
-     * @param city (optional) 
-     * @param minRating (optional) 
      * @param page (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem> {
-        let url_ = this.baseUrl + "/api/v1/catalog/makers?";
-        if (country === null)
-            throw new globalThis.Error("The parameter 'country' cannot be null.");
-        else if (country !== undefined)
-            url_ += "country=" + encodeURIComponent("" + country) + "&";
-        if (category === null)
-            throw new globalThis.Error("The parameter 'category' cannot be null.");
-        else if (category !== undefined)
-            url_ += "category=" + encodeURIComponent("" + category) + "&";
-        if (city === null)
-            throw new globalThis.Error("The parameter 'city' cannot be null.");
-        else if (city !== undefined)
-            url_ += "city=" + encodeURIComponent("" + city) + "&";
-        if (minRating === null)
-            throw new globalThis.Error("The parameter 'minRating' cannot be null.");
-        else if (minRating !== undefined)
-            url_ += "minRating=" + encodeURIComponent("" + minRating) + "&";
+    productsGET(page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerProductListItem> {
+        let url_ = this.baseUrl + "/api/v1/products?";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
         else if (page !== undefined)
@@ -178,59 +165,26 @@ export class PublicApi implements IPublicApi {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processMakers(_response);
+            return this.processProductsGET(_response);
         });
     }
 
-    protected processMakers(response: Response): Promise<PagedDataOfMakerListItem> {
+    protected processProductsGET(response: Response): Promise<PagedDataOfMakerProductListItem> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = PagedDataOfMakerListItem.fromJS(resultData200);
+            result200 = PagedDataOfMakerProductListItem.fromJS(resultData200);
             return result200;
             });
-        } else if (status !== 200 && status !== 204) {
+        } else if (status === 401) {
             return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<PagedDataOfMakerListItem>(null as any);
-    }
-
-    /**
-     * @return OK
-     */
-    makers2(slug: string): Promise<MakerProfile> {
-        let url_ = this.baseUrl + "/api/v1/catalog/makers/{slug}";
-        if (slug === undefined || slug === null)
-            throw new globalThis.Error("The parameter 'slug' must be defined.");
-        url_ = url_.replace("{slug}", encodeURIComponent("" + slug));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processMakers2(_response);
-        });
-    }
-
-    protected processMakers2(response: Response): Promise<MakerProfile> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = MakerProfile.fromJS(resultData200);
-            return result200;
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -244,40 +198,48 @@ export class PublicApi implements IPublicApi {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<MakerProfile>(null as any);
+        return Promise.resolve<PagedDataOfMakerProductListItem>(null as any);
     }
 
     /**
      * @return OK
      */
-    products(productId: string): Promise<ProductDetail> {
-        let url_ = this.baseUrl + "/api/v1/catalog/products/{productId}";
-        if (productId === undefined || productId === null)
-            throw new globalThis.Error("The parameter 'productId' must be defined.");
-        url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
+    productsPOST(body: CreateProductRequest): Promise<CreateProductResponse> {
+        let url_ = this.baseUrl + "/api/v1/products";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(body);
+
         let options_: RequestInit = {
-            method: "GET",
+            body: content_,
+            method: "POST",
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processProducts(_response);
+            return this.processProductsPOST(_response);
         });
     }
 
-    protected processProducts(response: Response): Promise<ProductDetail> {
+    protected processProductsPOST(response: Response): Promise<CreateProductResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ProductDetail.fromJS(resultData200);
+            result200 = CreateProductResponse.fromJS(resultData200);
             return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -291,42 +253,108 @@ export class PublicApi implements IPublicApi {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ProductDetail>(null as any);
+        return Promise.resolve<CreateProductResponse>(null as any);
     }
 
     /**
      * @return OK
      */
-    products2(country: string, productId: string, filename: string): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/files/products/{country}/{productId}/{filename}";
-        if (country === undefined || country === null)
-            throw new globalThis.Error("The parameter 'country' must be defined.");
-        url_ = url_.replace("{country}", encodeURIComponent("" + country));
+    productsGET2(productId: string): Promise<MakerProductDetail> {
+        let url_ = this.baseUrl + "/api/v1/products/{productId}";
         if (productId === undefined || productId === null)
             throw new globalThis.Error("The parameter 'productId' must be defined.");
         url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
-        if (filename === undefined || filename === null)
-            throw new globalThis.Error("The parameter 'filename' must be defined.");
-        url_ = url_.replace("{filename}", encodeURIComponent("" + filename));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
             method: "GET",
             headers: {
+                "Accept": "application/json"
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processProducts2(_response);
+            return this.processProductsGET2(_response);
         });
     }
 
-    protected processProducts2(response: Response): Promise<void> {
+    protected processProductsGET2(response: Response): Promise<MakerProductDetail> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = MakerProductDetail.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<MakerProductDetail>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    productsPUT(productId: string, body: UpdateProductRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/products/{productId}";
+        if (productId === undefined || productId === null)
+            throw new globalThis.Error("The parameter 'productId' must be defined.");
+        url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processProductsPUT(_response);
+        });
+    }
+
+    protected processProductsPUT(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -339,31 +367,166 @@ export class PublicApi implements IPublicApi {
     /**
      * @return OK
      */
-    register(body: RegisterMakerRequest): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/makers/register";
+    productsDELETE(productId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/products/{productId}";
+        if (productId === undefined || productId === null)
+            throw new globalThis.Error("The parameter 'productId' must be defined.");
+        url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(body);
-
         let options_: RequestInit = {
-            body: content_,
-            method: "POST",
+            method: "DELETE",
             headers: {
-                "Content-Type": "application/json",
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRegister(_response);
+            return this.processProductsDELETE(_response);
         });
     }
 
-    protected processRegister(response: Response): Promise<void> {
+    protected processProductsDELETE(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param file (optional) 
+     * @return OK
+     */
+    imagesPOST(productId: string, file: FileParameter | undefined): Promise<UploadProductImageResponse> {
+        let url_ = this.baseUrl + "/api/v1/products/{productId}/images";
+        if (productId === undefined || productId === null)
+            throw new globalThis.Error("The parameter 'productId' must be defined.");
+        url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = new FormData();
+        if (file === null || file === undefined)
+            throw new globalThis.Error("The parameter 'file' cannot be null.");
+        else
+            content_.append("file", file.data, file.fileName ? file.fileName : "file");
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processImagesPOST(_response);
+        });
+    }
+
+    protected processImagesPOST(response: Response): Promise<UploadProductImageResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UploadProductImageResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UploadProductImageResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    imagesDELETE(productId: string, imageId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/products/{productId}/images/{imageId}";
+        if (productId === undefined || productId === null)
+            throw new globalThis.Error("The parameter 'productId' must be defined.");
+        url_ = url_.replace("{productId}", encodeURIComponent("" + productId));
+        if (imageId === undefined || imageId === null)
+            throw new globalThis.Error("The parameter 'imageId' must be defined.");
+        url_ = url_.replace("{imageId}", encodeURIComponent("" + imageId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processImagesDELETE(_response);
+        });
+    }
+
+    protected processImagesDELETE(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -553,7 +716,7 @@ export class PublicApi implements IPublicApi {
     /**
      * @return OK
      */
-    register2(body: RegisterRequest): Promise<void> {
+    register(body: RegisterRequest): Promise<void> {
         let url_ = this.baseUrl + "/api/v1/auth/register";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -568,11 +731,11 @@ export class PublicApi implements IPublicApi {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRegister2(_response);
+            return this.processRegister(_response);
         });
     }
 
-    protected processRegister2(response: Response): Promise<void> {
+    protected processRegister(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1157,6 +1320,122 @@ export interface IConsumeMagicLinkRequest {
     [key: string]: any;
 }
 
+export class CreateProductRequest implements ICreateProductRequest {
+    categoryId!: string;
+    title!: string;
+    description!: string | undefined;
+    priceAmountMinor!: number;
+    priceType!: PriceType;
+    weightGrams!: number;
+
+    [key: string]: any;
+
+    constructor(data?: ICreateProductRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.categoryId = _data["categoryId"];
+            this.title = _data["title"];
+            this.description = _data["description"];
+            this.priceAmountMinor = _data["priceAmountMinor"];
+            this.priceType = _data["priceType"];
+            this.weightGrams = _data["weightGrams"];
+        }
+    }
+
+    static fromJS(data: any): CreateProductRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateProductRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["categoryId"] = this.categoryId;
+        data["title"] = this.title;
+        data["description"] = this.description;
+        data["priceAmountMinor"] = this.priceAmountMinor;
+        data["priceType"] = this.priceType;
+        data["weightGrams"] = this.weightGrams;
+        return data;
+    }
+}
+
+export interface ICreateProductRequest {
+    categoryId: string;
+    title: string;
+    description: string | undefined;
+    priceAmountMinor: number;
+    priceType: PriceType;
+    weightGrams: number;
+
+    [key: string]: any;
+}
+
+export class CreateProductResponse implements ICreateProductResponse {
+    id!: string;
+
+    [key: string]: any;
+
+    constructor(data?: ICreateProductResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+        }
+    }
+
+    static fromJS(data: any): CreateProductResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateProductResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        return data;
+    }
+}
+
+export interface ICreateProductResponse {
+    id: string;
+
+    [key: string]: any;
+}
+
 export class ErrorDto implements IErrorDto {
     field!: string;
     code!: string;
@@ -1281,418 +1560,7 @@ export interface ILoginRequest {
     [key: string]: any;
 }
 
-export class MakerListItem implements IMakerListItem {
-    makerId!: string;
-    slug!: string;
-    companyName!: string;
-    bio!: string | undefined;
-    city!: string;
-    isVerified!: boolean;
-    ratingAverageBp!: number;
-    ratingCount!: number;
-    totalOrders!: number;
-
-    [key: string]: any;
-
-    constructor(data?: IMakerListItem) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.makerId = _data["makerId"];
-            this.slug = _data["slug"];
-            this.companyName = _data["companyName"];
-            this.bio = _data["bio"];
-            this.city = _data["city"];
-            this.isVerified = _data["isVerified"];
-            this.ratingAverageBp = _data["ratingAverageBp"];
-            this.ratingCount = _data["ratingCount"];
-            this.totalOrders = _data["totalOrders"];
-        }
-    }
-
-    static fromJS(data: any): MakerListItem {
-        data = typeof data === 'object' ? data : {};
-        let result = new MakerListItem();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["makerId"] = this.makerId;
-        data["slug"] = this.slug;
-        data["companyName"] = this.companyName;
-        data["bio"] = this.bio;
-        data["city"] = this.city;
-        data["isVerified"] = this.isVerified;
-        data["ratingAverageBp"] = this.ratingAverageBp;
-        data["ratingCount"] = this.ratingCount;
-        data["totalOrders"] = this.totalOrders;
-        return data;
-    }
-}
-
-export interface IMakerListItem {
-    makerId: string;
-    slug: string;
-    companyName: string;
-    bio: string | undefined;
-    city: string;
-    isVerified: boolean;
-    ratingAverageBp: number;
-    ratingCount: number;
-    totalOrders: number;
-
-    [key: string]: any;
-}
-
-export class MakerProductItem implements IMakerProductItem {
-    productId!: string;
-    title!: string;
-    priceAmountMinor!: number;
-    priceCurrency!: string;
-    priceType!: string;
-    primaryImageBlobPath!: string | undefined;
-
-    [key: string]: any;
-
-    constructor(data?: IMakerProductItem) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.productId = _data["productId"];
-            this.title = _data["title"];
-            this.priceAmountMinor = _data["priceAmountMinor"];
-            this.priceCurrency = _data["priceCurrency"];
-            this.priceType = _data["priceType"];
-            this.primaryImageBlobPath = _data["primaryImageBlobPath"];
-        }
-    }
-
-    static fromJS(data: any): MakerProductItem {
-        data = typeof data === 'object' ? data : {};
-        let result = new MakerProductItem();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["productId"] = this.productId;
-        data["title"] = this.title;
-        data["priceAmountMinor"] = this.priceAmountMinor;
-        data["priceCurrency"] = this.priceCurrency;
-        data["priceType"] = this.priceType;
-        data["primaryImageBlobPath"] = this.primaryImageBlobPath;
-        return data;
-    }
-}
-
-export interface IMakerProductItem {
-    productId: string;
-    title: string;
-    priceAmountMinor: number;
-    priceCurrency: string;
-    priceType: string;
-    primaryImageBlobPath: string | undefined;
-
-    [key: string]: any;
-}
-
-export class MakerProfile implements IMakerProfile {
-    makerId!: string;
-    slug!: string;
-    companyName!: string;
-    bio!: string | undefined;
-    legalForm!: string | undefined;
-    city!: string;
-    isVerified!: boolean;
-    personalPickupEnabled!: boolean;
-    pickupNote!: string | undefined;
-    ratingAverageBp!: number;
-    ratingCount!: number;
-    totalOrders!: number;
-    products!: MakerProductItem[];
-    reviews!: MakerReviewItem[];
-
-    [key: string]: any;
-
-    constructor(data?: IMakerProfile) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-        if (!data) {
-            this.products = [];
-            this.reviews = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.makerId = _data["makerId"];
-            this.slug = _data["slug"];
-            this.companyName = _data["companyName"];
-            this.bio = _data["bio"];
-            this.legalForm = _data["legalForm"];
-            this.city = _data["city"];
-            this.isVerified = _data["isVerified"];
-            this.personalPickupEnabled = _data["personalPickupEnabled"];
-            this.pickupNote = _data["pickupNote"];
-            this.ratingAverageBp = _data["ratingAverageBp"];
-            this.ratingCount = _data["ratingCount"];
-            this.totalOrders = _data["totalOrders"];
-            if (Array.isArray(_data["products"])) {
-                this.products = [] as any;
-                for (let item of _data["products"])
-                    this.products!.push(MakerProductItem.fromJS(item));
-            }
-            if (Array.isArray(_data["reviews"])) {
-                this.reviews = [] as any;
-                for (let item of _data["reviews"])
-                    this.reviews!.push(MakerReviewItem.fromJS(item));
-            }
-        }
-    }
-
-    static fromJS(data: any): MakerProfile {
-        data = typeof data === 'object' ? data : {};
-        let result = new MakerProfile();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["makerId"] = this.makerId;
-        data["slug"] = this.slug;
-        data["companyName"] = this.companyName;
-        data["bio"] = this.bio;
-        data["legalForm"] = this.legalForm;
-        data["city"] = this.city;
-        data["isVerified"] = this.isVerified;
-        data["personalPickupEnabled"] = this.personalPickupEnabled;
-        data["pickupNote"] = this.pickupNote;
-        data["ratingAverageBp"] = this.ratingAverageBp;
-        data["ratingCount"] = this.ratingCount;
-        data["totalOrders"] = this.totalOrders;
-        if (Array.isArray(this.products)) {
-            data["products"] = [];
-            for (let item of this.products)
-                data["products"].push(item ? item.toJSON() : undefined as any);
-        }
-        if (Array.isArray(this.reviews)) {
-            data["reviews"] = [];
-            for (let item of this.reviews)
-                data["reviews"].push(item ? item.toJSON() : undefined as any);
-        }
-        return data;
-    }
-}
-
-export interface IMakerProfile {
-    makerId: string;
-    slug: string;
-    companyName: string;
-    bio: string | undefined;
-    legalForm: string | undefined;
-    city: string;
-    isVerified: boolean;
-    personalPickupEnabled: boolean;
-    pickupNote: string | undefined;
-    ratingAverageBp: number;
-    ratingCount: number;
-    totalOrders: number;
-    products: MakerProductItem[];
-    reviews: MakerReviewItem[];
-
-    [key: string]: any;
-}
-
-export class MakerReviewItem implements IMakerReviewItem {
-    reviewId!: string;
-    ratingStars!: number;
-    comment!: string | undefined;
-    createdAt!: Date;
-
-    [key: string]: any;
-
-    constructor(data?: IMakerReviewItem) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.reviewId = _data["reviewId"];
-            this.ratingStars = _data["ratingStars"];
-            this.comment = _data["comment"];
-            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
-        }
-    }
-
-    static fromJS(data: any): MakerReviewItem {
-        data = typeof data === 'object' ? data : {};
-        let result = new MakerReviewItem();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["reviewId"] = this.reviewId;
-        data["ratingStars"] = this.ratingStars;
-        data["comment"] = this.comment;
-        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
-        return data;
-    }
-}
-
-export interface IMakerReviewItem {
-    reviewId: string;
-    ratingStars: number;
-    comment: string | undefined;
-    createdAt: Date;
-
-    [key: string]: any;
-}
-
-export class PagedDataOfMakerListItem implements IPagedDataOfMakerListItem {
-    items!: MakerListItem[];
-    page!: number;
-    pageSize!: number;
-    totalCount!: number;
-    totalPages?: number;
-    hasNextPage?: boolean;
-    hasPreviousPage?: boolean;
-
-    [key: string]: any;
-
-    constructor(data?: IPagedDataOfMakerListItem) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-        if (!data) {
-            this.items = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            if (Array.isArray(_data["items"])) {
-                this.items = [] as any;
-                for (let item of _data["items"])
-                    this.items!.push(MakerListItem.fromJS(item));
-            }
-            this.page = _data["page"];
-            this.pageSize = _data["pageSize"];
-            this.totalCount = _data["totalCount"];
-            this.totalPages = _data["totalPages"];
-            this.hasNextPage = _data["hasNextPage"];
-            this.hasPreviousPage = _data["hasPreviousPage"];
-        }
-    }
-
-    static fromJS(data: any): PagedDataOfMakerListItem {
-        data = typeof data === 'object' ? data : {};
-        let result = new PagedDataOfMakerListItem();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        if (Array.isArray(this.items)) {
-            data["items"] = [];
-            for (let item of this.items)
-                data["items"].push(item ? item.toJSON() : undefined as any);
-        }
-        data["page"] = this.page;
-        data["pageSize"] = this.pageSize;
-        data["totalCount"] = this.totalCount;
-        data["totalPages"] = this.totalPages;
-        data["hasNextPage"] = this.hasNextPage;
-        data["hasPreviousPage"] = this.hasPreviousPage;
-        return data;
-    }
-}
-
-export interface IPagedDataOfMakerListItem {
-    items: MakerListItem[];
-    page: number;
-    pageSize: number;
-    totalCount: number;
-    totalPages?: number;
-    hasNextPage?: boolean;
-    hasPreviousPage?: boolean;
-
-    [key: string]: any;
-}
-
-export class ProductDetail implements IProductDetail {
+export class MakerProductDetail implements IMakerProductDetail {
     productId!: string;
     title!: string;
     description!: string | undefined;
@@ -1701,15 +1569,13 @@ export class ProductDetail implements IProductDetail {
     priceType!: string;
     weightGrams!: number;
     categoryId!: string;
-    makerId!: string;
-    makerSlug!: string;
-    makerCompanyName!: string;
-    makerIsVerified!: boolean;
+    isActive!: boolean;
+    createdOn!: Date;
     images!: ProductImageItem[];
 
     [key: string]: any;
 
-    constructor(data?: IProductDetail) {
+    constructor(data?: IMakerProductDetail) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -1735,10 +1601,8 @@ export class ProductDetail implements IProductDetail {
             this.priceType = _data["priceType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
-            this.makerId = _data["makerId"];
-            this.makerSlug = _data["makerSlug"];
-            this.makerCompanyName = _data["makerCompanyName"];
-            this.makerIsVerified = _data["makerIsVerified"];
+            this.isActive = _data["isActive"];
+            this.createdOn = _data["createdOn"] ? new Date(_data["createdOn"].toString()) : undefined as any;
             if (Array.isArray(_data["images"])) {
                 this.images = [] as any;
                 for (let item of _data["images"])
@@ -1747,9 +1611,9 @@ export class ProductDetail implements IProductDetail {
         }
     }
 
-    static fromJS(data: any): ProductDetail {
+    static fromJS(data: any): MakerProductDetail {
         data = typeof data === 'object' ? data : {};
-        let result = new ProductDetail();
+        let result = new MakerProductDetail();
         result.init(data);
         return result;
     }
@@ -1768,10 +1632,8 @@ export class ProductDetail implements IProductDetail {
         data["priceType"] = this.priceType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
-        data["makerId"] = this.makerId;
-        data["makerSlug"] = this.makerSlug;
-        data["makerCompanyName"] = this.makerCompanyName;
-        data["makerIsVerified"] = this.makerIsVerified;
+        data["isActive"] = this.isActive;
+        data["createdOn"] = this.createdOn ? this.createdOn.toISOString() : undefined as any;
         if (Array.isArray(this.images)) {
             data["images"] = [];
             for (let item of this.images)
@@ -1781,7 +1643,7 @@ export class ProductDetail implements IProductDetail {
     }
 }
 
-export interface IProductDetail {
+export interface IMakerProductDetail {
     productId: string;
     title: string;
     description: string | undefined;
@@ -1790,13 +1652,188 @@ export interface IProductDetail {
     priceType: string;
     weightGrams: number;
     categoryId: string;
-    makerId: string;
-    makerSlug: string;
-    makerCompanyName: string;
-    makerIsVerified: boolean;
+    isActive: boolean;
+    createdOn: Date;
     images: ProductImageItem[];
 
     [key: string]: any;
+}
+
+export class MakerProductListItem implements IMakerProductListItem {
+    productId!: string;
+    title!: string;
+    priceAmountMinor!: number;
+    priceCurrency!: string;
+    priceType!: string;
+    weightGrams!: number;
+    categoryId!: string;
+    isActive!: boolean;
+    primaryImageBlobPath!: string | undefined;
+    imageCount!: number;
+    createdOn!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerProductListItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.productId = _data["productId"];
+            this.title = _data["title"];
+            this.priceAmountMinor = _data["priceAmountMinor"];
+            this.priceCurrency = _data["priceCurrency"];
+            this.priceType = _data["priceType"];
+            this.weightGrams = _data["weightGrams"];
+            this.categoryId = _data["categoryId"];
+            this.isActive = _data["isActive"];
+            this.primaryImageBlobPath = _data["primaryImageBlobPath"];
+            this.imageCount = _data["imageCount"];
+            this.createdOn = _data["createdOn"] ? new Date(_data["createdOn"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MakerProductListItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerProductListItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["productId"] = this.productId;
+        data["title"] = this.title;
+        data["priceAmountMinor"] = this.priceAmountMinor;
+        data["priceCurrency"] = this.priceCurrency;
+        data["priceType"] = this.priceType;
+        data["weightGrams"] = this.weightGrams;
+        data["categoryId"] = this.categoryId;
+        data["isActive"] = this.isActive;
+        data["primaryImageBlobPath"] = this.primaryImageBlobPath;
+        data["imageCount"] = this.imageCount;
+        data["createdOn"] = this.createdOn ? this.createdOn.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IMakerProductListItem {
+    productId: string;
+    title: string;
+    priceAmountMinor: number;
+    priceCurrency: string;
+    priceType: string;
+    weightGrams: number;
+    categoryId: string;
+    isActive: boolean;
+    primaryImageBlobPath: string | undefined;
+    imageCount: number;
+    createdOn: Date;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfMakerProductListItem implements IPagedDataOfMakerProductListItem {
+    items!: MakerProductListItem[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfMakerProductListItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(MakerProductListItem.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfMakerProductListItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfMakerProductListItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfMakerProductListItem {
+    items: MakerProductListItem[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export enum PriceType {
+    Fixed = "Fixed",
+    From = "From",
+    OnRequest = "OnRequest",
 }
 
 export class ProductImageItem implements IProductImageItem {
@@ -1851,70 +1888,6 @@ export interface IProductImageItem {
     imageId: string;
     blobPath: string;
     sortOrder: number;
-
-    [key: string]: any;
-}
-
-export class RegisterMakerRequest implements IRegisterMakerRequest {
-    email!: string;
-    password!: string;
-    fullName!: string;
-    countryCodePrimary!: string;
-    registrationNumber!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IRegisterMakerRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.email = _data["email"];
-            this.password = _data["password"];
-            this.fullName = _data["fullName"];
-            this.countryCodePrimary = _data["countryCodePrimary"];
-            this.registrationNumber = _data["registrationNumber"];
-        }
-    }
-
-    static fromJS(data: any): RegisterMakerRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new RegisterMakerRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["email"] = this.email;
-        data["password"] = this.password;
-        data["fullName"] = this.fullName;
-        data["countryCodePrimary"] = this.countryCodePrimary;
-        data["registrationNumber"] = this.registrationNumber;
-        return data;
-    }
-}
-
-export interface IRegisterMakerRequest {
-    email: string;
-    password: string;
-    fullName: string;
-    countryCodePrimary: string;
-    registrationNumber: string;
 
     [key: string]: any;
 }
@@ -2135,6 +2108,74 @@ export interface IUpdateMakerProfileRequest {
     [key: string]: any;
 }
 
+export class UpdateProductRequest implements IUpdateProductRequest {
+    categoryId!: string;
+    title!: string;
+    description!: string | undefined;
+    priceAmountMinor!: number;
+    priceType!: PriceType;
+    weightGrams!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IUpdateProductRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.categoryId = _data["categoryId"];
+            this.title = _data["title"];
+            this.description = _data["description"];
+            this.priceAmountMinor = _data["priceAmountMinor"];
+            this.priceType = _data["priceType"];
+            this.weightGrams = _data["weightGrams"];
+        }
+    }
+
+    static fromJS(data: any): UpdateProductRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateProductRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["categoryId"] = this.categoryId;
+        data["title"] = this.title;
+        data["description"] = this.description;
+        data["priceAmountMinor"] = this.priceAmountMinor;
+        data["priceType"] = this.priceType;
+        data["weightGrams"] = this.weightGrams;
+        return data;
+    }
+}
+
+export interface IUpdateProductRequest {
+    categoryId: string;
+    title: string;
+    description: string | undefined;
+    priceAmountMinor: number;
+    priceType: PriceType;
+    weightGrams: number;
+
+    [key: string]: any;
+}
+
 export class UpdateProfileRequest implements IUpdateProfileRequest {
     fullName!: string;
     phone!: string | undefined;
@@ -2187,6 +2228,54 @@ export interface IUpdateProfileRequest {
     [key: string]: any;
 }
 
+export class UploadProductImageResponse implements IUploadProductImageResponse {
+    imageId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IUploadProductImageResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.imageId = _data["imageId"];
+        }
+    }
+
+    static fromJS(data: any): UploadProductImageResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new UploadProductImageResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["imageId"] = this.imageId;
+        return data;
+    }
+}
+
+export interface IUploadProductImageResponse {
+    imageId: string;
+
+    [key: string]: any;
+}
+
 export class ApiException extends Error {
     override message: string;
     status: number;
@@ -2217,3 +2306,9 @@ function throwException(message: string, status: number, response: string, heade
     else
         throw new ApiException(message, status, response, headers, null);
 }
+/** Multipart helper type referenced by NSwag-generated multipart
+ * client methods. Injected by scripts/generate-api.mjs because the
+ * Fetch template uses the identifier but does not emit the
+ * declaration. `fileName` is optional to match the template's
+ * fallback to "file" when omitted. T-0049b. */
+export interface FileParameter { data: any; fileName?: string; }

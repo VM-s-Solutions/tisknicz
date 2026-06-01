@@ -25,7 +25,7 @@ builder.Services.AddMakablesControllers();
 
 // OpenAPI per host per version (T-0012). The host exposes /openapi/v1.json
 // which NSwag in T-0013 consumes to generate the TypeScript client.
-builder.Services.AddOpenApi("v1");
+builder.Services.AddMakablesOpenApi("v1");
 
 var app = builder.Build();
 
