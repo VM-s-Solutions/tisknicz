@@ -14,10 +14,12 @@
  * </para>
  *
  * <para>
- * The <c>lastSpace &gt; 80</c> heuristic keeps the cut from removing
- * more than roughly half the budget when the limit lands mid-word in
- * a long token (e.g. an URL). Below that threshold we fall back to a
- * hard slice to avoid returning a near-empty string.
+ * The <c>lastSpace &gt; max / 2</c> heuristic keeps the cut from
+ * removing more than roughly half the budget when the limit lands
+ * mid-word in a long token (e.g. an URL). Below that threshold we fall
+ * back to a hard slice to avoid returning a near-empty string. The
+ * threshold scales with <paramref name="max"/> so a caller passing a
+ * non-default limit gets the same "roughly half" guarantee.
  * </para>
  */
 export function truncateForMeta(text: string, max = 160): string {
@@ -25,5 +27,6 @@ export function truncateForMeta(text: string, max = 160): string {
   if (collapsed.length <= max) return collapsed;
   const slice = collapsed.slice(0, max);
   const lastSpace = slice.lastIndexOf(' ');
-  return (lastSpace > 80 ? slice.slice(0, lastSpace) : slice).trimEnd() + '…';
+  const minSpaceIndex = Math.floor(max / 2);
+  return (lastSpace > minSpaceIndex ? slice.slice(0, lastSpace) : slice).trimEnd() + '…';
 }
