@@ -64,6 +64,8 @@ None. All four frontend tickets' dependencies are `done`.
 
 The customer can browse and click through to a product detail page; the maker can create, edit, deactivate, and manage images on their own products. The maker's UI works under server-side rendering thanks to ADR 0024.
 
+**Phase-3 backend smooth delivery.** The seven backend tickets (T-0040 Category, T-0041 Product, T-0042 Blob storage, T-0043 GetPagedMakers, T-0044 GetMakerBySlug, T-0045 GetProductById, T-0046b response types) merged first-pass with stable contracts and no rework once they landed on `master`. Three of the eight latent bugs surfaced this sprint (#5 `priceType` wire-contract; #6 schema-collision; and the 10× rating divisor that took T-0047 to catch) trace back to Phase-3-backend or earlier, but T-0040–T-0046b themselves shipped clean — every Phase-3 frontend ticket lit up on its expected schedule because the contract under it was solid. Worth not burying.
+
 ### Reusable primitives the sprint produced
 
 Promoted from inline / ad-hoc into first-class:
@@ -79,9 +81,9 @@ Promoted from inline / ad-hoc into first-class:
 - **Plural-neutral i18n** ("Label: N" shape) — workaround for missing `Intl.PluralRules('cs')`; flagged in the cs-CZ.ts comment so T-0048+ follows.
 - **`AddMakablesOpenApi` enum schema transformer** (T-0049b) — platform-wide rewrite of `IsEnum` schemas from `integer` to a string union matching `JsonStringEnumConverter`'s runtime emission. Applied across all four hosts.
 - **`[ProducesResponseType]` discipline** (T-0046b + T-0049b) — per-action typed 200, honest error codes (don't claim `400 → Error` on endpoints where model binding can emit `ValidationProblemDetails`).
-- **`apiFetch` SSR cookie forwarding** (T-0049 + ADR 0024) — chokepoint detection of the server runtime, audience-scoped cookie pair read via `next/headers`. Every future authenticated Server Component works automatically.
+- **`apiFetch` SSR cookie forwarding** (T-0049 + ADR 0024) — chokepoint detection of the server runtime, audience-scoped cookie pair read via `next/headers`. Pattern established; T-0049 proved it works once. Phase 4's first authenticated SSR pages will reveal the edge cases (token refresh across the boundary, multi-cookie scenarios, etc.).
 - **`apiFetch` multipart support** (T-0049) — pass `body: FormData` without `Content-Type`; browser writes the boundary.
-- **`ApiError.fields` flattening** (T-0049, Sprint-2-era latent bug) — `parseErrorResponse` now collapses both validation shapes (multi-field `details: ValidationDetail[]` AND single-field `Error.Validation(field, code)`) into `Record<string, readonly string[]>` of display copy. Unlocks every future form on the platform.
+- **`ApiError.fields` flattening** (T-0049, Sprint-2-era latent bug) — `parseErrorResponse` now collapses both validation shapes (multi-field `details: ValidationDetail[]` AND single-field `Error.Validation(field, code)`) into `Record<string, readonly string[]>` of display copy. Unblocks future forms that need per-input errors; T-0049's product form is the only consumer today.
 
 ### Latent bugs surfaced (Sprint-1/2/3 era issues this sprint exposed)
 
@@ -98,12 +100,12 @@ T-0049's review trail in particular was a Sprint-2 archeology dig. Counted:
 
 ### What the review process actually caught
 
-23 commits with "Copilot review" in the title across the sprint (4 on T-0047, 4 on T-0048, 7 on T-0049, 3 on T-0049ab, 5 cluster-wide). The dual-reviewer (security + code-quality) pass that runs against every PR caught the visible architectural issues — but the latent platform bugs above (#1, #2, #3, #5, #7, #8) only surfaced under Copilot's per-commit review at PR-edit time, often **iteratively across rounds**.
+16 commits with "Copilot review" in the title across the sprint (2 on T-0047, 2 on T-0048, 7 on T-0049, 2 on T-0049a/b, 3 cluster-wide on T-0041 / T-0043 / T-0046b). The frontend Copilot rounds were the bulk: T-0049 went seven rounds on a single PR. The dual-reviewer (security + code-quality) pass that runs against every PR caught the visible architectural issues — but the latent platform bugs above (#1, #2, #3, #5, #7, #8) only surfaced under Copilot's per-commit review at PR-edit time, often **iteratively across rounds**.
 
 Specific patterns:
 
 - **Round-N "fix" introducing Round-(N+1) regression.** Twice on T-0049: the `createdOn` Date typing "fix" in Round 1 was an illusion (`Readonly<IMakerProductListItem>` inherits the generated `Date` typing verbatim) — Round 6 caught it. The validation-`fields` Round-2 fix passed the substituted `message` instead of `payload.message` — Round 4 caught it. Lesson: *incremental review needs a final read-through against the actual artefacts*, not against the previous round's diff.
-- **Spec drift after implementation lands.** T-0048 shipped correct code with five ticket-text drifts (gallery props, weight separator, two namespace references, error-type casing) that Round 2 had to catch. The implementation was right; the spec wasn't. Worth tightening the spec-to-PR ceremony if this recurs.
+- **Spec drift after implementation lands.** T-0048 shipped correct code with five ticket-text drifts (gallery props, weight separator, two namespace references, error-type casing) that Round 2 had to catch. The implementation was right; the spec wasn't — which is a process gap, not just a quirk. Phase 4 owner action: before opening a PR, re-read the ticket's AC list against the *shipped* commit (not against the spec at ticket-expansion time) and reconcile drift on the same PR.
 - **Multi-round reviews on backend prep that nominally "didn't change behavior".** T-0049ab was supposed to be mechanical (`[ProducesResponseType]` attributes). It triggered three Copilot rounds and surfaced the `priceType` wire-contract bug, the schema-collision, and the `FileParameter` template gap — three platform-wide fixes. Mechanical PRs aren't.
 
 ### Process learnings
@@ -111,7 +113,7 @@ Specific patterns:
 - **Hand-written `apiFetch` helpers stayed the right call.** Every PR re-confirmed it: the generated NSwag client throws on every non-2xx (typed `ErrorDto` for documented errors, `ApiException` for the rest), which doesn't fit the `Result<T, ApiError>` flow. The hand-written wrapper convention is now load-bearing across `profile.ts` / `catalog.ts` / `maker-products.ts`.
 - **ADRs can emerge from review feedback, not just up-front planning.** ADR 0024 wasn't in the sprint plan; it was forced into existence by T-0049's security review finding that authenticated SSR pages don't carry cookies. Worth documenting as a process pattern: when a review surfaces an architectural gap, an ADR is the right place to record the choice.
 - **Mechanical PRs surface latent platform bugs.** T-0049ab was supposed to be 3 attribute lines + 1 NSwag regen. It surfaced the `priceType` wire-contract bug that's been wrong since Phase-1 hosts went up.
-- **Multi-round review on the same PR is a feature, not a process failure.** T-0049 went seven rounds. Each round caught a real bug at a different layer of the stack. The alternative — one big review followed by merge — would have shipped at least the `parseErrorResponse` `fields` gap and the `createdOn` Date type lie into production.
+- **Multi-round review on the same PR caught real bugs — but also exposed earlier-sprint debt.** T-0049 went seven rounds; without them at least the `parseErrorResponse` `fields` gap and the `createdOn` Date type lie would have shipped. The other framing matters too though: a Sprint-2-era contract mismatch survived four sprints before T-0049 was the first surface to consume it. That's an architectural-test gap, not a process win. Phase 4 owner action: stand up a "latent platform issues" audit pass — read every shipped `parseErrorResponse`-like contract surface and write at least one test that exercises the wire shape, before Phase-4 forms start surfacing the next gap.
 
 ### Follow-ups queued during the sprint
 
@@ -121,9 +123,11 @@ Specific patterns:
 - **FluentValidation nested-rules support in the field flattener** — current PascalCase→camelCase normaliser handles top-level fields only. `Description.MaxLength` would mangle to `description.MaxLength` and miss the form's state key. T-0049's validators are all top-level; defer until a nested rule appears.
 - **Categories list endpoint** — T-0119 already exists as the placeholder; Phase 3 hard-coded the 6 launch slugs in `lib/catalog/categories.ts`. Wire it up when admin category CRUD ships.
 - **Duplicate `verified` i18n key consolidation** — `catalog.card.verified` (T-0046) + `catalog.maker.verified` (T-0047). Informational; consolidate when convenient.
+- **`patterns.md` catalogue gap** — eight of the 14 primitives this sprint produced (URL-state pagination, `buildProductImageUrl`, `formatWeight`, `<section>`-not-`<main>`, `generateMetadata` NotFound/transient branching, multipart through `apiFetch`, ADR-0024 SSR cookie forwarding, `RATING_BP_PER_STAR`-style shared constants) are load-bearing enough to deserve explicit subsections in `docs/architecture/patterns.md`, not just retro mentions. The other six overlap existing entries (`apiFetch` auth, money formatter, plural-neutral i18n, NSwag enum schema, `[ProducesResponseType]` discipline, `ApiError.fields` flattening) — those need cross-references added so the catalog stays the source of truth. Separate ticket; not deferred indefinitely.
+- **ADR-emergence-from-review pattern** — Sprint 6 produced one ADR (0024) from review feedback rather than up-front planning. Worth formalising as either a new entry in `docs/processes/` or a short ADR (0025) that documents the workflow: when a review surfaces an architectural gap, draft an ADR before re-implementing.
 
 ### What I'd do differently next sprint
 
-- **Plan rebase choreography up front.** T-0046 and T-0049 both required hand-reconciliation of shared helper files (`catalog.ts`) because branches were authored in parallel against stale trees. Either stack PRs (T-0047 explicitly on top of T-0046) or wait for merges, but commit to one.
-- **Don't trust "this is mechanical".** T-0049ab was three attribute lines; it shipped a platform-wide enum schema transformer + a controller schema-collision workaround + a generator-script appendix. Mechanical PRs deserve the same review attention as feature PRs.
-- **Verify spec-to-implementation drift before opening the PR.** T-0048's ticket had five drifts that Copilot caught after the fact. A pre-PR self-review against the AC list would have closed them without a review round.
+- **If Phase 4 has parallel tickets, commit to stacked PRs or wait-for-merge discipline at sprint start.** T-0046 and T-0049 both required hand-reconciliation of shared helper files (`catalog.ts`) because branches were authored in parallel against stale trees. Phase 4 (Orders) has long dep chains; if T-0063 / T-0066 / T-0067 end up in flight simultaneously, pick one of the two strategies up front.
+- **Don't trust "this is mechanical" — budget review cycles accordingly.** T-0049ab was nominally three attribute lines; it actually shipped a platform-wide enum schema transformer + a controller schema-collision workaround + a generator-script appendix, after three Copilot rounds. Implication for sprint planning: attribute-only / spec-only PRs need the same review budget as feature PRs, not a half-cycle estimate.
+- **Verify spec-to-implementation drift before opening the PR.** T-0048's ticket had five drifts that Copilot caught after the fact. A pre-PR self-review of the AC list against the shipped commit (not the spec at ticket-expansion time) would have closed them without a review round.
