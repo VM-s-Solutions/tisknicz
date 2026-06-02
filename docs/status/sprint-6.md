@@ -2,7 +2,7 @@
 
 **Period:** 2026-05-28 → 2026-06-01 (closed)
 **Goal (per `INDEX.md`):** Phase 3 (Catalog) end-to-end — backend read-side + customer-facing pages.
-**Outcome:** Met. The public storefront flow `/katalog → /katalog/{slug} → /produkt/{id}` is live, the maker's first authoring surface (`/dashboard/maker/produkty`) is in production, and one new ADR (0024) was forced into existence by review feedback.
+**Outcome:** Met. The public storefront flow `/katalog → /katalog/{slug} → /produkt/{productId}` is live, the maker's first authoring surface (`/dashboard/maker/produkty`) is in production, and one new ADR (0024) was forced into existence by review feedback.
 
 ## Phase 3 backend — DONE
 
@@ -20,7 +20,7 @@ All seven are on `master`. The public `CatalogController` (`/api/v1/catalog/make
 
 ## Phase 3 frontend — DONE
 
-Sequencing: **T-0046 → T-0047 → T-0048 → T-0049**. The customer flow `/katalog → /katalog/{slug} → /produkt/{id}` is built in the order callers appear, so each downstream page already has linkers when it ships. T-0049 (maker dashboard CRUD UI) is independent and slots in after T-0048 — it's a separate audience and doesn't unblock the public flow.
+Sequencing: **T-0046 → T-0047 → T-0048 → T-0049**. The customer flow `/katalog → /katalog/{slug} → /produkt/{productId}` is built in the order callers appear, so each downstream page already has linkers when it ships. T-0049 (maker dashboard CRUD UI) is independent and slots in after T-0048 — it's a separate audience and doesn't unblock the public flow.
 
 | Ticket | State | Owner | Notes |
 |---|---|---|---|
