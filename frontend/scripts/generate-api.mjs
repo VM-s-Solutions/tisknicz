@@ -100,7 +100,31 @@ for (const doc of documents) {
   // "file")` line in the generated client), so this declaration is the
   // contract — not an ad-hoc patch.
   const outputPath = resolve(frontendDir, doc.output.replace(/^\.\.\//, ''));
-  const generated = readFileSync(outputPath, 'utf8');
+  let generated = readFileSync(outputPath, 'utf8');
+
+  // T-0049c: NSwag's Fetch template hard-codes multipart-form parameters
+  // as `FileParameter | undefined` regardless of whether the OpenAPI
+  // spec marks the request body's `schema.required` array — see
+  // https://github.com/RicoSuter/NSwag for the template behaviour. Our
+  // backend now emits the canonical OpenAPI 3.0 multipart shape via
+  // `AddMakablesOpenApi`'s operation transformer (T-0049c), with the
+  // file property in `required`. Strip the trailing ` | undefined` from
+  // every `FileParameter` parameter so the generated signature matches
+  // the contract the server actually enforces. The runtime body of the
+  // method still throws on null/undefined ("cannot be null"), so the
+  // narrower type only sharpens callers — it doesn't loosen the
+  // runtime contract.
+  if (generated.includes('FileParameter | undefined')) {
+    generated = generated.replace(/FileParameter \| undefined/g, 'FileParameter');
+    // The NSwag-generated JSDoc says "(optional)" on these params; rewrite
+    // to match the new signature so the doc and the type agree.
+    generated = generated.replace(
+      /(\* @param file )\(optional\) /g,
+      '$1',
+    );
+    writeFileSync(outputPath, generated, 'utf8');
+  }
+
   if (generated.includes('FileParameter') && !/(interface|type)\s+FileParameter\b/.test(generated)) {
     // `fileName` is optional because the NSwag-generated multipart code
     // falls back to the literal "file" when it's falsy

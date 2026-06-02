@@ -37,10 +37,10 @@ export interface IMakerApi {
     productsDELETE(productId: string): Promise<void>;
 
     /**
-     * @param file (optional) 
+     * @param file 
      * @return OK
      */
-    imagesPOST(productId: string, file: FileParameter | undefined): Promise<UploadProductImageResponse>;
+    imagesPOST(productId: string, file: FileParameter): Promise<UploadProductImageResponse>;
 
     /**
      * @return OK
@@ -415,10 +415,10 @@ export class MakerApi implements IMakerApi {
     }
 
     /**
-     * @param file (optional) 
+     * @param file 
      * @return OK
      */
-    imagesPOST(productId: string, file: FileParameter | undefined): Promise<UploadProductImageResponse> {
+    imagesPOST(productId: string, file: FileParameter): Promise<UploadProductImageResponse> {
         let url_ = this.baseUrl + "/api/v1/products/{productId}/images";
         if (productId === undefined || productId === null)
             throw new globalThis.Error("The parameter 'productId' must be defined.");
@@ -2276,6 +2276,11 @@ export interface IUploadProductImageResponse {
     [key: string]: any;
 }
 
+export interface FileParameter {
+    data: any;
+    fileName: string;
+}
+
 export class ApiException extends Error {
     override message: string;
     status: number;
@@ -2306,9 +2311,3 @@ function throwException(message: string, status: number, response: string, heade
     else
         throw new ApiException(message, status, response, headers, null);
 }
-/** Multipart helper type referenced by NSwag-generated multipart
- * client methods. Injected by scripts/generate-api.mjs because the
- * Fetch template uses the identifier but does not emit the
- * declaration. `fileName` is optional to match the template's
- * fallback to "file" when omitted. T-0049b. */
-export interface FileParameter { data: any; fileName?: string; }

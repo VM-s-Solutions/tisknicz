@@ -166,14 +166,12 @@ public sealed class ProductController(
     [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UploadImage(string productId, IFormFile file, CancellationToken ct)
     {
-        // The OpenAPI spec marks the multipart body required at the
-        // requestBody level, but ASP.NET's emitter doesn't propagate
-        // [Required] to the individual property — so NSwag still
-        // generates `file: FileParameter | undefined`. The defensive
-        // null/zero-length check below is the contract enforcement.
-        // T-0049b Copilot review M3 acknowledged the gap; a real fix
-        // needs an IOperationFilter / explicit MultipartFormDataContent
-        // schema override, which is bigger than this PR's scope.
+        // Bare IFormFile parameter — multipart schema rewritten to the
+        // canonical { type: "string", format: "binary" } + required by
+        // AddMakablesOpenApi's operation transformer (T-0049c). The
+        // defensive null / zero-length check below stays: spec-level
+        // `required: ["file"]` informs the client, but the server still
+        // enforces the runtime contract.
         if (file is null || file.Length == 0)
         {
             return BadRequest(Error.Validation("file", BusinessErrorMessage.FileInvalid));
