@@ -3,9 +3,9 @@
 **Period:** 2026-06-02 → ongoing
 **Goal (per `INDEX.md`):** Phase 4 first third — orders foundation through payment-paid event. End of sprint: a customer can place an order, pay via Comgate, and the system transitions to `Paid` end-to-end with the invoice queued for generation.
 
-Per the original 10-sprint plan (INDEX.md "Sprint plan (proposed)"):
+The original 10-sprint proposal in [`docs/tickets/INDEX.md`](../tickets/INDEX.md#sprint-plan-proposed) put **Phase 4 first third (§60–69) under Sprint 5**, predicting that each sprint would cover more tickets. Actual progress diverged by two sprints (Sprints 1–4 covered Phases 1–2 + Phase 3 backend; Sprints 5–6 covered Phase 3 frontend). Sprint 7 picks up where the proposed plan said Sprint 5 would — same goal, two cycles later:
 
-> **Sprint 7** — Phase 4 first third (60–69) — Order placement → payment → invoice generation works end-to-end (no UI for tracking yet).
+> "Order placement → payment → invoice generation works end-to-end (no UI for tracking yet)."
 
 ## Sprint 6 carry-overs picked into Sprint 7
 
