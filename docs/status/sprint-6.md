@@ -54,7 +54,7 @@ None. All four frontend tickets' dependencies are `done`.
 
 ### What shipped
 
-| Slice | Tickets | Lines on `master` |
+| Slice | Tickets | Artefacts on `master` |
 |---|---|---|
 | Phase 3 backend prep | T-0046b (Public response types + port 5104) | merged before sprint open |
 | Public storefront | T-0046, T-0047, T-0048 | `/katalog`, `/katalog/[slug]`, `/produkt/[productId]` |
@@ -90,7 +90,7 @@ Promoted from inline / ad-hoc into first-class:
 T-0049's review trail in particular was a Sprint-2 archeology dig. Counted:
 
 1. **`parseErrorResponse` never produced `fields`** (Sprint 2). The wrapper claimed to read `payload.fields` but the backend wire shape is `{ field, code, type, details }`. T-0049's form was the first surface to consume per-field errors and exposed the gap.
-2. **Application/problem+json content type ignored.** The wrapper's content-type guard matched only `application/json`. ASP.NET's RFC 7807 responses use `application/problem+json` — framework 400s (model binding) and the framework 404 would fall through to the text branch and lose `title`/`detail`. Affects every host.
+2. **`application/problem+json` content type ignored.** The wrapper's content-type guard matched only `application/json`. ASP.NET's RFC 7807 responses use `application/problem+json` — framework 400s (model binding) and the framework 404 would fall through to the text branch and lose `title`/`detail`. Affects every host.
 3. **Single-field validation never flattened.** Even if the wrapper had read `fields`, `Error.Validation(field, code)` would have been missed because that shape ships `field`/`code` at the top level with `details: null`. T-0049's review forced both shapes to be handled.
 4. **Rating divisor off by 10×** (T-0046 carry-over → caught in T-0047). Docs claimed `÷1000`, backend is 10 000 bp/star. Every rated maker rendered as 5 stars (clamped). Three call sites fixed via `RATING_BP_PER_STAR`.
 5. **`priceType` wire-contract lie** (platform-wide). `JsonStringEnumConverter` emits enum names at runtime, but `Microsoft.AspNetCore.OpenApi` builds schemas from the type model and didn't see the converter → emitted `integer`. Generated client typed `priceType: number` while the runtime accepted strings. The runtime tolerated both forms (`JsonStringEnumConverter` is lenient), so the spec lied silently. Fixed via `AddMakablesOpenApi` enum schema transformer on every host.

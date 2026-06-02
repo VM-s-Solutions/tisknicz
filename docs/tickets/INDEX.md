@@ -77,14 +77,15 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | T-0044 | GetMakerBySlug query (ICatalogQueries; MakerProfile DTO = header + active products newest-first w/ primary image + empty Reviews deferred to T-0050; same publicly-listable gate as the list so hidden makers arent probeable by slug). Web.Public GET /api/v1/catalog/makers/{slug}. | 3 | M | done | T-0033, T-0041, T-0043 | US-customer-0008 | — |
 | T-0045 | GetProductById query (ICatalogQueries; ProductDetail DTO = product fields + ordered images + owning-maker display info; null when product inactive or maker not listable). Web.Public GET /api/v1/catalog/products/{productId}. | 3 | S | done | T-0041, T-0043 | US-customer-0009 | — |
 | T-0046 | Frontend: /katalog page (filters, list, pagination) | 3 | M | done | T-0043, T-0046b | US-customer-0007 | — |
+| T-0046b | Public Web.Public.CatalogController [ProducesResponseType] annotations + canonical dev port move 5004→5104 + first NSwag regen of public-api.v1.ts with typed return shapes. Surfaced and worked around the model-binding ValidationProblemDetails vs domain Error 400 ambiguity on GetMakers. | 3 | S | **done** | T-0043, T-0044, T-0045 | — | — |
 | T-0047 | Frontend: /katalog/[slug] maker profile page | 3 | M | **done** | T-0044, T-0046, T-0046b | US-customer-0008 | — |
-| T-0048 | Frontend: /produkt/[id] product detail page | 3 | M | **done** | T-0045, T-0047 | US-customer-0009 | — |
+| T-0048 | Frontend: /produkt/[productId] product detail page | 3 | M | **done** | T-0045, T-0047 | US-customer-0009 | — |
 | T-0049 | Frontend: /dashboard/maker/produkty (CRUD UI; image picker; price/weight forms) | 3 | L | **done** | T-0041, T-0042, T-0049a, T-0049b | US-maker-0004 | 0024 |
 | T-0049a | Maker-side product read queries: GetMyProducts paged + GetMyProductById; IDOR shield at handler + projection; soft-delete bypass for owner dashboard | 3 | M | **done** | T-0041, T-0043 | US-maker-0004 | — |
 | T-0049b | [ProducesResponseType] on Web.Maker ProductController + NSwag regen of maker-api.v1.ts + platform-wide AddMakablesOpenApi enum schema transformer (fixes silent priceType wire-contract bug across every host) | 3 | S | **done** | T-0049a | — | — |
 | T-0049c | IOperationFilter for multipart endpoints: rewrite the request body schema so IFormFile lands as { file: binary } with required: true, instead of the current FileParameter optional union or the synthetic Body class that inlines the entire IFormFile interface. T-0049b documented the gap; defensive empty-file check in UploadImage still enforces at runtime, so the client-ergonomic fix is non-blocking. | 3 | S | draft | T-0049b | — | — |
 
-**Phase 3 total:** 13 tickets (T-0049a/b/c added during Sprint 6 to bridge backend prep + a deferred multipart-schema fix).
+**Phase 3 total:** 14 tickets (T-0046b promoted to a first-class row during Sprint 6; T-0049a/b/c added during Sprint 6 to bridge backend prep + a deferred multipart-schema fix).
 
 ---
 
@@ -175,11 +176,11 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 |---|---|---|
 | 1 — Foundation scaffold | 16 | ~10 days |
 | 2 — Identity | 17 | ~12 days |
-| 3 — Catalog | 13 | ~6 days |
+| 3 — Catalog | 14 | ~6 days |
 | 4 — Orders | 28 | ~20 days |
 | 5 — Post-order | 20 | ~12 days |
 | 6 — Polish | 6 | ~5 days |
-| **Total** | **100** | **~65 days** of agent-equivalent work |
+| **Total** | **101** | **~65 days** of agent-equivalent work |
 
 This is a rough rolling estimate. Some tickets in Phase 4 will reveal sub-tickets during implementation (e.g. label-streaming edge cases). PM splits as needed.
 
