@@ -104,17 +104,38 @@ public class OrderTests
         o.ProductId.Should().BeNull();
     }
 
+    // Each row drives exactly ONE money field negative; the other four
+    // satisfy both pricing-consistency invariants (product + shipping ==
+    // total, AND maker + fee == product + shipping) so the per-field
+    // non-negativity guard MUST fire before either consistency check.
+    // Asserting on ParamName pins the right guard and isolates regressions.
+    // T-0060 Copilot review R4-1.
     [Theory]
-    [InlineData(-1L, 100L, 100L)]
-    [InlineData(100L, -1L, 100L)]
-    [InlineData(100L, 0L, -1L)]
-    public void Create_rejects_negative_money_columns(long product, long shipping, long total)
+    [InlineData(-1L, 101L, 50L, 50L, 100L, "productPriceAmountMinor")]
+    [InlineData(100L, -1L, 50L, 49L, 99L, "shippingPriceAmountMinor")]
+    [InlineData(100L, 0L, -1L, 101L, 100L, "platformFeeAmountMinor")]
+    [InlineData(100L, 0L, 101L, -1L, 100L, "makerPayoutAmountMinor")]
+    [InlineData(100L, 0L, 0L, 100L, -1L, "totalAmountMinor")]
+    public void Create_rejects_negative_money_columns(
+        long productPriceAmountMinor,
+        long shippingPriceAmountMinor,
+        long platformFeeAmountMinor,
+        long makerPayoutAmountMinor,
+        long totalAmountMinor,
+        string expectedParamName)
     {
         var act = () => Order.Create(
             "ord-1", "CZ-1", "user-1", "maker-1", null,
-            "X", "x@y.cz", "+420", product, shipping, 0, total, total,
+            "X", "x@y.cz", "+420",
+            productPriceAmountMinor,
+            shippingPriceAmountMinor,
+            platformFeeAmountMinor,
+            makerPayoutAmountMinor,
+            totalAmountMinor,
             "CZK", 2100, ShippingMethod.PersonalPickup, null, "CZ");
-        act.Should().Throw<ArgumentException>();
+
+        act.Should().Throw<ArgumentException>()
+            .Which.ParamName.Should().Be(expectedParamName);
     }
 
     [Fact]
