@@ -63,6 +63,22 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             //   on this constraint means an unexpected concurrent insert
             //   we couldn't have produced. Let it rethrow so the
             //   underlying bug stays visible.
+            //
+            // Intentionally unmapped (T-0060 Copilot review M-1):
+            //   ix_orders_order_number — T-0062's IOrderNumberGenerator
+            //   reserves the number under FOR UPDATE lock (ADR 0009);
+            //   the generator is monotonic so two CreateOrder runs
+            //   cannot collide. A 23505 here means the generator was
+            //   bypassed or broke — a bug, not a user-facing conflict.
+            //
+            //   ix_orders_payment_provider_ref — T-0066's Comgate webhook
+            //   pre-checks via GetByPaymentProviderRefAsync and returns
+            //   200 idempotently when the ref is already known
+            //   (role doc: "Idempotent webhook"). A 23505 race here is
+            //   a duplicate delivery the pre-check missed; translating
+            //   to Error.Conflict would cause Comgate to retry, which
+            //   is the wrong resolution. Let it rethrow; the next
+            //   delivery hits the pre-check successfully and returns 200.
         };
 
     public Error? Translate(string constraintName) =>

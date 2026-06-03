@@ -19,28 +19,40 @@ Before opening the order tickets, three Sprint-6 carry-overs land first. Each is
 
 After those three land, the Phase 4 backlog opens with **T-0060**.
 
+**2026-06-03 update:** T-0060 expanded to a full ticket file → `ready`, owner `dotnet-backend`. See [`T-0060-order-entity-state-machine.md`](../tickets/T-0060-order-entity-state-machine.md). This is the first Phase-4 ticket in flight; it locks the Order aggregate shape, state machine, scoped repository, and EF mapping that the remaining ~20 Phase-4 + Phase-5 tickets depend on. Three open questions surfaced in the ticket's Technical notes — none block T-0060 itself; two need user input before T-0072 / T-0083 land.
+
+**2026-06-03 update:** T-0060 done. Order aggregate + 9-state machine + `IOrderRepository` (ADR 0013 surface) + migration + 65 new tests (922 total pass). User confirmed both open questions: (a) cancel-state edges at the entity layer are `PendingPayment | Paid | Accepted → Cancelled` with role enforcement deferred to commands (customer cancels from `PendingPayment` only; maker from `Paid` only; admin from any state); (b) `Order.Ship(autoDeliverWindowDays)` takes the window as a required parameter — T-0072 will hard-code 7, and `CountryConfiguration.AutoDeliverWindowDays` is added only if a future country materially differs. Code-quality review folded 2 Mediums in the same commit (translator over-mapping removed per the file's own policy; `ix_orders_state` made partial-WHERE `is_active`). T-0061 (OrderPricing + PricingService) opens next.
+
 ## Phase 4 ticket plan (first third)
 
 Per `INDEX.md` Phase 4 (Orders) §60–69:
 
-| Ticket | Title | Size | Depends on |
-|---|---|---|---|
-| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | L | T-0033, T-0041 |
-| T-0061 | OrderPricing domain service + PricingService orchestrator | M | T-0010, T-0041 |
-| T-0062 | OrderNumber + IOrderNumberGenerator integration into CreateOrder | S | T-0007, T-0060 |
-| T-0063 | CreateOrder command + Validator + Handler + controller; persists Order in `PendingPayment` | L | T-0060, T-0061, T-0062 |
-| T-0064 | Order attachments upload endpoint + streaming download | M | T-0042, T-0063 |
-| T-0065 | IPaymentProvider + ComgatePaymentProvider; IPaymentProviderFactory | L | T-0063 |
-| T-0066 | Comgate webhook controller — IP allowlist + status re-fetch + idempotency | M | T-0065 |
-| T-0067 | MarkOrderPaid — transitions PendingPayment → Paid; enqueues outbox events | M | T-0066, T-0011 |
-| T-0068 | Invoice entity + IInvoiceRepository + IInvoiceNumberGenerator + InvoiceService.IssueAsync + QuestPDF | L | T-0011, T-0042, T-0061 |
-| T-0069 | GenerateInvoice Function (queue-triggered from outbox); attaches PDF to outbox customer email event | M | T-0068, T-0029 |
+| Ticket | Title | Size | Depends on | State |
+|---|---|---|---|---|
+| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | L | T-0033, T-0041 | **done** |
+| T-0061 | OrderPricing domain service + PricingService orchestrator | M | T-0010, T-0041 | draft |
+| T-0062 | OrderNumber + IOrderNumberGenerator integration into CreateOrder | S | T-0007, T-0060 | draft |
+| T-0063 | CreateOrder command + Validator + Handler + controller; persists Order in `PendingPayment` | L | T-0060, T-0061, T-0062 | draft |
+| T-0064 | Order attachments upload endpoint + streaming download | M | T-0042, T-0063 | draft |
+| T-0065 | IPaymentProvider + ComgatePaymentProvider; IPaymentProviderFactory | L | T-0063 | draft |
+| T-0066 | Comgate webhook controller — IP allowlist + status re-fetch + idempotency | M | T-0065 | draft |
+| T-0067 | MarkOrderPaid — transitions PendingPayment → Paid; enqueues outbox events | M | T-0066, T-0011 | draft |
+| T-0068 | Invoice entity + IInvoiceRepository + IInvoiceNumberGenerator + InvoiceService.IssueAsync + QuestPDF | L | T-0011, T-0042, T-0061 | draft |
+| T-0069 | GenerateInvoice Function (queue-triggered from outbox); attaches PDF to outbox customer email event | M | T-0068, T-0029 | draft |
 
 10 tickets, mostly L/M, all sequentially-coupled. The biggest blast-radius work in the platform; payments + money + state machines + outbox + invoice generation all converge here.
 
 ## Open blockers
 
 None. All Phase 4 first-third tickets' dependencies are on `master` (Phase 1, T-0011 outbox, T-0033 Maker, T-0041 Product, T-0042 BlobStorage).
+
+## Questions resolved during T-0060 expansion (2026-06-03)
+
+All three questions are closed; recorded here so the decisions are discoverable from the sprint log. See the 2026-06-03 update above and the `T-0060-order-entity-state-machine.md` status log (2026-06-03 entry) for the authoritative trace.
+
+1. **Cancellation authorisation rules** (consumed by T-0083 auto-cancel + T-0107 admin manual change). The Order entity exposes the state-graph edges `PendingPayment | Paid | Accepted → Cancelled`; role enforcement lives in the command layer: customer cancels from `PendingPayment` only; maker cancels ("refuses") from `Paid` only; admin cancels from any state (audited). **Confirmed by user 2026-06-03.**
+2. **Per-country `AutoDeliverAt` window** (consumed by T-0072). `Order.Ship(autoDeliverWindowDays)` takes the window as a **required** parameter (no default); T-0072 `ShipOrder.Handler` hard-codes 7 days. `CountryConfiguration.AutoDeliverWindowDays` is added only if a future country materially differs. **Confirmed by user 2026-06-03.**
+3. **`Order.Create` factory return shape** (internal). Throws `ArgumentException` on impossible inputs (negative amounts, blank ids, inconsistent pricing) — same pattern as `Product.Create`. User-input errors are caught upstream by `CreateOrder.Validator` (T-0063); `Create` only sees vetted inputs. No external decision needed.
 
 ## Carried follow-ups (still open from Sprint 6)
 
