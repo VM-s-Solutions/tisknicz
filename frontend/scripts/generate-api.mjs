@@ -100,13 +100,56 @@ for (const doc of documents) {
   // "file")` line in the generated client), so this declaration is the
   // contract — not an ad-hoc patch.
   const outputPath = resolve(frontendDir, doc.output.replace(/^\.\.\//, ''));
-  const generated = readFileSync(outputPath, 'utf8');
-  if (generated.includes('FileParameter') && !/(interface|type)\s+FileParameter\b/.test(generated)) {
-    // `fileName` is optional because the NSwag-generated multipart code
-    // falls back to the literal "file" when it's falsy
-    // (`content_.append("file", file.data, file.fileName ? file.fileName : "file")`).
-    // Marking it required would lie about the runtime contract and
-    // force every caller to invent a name. T-0049b Copilot review.
+  let generated = readFileSync(outputPath, 'utf8');
+
+  // T-0049c: NSwag's Fetch template hard-codes multipart-form parameters
+  // as `FileParameter | undefined` regardless of whether the OpenAPI
+  // spec marks the request body's `schema.required` array — see
+  // https://github.com/RicoSuter/NSwag for the template behaviour. Our
+  // backend now emits the canonical OpenAPI 3.0 multipart shape via
+  // `AddMakablesOpenApi`'s operation transformer (T-0049c), with the
+  // file property in `required`. Strip the trailing ` | undefined` from
+  // every `FileParameter` parameter so the generated signature matches
+  // the contract the server actually enforces. The runtime body of the
+  // method still throws on null/undefined ("cannot be null"), so the
+  // narrower type only sharpens callers — it doesn't loosen the
+  // runtime contract.
+  if (generated.includes('FileParameter | undefined')) {
+    generated = generated.replace(/FileParameter \| undefined/g, 'FileParameter');
+    // The NSwag-generated JSDoc says "(optional)" on these params; rewrite
+    // to match the new signature so the doc and the type agree.
+    generated = generated.replace(
+      /(\* @param file )\(optional\) /g,
+      '$1',
+    );
+    writeFileSync(outputPath, generated, 'utf8');
+  }
+
+  // T-0049b + T-0049c carry-over. NSwag's Fetch template emits multipart
+  // forms like `content_.append("file", file.data, file.fileName ? file.fileName : "file")`,
+  // so `fileName` is genuinely optional at runtime — the template falls
+  // back to the literal "file" when it's falsy. Once the canonical
+  // multipart schema lands (T-0049c) NSwag itself emits
+  // `export interface FileParameter { data: any; fileName: string; }`
+  // with `fileName` REQUIRED, which contradicts the template's own
+  // runtime behaviour. Normalise to optional whether NSwag emitted the
+  // declaration itself (the post-T-0049c case) OR we need to append it
+  // ourselves (the pre-T-0049c fallback).
+  const fileParameterDeclaration =
+    /export interface FileParameter\s*\{\s*data:\s*any;\s*fileName:\s*string;\s*\}/;
+  if (fileParameterDeclaration.test(generated)) {
+    // NSwag emitted its own declaration; relax `fileName` to optional.
+    generated = generated.replace(
+      fileParameterDeclaration,
+      'export interface FileParameter { data: any; fileName?: string; }',
+    );
+    writeFileSync(outputPath, generated, 'utf8');
+  } else if (
+    generated.includes('FileParameter') &&
+    !/(interface|type)\s+FileParameter\b/.test(generated)
+  ) {
+    // NSwag referenced but didn't declare the type; inject the canonical
+    // shape ourselves. T-0049b.
     const appendix =
       '\n/** Multipart helper type referenced by NSwag-generated multipart\n' +
       ' * client methods. Injected by scripts/generate-api.mjs because the\n' +
