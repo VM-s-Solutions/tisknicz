@@ -15,7 +15,7 @@ Before opening the order tickets, three Sprint-6 carry-overs land first. Each is
 |---|---|---|
 | T-0049c | `IOperationFilter` rewriting multipart schemas (`{ file: binary }` + `required: true`) so NSwag emits typed multipart parameters. T-0064 (order attachments) is a new multipart endpoint; closing this now means the order frontend lands typed instead of replicating T-0049's `FileParameter | undefined` workaround. **(2026-06-02: expanded to full ticket → `in_progress`, owner `dotnet-backend`; see [`T-0049c-multipart-operation-filter.md`](../tickets/T-0049c-multipart-operation-filter.md).)** | S |
 | Latent-platform-issues audit | Read every shipped `parseErrorResponse`-like consumer + every helper that mirrors a backend DTO. Either add tests pinning the wire shape or open follow-up tickets. Sprint 6 surfaced 8 latent bugs (mostly Sprint-2 era); the order layer's state-machine + outbox + payment-webhook surfaces will amplify any contract drift. Runs as its own branch, not under a single ticket. | M |
-| `patterns.md` catalog update | Eight Sprint-6 primitives need explicit subsections (URL-state pagination, `buildProductImageUrl`, `formatWeight`, `<section>`-not-`<main>`, `generateMetadata` branching, multipart through `apiFetch`, SSR cookie forwarding, shared display-only constants). Six others overlap existing entries and need cross-references. Catalog stays the source of truth before Phase 4 produces more primitives. | M |
+| `patterns.md` catalog update | Eight Sprint-6 primitives need explicit subsections (URL-state pagination, `buildProductImageUrl`, `formatWeight`, `<section>`-not-`<main>`, `generateMetadata` branching, multipart through `apiFetch`, SSR cookie forwarding, shared display-only constants). Six others overlap existing entries and need cross-references. Catalog stays the source of truth before Phase 4 produces more primitives. **(2026-06-03: complete. Added 13 new B subsections (B.7–B.19) covering layout + URL state, display helpers, API access, validation flattening, plural-neutral i18n, host-anchored blob URLs. Rewrote B.3 (Bearer-access-token claim was wrong — actual model is audience-scoped cookies + ADR 0024 SSR forwarding) + B.4 (the "401 → refresh → retry once" claim doesn't match the implementation — refresh isn't wired in yet). Cross-refs added to A.4, A.6 (`[ProducesResponseType]` discipline + honest-400 lesson), A.18 (formatCzk display mirror), A.21 (schema transformer convention). Verified via 6-agent workflow: 4 parallel miners drafted from code, 1 cross-ref miner, 1 adversarial verifier confirmed every cited file:line. Now 19 B sections total; patterns.md is the live source of truth before Phase 4 produces more primitives.)** | M |
 
 After those three land, the Phase 4 backlog opens with **T-0060**.
 
@@ -55,6 +55,6 @@ None. All Phase 4 first-third tickets' dependencies are on `master` (Phase 1, T-
 
 - [ ] T-0049c merged
 - [ ] Latent-platform-issues audit merged (either as test additions or follow-up tickets opened)
-- [ ] `patterns.md` catalog update merged
+- [x] `patterns.md` catalog update merged (this PR; B.7–B.19 added, B.3/B.4 corrected, A.4/A.6/A.18/A.21 cross-referenced)
 - [ ] T-0060 → T-0069 merged
 - [ ] Sprint 7 retrospective added to this file
