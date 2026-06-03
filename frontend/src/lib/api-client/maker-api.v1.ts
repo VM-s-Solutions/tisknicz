@@ -2276,10 +2276,7 @@ export interface IUploadProductImageResponse {
     [key: string]: any;
 }
 
-export interface FileParameter {
-    data: any;
-    fileName: string;
-}
+export interface FileParameter { data: any; fileName?: string; }
 
 export class ApiException extends Error {
     override message: string;

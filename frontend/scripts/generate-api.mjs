@@ -125,12 +125,31 @@ for (const doc of documents) {
     writeFileSync(outputPath, generated, 'utf8');
   }
 
-  if (generated.includes('FileParameter') && !/(interface|type)\s+FileParameter\b/.test(generated)) {
-    // `fileName` is optional because the NSwag-generated multipart code
-    // falls back to the literal "file" when it's falsy
-    // (`content_.append("file", file.data, file.fileName ? file.fileName : "file")`).
-    // Marking it required would lie about the runtime contract and
-    // force every caller to invent a name. T-0049b Copilot review.
+  // T-0049b + T-0049c carry-over. NSwag's Fetch template emits multipart
+  // forms like `content_.append("file", file.data, file.fileName ? file.fileName : "file")`,
+  // so `fileName` is genuinely optional at runtime — the template falls
+  // back to the literal "file" when it's falsy. Once the canonical
+  // multipart schema lands (T-0049c) NSwag itself emits
+  // `export interface FileParameter { data: any; fileName: string; }`
+  // with `fileName` REQUIRED, which contradicts the template's own
+  // runtime behaviour. Normalise to optional whether NSwag emitted the
+  // declaration itself (the post-T-0049c case) OR we need to append it
+  // ourselves (the pre-T-0049c fallback).
+  const fileParameterDeclaration =
+    /export interface FileParameter\s*\{\s*data:\s*any;\s*fileName:\s*string;\s*\}/;
+  if (fileParameterDeclaration.test(generated)) {
+    // NSwag emitted its own declaration; relax `fileName` to optional.
+    generated = generated.replace(
+      fileParameterDeclaration,
+      'export interface FileParameter { data: any; fileName?: string; }',
+    );
+    writeFileSync(outputPath, generated, 'utf8');
+  } else if (
+    generated.includes('FileParameter') &&
+    !/(interface|type)\s+FileParameter\b/.test(generated)
+  ) {
+    // NSwag referenced but didn't declare the type; inject the canonical
+    // shape ourselves. T-0049b.
     const appendix =
       '\n/** Multipart helper type referenced by NSwag-generated multipart\n' +
       ' * client methods. Injected by scripts/generate-api.mjs because the\n' +

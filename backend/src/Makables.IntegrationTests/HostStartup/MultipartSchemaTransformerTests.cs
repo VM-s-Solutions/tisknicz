@@ -1,12 +1,5 @@
 using System.Text.Json;
 using FluentAssertions;
-using Makables.Infra.Database;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Makables.IntegrationTests.HostStartup;
 
@@ -14,10 +7,9 @@ namespace Makables.IntegrationTests.HostStartup;
 /// Pins the OpenAPI document shape that
 /// <see cref="Makables.Config.Extensions.MakablesOpenApiExtensions.AddMakablesOpenApi"/>
 /// produces for the Maker host's multipart upload endpoint (T-0049c).
-/// Boots <see cref="Makables.Web.Maker.Program"/> via
-/// <see cref="WebApplicationFactory{TEntryPoint}"/> with the same stub
-/// configuration the host-startup tests use, GETs
-/// <c>/openapi/v1.json</c>, and asserts:
+/// Reuses the shared <see cref="HostStartupHarness"/> for stub config
+/// + SQLite swap so any new <c>ValidateOnStart</c> Options block lands
+/// in one place. GETs <c>/openapi/v1.json</c> and asserts:
 ///
 /// <list type="bullet">
 /// <item>The multipart upload endpoint's request body schema is rewritten
@@ -35,62 +27,10 @@ namespace Makables.IntegrationTests.HostStartup;
 /// </summary>
 public class MultipartSchemaTransformerTests
 {
-    private static WebApplicationFactory<Makables.Web.Maker.Program> BuildFactory()
-    {
-        return new WebApplicationFactory<Makables.Web.Maker.Program>().WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("IntegrationTest");
-
-            // Mirror HostStartupTestBase's stub config — every Options
-            // block that's ValidateOnStart needs a value or the host
-            // refuses to boot. Production hosts read all of these from
-            // Azure App Config / Key Vault.
-            builder.ConfigureAppConfiguration((_, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:Postgres"] = "Host=placeholder;Database=ignored",
-                    ["Jwt:Issuer"] = "https://makables.test",
-                    ["Jwt:SigningKeyBase64"] = Convert.ToBase64String(new byte[32]),
-                    ["SendGrid:ApiKey"] = "SG.integration-test-stub",
-                    ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
-                    ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
-                    ["Mapbox:AccessToken"] = "pk.integration-test-stub",
-                    ["Ares:BaseUrl"] = "https://ares.integration-test.local",
-                    ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
-                    ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",
-                });
-            });
-
-            builder.ConfigureServices(services =>
-            {
-                // Swap the Postgres registration for in-memory SQLite so
-                // the host actually starts. The OpenAPI spec is generated
-                // from the type model and route metadata — no DB roundtrip
-                // — so SQLite is enough to serve /openapi/v1.json.
-                var dbContextDescriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbContextOptions<MakablesDbContext>));
-                if (dbContextDescriptor is not null)
-                {
-                    services.Remove(dbContextDescriptor);
-                }
-
-                var connection = new SqliteConnection("DataSource=:memory:");
-                connection.Open();
-
-                services.AddSingleton(connection);
-                services.AddDbContext<MakablesDbContext>(options =>
-                {
-                    options.UseSqlite(connection);
-                });
-            });
-        });
-    }
-
     [Fact]
     public async Task Multipart_Upload_Endpoint_Has_Canonical_Binary_Schema()
     {
-        using var factory = BuildFactory();
+        using var factory = HostStartupHarness.Build<Makables.Web.Maker.Program>();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/openapi/v1.json");
@@ -126,7 +66,7 @@ public class MultipartSchemaTransformerTests
     [Fact]
     public async Task Json_Request_Bodies_Are_Not_Touched_By_The_Multipart_Transformer()
     {
-        using var factory = BuildFactory();
+        using var factory = HostStartupHarness.Build<Makables.Web.Maker.Program>();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/openapi/v1.json");
