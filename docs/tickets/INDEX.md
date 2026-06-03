@@ -93,7 +93,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
 |---|---|---|---|---|---|---|---|
-| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | 4 | L | draft | T-0033, T-0041 | — | 0002, 0013 |
+| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | 4 | L | **ready** | T-0033, T-0041 | — | 0002, 0003, 0009, 0011, 0013, 0014, 0016, 0017, 0020 |
 | T-0061 | OrderPricing domain service + PricingService orchestrator; reads CountryConfiguration; tests | 4 | M | draft | T-0010, T-0041 | — | 0003, 0004 |
 | T-0062 | OrderNumber + IOrderNumberGenerator integration into CreateOrder | 4 | S | draft | T-0007, T-0060 | — | 0009 |
 | T-0063 | CreateOrder command + Validator (extensive — see US-customer-0010 AC list) + Handler + controller; persists Order in `PendingPayment` | 4 | L | draft | T-0060, T-0061, T-0062 | US-customer-0010, 0011 | 0003, 0009, 0010 |

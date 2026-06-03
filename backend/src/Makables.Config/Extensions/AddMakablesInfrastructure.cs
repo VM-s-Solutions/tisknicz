@@ -11,6 +11,7 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Makers;
+using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
@@ -28,6 +29,7 @@ using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Catalog;
 using Makables.Infra.Database.Categories;
 using Makables.Infra.Database.Makers;
+using Makables.Infra.Database.Orders;
 using Makables.Infra.Database.Products;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
@@ -147,6 +149,9 @@ public static class MakablesInfrastructureExtensions
 
         // === Products (T-0041) ===
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        // === Orders (T-0060) ===
+        services.AddScoped<IOrderRepository, OrderRepository>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
