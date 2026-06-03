@@ -29,7 +29,7 @@ Per `INDEX.md` Phase 4 (Orders) §60–69:
 
 | Ticket | Title | Size | Depends on | State |
 |---|---|---|---|---|
-| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | L | T-0033, T-0041 | **ready** |
+| T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | L | T-0033, T-0041 | **done** |
 | T-0061 | OrderPricing domain service + PricingService orchestrator | M | T-0010, T-0041 | draft |
 | T-0062 | OrderNumber + IOrderNumberGenerator integration into CreateOrder | S | T-0007, T-0060 | draft |
 | T-0063 | CreateOrder command + Validator + Handler + controller; persists Order in `PendingPayment` | L | T-0060, T-0061, T-0062 | draft |
@@ -46,13 +46,13 @@ Per `INDEX.md` Phase 4 (Orders) §60–69:
 
 None. All Phase 4 first-third tickets' dependencies are on `master` (Phase 1, T-0011 outbox, T-0033 Maker, T-0041 Product, T-0042 BlobStorage).
 
-## Open questions surfaced during T-0060 expansion (2026-06-03)
+## Questions resolved during T-0060 expansion (2026-06-03)
 
-Two need user input before downstream tickets land; one is internal to the team and proposed for self-resolution. None block T-0060.
+All three questions are closed; recorded here so the decisions are discoverable from the sprint log. See the 2026-06-03 update above and the `T-0060-order-entity-state-machine.md` status log (2026-06-03 entry) for the authoritative trace.
 
-1. **Cancellation authorisation rules** (blocks T-0083 auto-cancel + T-0107 admin manual change, not T-0060). The Order entity in T-0060 exposes the state-graph edges (`PendingPayment | Paid | Accepted → Cancelled`); the command layer decides who may take them. Proposal: customer can cancel from `PendingPayment` only; maker can cancel ("refuse") from `Paid` only; admin can cancel from any state (audited). User confirmation requested before T-0083 / T-0107 are expanded to full tickets.
-2. **Per-country `AutoDeliverAt` window** (affects T-0072 default, not T-0060). T-0060 hard-codes 7 days as a default parameter on `Ship(...)`. Should T-0072 read the window from `CountryConfiguration` (multi-country-ready) or stay hard-coded? Architecturally consistent move is country-driven; pragmatic move at single-launch is hard-coded. Proposal: hard-code in T-0072; add `CountryConfiguration.AutoDeliverWindowDays` field only if a second country materially differs. User input welcome but not blocking.
-3. **`Order.Create` factory return shape** (internal). Throws `ArgumentException` on impossible inputs (negative amounts, blank ids, inconsistent pricing) — same pattern as `Product.Create`. User-input errors are caught upstream by the `CreateOrder.Validator` (T-0063), so `Create` only sees vetted inputs. No user input needed; surfaced for completeness.
+1. **Cancellation authorisation rules** (consumed by T-0083 auto-cancel + T-0107 admin manual change). The Order entity exposes the state-graph edges `PendingPayment | Paid | Accepted → Cancelled`; role enforcement lives in the command layer: customer cancels from `PendingPayment` only; maker cancels ("refuses") from `Paid` only; admin cancels from any state (audited). **Confirmed by user 2026-06-03.**
+2. **Per-country `AutoDeliverAt` window** (consumed by T-0072). `Order.Ship(autoDeliverWindowDays)` takes the window as a **required** parameter (no default); T-0072 `ShipOrder.Handler` hard-codes 7 days. `CountryConfiguration.AutoDeliverWindowDays` is added only if a future country materially differs. **Confirmed by user 2026-06-03.**
+3. **`Order.Create` factory return shape** (internal). Throws `ArgumentException` on impossible inputs (negative amounts, blank ids, inconsistent pricing) — same pattern as `Product.Create`. User-input errors are caught upstream by `CreateOrder.Validator` (T-0063); `Create` only sees vetted inputs. No external decision needed.
 
 ## Carried follow-ups (still open from Sprint 6)
 

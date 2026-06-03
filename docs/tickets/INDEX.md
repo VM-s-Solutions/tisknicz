@@ -155,6 +155,14 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 
 ---
 
+## Cross-cutting follow-ups (queued during sprint reviews)
+
+| Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
+|---|---|---|---|---|---|---|---|
+| T-0123 | Migration-pipeline validation harness: integration test using `Database.Migrate()` against a fresh Postgres container (Testcontainers per T-0049a precedent) to assert all migration scripts apply cleanly and produce the expected schema. Closes the coverage gap surfaced by T-0060 third Copilot review (the SQLite `TestDbHarness` uses `EnsureCreated()` and never executes migration files). | 4 | S | draft | T-0002, T-0060 | — | — |
+
+---
+
 ## Phase 6 — Polish (static pages, content, SEO, manual ops checks)
 
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
