@@ -398,7 +398,15 @@ public sealed class Order : Auditable
         if (State != OrderState.Accepted)
             return InvalidTransition();
 
-        if (shippingCarrierRef is not null && ShippingCarrierRef is not null)
+        // Belt-and-braces set-once guard on ShippingCarrierRef. The state
+        // guard above already blocks a second Ship call in the current
+        // state graph (second call's State is Shipped, not Accepted), but
+        // if a future state-graph change lets a Shipped order revisit
+        // Accepted we don't want a silent overwrite of the carrier ref.
+        // Field-only check: any prior non-null value is sticky, even if
+        // the new call passes a null carrier ref. Mirrors MarkAsPaid's
+        // layering. T-0060 Copilot review R2-2.
+        if (ShippingCarrierRef is not null)
             return BusinessResult.Failure(
                 Error.Conflict("shippingCarrierRef", BusinessErrorMessage.OrderInvalidTransition));
 

@@ -333,6 +333,30 @@ public class OrderTests
         o.AutoDeliverAt.Should().BeNull();
     }
 
+    [Fact]
+    public void Ship_called_twice_returns_invalid_transition_from_state_guard()
+    {
+        // The state guard fires first on a duplicate Ship call (the order
+        // is in Shipped state after the first call), so the surfaced error
+        // is the generic state conflict — NOT the shippingCarrierRef
+        // set-once conflict. The set-once guard on ShippingCarrierRef is a
+        // belt-and-braces secondary check that mirrors MarkAsPaid's pattern
+        // and is unreachable in the current state graph. T-0060 Copilot
+        // review R2-2 — test promised in Scope > Tests but missing.
+        var o = ValidDefaults();
+        o.MarkAsPaid(FixedClock(), "tx-1");
+        o.Accept(FixedClock(Now.AddHours(1)));
+        o.Ship(FixedClock(Now.AddDays(1)), "PKT-123", autoDeliverWindowDays: 7);
+
+        var second = o.Ship(FixedClock(Now.AddDays(2)), "PKT-456", autoDeliverWindowDays: 7);
+
+        second.IsSuccess.Should().BeFalse();
+        second.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
+        second.Error.Type.Should().Be(ErrorType.Conflict);
+        o.State.Should().Be(OrderState.Shipped);
+        o.ShippingCarrierRef.Should().Be("PKT-123");
+    }
+
     // === MarkAsDelivered ===
 
     [Fact]
