@@ -76,7 +76,14 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         if (string.IsNullOrWhiteSpace(orderId))
             return Task.FromResult<Order?>(null);
 
+        // IgnoreQueryFilters: this method is the admin + GDPR-reconciliation
+        // lookup (see IOrderRepository XML doc). Per ADR 0013, admin paths
+        // that legitimately need to see soft-deleted rows opt out of the
+        // global soft-delete filter explicitly here. Callers that must hide
+        // soft-deleted rows should use the owner-scoped GetByIdForCustomerAsync
+        // or GetByIdForMakerAsync. T-0060 Copilot review C-6.
         return db.Set<Order>()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
     }
 

@@ -89,7 +89,16 @@ public interface IOrderRepository
     /// <summary>
     /// Load a single order without ownership scoping. <b>Admin host
     /// only</b> per ADR 0013. Used by admin lookups (T-0107 manual
-    /// state change, T-0105 refund) and GDPR reconciliation. Tracked.
+    /// state change, T-0105 refund) and GDPR reconciliation (T-0110).
+    /// Tracked.
+    /// <para>
+    /// Calls <c>.IgnoreQueryFilters()</c> internally so soft-deleted
+    /// rows are returned. This is intentional: admin reconciliation
+    /// paths legitimately need to see deactivated orders. Callers that
+    /// must hide soft-deleted rows should use the owner-scoped
+    /// <see cref="GetByIdForCustomerAsync"/> or
+    /// <see cref="GetByIdForMakerAsync"/>.
+    /// </para>
     /// </summary>
     Task<Order?> GetByIdUnscopedAsync(string orderId, CancellationToken cancellationToken);
 

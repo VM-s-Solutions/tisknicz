@@ -1,8 +1,10 @@
 using FluentAssertions;
+using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Orders;
 using Makables.Infra.Database.Orders;
 using Makables.Tests.Infra.Database;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 
 namespace Makables.Tests.Infra.Orders;
 
@@ -18,6 +20,13 @@ namespace Makables.Tests.Infra.Orders;
 public class OrderRepositoryTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-06-03T10:00:00Z");
+
+    private static IClock FixedClock(DateTimeOffset? at = null)
+    {
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(at ?? Now);
+        return clock;
+    }
 
     private static Order BuildOrder(
         string id,
@@ -132,10 +141,12 @@ public class OrderRepositoryTests
     }
 
     [Fact]
-    public async Task Soft_deleted_orders_are_excluded_by_default_scoped_queries()
+    public async Task Soft_deleted_orders_are_excluded_by_owner_scoped_queries()
     {
-        // Global Auditable filter applies — neither the scoped queryables
-        // nor the Get-by-id helpers should surface a deactivated row.
+        // Global Auditable filter applies — the owner-scoped queryables
+        // and Get-by-id helpers should not surface a deactivated row.
+        // The Unscoped() queryable and GetByIdUnscopedAsync are admin
+        // carve-outs and are covered by the next two tests.
         using var h = TestDbHarness.Create();
         var live = BuildOrder("ord-live", "user-a", "maker-1", "CZ-LIVE");
         var dead = BuildOrder("ord-dead", "user-a", "maker-1", "CZ-DEAD");
@@ -153,7 +164,55 @@ public class OrderRepositoryTests
             .Should().ContainSingle().Which.Id.Should().Be("ord-live");
         (await sut.GetByIdForCustomerAsync("ord-dead", "user-a", default)).Should().BeNull();
         (await sut.GetByIdForMakerAsync("ord-dead", "maker-1", default)).Should().BeNull();
-        (await sut.GetByIdUnscopedAsync("ord-dead", default)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetByIdUnscopedAsync_returns_soft_deleted_rows_for_admin_reconciliation()
+    {
+        // ADR 0013 carve-out: admin + GDPR reconciliation legitimately
+        // needs to see deactivated rows. The interface XML doc documents
+        // .IgnoreQueryFilters() as the implementation contract.
+        // T-0060 Copilot review C-6 — without this carve-out, T-0107
+        // (admin manual state change), T-0105 (refund) and T-0110 (GDPR
+        // reconciliation) would all silently fail when targeting a
+        // soft-deleted row.
+        using var h = TestDbHarness.Create();
+        var dead = BuildOrder("ord-dead", "user-a", "maker-1", "CZ-DEAD");
+        h.Db.Set<Order>().Add(dead);
+        await h.Db.SaveChangesAsync(default);
+        dead.MarkDeactivated("admin", Now);
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new OrderRepository(h.Db);
+
+        var found = await sut.GetByIdUnscopedAsync("ord-dead", default);
+        found.Should().NotBeNull();
+        found!.Id.Should().Be("ord-dead");
+        found.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetByPaymentProviderRefAsync_still_hides_soft_deleted_rows()
+    {
+        // Audit: the .IgnoreQueryFilters() carve-out is scoped to
+        // GetByIdUnscopedAsync only. The Comgate webhook lookup
+        // (T-0066) must NOT see deactivated rows — a soft-deleted order
+        // is no longer eligible for state transitions and the webhook
+        // should treat the ref as unknown so the create-order race path
+        // can proceed cleanly. T-0060 Copilot review C-6 sibling check.
+        using var h = TestDbHarness.Create();
+        var dead = BuildOrder("ord-dead", "user-a", "maker-1", "CZ-DEAD");
+        dead.MarkAsPaid(FixedClock(), "comgate-tx-dead")
+            .IsSuccess.Should().BeTrue();
+        h.Db.Set<Order>().Add(dead);
+        await h.Db.SaveChangesAsync(default);
+        dead.MarkDeactivated("admin", Now);
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new OrderRepository(h.Db);
+
+        (await sut.GetByPaymentProviderRefAsync("comgate-tx-dead", default))
+            .Should().BeNull();
     }
 
     [Fact]
@@ -218,9 +277,14 @@ public class OrderRepositoryTests
     {
         // Belt-and-braces: even if a future caller bypasses the
         // OrderNumberGenerator's monotonic sequence, the DB blocks a
-        // duplicate-number insert. The translator maps the constraint
-        // name to a typed conflict (Postgres only — SQLite raises a
-        // plain DbUpdateException which is enough for this AC).
+        // duplicate-number insert. The UniqueConstraintTranslator
+        // intentionally does NOT map ix_orders_order_number (T-0060
+        // Copilot review M-1): the generator is monotonic per ADR 0009,
+        // so a 23505 here means the generator was bypassed or broke —
+        // a bug, not a user-facing conflict that should be masked with
+        // Error.Conflict. The DbUpdateException is therefore the
+        // correct surface (SQLite raises a plain DbUpdateException
+        // which is enough for this AC).
         using var h = TestDbHarness.Create();
         h.Db.Set<Order>().Add(BuildOrder("ord-a", "user-a", "maker-1", "CZ-DUP"));
         h.Db.Set<Order>().Add(BuildOrder("ord-b", "user-b", "maker-1", "CZ-DUP"));

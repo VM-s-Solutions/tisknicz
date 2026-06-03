@@ -85,8 +85,13 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasColumnName("payment_provider_ref").HasMaxLength(200);
         // Partial-unique on the payment ref backs webhook idempotency:
         // a duplicate Comgate notification trying to create a second
-        // order against the same transaction loses the unique race and
-        // the UniqueConstraintTranslator surfaces a typed conflict.
+        // order against the same transaction loses the unique race.
+        // The UniqueConstraintTranslator intentionally leaves this
+        // constraint unmapped (T-0060 Copilot review M-1) so the 23505
+        // rethrows — the next webhook delivery then hits the
+        // GetByPaymentProviderRefAsync pre-check and returns 200
+        // idempotently. Translating to Error.Conflict here would cause
+        // Comgate to retry, which is the wrong resolution.
         builder.HasIndex(o => o.PaymentProviderRef)
             .IsUnique()
             .HasDatabaseName("ix_orders_payment_provider_ref")
