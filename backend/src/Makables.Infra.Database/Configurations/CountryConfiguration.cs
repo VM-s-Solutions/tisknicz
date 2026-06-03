@@ -55,6 +55,9 @@ internal sealed class CountryConfigurationEntityConfiguration : IEntityTypeConfi
         builder.Property(c => c.ReducedVatRateBp).HasColumnName("reduced_vat_rate_bp");
         builder.Property(c => c.InvoicingMode).HasColumnName("invoicing_mode").HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.PlatformFeeRateBp).HasColumnName("platform_fee_rate_bp").IsRequired();
+        builder.Property(c => c.DefaultShippingPriceMinor)
+            .HasColumnName("default_shipping_price_minor")
+            .IsRequired();
 
         builder.Property(c => c.TaxIdLabel).HasColumnName("tax_id_label").HasMaxLength(50).IsRequired();
         builder.Property(c => c.TaxIdFormat).HasColumnName("tax_id_format").HasMaxLength(200);

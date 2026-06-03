@@ -1,6 +1,7 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.AppServices.Features.Outbox;
+using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Addresses.Validators;
 using Makables.Core.Domain.Auditing;
@@ -198,6 +199,14 @@ public static class MakablesInfrastructureExtensions
                "and every path template must start with '/' and contain the literal '{token}' placeholder.")
             .ValidateOnStart();
         services.AddScoped<IEmailSendService, EmailSendService>();
+
+        // === Pricing (T-0061) ===
+        // Scoped because the underlying repositories (IProductRepository +
+        // ICountryConfigurationRepository) are scoped on the request-bound
+        // DbContext. Caller is the future CreateOrder command (T-0063),
+        // the checkout preview query (T-0099), and the platform-fee
+        // invoice composer (T-0068). Single seam → single formula.
+        services.AddScoped<IPricingService, PricingService>();
 
         // === Outbox + Admin audit log ===
         services.AddScoped<IOutbox, OutboxWriter>();

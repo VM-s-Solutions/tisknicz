@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MediatR;
+using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Numbering;
 using Makables.Infra.Database;
@@ -73,6 +74,12 @@ public abstract class HostStartupTestBase<TProgram> where TProgram : class
         sp.GetService<IPayoutBatchNumberGenerator>().Should().NotBeNull();
 
         sp.GetService<ISender>().Should().NotBeNull();
+
+        // T-0061: IPricingService is wired via AddMakablesInfrastructure.
+        // Resolving it confirms the DI registration line lives in the
+        // shared extension and ships on every host.
+        sp.GetService<IPricingService>().Should().NotBeNull(
+            "AddMakablesInfrastructure must register IPricingService for the order pricing path (T-0061)");
     }
 
     [Fact]

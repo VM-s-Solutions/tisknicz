@@ -83,6 +83,22 @@ public class CountryConfigurationTests
     }
 
     [Fact]
+    public void Create_sets_default_shipping_price_minor()
+    {
+        var cfg = BuildCz(defaultShippingPriceMinor: 7900);
+
+        cfg.DefaultShippingPriceMinor.Should().Be(7900);
+    }
+
+    [Fact]
+    public void Create_rejects_negative_default_shipping_price_minor()
+    {
+        var act = () => BuildCz(defaultShippingPriceMinor: -1);
+        act.Should().Throw<ArgumentException>()
+            .Which.ParamName.Should().Be("defaultShippingPriceMinor");
+    }
+
+    [Fact]
     public void Country_Create_Normalizes_IsoCode()
     {
         var country = Country.Create("cz", "Česká republika", isServiced: true);
@@ -114,7 +130,8 @@ public class CountryConfigurationTests
         string countryId = "CZ",
         string currency = "CZK",
         int standardVatBp = 2100,
-        int? reducedVatBp = 1200) =>
+        int? reducedVatBp = 1200,
+        long defaultShippingPriceMinor = 0) =>
         CountryConfiguration.Create(
             countryId: countryId,
             defaultCurrencyCode: currency,
@@ -130,5 +147,6 @@ public class CountryConfigurationTests
             defaultPaymentProvider: "comgate",
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
-            defaultEmailProvider: "resend");
+            defaultEmailProvider: "resend",
+            defaultShippingPriceMinor: defaultShippingPriceMinor);
 }
