@@ -1,3 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <!--
+      T-0061: `OrderPricing` is `internal static` per role/order-pricing.md
+      (pure-math layer, no DI seam). Two assemblies need access:
+      - `Makables.Core.AppServices` for the `PricingService` orchestrator
+        that fetches the inputs and delegates the math.
+      - `Makables.Tests` for the domain-level unit tests.
+      Both consumers cross an assembly boundary, so `InternalsVisibleTo`
+      is the surface-narrowing alternative to going public.
+    -->
+    <InternalsVisibleTo Include="Makables.Core.AppServices" />
+    <InternalsVisibleTo Include="Makables.Tests" />
+  </ItemGroup>
+
 </Project>

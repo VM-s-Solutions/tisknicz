@@ -34,6 +34,17 @@ public sealed class CountryConfiguration : Auditable
     // Platform fee
     public int PlatformFeeRateBp { get; private set; } = 1500;            // 15% by default
 
+    /// <summary>
+    /// Default shipping price in minor currency units (haléře for CZK)
+    /// applied to <c>ShippingMethod.ZasilkovnaPickupPoint</c> orders when
+    /// no per-tariff lookup is available. Admin-editable (T-0108);
+    /// T-0061 reads this as the single source of truth for the
+    /// platform-wide Zásilkovna default. Non-negative. Seed CZ value is
+    /// 7900 (79 CZK, midpoint of the 69–89 CZK Zásilkovna range per
+    /// <c>PROJEKT-VIZE.md</c>).
+    /// </summary>
+    public long DefaultShippingPriceMinor { get; private set; }
+
     // Business identifiers
     public string TaxIdLabel { get; private set; } = default!;            // e.g. "DIČ"
     public string? TaxIdFormat { get; private set; }                      // regex; nullable
@@ -80,6 +91,7 @@ public sealed class CountryConfiguration : Auditable
         bool registrationNumberRequired = true,
         InvoicingMode invoicingMode = InvoicingMode.None,
         int platformFeeRateBp = 1500,
+        long defaultShippingPriceMinor = 0,
         string? legalRequirementsJson = null)
     {
         if (string.IsNullOrWhiteSpace(countryId) || countryId.Length != 2)
@@ -92,6 +104,10 @@ public sealed class CountryConfiguration : Auditable
             throw new ArgumentOutOfRangeException(nameof(reducedVatRateBp), "Must be ≤ standard rate.");
         if (platformFeeRateBp < 0 || platformFeeRateBp > 10_000)
             throw new ArgumentOutOfRangeException(nameof(platformFeeRateBp), "Must be 0..10000.");
+        if (defaultShippingPriceMinor < 0)
+            throw new ArgumentException(
+                "DefaultShippingPriceMinor cannot be negative.",
+                nameof(defaultShippingPriceMinor));
 
         var normalized = countryId.ToUpperInvariant();
 
@@ -110,6 +126,7 @@ public sealed class CountryConfiguration : Auditable
             ReducedVatRateBp = reducedVatRateBp,
             InvoicingMode = invoicingMode,
             PlatformFeeRateBp = platformFeeRateBp,
+            DefaultShippingPriceMinor = defaultShippingPriceMinor,
             TaxIdLabel = taxIdLabel,
             TaxIdFormat = taxIdFormat,
             VatIdLabel = vatIdLabel,
@@ -150,6 +167,24 @@ public sealed class CountryConfiguration : Auditable
         if (rateBp < 0 || rateBp > 10_000)
             throw new ArgumentOutOfRangeException(nameof(rateBp));
         PlatformFeeRateBp = rateBp;
+        return this;
+    }
+
+    /// <summary>
+    /// Admin self-service patch (wired through T-0108
+    /// <c>UpdateCountryConfiguration</c>) for the per-country Zásilkovna
+    /// default shipping price. Rejects negative values — the entity
+    /// guards programmer-error inputs, the command-layer validator covers
+    /// user-input messaging. Existing orders are unaffected (they hold a
+    /// pricing snapshot taken at order time per <c>Order.Create</c>).
+    /// </summary>
+    public CountryConfiguration UpdateDefaultShippingPrice(long minor)
+    {
+        if (minor < 0)
+            throw new ArgumentException(
+                "DefaultShippingPriceMinor cannot be negative.",
+                nameof(minor));
+        DefaultShippingPriceMinor = minor;
         return this;
     }
 

@@ -52,6 +52,13 @@ public static class BusinessErrorMessage
     public const string ProductPriceNegative = "product.priceNegative";
     public const string ProductFreeRequiresOnRequest = "product.freeRequiresOnRequest";
     public const string ProductCurrencyMismatch = "product.currencyMismatch";
+    /// <summary>
+    /// Product cannot be ordered directly through the standard checkout
+    /// path — e.g. <see cref="Products.PriceType.OnRequest"/> requires
+    /// the (post-MVP) custom-quote flow. T-0061
+    /// <c>PricingService.ComputeForProductAsync</c>.
+    /// </summary>
+    public const string ProductNotOrderable = "product.notOrderable";
 
     // === Category (T-0040) ===
     public const string CategoryNotFound = "category.notFound";
@@ -94,6 +101,14 @@ public static class BusinessErrorMessage
     public const string CountryNotServiced = "country.notServiced";
     public const string CountryConfigMissing = "country.configMissing";
     public const string CountryProviderNotRegistered = "country.providerNotRegistered";
+    /// <summary>
+    /// The <c>CountryConfiguration</c> row for the requested country code
+    /// is missing — used by <see cref="ProductNotOrderable"/>-adjacent
+    /// flows where the upstream country lookup fails and the caller wants
+    /// a typed NotFound rather than the generic
+    /// <see cref="CountryConfigMissing"/>. T-0061.
+    /// </summary>
+    public const string CountryConfigurationNotFound = "countryConfiguration.notFound";
 
     // === Payment ===
     public const string PaymentGatewayUnavailable = "payment.gatewayUnavailable";
