@@ -102,8 +102,15 @@ public sealed class PostgresHarness : IAsyncLifetime
         // order_payment_attempts referencing orders) don't break this
         // reset call as the schema grows. The seed tables are explicitly
         // excluded.
+        //
+        // T-0063: extended to truncate the upstream aggregates the
+        // CreateOrder integration tests need to seed fresh — users,
+        // addresses, makers, categories, products. Race-sensitive tests
+        // (T-0062) only mutated numbering_sequence + orders so the
+        // narrower list was enough; the CreateOrder tests need a clean
+        // slate up the join graph too.
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, orders RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, orders, products, makers, categories, addresses, users RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

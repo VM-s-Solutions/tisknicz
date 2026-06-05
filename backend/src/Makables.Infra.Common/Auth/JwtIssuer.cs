@@ -75,6 +75,14 @@ public sealed class JwtIssuer : IJwtIssuer
             [ClaimTypes.NameIdentifier] = user.Id,
         };
 
+        // Add email_confirmed_at only when set so the absence-vs-zero
+        // distinction is structural (T-0063): a forged claim of `0` on a
+        // future evil token still fails the middleware's null check.
+        if (user.EmailConfirmedAt is { } confirmedAt)
+        {
+            claims[MakablesClaimTypes.EmailConfirmedAt] = confirmedAt.ToUnixTimeSeconds();
+        }
+
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = _options.Issuer,

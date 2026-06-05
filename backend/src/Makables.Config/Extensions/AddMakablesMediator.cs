@@ -1,6 +1,5 @@
 using FluentValidation;
 using MediatR;
-using Makables.Core.AppServices;
 using Makables.Core.AppServices.Behaviors;
 using Makables.Core.AppServices.Features.Auth;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +15,17 @@ public static class MakablesMediatorExtensions
 {
     public static IServiceCollection AddMakablesMediator(this IServiceCollection services)
     {
-        var appServicesAssembly = typeof(AssemblyReference).Assembly;
-
+        // T-0063: the marker MUST be the fully-qualified
+        // Makables.Core.AppServices.AssemblyReference. The simple name
+        // `AssemblyReference` also exists in Makables.Config and in
+        // Makables.Core.Domain; C# overload resolution prefers the type
+        // declared in the CURRENT assembly (this file's host), which means
+        // `typeof(AssemblyReference)` resolves to
+        // Makables.Config.AssemblyReference here — pointing the scanner at
+        // the wrong DLL and silently registering zero handlers. The
+        // integration test "No service for type IRequestHandler" failure
+        // for CreateOrder surfaced this; the fix is to disambiguate.
+        var appServicesAssembly = typeof(Makables.Core.AppServices.AssemblyReference).Assembly;
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(appServicesAssembly);

@@ -43,6 +43,36 @@ public static class BusinessErrorMessage
     public const string OrderAlreadyAccepted = "order.alreadyAccepted";
     public const string OrderInvalidTransition = "order.invalidTransition";
     public const string OrderNotPayableYet = "order.notPayableYet";
+    /// <summary>
+    /// Quantity must equal 1 at MVP. T-0061 user decision Q4 keeps the
+    /// pricing snapshot scalar and the Order entity single-line; T-0063
+    /// CreateOrder.Validator fails loud (rather than silently truncating)
+    /// when the customer-supplied quantity is anything but 1.
+    /// </summary>
+    public const string OrderInvalidQuantity = "order.invalidQuantity";
+
+    // === Maker (T-0063 defence-in-depth on maker state) ===
+    /// <summary>
+    /// The maker's row exists but <c>Auditable.IsActive</c> is false (or
+    /// the row is missing entirely after a soft-delete cascade). T-0063
+    /// CreateOrder.Handler refuses to place an order against a
+    /// deactivated maker even if the frontend gate slipped.
+    /// </summary>
+    public const string MakerDeactivated = "maker.deactivated";
+    /// <summary>
+    /// The maker has not yet been admin-verified (<c>Maker.IsVerified ==
+    /// false</c>). T-0063 CreateOrder.Handler refuses the order — every
+    /// money-bearing flow requires a verified maker per US-customer-0010
+    /// AC-1's pre-condition.
+    /// </summary>
+    public const string MakerNotVerified = "maker.notVerified";
+    /// <summary>
+    /// The customer chose <see cref="Orders.ShippingMethod.PersonalPickup"/>
+    /// but the maker has <c>PersonalPickupEnabled == false</c>. T-0063
+    /// CreateOrder.Handler fails fast so the maker isn't stuck with an
+    /// order they can't fulfil.
+    /// </summary>
+    public const string MakerPersonalPickupDisabled = "maker.personalPickupDisabled";
 
     // === Product ===
     public const string ProductNotFound = "product.notFound";

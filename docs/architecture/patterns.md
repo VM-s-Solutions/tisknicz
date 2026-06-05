@@ -349,118 +349,238 @@ public class OrdersController : MakablesApiController
 
 ---
 
-### A.7 Feature file structure — full example
+### A.7 Feature file structure — full example (T-0063 CreateOrder)
+
+Single static class containing nested `Command` / `Response` / `Validator` / `Handler`. The shape below is the **shipped** T-0063 implementation — earlier drafts of this section assumed an async `MustAsync` existence check in the Validator and a clock-year argument on `IOrderNumberGenerator.NextAsync`; both were dropped (T-0062 made the generator TZ-aware, T-0063 moved existence checks to the handler so the Validator stays sync + stateless).
+
+#### Command shape
 
 ```csharp
-// Makables.Core.AppServices/Features/Orders/CreateOrder.cs
-using FluentValidation;
-using MediatR;
-using Makables.Core.AppServices.Abstractions;
-using Makables.Core.AppServices.Common;
-using Makables.Core.Domain.Orders;
-using Makables.Core.Domain.Products;
-using Makables.Core.Domain.Repositories;
+public sealed record Command(
+    string ProductId,
+    int Quantity,                       // == 1 at MVP per T-0061 Q4
+    ShippingMethod ShippingMethod,
+    string? ZasilkovnaPickupPointId,    // required iff ZasilkovnaPickupPoint
+    string CustomerName,
+    string CustomerEmail,
+    string CustomerPhone,
+    string? CustomerNotes
+) : ICommand<Response>;
 
-namespace Makables.Core.AppServices.Features.Orders;
+public sealed record Response(
+    string OrderId,
+    string OrderNumber,         // M-{CC}-{YYYY}{NNNN}
+    long TotalPriceMinor,
+    string Currency);
+```
 
-public class CreateOrder
+No attachments in the Command (T-0064 owns the multipart upload at `POST /api/v1/orders/{id}/attachments`). No payment URL (T-0065 is a follow-up call from the order page).
+
+#### Validator shape — sync, stateless
+
+```csharp
+public sealed class Validator : AbstractValidator<Command>
 {
-    public record Command(
-        string ProductId,
-        int Quantity,
-        ShippingMethod ShippingMethod,
-        string? ZasilkovnaBranchId,
-        string CustomerName,
-        string CustomerEmail,
-        string CustomerPhone,
-        string? Notes,
-        IReadOnlyList<string> Attachments
-    ) : ICommand<Response>;
-
-    public record Response(string OrderId, string OrderNumber, long TotalPriceMinor, string Currency);
-
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator(IProductRepository productRepository)
+        RuleFor(c => c.ProductId)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
+            .MaximumLength(64).WithErrorCode(BusinessErrorMessage.MaxLength);
+
+        RuleFor(c => c.Quantity)
+            .Equal(1).WithErrorCode(BusinessErrorMessage.OrderInvalidQuantity);
+
+        RuleFor(c => c.ShippingMethod)
+            .IsInEnum().WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
+
+        When(c => c.ShippingMethod == ShippingMethod.ZasilkovnaPickupPoint, () =>
         {
-            RuleFor(x => x.ProductId)
+            RuleFor(c => c.ZasilkovnaPickupPointId)
                 .Cascade(CascadeMode.Stop)
-                .NotEmpty().WithMessage(BusinessErrorMessage.Required)
-                .MustAsync(productRepository.ExistsAsync).WithMessage(BusinessErrorMessage.ProductNotFound);
+                .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
+                .MaximumLength(64).WithErrorCode(BusinessErrorMessage.MaxLength);
+        });
 
-            RuleFor(x => x.Quantity).GreaterThan(0).WithMessage(BusinessErrorMessage.Required);
+        RuleFor(c => c.CustomerName)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
+            .MinimumLength(2).WithErrorCode(BusinessErrorMessage.MinLength)
+            .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength);
 
-            RuleFor(x => x.CustomerName)
-                .Cascade(CascadeMode.Stop)
-                .NotEmpty().WithMessage(BusinessErrorMessage.Required)
-                .MinimumLength(2).WithMessage(BusinessErrorMessage.MinLength)
-                .MaximumLength(100).WithMessage(BusinessErrorMessage.MaxLength);
+        RuleFor(c => c.CustomerEmail)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
+            .EmailAddress().WithErrorCode(BusinessErrorMessage.InvalidEmailFormat)
+            .MaximumLength(254).WithErrorCode(BusinessErrorMessage.MaxLength);
 
-            RuleFor(x => x.CustomerEmail)
-                .NotEmpty().WithMessage(BusinessErrorMessage.Required)
-                .EmailAddress().WithMessage(BusinessErrorMessage.InvalidEmailFormat);
+        RuleFor(c => c.CustomerPhone)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
+            .Matches(CzechPhoneRegex.Pattern())
+                .WithErrorCode(BusinessErrorMessage.InvalidPhoneFormat);
 
-            RuleFor(x => x.ShippingMethod).IsInEnum().WithMessage(BusinessErrorMessage.InvalidEnumValue);
-
-            When(x => x.ShippingMethod == ShippingMethod.Zasilkovna, () =>
-            {
-                RuleFor(x => x.ZasilkovnaBranchId)
-                    .NotEmpty().WithMessage(BusinessErrorMessage.Required);
-            });
-        }
+        When(c => c.CustomerNotes is not null, () =>
+        {
+            RuleFor(c => c.CustomerNotes!)
+                .MaximumLength(2000).WithErrorCode(BusinessErrorMessage.MaxLength);
+        });
     }
+}
 
-    public class Handler(
-        IOrderRepository orderRepository,
-        IProductRepository productRepository,
-        ICountryConfigurationRepository countryConfigRepository,
-        IPricingService pricingService,
-        IUserSessionProvider userSessionProvider,
-        IOrderNumberGenerator orderNumberGenerator,
-        IClock clock
-    ) : ICommandHandler<Command, Response>
+internal static partial class CzechPhoneRegex
+{
+    [GeneratedRegex(@"^(\+420\s?)?[6-9]\d{2}\s?\d{3}\s?\d{3}$")]
+    public static partial Regex Pattern();
+}
+```
+
+Note `WithErrorCode` (not `WithMessage`) — `Error.Code` is what the frontend i18n catalogue keys off; the human message is rendered on the FE from the catalogue. No DB-backed `MustAsync` existence checks: the handler owns `ProductNotFound` / `MakerDeactivated` etc. because they overlap with TOCTOU-window concerns the validator can't see.
+
+#### Handler shape — 8-step happy-path, no SaveChanges
+
+```csharp
+public sealed class Handler(
+    IUserSessionProvider session,
+    IProductRepository products,
+    IMakerRepository makers,
+    IPricingService pricing,
+    IOrderNumberGenerator orderNumbers,
+    IOrderRepository orders,
+    IIdGenerator ids,
+    ILogger<Handler> logger
+) : IRequestHandler<Command, BusinessResult<Response>>
+{
+    public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken ct)
     {
-        public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken ct)
-        {
-            // Validator already confirmed productId exists — we can dereference.
-            var product = (await productRepository.GetByIdAsync(command.ProductId, ct))!;
-            var config = await countryConfigRepository.GetByCodeAsync(product.CountryCode, ct)
-                         ?? throw new InvalidOperationException(
-                            $"CountryConfiguration missing for {product.CountryCode}");
+        // 1. Resolve customer identity (backstop — [Authorize] should already have 401'd).
+        var customerUserId = session.GetUserId();
+        if (string.IsNullOrEmpty(customerUserId))
+            return BusinessResult.Failure<Response>(Error.Unauthorized());
 
-            var pricing = pricingService.Compute(product, command.Quantity, command.ShippingMethod, config);
-            var customerId = userSessionProvider.GetUserId()!;
-            var orderNumber = await orderNumberGenerator.NextAsync(product.CountryCode, clock.UtcNow.Year, ct);
+        // 2. Load product (TOCTOU pre-check).
+        var product = await products.GetByIdAsync(command.ProductId, ct);
+        if (product is null)
+            return BusinessResult.Failure<Response>(
+                Error.NotFound("productId", BusinessErrorMessage.ProductNotFound));
+        if (!product.IsActive)
+            return BusinessResult.Failure<Response>(
+                Error.Conflict("productId", BusinessErrorMessage.ProductNotActive));
 
-            var order = Order.Create(
-                orderNumber,
-                customerId,
-                product,
-                command.Quantity,
-                command.CustomerName,
-                command.CustomerEmail,
-                command.CustomerPhone,
-                command.ShippingMethod,
-                command.ZasilkovnaBranchId,
-                pricing,
-                clock.UtcNow);
+        // 3. Defence-in-depth on maker state (user decision Q4 — every customer-facing
+        //    money-bearing flow defends even when the frontend gates).
+        var maker = await makers.GetByIdAsync(product.MakerId, ct);
+        if (maker is null || !maker.IsActive)
+            return BusinessResult.Failure<Response>(
+                Error.Conflict("makerId", BusinessErrorMessage.MakerDeactivated));
+        if (!maker.IsVerified)
+            return BusinessResult.Failure<Response>(
+                Error.Conflict("makerId", BusinessErrorMessage.MakerNotVerified));
+        if (command.ShippingMethod == ShippingMethod.PersonalPickup && !maker.PersonalPickupEnabled)
+            return BusinessResult.Failure<Response>(
+                Error.Conflict("shippingMethod", BusinessErrorMessage.MakerPersonalPickupDisabled));
 
-            orderRepository.Add(order);
+        // 4. Pricing — surface every IPricingService failure verbatim.
+        var pricingResult = await pricing.ComputeForProductAsync(
+            command.ProductId, command.ShippingMethod, ct);
+        if (!pricingResult.IsSuccess)
+            return BusinessResult.Failure<Response>(pricingResult.Error!);
+        var breakdown = pricingResult.Value!;
 
-            // UnitOfWorkPipelineBehavior commits.
-            return BusinessResult.Success(new Response(
-                order.Id, order.OrderNumber, pricing.TotalPriceMinor, pricing.Currency));
-        }
+        // 5. Reserve order number — T-0062 TZ-aware contract: no `int year` argument.
+        var orderNumber = await orderNumbers.NextAsync(product.CountryCode, ct);
+
+        // 6. Build aggregate (Order.Create re-trims defensively; we trim locally
+        //    so the snapshot is canonical in logs and downstream serialisation).
+        var order = Order.Create(
+            id: ids.Next(),
+            orderNumber: orderNumber,
+            customerUserId: customerUserId,
+            makerId: maker.Id,
+            productId: product.Id,
+            contactName: command.CustomerName.Trim(),
+            contactEmail: command.CustomerEmail.Trim(),
+            contactPhone: command.CustomerPhone.Trim(),
+            productPriceAmountMinor: breakdown.ProductPrice.AmountMinor,
+            shippingPriceAmountMinor: breakdown.ShippingPrice.AmountMinor,
+            platformFeeAmountMinor: breakdown.PlatformFee.AmountMinor,
+            makerPayoutAmountMinor: breakdown.MakerPayout.AmountMinor,
+            totalAmountMinor: breakdown.TotalPrice.AmountMinor,
+            currency: breakdown.TotalPrice.Currency,
+            vatRateBp: breakdown.VatRateBp,
+            shippingMethod: command.ShippingMethod,
+            zasilkovnaPickupPointId: command.ZasilkovnaPickupPointId?.Trim(),
+            countryCode: product.CountryCode,
+            customerNotes: command.CustomerNotes?.Trim());
+
+        // 7. Persist — UnitOfWorkPipelineBehavior commits.
+        await orders.AddAsync(order, ct);
+
+        logger.LogInformation(
+            "Order {OrderId} ({OrderNumber}) created in PendingPayment for customer {CustomerId}.",
+            order.Id, order.OrderNumber, customerUserId);
+
+        // 8. Return the four fields the frontend needs.
+        return BusinessResult.Success(new Response(
+            order.Id, order.OrderNumber, order.TotalAmountMinor, order.Currency));
     }
 }
 ```
 
+#### Controller shape — JSON, audience-bound, wrapper for OpenAPI
+
+```csharp
+// Makables.Web.Customer/Controllers/OrdersController.cs
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/orders")]
+[Authorize]
+public sealed class OrdersController : MakablesApiController
+{
+    public sealed record CreateOrderRequest(
+        string ProductId, int Quantity, ShippingMethod ShippingMethod,
+        string? ZasilkovnaPickupPointId, string CustomerName, string CustomerEmail,
+        string CustomerPhone, string? CustomerNotes);
+
+    // Controller-level wrapper dodges the OpenAPI schema-name collision —
+    // every Features/*/Xxx.Response would emit as "Response" and NSwag picks
+    // whichever wins (same pattern as Maker.ProductController T-0049b).
+    public sealed record CreateOrderResponse(
+        string OrderId, string OrderNumber, long TotalPriceMinor, string Currency);
+
+    [HttpPost]
+    [ProducesResponseType(typeof(CreateOrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Create([FromBody] CreateOrderRequest body, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new CreateOrder.Command(
+            body.ProductId, body.Quantity, body.ShippingMethod,
+            body.ZasilkovnaPickupPointId, body.CustomerName, body.CustomerEmail,
+            body.CustomerPhone, body.CustomerNotes), ct);
+
+        return result.IsSuccess
+            ? HandleResult(BusinessResult.Success(new CreateOrderResponse(
+                result.Value!.OrderId, result.Value.OrderNumber,
+                result.Value.TotalPriceMinor, result.Value.Currency)))
+            : HandleResult(BusinessResult.Failure<CreateOrderResponse>(result.Error!));
+    }
+}
+```
+
+The customer host wires `RequireEmailConfirmedMiddleware` in `Program.cs` AFTER `UseAuthentication`/`UseAuthorization` — every authenticated customer endpoint inherits the 403 gate without per-action plumbing (skip-list: `/api/v*/auth/*`).
+
 **Notes:**
-- One file. Command + Response + Validator + Handler nested in a class named after the use case.
-- Validator handles all existence checks and field rules. Handler is happy-path only.
-- Handler uses `!` on values the validator confirmed exist.
-- No `SaveChangesAsync()` call — pipeline does it.
-- No `if (countryCode == "CZ")` — config table drives variation.
+- One file, single static class. `Command` + `Response` + `Validator` + `Handler` nested.
+- Validator is **sync and stateless** — no DB lookups, no async checks. Existence checks (`ProductNotFound`, `MakerDeactivated`, …) belong in the handler where the TOCTOU window is unavoidable anyway.
+- Handler runs the 8 steps in order; every expected failure returns `BusinessResult.Failure`, never throws.
+- No `SaveChangesAsync()` — `UnitOfWorkPipelineBehavior` commits.
+- No `if (countryCode == "CZ")` — `IPricingService` reads `CountryConfiguration`; the order-number generator is TZ-aware.
+- `customerUserId` only ever comes from `IUserSessionProvider` (IDOR shield).
+- Defence-in-depth on maker state: handler returns typed `MakerDeactivated` / `MakerNotVerified` / `MakerPersonalPickupDisabled` failures even though the frontend gates.
 
 ---
 
