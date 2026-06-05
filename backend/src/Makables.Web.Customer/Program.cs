@@ -5,6 +5,7 @@
 using Makables.Config;
 using Makables.Config.Extensions;
 using Makables.Core.Domain.Identity;
+using Makables.Web.Customer.Middleware;
 
 const string Audience = MakablesHosts.Customer;
 
@@ -30,6 +31,11 @@ builder.Services.AddMakablesOpenApi("v1");
 var app = builder.Build();
 
 app.UseMakablesPipeline();
+
+// Customer-host email-confirmed gate. Sits AFTER UseAuthentication +
+// UseAuthorization (which UseMakablesPipeline wired) so it only ever
+// sees authenticated requests and never 403s anonymous traffic. T-0063.
+app.UseMiddleware<RequireEmailConfirmedMiddleware>();
 
 app.MapGet("/", () => "Makables Customer API — alive.");
 app.MapControllers();

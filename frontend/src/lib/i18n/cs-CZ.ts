@@ -362,6 +362,14 @@ export const messages = {
   'order.state.cancelled': 'Zrušeno',
   'order.state.refunded': 'Vráceno',
   'order.state.disputed': 'V řízení',
+
+  // T-0063 CreateOrder error codes (parity with BusinessErrorMessage).
+  // PM to review on the PR — UX may refine the Czech wording.
+  'order.invalidQuantity': 'Množství musí být 1.',
+  'product.notActive': 'Tento výrobek již není k dispozici.',
+  'maker.deactivated': 'Tento výrobce momentálně nepřijímá objednávky.',
+  'maker.notVerified': 'Tento výrobce ještě nebyl ověřen a nemůže přijímat objednávky.',
+  'maker.personalPickupDisabled': 'Tento výrobce osobní odběr nenabízí.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
