@@ -175,6 +175,78 @@ public sealed class Order : Auditable
     /// <summary>Free-form note from the customer to the maker.</summary>
     public string? CustomerNotes { get; private set; }
 
+    // === Attachments ===
+
+    /// <summary>
+    /// Per-order cap on customer-uploaded attachments. Mirrors
+    /// <see cref="Products.Product.MaxImageCount"/> at a slightly higher
+    /// number — orders can be more complex than a product listing (multi-
+    /// page spec sheets, photo references), but ten is enough at MVP per
+    /// US-customer-0010 AC-1. The cap is enforced at
+    /// <see cref="AddAttachment"/> and double-checked at the upload
+    /// controller as an optimistic fast-path; the handler re-checks under
+    /// the unit-of-work transaction (race defence).
+    /// </summary>
+    public const int MaxAttachmentCount = 10;
+
+    private readonly List<OrderAttachment> _attachments = new();
+
+    /// <summary>
+    /// Customer-uploaded reference files. Read-only collection; the only
+    /// path to add an attachment is <see cref="AddAttachment"/> which
+    /// enforces the state-gate + count-cap invariants. Removed at MVP is
+    /// not supported (append-only) — a future <c>RemoveAttachment</c>
+    /// would soft-delete via <see cref="Auditable.MarkDeactivated"/>.
+    /// </summary>
+    public IReadOnlyCollection<OrderAttachment> Attachments => _attachments;
+
+    /// <summary>
+    /// True when the customer may still attach more reference files —
+    /// limited to the pre-shipment states. After <see cref="OrderState.Shipped"/>
+    /// the order snapshot is frozen for the maker; in
+    /// <see cref="OrderState.Delivered"/> / <see cref="OrderState.Completed"/>
+    /// the lifecycle is finished; <see cref="OrderState.Cancelled"/> /
+    /// <see cref="OrderState.Refunded"/> / <see cref="OrderState.Disputed"/>
+    /// are dead. T-0064 user decision Q4.
+    /// </summary>
+    public bool AllowsAttachmentUpload() =>
+        State is OrderState.PendingPayment or OrderState.Paid or OrderState.Accepted;
+
+    /// <summary>
+    /// Append <paramref name="attachment"/> to the order. Refuses with
+    /// <see cref="BusinessErrorMessage.OrderStateForbidsAttachment"/> when
+    /// the order has progressed past the attach-window, and with
+    /// <see cref="BusinessErrorMessage.OrderAttachmentLimitReached"/> at
+    /// the <see cref="MaxAttachmentCount"/> ceiling.
+    ///
+    /// <para>
+    /// Both invariants are also pre-checked at the upload controller
+    /// (optimistic fast-path). This method is the source of truth: the
+    /// controller's check can lose a concurrent-upload race; this guard
+    /// runs inside the request unit-of-work so the second uploader sees
+    /// the cap and gets a typed failure rather than silently writing the
+    /// 11th row.
+    /// </para>
+    /// </summary>
+    public BusinessResult AddAttachment(OrderAttachment attachment)
+    {
+        ArgumentNullException.ThrowIfNull(attachment);
+
+        if (!AllowsAttachmentUpload())
+        {
+            return BusinessResult.Failure(
+                Error.Conflict("order", BusinessErrorMessage.OrderStateForbidsAttachment));
+        }
+        if (_attachments.Count >= MaxAttachmentCount)
+        {
+            return BusinessResult.Failure(
+                Error.Conflict("attachments", BusinessErrorMessage.OrderAttachmentLimitReached));
+        }
+
+        _attachments.Add(attachment);
+        return BusinessResult.Success();
+    }
+
     // EF Core needs a parameterless ctor.
     private Order() { }
 

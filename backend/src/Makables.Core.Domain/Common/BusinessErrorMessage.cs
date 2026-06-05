@@ -50,6 +50,26 @@ public static class BusinessErrorMessage
     /// when the customer-supplied quantity is anything but 1.
     /// </summary>
     public const string OrderInvalidQuantity = "order.invalidQuantity";
+    /// <summary>
+    /// Per-order cap on customer attachments hit (10 at MVP, see
+    /// <see cref="Orders.Order.MaxAttachmentCount"/>). T-0064 user
+    /// decision baked into the AddAttachment / upload contract.
+    /// </summary>
+    public const string OrderAttachmentLimitReached = "order.attachmentLimitReached";
+    /// <summary>
+    /// Upload attempted on an order whose state no longer admits new
+    /// attachments — see <see cref="Orders.Order.AllowsAttachmentUpload"/>
+    /// for the open window (PendingPayment / Paid / Accepted only).
+    /// T-0064 user decision Q4.
+    /// </summary>
+    public const string OrderStateForbidsAttachment = "order.stateForbidsAttachment";
+    /// <summary>
+    /// Download requested for an attachment that does not exist OR is
+    /// owned by another customer / assigned to another maker. Same
+    /// IDOR-leak-resistant 404 shape as <see cref="OrderNotFound"/>.
+    /// T-0064.
+    /// </summary>
+    public const string OrderAttachmentNotFound = "order.attachmentNotFound";
 
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>

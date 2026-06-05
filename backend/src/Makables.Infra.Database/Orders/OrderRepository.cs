@@ -105,4 +105,50 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         db.Set<Order>().Add(order);
         return Task.CompletedTask;
     }
+
+    public async Task<OrderAttachment?> GetAttachmentForCustomerAsync(
+        string orderId,
+        string attachmentId,
+        string customerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId)
+            || string.IsNullOrWhiteSpace(attachmentId)
+            || string.IsNullOrWhiteSpace(customerUserId))
+        {
+            return null;
+        }
+
+        // Project to the attachment directly so we don't materialise the
+        // whole order aggregate just to read one child row. AsNoTracking
+        // because the customer-host download is a pure read; if the row
+        // is null, the controller surfaces 404. Soft-deleted orders are
+        // hidden by the global query filter — a soft-deleted parent's
+        // attachments thus invisible to the customer, matching AC-12.
+        return await db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.Id == orderId && o.CustomerUserId == customerUserId)
+            .SelectMany(o => o.Attachments)
+            .FirstOrDefaultAsync(a => a.Id == attachmentId, cancellationToken);
+    }
+
+    public async Task<OrderAttachment?> GetAttachmentForMakerAsync(
+        string orderId,
+        string attachmentId,
+        string makerId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId)
+            || string.IsNullOrWhiteSpace(attachmentId)
+            || string.IsNullOrWhiteSpace(makerId))
+        {
+            return null;
+        }
+
+        return await db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.Id == orderId && o.MakerId == makerId)
+            .SelectMany(o => o.Attachments)
+            .FirstOrDefaultAsync(a => a.Id == attachmentId, cancellationToken);
+    }
 }

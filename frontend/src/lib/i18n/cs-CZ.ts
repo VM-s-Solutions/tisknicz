@@ -370,6 +370,12 @@ export const messages = {
   'maker.deactivated': 'Tento výrobce momentálně nepřijímá objednávky.',
   'maker.notVerified': 'Tento výrobce ještě nebyl ověřen a nemůže přijímat objednávky.',
   'maker.personalPickupDisabled': 'Tento výrobce osobní odběr nenabízí.',
+
+  // T-0064 Order attachments (parity with BusinessErrorMessage).
+  // PM/UX to refine on PR review.
+  'order.attachmentLimitReached': 'K této objednávce lze přiložit nejvýše 10 souborů.',
+  'order.stateForbidsAttachment': 'V tomto stavu objednávky již nelze přidávat přílohy.',
+  'order.attachmentNotFound': 'Tato příloha neexistuje nebo k ní nemáte přístup.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
