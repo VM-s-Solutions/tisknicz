@@ -19,8 +19,9 @@ namespace Makables.Core.Domain.Numbering;
 /// The <c>int year</c> parameter that earlier versions of this
 /// interface exposed has been removed deliberately: a caller passing
 /// <c>clock.UtcNow.Year</c> would compile but ship the wrong year for
-/// the 30 minutes per year between 23:00 UTC Dec 31 and midnight local
-/// Prague. Removing it forces every caller into the TZ-aware contract.
+/// the 1-hour window per year between 23:00 UTC Dec 31 and 00:00 UTC
+/// Jan 1 (midnight local Prague in winter, since CET = UTC+1).
+/// Removing it forces every caller into the TZ-aware contract.
 /// </para>
 /// </summary>
 public interface IOrderNumberGenerator

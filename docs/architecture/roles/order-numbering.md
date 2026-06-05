@@ -32,7 +32,7 @@ Hand out the next order number for a given country. Sequence is not legally requ
 Task<string> NextAsync(string countryCode, CancellationToken ct)
 ```
 
-The earlier `(string countryCode, int year, CancellationToken)` signature was removed in T-0062 (see ADR 0009 amendment). A caller passing `clock.UtcNow.Year` to the old signature would compile but ship the wrong year for the 30 minutes between 23:00 UTC and midnight local Prague each Dec 31. Removing the parameter forces every caller into the TZ-aware contract.
+The earlier `(string countryCode, int year, CancellationToken)` signature was removed in T-0062 (see ADR 0009 amendment). A caller passing `clock.UtcNow.Year` to the old signature would compile but ship the wrong year for the 1-hour window between 23:00 UTC Dec 31 and 00:00 UTC Jan 1 (midnight local Prague in winter, since CET = UTC+1). Removing the parameter forces every caller into the TZ-aware contract.
 
 ## Invariants
 
