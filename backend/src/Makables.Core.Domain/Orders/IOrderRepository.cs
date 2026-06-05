@@ -124,4 +124,31 @@ public interface IOrderRepository
 
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load a single <see cref="OrderAttachment"/> belonging to an order
+    /// owned by <paramref name="customerUserId"/>. Returns <c>null</c>
+    /// when any of <paramref name="orderId"/> / <paramref name="attachmentId"/>
+    /// is unknown OR when the order is owned by another customer — same
+    /// IDOR-leak-resistant shape as <see cref="GetByIdForCustomerAsync"/>.
+    /// Backs the customer-host attachment download endpoint (T-0064).
+    /// Read-only — no tracking needed.
+    /// </summary>
+    Task<OrderAttachment?> GetAttachmentForCustomerAsync(
+        string orderId,
+        string attachmentId,
+        string customerUserId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load a single <see cref="OrderAttachment"/> belonging to an order
+    /// assigned to <paramref name="makerId"/>. Returns <c>null</c> for
+    /// unknown ids or cross-maker ids (same IDOR shield). Backs the
+    /// maker-host attachment download endpoint (T-0064).
+    /// </summary>
+    Task<OrderAttachment?> GetAttachmentForMakerAsync(
+        string orderId,
+        string attachmentId,
+        string makerId,
+        CancellationToken cancellationToken);
 }

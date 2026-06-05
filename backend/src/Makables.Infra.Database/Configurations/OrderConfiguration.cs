@@ -125,6 +125,30 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasDatabaseName("ix_orders_state")
             .HasFilter("is_active");
 
+        // === Attachments (T-0064) ===
+        // One-to-many to OrderAttachment with cascade-delete at the FK
+        // level. Soft-delete on the parent doesn't touch the FK; the
+        // global query filter on Auditable.IsActive hides both rows from
+        // every non-admin query. The cascade only fires on the GDPR
+        // right-to-erasure hard-delete (T-0110).
+        builder.HasMany(o => o.Attachments)
+            .WithOne()
+            .HasForeignKey(a => a.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Backing-field metadata for the private List<OrderAttachment>.
+        // Lets EF materialise straight into the field rather than going
+        // through the read-only IReadOnlyCollection property.
+        // AutoInclude mirrors ProductConfiguration's Images navigation:
+        // the attachment-count gate (Order.AddAttachment / handler / upload
+        // controller) needs the collection populated to be correct. Loading
+        // a partial aggregate would let an 11th row through. The shape is
+        // bounded at 10 rows per order so the JOIN is cheap.
+        builder.Navigation(o => o.Attachments)
+            .HasField("_attachments")
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
+            .AutoInclude();
+
         ConfigureAuditable(builder);
     }
 
