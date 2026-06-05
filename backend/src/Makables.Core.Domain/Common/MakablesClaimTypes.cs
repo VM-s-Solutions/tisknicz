@@ -19,8 +19,8 @@ public static class MakablesClaimTypes
     /// rather than the alternative of caching <c>IUserRepository</c>
     /// per request: cheaper, and the 15-minute access-token lifetime
     /// caps how long a freshly-confirmed user has to wait for refresh.
-    /// Absent for unconfirmed users so a forged claim of <c>0</c> on a
-    /// future evil token still fails closed.
+    /// JWT signature validation prevents clients from forging this
+    /// claim; unconfirmed users simply omit it from the token.
     /// </summary>
     public const string EmailConfirmedAt = "email_confirmed_at";
 }

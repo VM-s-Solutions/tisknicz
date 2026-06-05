@@ -68,11 +68,12 @@ public sealed class OrdersController : MakablesApiController
     /// order page and trigger T-0065's payment-session creation.
     ///
     /// <para>
-    /// 401 is intentionally not declared via <see cref="ProducesResponseTypeAttribute"/>
-    /// because the framework's challenge response (no body) precedes the
-    /// handler — but the handler's own Unauthorized backstop (called
-    /// directly from a non-controller path, e.g. a future cron) DOES
-    /// surface a typed <see cref="Error"/>, so we keep the 401 declared.
+    /// 401 is declared via <see cref="ProducesResponseTypeAttribute"/>
+    /// for OpenAPI completeness even though, on the normal controller
+    /// path, the framework's authentication challenge can short-circuit
+    /// before the handler runs. The handler still has an Unauthorized
+    /// backstop for non-controller callers (e.g. a future cron), which
+    /// returns a typed <see cref="Error"/>.
     /// </para>
     /// </summary>
     [HttpPost]

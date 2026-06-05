@@ -34,9 +34,7 @@ namespace Makables.Web.Customer.Middleware;
 /// <b>Bypasses.</b> Anonymous requests skip (they're handled by
 /// <c>[Authorize]</c>); the SendEmailConfirmation endpoint at
 /// <c>/api/v*/auth/*</c> must stay reachable while unconfirmed so the
-/// customer can request a new confirmation link. Health (<c>/</c>) and
-/// OpenAPI (<c>/openapi/*</c>) also skip because they're not customer
-/// surface.
+/// customer can request a new confirmation link.
 /// </para>
 /// </summary>
 public sealed class RequireEmailConfirmedMiddleware(RequestDelegate next)
@@ -80,9 +78,11 @@ public sealed class RequireEmailConfirmedMiddleware(RequestDelegate next)
             return;
         }
 
-        // Confirmed if the claim is present at all. Absence (not "= 0")
-        // is the unconfirmed signal — see MakablesClaimTypes.EmailConfirmedAt
-        // remarks on why we don't emit zero for unconfirmed users.
+        // Confirmed if the claim is present at all; unconfirmed users
+        // structurally omit it. The gate relies on JWT signature
+        // validation: callers cannot add this claim to a token without
+        // the server signing key (see MakablesClaimTypes.EmailConfirmedAt
+        // remarks for the wider rationale).
         var confirmedClaim = context.User.FindFirstValue(MakablesClaimTypes.EmailConfirmedAt);
         if (!string.IsNullOrEmpty(confirmedClaim))
         {
