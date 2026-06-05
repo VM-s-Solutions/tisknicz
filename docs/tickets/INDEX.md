@@ -94,8 +94,8 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
 |---|---|---|---|---|---|---|---|
 | T-0060 | Order entity + state machine + IOrderRepository (scoped ForCustomer / ForMaker / Unscoped) | 4 | L | **done** | T-0033, T-0041 | — | 0002, 0003, 0009, 0011, 0013, 0014, 0016, 0017, 0020 |
-| T-0061 | OrderPricing domain service + PricingService orchestrator; adds CountryConfiguration.DefaultShippingPriceMinor; reads CountryConfiguration; tests | 4 | M | **ready** | T-0010, T-0041, T-0060 | — | 0003, 0004 |
-| T-0062 | OrderNumber + IOrderNumberGenerator integration into CreateOrder | 4 | S | draft | T-0007, T-0060 | — | 0009 |
+| T-0061 | OrderPricing domain service + PricingService orchestrator; adds CountryConfiguration.DefaultShippingPriceMinor; reads CountryConfiguration; tests | 4 | M | **done** | T-0010, T-0041, T-0060 | — | 0003, 0004 |
+| T-0062 | OrderNumberGenerator: TZ-aware year (drops `int year` parameter; reads CountryConfiguration.TimeZoneId) + Postgres Testcontainers harness + race/rollback/first-allocation test coverage. Rescoped from "integration into CreateOrder" since that handler is T-0063 | 4 | S | **ready** | T-0007, T-0010, T-0060 | — | 0009 |
 | T-0063 | CreateOrder command + Validator (extensive — see US-customer-0010 AC list) + Handler + controller; persists Order in `PendingPayment` | 4 | L | draft | T-0060, T-0061, T-0062 | US-customer-0010, 0011 | 0003, 0009, 0010 |
 | T-0064 | Order attachments upload endpoint (multipart, validates type+size, stores under `order-attachments/cz/orders/<id>/`); GetAttachment streaming endpoint with ownership check | 4 | M | draft | T-0042, T-0063 | US-customer-0010; US-maker-0010 | 0011 |
 | T-0065 | IPaymentProvider + ComgatePaymentProvider; IPaymentProviderFactory; CreatePayment integrated into CreateOrder flow returning Comgate redirect URL | 4 | L | draft | T-0063 | US-customer-0010 | 0016 |
@@ -159,7 +159,7 @@ Until expanded, the manifest row is the lightweight backlog representation. Spri
 
 | Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
 |---|---|---|---|---|---|---|---|
-| T-0123 | Migration-pipeline validation harness: integration test using `Database.Migrate()` against a fresh Postgres container (Testcontainers per T-0049a precedent) to assert all migration scripts apply cleanly and produce the expected schema. Closes the coverage gap surfaced by T-0060 third Copilot review (the SQLite `TestDbHarness` uses `EnsureCreated()` and never executes migration files). | 4 | S | draft | T-0002, T-0060 | — | — |
+| T-0123 | Dedicated migration-pipeline assertions on top of the Postgres `PostgresHarness` shipped by T-0062: explicit tests that walk the migration journal, assert every expected schema object exists, and pin column types / indexes / partial-index filters. (T-0062 ships the Testcontainers harness itself + calls `MigrateAsync` to set up; T-0123 adds the assertion layer to fully close the gap surfaced by T-0060 third Copilot review where SQLite `TestDbHarness` uses `EnsureCreated()`.) | 4 | S | draft | T-0002, T-0062 | — | — |
 
 ---
 

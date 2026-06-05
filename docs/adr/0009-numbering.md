@@ -95,13 +95,21 @@ Invoice numbers are allocated **only when the invoice row is being persisted**. 
 
 `VYP-CZ-2026-W21` is derived from the ISO week number of the batch run date — no sequence increment needed. Uniqueness is enforced by the table's unique index.
 
+### TZ-aware year for orders (T-0062 amendment, 2026-06-04)
+
+The order generator's public interface signature is `NextAsync(string countryCode, CancellationToken)` — the year is no longer a caller-supplied parameter. The implementation reads `CountryConfiguration.TimeZoneId` for the given country and computes the year via `TimeZoneInfo.ConvertTimeFromUtc(clock.UtcNow.UtcDateTime, tz).Year`. A 23:30 Prague order on Dec 31 buckets into the local-year sequence, matching the year the customer sees on the invoice. Rationale: under the previous signature, a caller passing `clock.UtcNow.Year` to the old method would have shipped the wrong year for the 1-hour window between 23:00 UTC Dec 31 and 00:00 UTC Jan 1 (midnight local Prague in winter, since CET = UTC+1) — a silent, customer-visible numbering bug. Forcing the country-local conversion at the generator boundary eliminates that footgun.
+
+Invoice (`IInvoiceNumberGenerator`) and payout-batch (`IPayoutBatchNumberGenerator`) generators retain the explicit-year/week parameter for now. They will migrate to the same TZ-aware pattern in their respective tickets (T-0068 for invoices — legally regulated, so the same year mismatch would be a real compliance issue; T-0101 for payout batches — week derivation is similar). The internal `NumberingSequenceAllocator` is unchanged and still takes `int year`; it remains the shared infrastructure for all three scopes.
+
 ## Domain types
 
 ```csharp
 // Core.Domain/Numbering/INumberingGenerator.cs
 public interface IOrderNumberGenerator
 {
-    Task<string> NextAsync(string countryCode, int year, CancellationToken ct);
+    // Year is derived from CountryConfiguration.TimeZoneId per the
+    // TZ-aware-year amendment below (T-0062, 2026-06-04).
+    Task<string> NextAsync(string countryCode, CancellationToken ct);
 }
 
 public interface IInvoiceNumberGenerator
@@ -142,6 +150,7 @@ public interface IPayoutBatchNumberGenerator
 - Reviewer checklist: number allocation happens inside the surrounding command's transaction (i.e. between handler start and `UnitOfWorkPipelineBehavior.SaveChangesAsync`).
 - Integration test: a failing invoice command leaves `last_used_value` unchanged.
 - Integration test: two concurrent invoice commands serialize and produce consecutive numbers.
+- Integration test (T-0062): the order generator satisfies the same two properties on real Postgres — `Failed_command_leaves_last_used_value_unchanged` and `Two_concurrent_NextAsync_calls_produce_consecutive_numbers` in `OrderNumberGeneratorRaceSafetyTests`. The first-allocation race is separately pinned by `First_allocation_race_creates_row_exactly_once` (either both succeed with consecutive numbers, or one succeeds and the loser surfaces `UniqueConstraintViolationException` from the unique-PK 23505 — exactly one row in `numbering_sequence` either way).
 
 ## Related
 - Patterns: §A.5 pipeline behaviors, §A.20 idempotent webhooks (where webhook handlers issue invoices)
