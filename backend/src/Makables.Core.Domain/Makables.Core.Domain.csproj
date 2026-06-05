@@ -2,6 +2,20 @@
 
   <ItemGroup>
     <!--
+      T-0065: `IPaymentProvider.ParseAndVerifyWebhookAsync` declares
+      `Microsoft.AspNetCore.Http.HttpRequest` per ADR 0016 §C# Interface
+      and the payment-provider role doc. `Microsoft.AspNetCore.App` is a
+      framework reference (not a NuGet package) — no transitive third-party
+      surface leaks into Core.Domain. This is the same shape Microsoft uses
+      for shared abstractions (e.g. `ProblemDetails`, `HttpContext`) and
+      keeps the contract authored in the language of the boundary (HTTP)
+      without forcing a domain-shaped adapter for the webhook bytes.
+    -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
       T-0061: `OrderPricing` is `internal static` per role/order-pricing.md
       (pure-math layer, no DI seam). Two assemblies need access:
       - `Makables.Core.AppServices` for the `PricingService` orchestrator

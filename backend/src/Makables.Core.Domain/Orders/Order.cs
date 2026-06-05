@@ -149,12 +149,30 @@ public sealed class Order : Auditable
     // === Provider refs (set-once) ===
 
     /// <summary>
-    /// Comgate transaction id, set on <see cref="MarkAsPaid"/>. Set-once
-    /// invariant — a second <see cref="MarkAsPaid"/> call (or the
-    /// would-be edge case of two parallel webhooks racing the same row)
-    /// surfaces as <see cref="BusinessErrorMessage.OrderInvalidTransition"/>.
+    /// Comgate transaction id, set on <see cref="MarkAsPaid"/> OR on
+    /// <see cref="ReservePaymentSession"/> (T-0065). Set-once invariant on
+    /// <see cref="MarkAsPaid"/>; <see cref="ReservePaymentSession"/> allows
+    /// overwrite-after-rejection per user decision Q1 (the handler vetted
+    /// the prior session was Cancelled/Failed first via
+    /// <see cref="Payments.IPaymentProvider.VerifyPaymentAsync"/>). A second
+    /// <see cref="MarkAsPaid"/> call (or two parallel webhooks racing the
+    /// same row) still surfaces as
+    /// <see cref="BusinessErrorMessage.OrderInvalidTransition"/>.
     /// </summary>
     public string? PaymentProviderRef { get; private set; }
+
+    /// <summary>
+    /// Cached Comgate redirect URL for the 24h retry window
+    /// (US-customer-0010 AC-3). Set by <see cref="ReservePaymentSession"/>
+    /// (T-0065); read back when the customer revisits an order in
+    /// <see cref="OrderState.PendingPayment"/> with the provider session
+    /// still <see cref="Payments.PaymentState.Pending"/> or
+    /// <see cref="Payments.PaymentState.Authorized"/> — saves a Comgate
+    /// roundtrip on every retry. Null until the customer triggers their
+    /// first payment-session creation. Length-bounded to 500 chars
+    /// (Comgate URLs are ~120 chars; 500 gives generous headroom).
+    /// </summary>
+    public string? PaymentRedirectUrl { get; private set; }
 
     /// <summary>
     /// Packeta shipment id, set on <see cref="Ship"/>. Null for
@@ -582,6 +600,66 @@ public sealed class Order : Auditable
 
         State = OrderState.Disputed;
         DisputedAt = clock.UtcNow;
+        return BusinessResult.Success();
+    }
+
+    /// <summary>
+    /// T-0065. Record the provider's session reference and redirect URL on
+    /// an order in <see cref="OrderState.PendingPayment"/>. Does NOT change
+    /// <see cref="State"/> — that's the webhook's job
+    /// (<see cref="MarkAsPaid"/> via T-0067).
+    ///
+    /// <para>
+    /// <b>State gate.</b> Refuses with
+    /// <see cref="BusinessErrorMessage.OrderInvalidTransition"/> for any
+    /// state other than <see cref="OrderState.PendingPayment"/>. The
+    /// handler also enforces a stricter
+    /// <see cref="BusinessErrorMessage.OrderInvalidStateForPayment"/>
+    /// at the command boundary (so already-paid orders surface a UX
+    /// distinct message); this entity-level guard is defence-in-depth.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Idempotent on same ref.</b> When
+    /// <see cref="PaymentProviderRef"/> already equals the incoming ref,
+    /// only <see cref="PaymentRedirectUrl"/> is refreshed and the call
+    /// succeeds. Comgate retries on the same <c>refId</c> return the same
+    /// <c>transId</c>; the URL may legitimately rotate, so we accept the
+    /// fresh value.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Overwrite-after-rejection.</b> When the existing ref differs
+    /// from the incoming one, this method ALSO succeeds — but the caller
+    /// (T-0065 <c>CreatePaymentSession.Handler</c>) is responsible for
+    /// having verified the prior session was
+    /// <see cref="Payments.PaymentState.Cancelled"/> or
+    /// <see cref="Payments.PaymentState.Failed"/> first. The aggregate
+    /// trusts the caller here because the verify-then-recreate sequencing
+    /// lives at the application-service layer, not in the entity (an
+    /// admin manual fix-up via T-0107 may also overwrite without the
+    /// verify step). Per user decision Q1.
+    /// </para>
+    /// </summary>
+    public BusinessResult ReservePaymentSession(string providerRef, string redirectUrl, IClock clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (string.IsNullOrWhiteSpace(providerRef))
+            throw new ArgumentException("ProviderRef is required.", nameof(providerRef));
+        if (string.IsNullOrWhiteSpace(redirectUrl))
+            throw new ArgumentException("RedirectUrl is required.", nameof(redirectUrl));
+
+        if (State != OrderState.PendingPayment)
+            return InvalidTransition();
+
+        var trimmedRef = providerRef.Trim();
+        var trimmedUrl = redirectUrl.Trim();
+
+        // Same ref (Comgate idempotency on refId) → only the URL refreshes.
+        // Different ref (overwrite-after-rejection per Q1) → both update.
+        PaymentProviderRef = trimmedRef;
+        PaymentRedirectUrl = trimmedUrl;
+        UpdatedAt = clock.UtcNow;
         return BusinessResult.Success();
     }
 

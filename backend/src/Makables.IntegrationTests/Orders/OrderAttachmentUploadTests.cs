@@ -81,6 +81,10 @@ public sealed class OrderAttachmentUploadTests : IAsyncLifetime
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                         ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                         ["Ares:BaseUrl"] = "https://ares.integration-test.local",
+                        // T-0065 ComgateOptions ValidateOnStart stubs.
+                        ["Comgate:MerchantId"] = "12345",
+                        ["Comgate:Secret"] = "integration-test-secret",
+                        ["Comgate:BaseUrl"] = "https://payments.comgate.test",
                         ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
                         ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
                         ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",

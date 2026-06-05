@@ -70,6 +70,25 @@ public static class BusinessErrorMessage
     /// T-0064.
     /// </summary>
     public const string OrderAttachmentNotFound = "order.attachmentNotFound";
+    /// <summary>
+    /// <c>CreatePaymentSession</c> called on an order whose state is no
+    /// longer eligible for payment (anything other than
+    /// <see cref="Orders.OrderState.PendingPayment"/>). Distinct from
+    /// <see cref="OrderPaymentAlreadyCaptured"/> so the frontend can
+    /// distinguish "already paid, navigate to receipt" from "cancelled /
+    /// shipped / delivered, you can't pay this anymore". T-0065.
+    /// </summary>
+    public const string OrderInvalidStateForPayment = "order.invalidStateForPayment";
+    /// <summary>
+    /// The verify-then-recreate retry path discovered the order's existing
+    /// Comgate session is already <see cref="Payments.PaymentState.Paid"/>
+    /// (or <see cref="Payments.PaymentState.Refunded"/>) — meaning the
+    /// webhook should already have transitioned the row past
+    /// <see cref="Orders.OrderState.PendingPayment"/>. Surfaces as a
+    /// state-machine mismatch + Critical log so ops can reconcile before
+    /// the customer double-pays. T-0065 user decision Q1.
+    /// </summary>
+    public const string OrderPaymentAlreadyCaptured = "order.paymentAlreadyCaptured";
 
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
@@ -164,6 +183,37 @@ public static class BusinessErrorMessage
     public const string PaymentGatewayUnavailable = "payment.gatewayUnavailable";
     public const string PaymentVerificationFailed = "payment.verificationFailed";
     public const string PaymentGatewayMisconfigured = "payment.gatewayMisconfigured";
+    /// <summary>
+    /// HTTP-level failure talking to the payment provider — network blip,
+    /// timeout, 5xx, 408, 429. Classified <see cref="ErrorType.Transient"/>;
+    /// the customer can retry. T-0065.
+    /// </summary>
+    public const string PaymentProviderUnavailable = "payment.providerUnavailable";
+    /// <summary>
+    /// Provider returned a business error (e.g. invalid currency,
+    /// insufficient merchant balance). Classified
+    /// <see cref="ErrorType.Permanent"/> — retrying won't help. T-0065.
+    /// </summary>
+    public const string PaymentProviderRejected = "payment.providerRejected";
+    /// <summary>
+    /// Provider says the merchant id or shared secret is wrong. Classified
+    /// <see cref="ErrorType.Configuration"/> and logged at
+    /// <see cref="Microsoft.Extensions.Logging.LogLevel.Critical"/> —
+    /// ops must intervene; no retry. T-0065.
+    /// </summary>
+    public const string PaymentProviderMisconfigured = "payment.providerMisconfigured";
+    /// <summary>
+    /// <see cref="Payments.IPaymentProviderFactory.ResolveAsync"/> could not
+    /// find a keyed <see cref="Payments.IPaymentProvider"/> for the country's
+    /// configured provider code. T-0065.
+    /// </summary>
+    public const string PaymentProviderNotRegistered = "payment.providerNotRegistered";
+    /// <summary>
+    /// Provider returned an unrecognised error shape. Classified
+    /// <see cref="ErrorType.Unknown"/> — limited retry then escalate
+    /// (Mapbox / ARES precedent: 3 attempts). T-0065.
+    /// </summary>
+    public const string PaymentUnknownError = "payment.unknownError";
 
     // === Shipping ===
     public const string ShippingCarrierUnavailable = "shipping.carrierUnavailable";

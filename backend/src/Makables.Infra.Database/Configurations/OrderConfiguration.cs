@@ -97,6 +97,12 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasDatabaseName("ix_orders_payment_provider_ref")
             .HasFilter("payment_provider_ref IS NOT NULL AND is_active");
 
+        // T-0065: cached Comgate redirect URL for the 24h retry window.
+        // Nullable until the customer's first payment-session call. Length
+        // 500 — generous headroom over Comgate's ~120-char URLs.
+        builder.Property(o => o.PaymentRedirectUrl)
+            .HasColumnName("payment_redirect_url").HasMaxLength(500);
+
         builder.Property(o => o.ShippingCarrierRef)
             .HasColumnName("shipping_carrier_ref").HasMaxLength(200);
         builder.Property(o => o.AutoDeliverAt).HasColumnName("auto_deliver_at");

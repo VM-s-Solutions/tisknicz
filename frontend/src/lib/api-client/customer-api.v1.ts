@@ -15,6 +15,11 @@ export interface ICustomerApi {
     orders(body: CreateOrderRequest): Promise<CreateOrderResponse>;
 
     /**
+     * @return OK
+     */
+    paymentSession(orderId: string): Promise<CreatePaymentSessionResponse>;
+
+    /**
      * @param file 
      * @return OK
      */
@@ -192,6 +197,81 @@ export class CustomerApi implements ICustomerApi {
             });
         }
         return Promise.resolve<CreateOrderResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    paymentSession(orderId: string): Promise<CreatePaymentSessionResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/payment-session";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPaymentSession(_response);
+        });
+    }
+
+    protected processPaymentSession(response: Response): Promise<CreatePaymentSessionResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = CreatePaymentSessionResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CreatePaymentSessionResponse>(null as any);
     }
 
     /**
@@ -1250,6 +1330,58 @@ export interface ICreateOrderResponse {
     orderNumber: string;
     totalPriceMinor: number;
     currency: string;
+
+    [key: string]: any;
+}
+
+export class CreatePaymentSessionResponse implements ICreatePaymentSessionResponse {
+    paymentProviderRef!: string;
+    redirectUrl!: string;
+
+    [key: string]: any;
+
+    constructor(data?: ICreatePaymentSessionResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.paymentProviderRef = _data["paymentProviderRef"];
+            this.redirectUrl = _data["redirectUrl"];
+        }
+    }
+
+    static fromJS(data: any): CreatePaymentSessionResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreatePaymentSessionResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["paymentProviderRef"] = this.paymentProviderRef;
+        data["redirectUrl"] = this.redirectUrl;
+        return data;
+    }
+}
+
+export interface ICreatePaymentSessionResponse {
+    paymentProviderRef: string;
+    redirectUrl: string;
 
     [key: string]: any;
 }

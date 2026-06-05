@@ -77,6 +77,11 @@ public sealed class OrdersController(
         long SizeBytes,
         DateTimeOffset UploadedOn);
 
+    // Same schema-collision dodge for the payment-session action. T-0065.
+    public sealed record CreatePaymentSessionResponse(
+        string PaymentProviderRef,
+        string RedirectUrl);
+
     /// <summary>
     /// Create a customer order in <see cref="OrderState.PendingPayment"/>.
     /// Returns the four fields the frontend uses to navigate to the
@@ -121,6 +126,40 @@ public sealed class OrdersController(
                 result.Value.TotalPriceMinor,
                 result.Value.Currency)))
             : HandleResult(BusinessResult.Failure<CreateOrderResponse>(result.Error!));
+    }
+
+    /// <summary>
+    /// Create (or re-use) a Comgate payment session for an order in
+    /// <see cref="OrderState.PendingPayment"/>. Returns the redirect URL
+    /// the frontend navigates the customer to and the provider's session
+    /// reference (Comgate <c>transId</c>). T-0065 / US-customer-0010 AC-2.
+    ///
+    /// <para>
+    /// Per user decision Q1 the 24h retry window is handled inside the
+    /// handler: a second call within the window with the existing Comgate
+    /// session still <see cref="Payments.PaymentState.Pending"/> /
+    /// <see cref="Payments.PaymentState.Authorized"/> returns the same
+    /// cached URL without a new Comgate roundtrip.
+    /// </para>
+    /// </summary>
+    [HttpPost("{orderId}/payment-session")]
+    [ProducesResponseType(typeof(CreatePaymentSessionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> CreatePaymentSession(string orderId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new CreatePaymentSession.Command(orderId), ct);
+
+        // Project the handler's nested Response into the controller-level
+        // shape so the OpenAPI schema gets a unique top-level name.
+        return result.IsSuccess
+            ? HandleResult(BusinessResult.Success(new CreatePaymentSessionResponse(
+                result.Value!.PaymentProviderRef,
+                result.Value.RedirectUrl)))
+            : HandleResult(BusinessResult.Failure<CreatePaymentSessionResponse>(result.Error!));
     }
 
     /// <summary>

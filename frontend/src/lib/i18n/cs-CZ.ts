@@ -376,6 +376,16 @@ export const messages = {
   'order.attachmentLimitReached': 'K této objednávce lze přiložit nejvýše 10 souborů.',
   'order.stateForbidsAttachment': 'V tomto stavu objednávky již nelze přidávat přílohy.',
   'order.attachmentNotFound': 'Tato příloha neexistuje nebo k ní nemáte přístup.',
+
+  // T-0065 Comgate payment session (parity with BusinessErrorMessage).
+  // PM/UX to refine on PR review.
+  'payment.providerUnavailable': 'Platební brána je momentálně nedostupná. Zkuste to prosím za pár minut.',
+  'payment.providerRejected': 'Platba byla zamítnuta. Zkontrolujte údaje a zkuste to znovu.',
+  'payment.providerMisconfigured': 'Platba dočasně není možná z technických důvodů.',
+  'payment.providerNotRegistered': 'Platba pro tuto zemi není podporována.',
+  'payment.unknownError': 'Nastala neznámá chyba při zpracování platby. Zkuste to prosím znovu.',
+  'order.invalidStateForPayment': 'Tuto objednávku již nelze platit.',
+  'order.paymentAlreadyCaptured': 'Tato objednávka už byla zaplacena.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
