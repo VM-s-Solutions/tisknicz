@@ -132,11 +132,18 @@ public sealed class OrderNumberGeneratorRaceSafetyTests
         //
         // This test pins that behaviour so a future allocator rewrite
         // (e.g. adding ON CONFLICT or a separate "ensure row exists"
-        // transaction) cannot regress silently. Either outcome is fine
-        // from the caller's perspective — UnitOfWorkPipelineBehavior
-        // would translate the loser into a typed BusinessResult.Failure
-        // (Conflict), and the next attempt would find the row and
-        // increment cleanly to 0002.
+        // transaction) cannot regress silently. Runtime contract: the
+        // loser currently surfaces UniqueConstraintViolationException
+        // verbatim (the PK_numbering_sequence constraint is intentionally
+        // NOT mapped in UniqueConstraintTranslator — same policy as
+        // ix_orders_order_number per the file's "defence-in-depth
+        // invariants stay unmapped" rule, since a monotonic generator
+        // should never produce a colliding insert). The caller's next
+        // attempt finds the freshly-committed row and increments cleanly
+        // to 0002. If the team later decides this race should surface as
+        // a typed BusinessResult.Failure(Conflict), the fix is to add
+        // PK_numbering_sequence to UniqueConstraintTranslator + a comment
+        // explaining the policy carve-out. T-0062 Copilot review R3.
         var genA = BuildGenerator(out var dbA);
         var genB = BuildGenerator(out var dbB);
 
