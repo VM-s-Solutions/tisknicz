@@ -94,9 +94,10 @@ jobs:
         env:
           # Placeholder values to satisfy every Options class wired with
           # .ValidateOnStart() (T-0027 Jwt, T-0028 SendGrid + PublicAppUrls,
-          # T-0029 OutboxDispatcher + OutboxQueues). The hosts never touch
-          # any of these at startup — they only need to pass the boot-time
-          # validators so /openapi/v1.json becomes reachable.
+          # T-0029 OutboxDispatcher + OutboxQueues, T-0065 Comgate). The
+          # hosts never touch any of these at startup — they only need to
+          # pass the boot-time validators so /openapi/v1.json becomes
+          # reachable.
           ConnectionStrings__Postgres: 'Host=placeholder;Database=ignored'
           Jwt__Issuer: 'https://makables.test'
           Jwt__SigningKeyBase64: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
@@ -113,6 +114,16 @@ jobs:
           # touches blob storage at startup — supply the dev-storage stub
           # so the validator passes and /openapi/v1.json becomes reachable.
           AzureBlobStorage__ConnectionString: 'UseDevelopmentStorage=true'
+          # T-0065: ComgateOptions.ValidateOnStart requires MerchantId +
+          # Secret non-empty and BaseUrl absolute HTTPS. The spec-parity
+          # host never calls Comgate at startup; stub values pass the
+          # validator. BaseUrl falls back to the production default if
+          # absent (ComgateOptions.BaseUrl initialiser), but setting it
+          # here keeps every ValidateOnStart input explicit and the
+          # boot diagnostics easy to read.
+          Comgate__MerchantId: 'ci-spec-parity-stub-merchant'
+          Comgate__Secret: 'ci-spec-parity-stub-secret'
+          Comgate__BaseUrl: 'https://payments.comgate.cz'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs
