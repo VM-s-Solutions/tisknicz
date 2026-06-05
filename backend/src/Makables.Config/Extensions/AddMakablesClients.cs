@@ -1,8 +1,10 @@
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Payments;
 using Makables.Core.Domain.Registry;
 using Makables.Infra.Clients.Ares;
+using Makables.Infra.Clients.Comgate;
 using Makables.Infra.Clients.Google;
 using Makables.Infra.Clients.Mapbox;
 using Makables.Infra.Clients.SendGrid;
@@ -152,6 +154,35 @@ public static class MakablesClientsExtensions
 
         services.AddScoped<ICompanyRegistry, AresCompanyRegistry>();
 
+        // === Comgate (T-0065) ===
+        // ValidateOnStart so a missing/typo'd Comgate:MerchantId or
+        // Comgate:Secret crashes the host at boot rather than on the
+        // first /create call. The merchant id and secret are the entire
+        // auth surface — there is no header alternative — so a misconfig
+        // here turns every payment-session attempt into a 5xx.
+        services.AddOptions<ComgateOptions>()
+            .Bind(configuration.GetSection(ComgateOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.MerchantId),
+                "Comgate:MerchantId is required.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.Secret),
+                "Comgate:Secret is required.")
+            // BaseUrl must be absolute https (same shape as T-0031 sec MN-2 +
+            // T-0032 ARES). A compromised config that pointed Comgate calls
+            // at an attacker-controlled host would leak the secret on every
+            // create + status call.
+            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u)
+                        && u.Scheme == Uri.UriSchemeHttps,
+                "Comgate:BaseUrl must be an absolute https URI.")
+            .ValidateOnStart();
+
+        services.AddHttpClient(ComgatePaymentProvider.HttpClientName);
+
+        // Keyed registration — T-0065 introduces the keyed-services pattern
+        // for IPaymentProvider; SendGrid + ARES migration in T-0124 (Q3).
+        services.AddKeyedScoped<IPaymentProvider, ComgatePaymentProvider>(
+            ComgatePaymentProvider.ProviderCode);
+        services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
+
         // === Shared Polly registry for every HttpResponseMessage-typed
         // pipeline across adapters (T-0032 follow-up to a latent T-0031
         // collision: two adapters registering ResiliencePipeline<HttpResponseMessage>
@@ -174,6 +205,16 @@ public static class MakablesClientsExtensions
                 AresCompanyRegistry.HttpClientName,
                 (builder, _) => builder.AddRetry(HttpRetryStrategy(
                     aresOpts.RetryCount, aresOpts.RetryBaseDelayMs)));
+
+            // Comgate (T-0065): fixed 3-attempt retry chain with 200ms
+            // exponential jittered backoff. Matches the ticket §Scope.DI
+            // numbers; Comgate doesn't have a per-call options surface
+            // for retry count today (single global section per Q4), so
+            // the constants live inline rather than on ComgateOptions.
+            registry.TryAddBuilder<HttpResponseMessage>(
+                ComgatePaymentProvider.HttpClientName,
+                (builder, _) => builder.AddRetry(HttpRetryStrategy(
+                    retryCount: 3, baseDelayMs: 200)));
 
             return registry;
         });

@@ -61,6 +61,13 @@ internal static class HostStartupHarness
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                     ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                     ["Ares:BaseUrl"] = "https://ares.integration-test.local",
+                    // T-0065: ComgateOptions ValidateOnStart needs MerchantId,
+                    // Secret + an absolute-https BaseUrl. Stub values keep the
+                    // host bootable; the keyed IPaymentProvider registration
+                    // is overridden in tests that exercise payment flows.
+                    ["Comgate:MerchantId"] = "12345",
+                    ["Comgate:Secret"] = "integration-test-secret",
+                    ["Comgate:BaseUrl"] = "https://payments.comgate.test",
                     // T-0042: AddMakablesBlobStorage requires either
                     // ConnectionString (dev/CI) or ServiceUri (Managed
                     // Identity). Stub connection string for tests.
