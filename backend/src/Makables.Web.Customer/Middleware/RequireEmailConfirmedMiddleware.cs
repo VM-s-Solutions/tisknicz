@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Makables.Core.Domain.Common;
 using Microsoft.AspNetCore.Http;
 
@@ -40,6 +41,24 @@ namespace Makables.Web.Customer.Middleware;
 /// </summary>
 public sealed class RequireEmailConfirmedMiddleware(RequestDelegate next)
 {
+    /// <summary>
+    /// Wire-shape options for the typed <see cref="Error"/> body this
+    /// middleware writes on a 403. Mirrors what <c>AddMakablesControllers</c>
+    /// configures for every controller-returned <see cref="Error"/>:
+    /// camelCase property names (<see cref="JsonSerializerDefaults.Web"/>)
+    /// plus string-named enums (<see cref="JsonStringEnumConverter"/>).
+    /// Without these options the middleware would emit
+    /// <c>{"Field":"","Code":"auth.emailNotConfirmed","Type":2,...}</c>
+    /// — PascalCase + numeric enum — and the frontend's
+    /// <c>lib/runtime/api-fetch.ts</c> reader (which reads <c>payload.code</c>
+    /// / <c>payload.type</c>) would fall through to a generic 403 message
+    /// instead of resolving the typed i18n key. T-0063 Copilot review H-1.
+    /// </summary>
+    private static readonly JsonSerializerOptions ErrorJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
+
     public async Task Invoke(HttpContext context)
     {
         // Anonymous → defer to [Authorize] / 401 elsewhere. We never
@@ -123,9 +142,12 @@ public sealed class RequireEmailConfirmedMiddleware(RequestDelegate next)
     private static async Task WriteForbiddenAsync(HttpContext context)
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        context.Response.ContentType = "application/json; charset=utf-8";
         var error = Error.Forbidden(BusinessErrorMessage.AuthEmailNotConfirmed);
-        var json = JsonSerializer.Serialize(error);
-        await context.Response.WriteAsync(json, context.RequestAborted);
+        // WriteAsJsonAsync sets Content-Type: application/json; charset=utf-8
+        // and serialises with our explicit Web-shape options so the body
+        // matches the controller wire shape exactly (camelCase fields +
+        // string-named ErrorType). See ErrorJsonOptions remarks above.
+        await context.Response.WriteAsJsonAsync(
+            error, ErrorJsonOptions, context.RequestAborted);
     }
 }

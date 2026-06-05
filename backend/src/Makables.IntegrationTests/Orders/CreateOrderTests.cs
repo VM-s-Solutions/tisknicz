@@ -359,8 +359,22 @@ public sealed class CreateOrderTests : IAsyncLifetime
             "/api/v1/orders", ZasilkovnaPayload());
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // Wire-shape regression for T-0063 Copilot review H-1. The
+        // middleware MUST emit camelCase property names + string-named
+        // enums (matching AddMakablesControllers + the NSwag-generated
+        // TS client) so the frontend's api-fetch.ts reader resolves
+        // `payload.code` to the typed i18n key instead of falling
+        // through to a generic 403 message.
         var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain(BusinessErrorMessage.AuthEmailNotConfirmed);
+        body.Should().Contain($"\"code\":\"{BusinessErrorMessage.AuthEmailNotConfirmed}\"",
+            because: "the 403 body uses camelCase 'code' per AddMakablesControllers / NSwag contract");
+        body.Should().Contain("\"type\":\"Forbidden\"",
+            because: "ErrorType serialises as a string-named enum, not the numeric ordinal");
+        body.Should().NotContain("\"Code\":",
+            because: "PascalCase 'Code' would mean the middleware used JsonSerializer defaults instead of Web defaults");
+        body.Should().NotContain("\"Type\":",
+            because: "PascalCase 'Type' would mean the middleware used JsonSerializer defaults instead of Web defaults");
     }
 
     [Fact]

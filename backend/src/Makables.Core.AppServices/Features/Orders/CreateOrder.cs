@@ -25,11 +25,14 @@ namespace Makables.Core.AppServices.Features.Orders;
 ///     arriving here without a session means the handler was reached
 ///     outside the controller path (a cron / Functions caller without a
 ///     session).</item>
-///   <item>Load <see cref="Product"/> (TOCTOU pre-check). Missing →
-///     <see cref="BusinessErrorMessage.ProductNotFound"/>. Soft-deleted
-///     (handled by the global query filter — null lookup) and active=false
-///     are both surfaced as
-///     <see cref="BusinessErrorMessage.ProductNotActive"/>.</item>
+///   <item>Load <see cref="Product"/> (TOCTOU pre-check). A null lookup
+///     (row absent OR hidden by the global soft-delete query filter on
+///     <see cref="Makables.Core.Domain.SeedWork.Auditable"/>) →
+///     <see cref="BusinessErrorMessage.ProductNotFound"/>. An
+///     <c>IsActive == false</c> row →
+///     <see cref="BusinessErrorMessage.ProductNotActive"/>. Two distinct
+///     codes so the customer's UX distinguishes "product never existed
+///     / was purged" from "maker just deactivated the product".</item>
 ///   <item>Load <see cref="Maker"/>, defence-in-depth on all maker-state
 ///     gates per user decision Q4. Missing / inactive →
 ///     <see cref="BusinessErrorMessage.MakerDeactivated"/>; not verified
@@ -181,11 +184,14 @@ public static class CreateOrder
             }
 
             // 2. Load product (TOCTOU pre-check). The global soft-delete
-            //    query filter on Auditable already hides deleted rows;
-            //    a null lookup AND IsActive == false both surface as
-            //    ProductNotActive so the customer's UX is consistent
-            //    whether the maker just deactivated or whether the row is
-            //    being soft-purged.
+            //    query filter on Auditable hides deleted rows, so a null
+            //    lookup covers BOTH "never existed" and "soft-deleted".
+            //    Two distinct branches surface different codes:
+            //      - null       → ProductNotFound (NotFound / HTTP 404)
+            //      - !IsActive  → ProductNotActive (Conflict / HTTP 409)
+            //    Customers see a different message for "the maker just
+            //    deactivated this product" than for "the product was
+            //    purged / never existed".
             var product = await products.GetByIdAsync(command.ProductId, cancellationToken);
             if (product is null)
             {

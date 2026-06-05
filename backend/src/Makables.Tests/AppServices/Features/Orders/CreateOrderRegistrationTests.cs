@@ -31,7 +31,7 @@ namespace Makables.Tests.AppServices.Features.Orders;
 /// pins the fix: the marker is fully qualified inside Config.
 /// </para>
 /// </summary>
-public class CreateOrderRegistrationTest
+public class CreateOrderRegistrationTests
 {
     [Fact]
     public void Assembly_scan_registers_CreateOrder_Handler()
