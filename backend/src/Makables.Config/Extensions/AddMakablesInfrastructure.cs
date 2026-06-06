@@ -11,6 +11,7 @@ using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Categories;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
@@ -29,6 +30,7 @@ using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Catalog;
 using Makables.Infra.Database.Categories;
+using Makables.Infra.Database.Invoices;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.Orders;
 using Makables.Infra.Database.Products;
@@ -153,6 +155,9 @@ public static class MakablesInfrastructureExtensions
 
         // === Orders (T-0060) ===
         services.AddScoped<IOrderRepository, OrderRepository>();
+
+        // === Invoices (T-0068a) ===
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
