@@ -53,16 +53,18 @@ namespace Makables.Infra.Database.Configurations;
 /// </para>
 ///
 /// <para>
-/// <b>§ 35 zákon o DPH 10-year retention (TODO).</b> Czech tax law
-/// requires invoice PDFs + their underlying rows to survive for 10 years
-/// after the close of the calendar year of issuance. Soft-delete +
-/// global query filter handle the row side already (rows stay in
-/// Postgres, hidden from non-admin queries); the blob-storage side
-/// (Azure lifecycle policy preventing accidental delete on the
+/// <b>§ 35 zákon o DPH 10-year retention.</b> Czech tax law requires
+/// invoice PDFs + their underlying rows to survive for 10 years after
+/// the close of the calendar year of issuance. Soft-delete + global
+/// query filter handle the row side already (rows stay in Postgres,
+/// hidden from non-admin queries); the blob-storage side (Azure
+/// lifecycle policy preventing accidental delete on the
 /// <c>invoices/</c> container before the 10-year window) is
-/// infrastructure-as-code and tracked in a separate deploy ticket (TBD,
-/// see locked decision absorption in T-0068a). When that ticket lands,
-/// remove this comment.
+/// infrastructure-as-code, owned by the
+/// <c>docs/architecture/roles/blob-storage.md</c> role doc maintainer.
+/// See T-0068a Locked design decisions §"§ 35 10-year retention policy"
+/// for the absorption note. Remove this paragraph when the Azure
+/// lifecycle policy is committed to infrastructure-as-code.
 /// </para>
 /// </summary>
 internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>

@@ -63,7 +63,7 @@ public sealed class InvoiceRepositoryTests
     }
 
     [Fact]
-    public async Task ForMaker_returns_only_Customer_invoices_via_denormalised_maker_id()
+    public async Task ForMaker_returns_Customer_and_Fee_invoices_via_denormalised_maker_id()
     {
         await SeedTwoCustomersWithOneInvoiceEachAsync();
 

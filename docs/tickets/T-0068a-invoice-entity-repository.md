@@ -117,7 +117,7 @@ No public contract changes. No controllers ship in T-0068a.
 - **AC-9** Given an existing invoice with invoice_number = FV-CZ-20260001, when a second invoice with the same number is added and saved, then Postgres rejects with unique-constraint violation.
 - **AC-10** Given an order with an existing active invoice, when a second invoice with the same order_id is added and saved, then Postgres rejects via the partial unique index ix_invoices_order_id.
 - **AC-11** Given the EF migration Invoices is applied to an empty postgres:16-alpine container, when MigrateAsync() completes, then the invoices table exists with all columns + indexes per InvoiceConfiguration, and MigrateAsync() is idempotent on re-run.
-- **AC-12** Build clean. Unit tests: baseline + 13 new. Integration tests: baseline + 11 new.
+- **AC-12** Build clean. Unit tests: baseline + 13 new methods (~19 effective xunit cases after Theory expansion). Integration tests: baseline + 11 new.
 - **AC-13** Role doc, ADR 0009 amendment, and INDEX.md row split are all committed in the same PR.
 
 ## Technical notes
@@ -181,3 +181,6 @@ Inline above (see Scope > Tests). Reuses PostgresHarness from T-0062; no separat
 
 - 2026-06-06 `draft` by PM. Created as part of T-0068 L-split (the first ticket to hit the new DoR L-split rule per docs/process/ticket-lifecycle.md §DoR item 3). Sister ticket: T-0068b. Open user decisions documented in the splitting PM's report.
 - 2026-06-06 `draft → ready` by PM. User answered 4 blocking decisions via AskUserQuestion per `/feature` workflow step 3 (JVM YORE as legal seller; not VAT-registered → InvoicingMode.None default; DUZP = Order.PaidAt; single shared FV-CZ-YYYY sequence). Decisions captured in `## Locked design decisions` section. Five non-user-facing open decisions absorbed by PM with documented kill reasons. Ready for dotnet-db.
+- 2026-06-06 `ready → in_progress` by PM. Branch `feat/T-0068a-invoice-entity-repository`. dotnet-db owner; reviewer parallel-draft per `docs/process/routing.md`.
+- 2026-06-06 `in_progress → in_review` by dotnet-db. 8 commits landed (1 ticket + 7 feat/test/docs). TDD commit order verified: `0f2fdf1 test:(red)` precedes `2cba200 feat:(green)` for Invoice entity per `docs/process/tdd-policy.md`. Build clean (0/0). Unit tests: 1082 → 1102 (+20). Integration tests: 133 → 144 (+11). `node scripts/check-consistency.mjs` exit 0 (clean, 100 tracked).
+- 2026-06-06 Reviewer final-pass verdict: **APPROVE_WITH_NITS**. Gate 8 (Optimizer): GATE8_NA (no controllers); 6 perf checks PASS + 4 advisory nits for T-0068b. Gate 9 (Mechanical): GATE9_PASS. Folded inline before PR: (1) `docs/process/must-cover-tests.md` §11 set-once table row added for `Invoice.PdfBlobPath`; (2) `InvoiceRepositoryTests.ForMaker_returns_*` test method renamed to match its body; (3) `UniqueConstraintTranslator` intentionally-unmapped comment block extended with ix_invoices_invoice_number + ix_invoices_order_id rationale; (4) § 35 retention TODO sharpened with named owner (blob-storage role doc maintainer) per CLAUDE.md "no TODO without owner"; (5) AC-12 amended to "13 methods (~19 effective xunit cases)".
