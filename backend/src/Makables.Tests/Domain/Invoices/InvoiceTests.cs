@@ -332,7 +332,7 @@ public class InvoiceTests
         var second = invoice.AttachPdfBlobPath("invoices/cz/orders/ord-1/DIFFERENT.pdf");
 
         second.IsSuccess.Should().BeFalse();
-        second.Error!.Message.Should().Be(BusinessErrorMessage.InvoiceBlobPathAlreadySet);
+        second.Error!.Code.Should().Be(BusinessErrorMessage.InvoiceBlobPathAlreadySet);
         invoice.PdfBlobPath.Should().Be("invoices/cz/orders/ord-1/FV-CZ-20260001.pdf",
             because: "a rejected overwrite must leave the original path intact");
     }
