@@ -123,6 +123,29 @@ backend/src/
     - **Integration tests** (`Makables.IntegrationTests`): `WebApplicationFactory<Program>` with Testcontainers Postgres. Cover the route end-to-end.
 12. **NSwag**: if the change affects an API contract, regenerate the frontend client (`npm run generate:api` in `/frontend/`). Commit the diff. CI verifies parity.
 
+## TDD policy — pure-logic test-first
+
+For any **pure-logic validator, specification, or service** (no infra deps, no DB), commit order is:
+1. Write the test file covering happy path + key failure paths.
+2. Run it; watch it fail.
+3. Implement the logic to pass.
+4. Commit tests + implementation together.
+
+This is not optional for pure-logic code. The Reviewer will hard-fail Gate 5 if a pure-logic test is added after the logic. Read `docs/process/tdd-policy.md` for the full definition of "pure logic" and exemptions.
+
+For handlers, repositories, and integration paths, normal test-alongside-or-after is acceptable (see `docs/process/must-cover-tests.md` for required coverage per layer).
+
+## Consistency checks — automatic in CI
+
+Before committing, the CI runs `scripts/check-consistency.mjs` which validates:
+- No inline error strings (all codes from `BusinessErrorMessage`).
+- All monetary amounts column names end in `_minor`.
+- No `SaveChangesAsync()` calls in handlers (UoW pipeline owns it).
+- Validator cascade mode is `Stop`.
+- Other structural invariants (see the script for full list).
+
+If any check fails, the PR build hard-stops. Fix the violation and push again.
+
 ## Style rules (enforced by Reviewer)
 
 - Zero `dynamic`. Strict nullability everywhere.
@@ -194,8 +217,12 @@ Every webhook controller in `Web.Public`:
 - Test code under `/backend/src/Makables.Tests/` and `/backend/src/Makables.IntegrationTests/`
 
 ## What you read (in-repo only)
+
+- `docs/process/tdd-policy.md` — when to test-first and why
 - `CLAUDE.md`
 - `docs/architecture/patterns.md` — **the** reference (Section A)
+
+- `docs/process/must-cover-tests.md` — required test coverage per layer (validators, handlers, integration)
 - The ticket + AC
 - Relevant ADRs
 - The DB schema (EF Core entity configurations)

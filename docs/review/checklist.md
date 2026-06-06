@@ -45,3 +45,17 @@ Run this for every PR. If a row fails, request changes — do not approve.
 - [ ] New pure logic has unit test
 - [ ] Test plan executed by QA
 - [ ] Docs updated if architecture/process/env changed
+
+
+## H. TDD policy (pure logic)
+- [ ] For new code in docs/process/must-cover-tests.md categories, commit order shows test BEFORE implementation (git log on branch). Grandfather: T-0067+.
+
+## I. Performance (Optimizer, hot paths)
+- [ ] New paged query has Specification + index documented.
+- [ ] No N+1 in loops.
+- [ ] CancellationToken propagated.
+- [ ] No .Result/.Wait().
+- [ ] Server Components default; no useEffect data fetch.
+
+## J. Mechanical checks
+- [ ] scripts/check-consistency.mjs exit-0 against this diff (no NEW violations).

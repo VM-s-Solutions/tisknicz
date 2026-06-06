@@ -1554,3 +1554,8 @@ Consumers pass the URL straight to `next/image` — the existing `images.remoteP
 - If a pattern needs to change, write a new ADR that supersedes the old one, then update this file.
 
 **Never** import or read from any project folder outside this repository. This file plus the ADRs are the complete reference.
+
+
+## Evolution loop
+
+When reviewer flags the same finding ≥3× across PRs (tracked in docs/review/recurring-findings.md), architect promotes it to a new rule here AND, if mechanically catchable, adds a check to scripts/check-consistency.mjs. The loop: Reviewer log → Architect codification → Mechanical enforcement. Sprint 6's B.7–B.19 batch is the working precedent.

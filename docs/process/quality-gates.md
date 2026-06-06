@@ -62,6 +62,7 @@ If the ticket adds or modifies an extension point listed in `docs/architecture/e
 - **Backend**: unit tests for non-trivial validators, services, specifications; integration test via `WebApplicationFactory<Program>` for any new endpoint.
 - **Frontend**: manual test plan executed against preview environment; automated tests only where pure logic exists (money formatting, validation mirrors).
 - Regression spot-check on adjacent features.
+- **Pure logic TDD mandate**: For pure logic per [docs/process/must-cover-tests.md](./must-cover-tests.md), PR MUST show test commit before implementation commit (or status log red→green). After-the-fact test on pure logic = HARD FAIL. T-0067+ enforces; T-0001–T-0066 grandfathered.
 
 ## Gate 6 — Contract parity (Reviewer)
 
@@ -78,6 +79,25 @@ If the change affects:
 - New extension point → add to `docs/architecture/extension-points.md`
 - New configuration value → add to the appropriate `appsettings.*.json` template AND to the deployment env var list
 
+## Gate 8 — Performance (Optimizer, mandatory on hot paths)
+
+Optimizer reviews and signs off on any ticket that introduces or modifies:
+- New paged query (endpoint that returns `PagedList<T>` or similar; includes sorting, filtering, pagination logic)
+- External call (HTTP, gRPC, or database round-trip that blocks request or cron job)
+- Heavy UI (client-side list/table with >100 items, modal with complex render, animation, or virtualization)
+- New npm package (dependency audit, size impact, tree-shaking, SSR compatibility)
+- New navigation property fetched in loop (N+1 detection; require explicit `Include()` or repository pattern)
+
+Optimizer verifies against project baselines (DB query time <100ms, API response <1s, bundle impact <50KB gzip, client render <16ms frame budget).
+
+## Gate 9 — Mechanical checks (scripts/check-consistency.mjs)
+
+CI runs `scripts/check-consistency.mjs` on every PR. Violations are:
+- **New violations (T1–T7 rules not in baseline)** = HARD FAIL; PR cannot merge.
+- **Baseline violations** = noted in PR comment for awareness; does not block merge.
+
+Checks include: naming conventions (handlers, validators, API response DTOs), import hygiene (no circular imports, no leaky internals), file organization (features follow `<Entity>/<UseCase>.cs` shape), and contract integrity (NSwag-generated client unchanged outside regen).
+
 ## Definition of done
 
 ```
@@ -85,7 +105,10 @@ If the change affects:
 ☐ CLAUDE.md self-check passed (Reviewer)
 ☐ Security gate passed if applicable (SecOps)
 ☐ Architecture gate passed if applicable (Architect)
+☐ Tests gate passed; pure logic has test-first commit if applicable (QA)
+☐ Performance review passed if applicable (Optimizer)
 ☐ Contract parity green if applicable (Reviewer)
+☐ Mechanical checks clean (CI + Optimizer)
 ☐ Docs updated
 ☐ PR merged to master
 ☐ Ticket moved to done; sprint status updated (PM)
