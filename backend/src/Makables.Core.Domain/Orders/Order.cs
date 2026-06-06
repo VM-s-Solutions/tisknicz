@@ -427,19 +427,31 @@ public sealed class Order : Auditable
         if (State != OrderState.PendingPayment)
             return InvalidTransition();
 
+        var trimmedRef = paymentProviderRef.Trim();
+
         // Belt-and-braces set-once: the state guard above already blocks
         // a second call (because the second call's State is Paid, not
         // PendingPayment), but if a future state-graph change lets a
         // Paid order revisit PendingPayment we don't want a silent
         // overwrite of the original ref.
-        if (PaymentProviderRef is not null)
+        //
+        // T-0066 adjustment: when ReservePaymentSession has stamped a
+        // matching ref already (the normal customer-pays flow:
+        // T-0065 reserves the session, T-0066 marks paid via the
+        // webhook, both using the same Comgate transId), we accept the
+        // call. The set-once invariant only trips for a DIFFERENT
+        // existing ref — a real overwrite attempt.
+        if (PaymentProviderRef is not null
+            && !string.Equals(PaymentProviderRef, trimmedRef, StringComparison.Ordinal))
+        {
             return BusinessResult.Failure(
                 Error.Conflict("paymentProviderRef", BusinessErrorMessage.OrderInvalidTransition));
+        }
 
         var now = clock.UtcNow;
         State = OrderState.Paid;
         PaidAt = now;
-        PaymentProviderRef = paymentProviderRef.Trim();
+        PaymentProviderRef = trimmedRef;
         return BusinessResult.Success();
     }
 

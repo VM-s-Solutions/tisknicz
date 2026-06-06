@@ -217,11 +217,91 @@ public sealed class ComgatePaymentProvider(
         return BusinessResult.Success(new PaymentStatus(state.Value, normalisedMethod, paidAt));
     }
 
-    public Task<BusinessResult<WebhookPayload>> ParseAndVerifyWebhookAsync(
-        HttpRequest request, CancellationToken cancellationToken) =>
-        throw new NotSupportedException(
-            "ParseAndVerifyWebhookAsync is implemented in T-0066. " +
-            "If you are reading this, the webhook handler in T-0066 has not yet shipped.");
+    public async Task<BusinessResult<WebhookPayload>> ParseAndVerifyWebhookAsync(
+        HttpRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // 1. Must be form-urlencoded — Comgate posts the webhook as a form
+        //    body (ADR 0016 §"Webhook handling"). Any other content-type
+        //    is treated as malformed; the controller maps Validation to 400.
+        if (!request.HasFormContentType)
+        {
+            logger.LogWarning(
+                "Comgate webhook: rejected non-form content type {ContentType}.",
+                request.ContentType ?? "(null)");
+            return BusinessResult.Failure<WebhookPayload>(
+                Error.Validation("body", BusinessErrorMessage.PaymentWebhookMalformed));
+        }
+
+        var form = await request.ReadFormAsync(cancellationToken);
+
+        var transId = form["transId"].ToString();
+        var refId = form["refId"].ToString();
+        if (string.IsNullOrWhiteSpace(transId) || string.IsNullOrWhiteSpace(refId))
+        {
+            logger.LogWarning(
+                "Comgate webhook: missing required fields. transId blank={TransIdBlank}, refId blank={RefIdBlank}.",
+                string.IsNullOrWhiteSpace(transId), string.IsNullOrWhiteSpace(refId));
+            return BusinessResult.Failure<WebhookPayload>(
+                Error.Validation("body", BusinessErrorMessage.PaymentWebhookMalformed));
+        }
+
+        // 2. Test-mode mismatch check per ADR 0016:165-166. The body's
+        //    `test` field announces whether the originating session was
+        //    sandbox; if it diverges from our configured TestMode the
+        //    most likely cause is that prod traffic is hitting the
+        //    sandbox host (or vice versa). Critical log — do NOT fail
+        //    the webhook on this alone; the re-fetch is the authority.
+        var bodyTestFlag = ParseBoolFlag(form["test"].ToString());
+        if (bodyTestFlag.HasValue && bodyTestFlag.Value != options.Value.TestMode)
+        {
+            logger.LogCritical(
+                "Comgate webhook test-mode mismatch: body.test={BodyTest}, config.TestMode={ConfigTestMode}, transId={TransId}.",
+                bodyTestFlag.Value, options.Value.TestMode, transId);
+        }
+
+        // 3. Re-fetch authoritative status from Comgate. Body status is
+        //    not trusted (the whole point of this method). Failures
+        //    propagate verbatim — Transient/Permanent/Configuration
+        //    classification is already correct from VerifyPaymentAsync.
+        var verifyResult = await VerifyPaymentAsync(transId, cancellationToken);
+        if (!verifyResult.IsSuccess)
+        {
+            return BusinessResult.Failure<WebhookPayload>(verifyResult.Error!);
+        }
+
+        // 4. Optional divergence log: when the body's announced status
+        //    disagrees with the authoritative re-fetch, log Warning so
+        //    ops can spot Comgate-side delivery lag or a bug. The return
+        //    is the re-fetched state regardless.
+        var bodyStatus = form["status"].ToString();
+        var bodyState = MapComgateStatus(bodyStatus);
+        if (bodyState.HasValue && bodyState.Value != verifyResult.Value!.State)
+        {
+            logger.LogWarning(
+                "Comgate webhook: body status '{BodyStatus}' (mapped {BodyState}) diverges from re-fetched state {AuthoritativeState} for transId={TransId}. Returning the re-fetched state.",
+                bodyStatus, bodyState.Value, verifyResult.Value.State, transId);
+        }
+
+        return BusinessResult.Success(new WebhookPayload(
+            transId,
+            verifyResult.Value!.State,
+            verifyResult.Value.PaymentMethod));
+    }
+
+    /// <summary>
+    /// Parse Comgate's <c>test</c> form field, which we have observed in
+    /// the wild as <c>"true"</c> / <c>"false"</c> (lowercase). Returns
+    /// null when the field is absent or unparseable so the caller can
+    /// skip the mismatch log without falsely accusing every webhook.
+    /// </summary>
+    private static bool? ParseBoolFlag(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (bool.TryParse(value, out var parsed)) return parsed;
+        return null;
+    }
 
     public Task<BusinessResult<RefundReceipt>> RefundAsync(
         string providerRef, long amountMinor, string currency, CancellationToken cancellationToken) =>

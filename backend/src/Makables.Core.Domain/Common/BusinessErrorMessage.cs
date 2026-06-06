@@ -215,6 +215,31 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string PaymentUnknownError = "payment.unknownError";
 
+    // === Payment webhook (T-0066) ===
+    /// <summary>
+    /// The inbound provider webhook body is missing required fields
+    /// (<c>transId</c> / <c>refId</c>) or is not form-urlencoded. The
+    /// controller returns 400 so the provider retries; ops-side alert
+    /// surfaces if the rate spikes. T-0066.
+    /// </summary>
+    public const string PaymentWebhookMalformed = "payment.webhook.malformed";
+    /// <summary>
+    /// The webhook arrived from an IP that is not in
+    /// <c>ComgateOptions.WebhookAllowedIps</c>. Logged inside the
+    /// <c>ComgateWebhookIpAllowlist</c> filter; the response is a
+    /// bare 401 with no body (we never parsed the body), so this code
+    /// surfaces in our logs only, never to the caller. T-0066.
+    /// </summary>
+    public const string PaymentWebhookIpRejected = "payment.webhook.ipRejected";
+    /// <summary>
+    /// The body's <c>refId</c> does not match the order found by
+    /// <c>transId</c> — possible spoof attempt. Controller returns 401
+    /// (forces provider retry, ops alert fires); the handler's
+    /// defence-in-depth check ALSO returns this code as a
+    /// <see cref="ErrorType.Conflict"/> if reached. T-0066.
+    /// </summary>
+    public const string PaymentWebhookRefIdMismatch = "payment.webhook.refIdMismatch";
+
     // === Shipping ===
     public const string ShippingCarrierUnavailable = "shipping.carrierUnavailable";
 

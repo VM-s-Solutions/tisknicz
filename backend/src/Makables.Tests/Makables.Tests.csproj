@@ -28,6 +28,11 @@
     <ProjectReference Include="..\Makables.Infra.Database\Makables.Infra.Database.csproj" />
     <ProjectReference Include="..\Makables.Infra.Clients\Makables.Infra.Clients.csproj" />
     <ProjectReference Include="..\Makables.Infra.Azure.Storage.Blobs\Makables.Infra.Azure.Storage.Blobs.csproj" />
+    <!-- T-0066: ComgateWebhookIpAllowlistAttribute lives on Web.Public.
+         The unit tests construct ComgateWebhookIpAllowlistFilter directly
+         with a synthetic AuthorizationFilterContext, so the reference
+         keeps Web.Public's filter class reachable from the unit project. -->
+    <ProjectReference Include="..\Makables.Web.Public\Makables.Web.Public.csproj" />
   </ItemGroup>
 
 </Project>
