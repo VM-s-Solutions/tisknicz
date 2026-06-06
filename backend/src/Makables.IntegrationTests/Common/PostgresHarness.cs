@@ -109,8 +109,11 @@ public sealed class PostgresHarness : IAsyncLifetime
         // (T-0062) only mutated numbering_sequence + orders so the
         // narrower list was enough; the CreateOrder tests need a clean
         // slate up the join graph too.
+        // T-0067: extended to truncate outbox_event because MarkOrderPaid
+        // enqueues 2 outbox rows per webhook delivery and downstream tests
+        // assert on the count for the order they just seeded.
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, orders, products, makers, categories, addresses, users RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, orders, products, makers, categories, addresses, users, outbox_event RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

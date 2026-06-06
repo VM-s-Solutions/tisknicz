@@ -161,6 +161,25 @@ public static class BusinessErrorMessage
     public const string MakerCompanyDissolved = "maker.companyDissolved";
     public const string MakerSlugAlreadyExists = "maker.slugAlreadyExists";
 
+    /// <summary>
+    /// FK invariant violation: a <see cref="Makers.Maker"/> aggregate exists
+    /// for the given id but its linked <c>UserId</c> resolves to no row in
+    /// <c>users</c>. Distinct from <see cref="MakerNotFound"/> so the T-0029
+    /// triage UI (and ops alerting) can separate "maker soft-deleted" from
+    /// "data corruption — maker exists without its user". T-0067 reviewer M-2.
+    /// </summary>
+    public const string MakerUserMissing = "maker.userMissing";
+
+    /// <summary>
+    /// FK invariant violation: an <see cref="Orders.Order"/> exists but its
+    /// <c>CustomerUserId</c> resolves to no row in <c>users</c>. Used by
+    /// <see cref="Features.Orders.MarkOrderPaid"/> to refuse to commit when
+    /// the customer-user row is unexpectedly null — the Comgate webhook
+    /// retries, ops investigates. T-0067 reviewer M-3 (symmetric with the
+    /// maker-user-missing failure path).
+    /// </summary>
+    public const string OrderCustomerUserMissing = "order.customerUserMissing";
+
     // === Company registry (T-0032) ===
     public const string CompanyNotFound = "company.notFound";
     public const string CompanyRegistryTransient = "company.registryTransient";
@@ -269,6 +288,15 @@ public static class BusinessErrorMessage
     public const string EmailPayloadMalformed = "email.payloadMalformed";
     public const string EmailPayloadMissingFields = "email.payloadMissingFields";
     public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
+    /// <summary>
+    /// The outbox event type is one of the order-email variants but the
+    /// payload JSON could not be decoded into the matching record (e.g.
+    /// the producer enqueued a partial / malformed shape). Distinct from
+    /// <see cref="EmailPayloadMalformed"/> so T-0029's triage UI can show
+    /// the two classes of bug separately ("auth-flow payload bug" vs
+    /// "order-flow payload bug"). T-0067.
+    /// </summary>
+    public const string OrderEmailPayloadMalformed = "email.orderPayloadMalformed";
 
     // === Outbox processor (T-0029) ===
     public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";

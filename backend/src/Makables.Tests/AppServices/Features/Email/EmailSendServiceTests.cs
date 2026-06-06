@@ -197,6 +197,178 @@ public class EmailSendServiceTests
         result.Error!.Code.Should().Be(BusinessErrorMessage.EmailPayloadMissingFields);
     }
 
+    // === T-0067 — Order email branches. ===
+
+    private static string EncodeCustomerPayload(
+        string lang = LanguageCode.CsCZ,
+        string actionUrl = "https://makables.test/objednavka/ord-1") =>
+        JsonSerializer.Serialize(new OrderPaidCustomerEmailPayload(
+            OrderId: "ord-1",
+            OrderNumber: "M-CZ-20260042",
+            Email: "anna@example.cz",
+            ContactName: "Anna",
+            TotalAmountMinor: 57900,
+            Currency: "CZK",
+            LanguageCode: lang,
+            ActionUrl: actionUrl));
+
+    private static string EncodeMakerPayload(
+        string lang = LanguageCode.CsCZ,
+        string actionUrl = "https://makables.test/dashboard/maker/objednavky/ord-1") =>
+        JsonSerializer.Serialize(new OrderPlacedMakerEmailPayload(
+            OrderId: "ord-1",
+            OrderNumber: "M-CZ-20260042",
+            MakerId: "maker-1",
+            MakerEmail: "maker@example.cz",
+            TotalAmountMinor: 57900,
+            Currency: "CZK",
+            LanguageCode: lang,
+            ActionUrl: actionUrl));
+
+    [Fact]
+    public async Task SendAsync_with_OrderPaidCustomerEmail_routes_to_OrderEmail_branch()
+    {
+        var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
+            "Děkujeme za objednávku", "Pre-baked URL: {{action_url}}");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>())
+            .Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-msg-customer", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ProviderMessageId.Should().Be("sg-msg-customer");
+
+        // The pre-baked URL is passed verbatim — no further substitution
+        // (Q4: do NOT touch BuildActionUrl for the order branch).
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.ProviderTemplateId == "d-fake-OrderPaidCustomer"
+            && m.ToAddress == "anna@example.cz"
+            && m.ToName == "Anna"
+            && m.LanguageCode == LanguageCode.CsCZ
+            && m.Data.ContainsKey("action_url")
+            && ((string)m.Data["action_url"]) == "https://makables.test/objednavka/ord-1"
+            && m.PlainTextBody.Contains("https://makables.test/objednavka/ord-1")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendAsync_with_OrderPaidCustomerEmail_substitutes_order_number_in_subject()
+    {
+        // T-0067 reviewer B-1: SendGrid does NOT substitute the subject from
+        // dynamicTemplateData; if the producer doesn't inline the substitution
+        // the customer's inbox shows the raw "#{{order_number}}" literal.
+        // Pin the contract so a future template-engine change can't silently
+        // regress.
+        var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
+            "Děkujeme za objednávku #{{order_number}}",
+            "Hi {{contact_name}}");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>())
+            .Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-msg-customer", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.Subject == "Děkujeme za objednávku #M-CZ-20260042"
+            && m.PlainTextBody == "Hi Anna"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendAsync_with_OrderPlacedMakerEmail_routes_to_OrderEmail_branch()
+    {
+        var tpl = CreateTemplate(EmailTemplateType.OrderPlacedMaker);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, "Nová objednávka", "B");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPlacedMaker, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>())
+            .Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-msg-maker", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPlacedMakerEmail,
+            EncodeMakerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.ProviderTemplateId == "d-fake-OrderPlacedMaker"
+            && m.ToAddress == "maker@example.cz"
+            && ((string)m.Data["action_url"]) == "https://makables.test/dashboard/maker/objednavky/ord-1"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SendAsync_with_malformed_order_payload_returns_OrderEmailPayloadMalformed_Permanent()
+    {
+        // T-0067 — distinct error code so T-0029's triage UI separates
+        // auth-flow payload bugs from order-flow payload bugs.
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            "{not valid json",
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.OrderEmailPayloadMalformed);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+    }
+
+    [Fact]
+    public async Task SendAsync_with_unknown_event_type_still_returns_EmailEventTypeUnknown()
+    {
+        // Auth-flow code path unchanged. Pin that adding the order
+        // branches did not regress the default arm.
+        var result = await _sut.SendAsync("future.unmapped.send",
+            EncodePayload(LanguageCode.CsCZ), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailEventTypeUnknown);
+    }
+
+    [Fact]
+    public async Task SendAsync_with_OrderPaidCustomerEmail_falls_back_to_default_language()
+    {
+        // Mirror the auth-flow translation-fallback behaviour for the
+        // order branch — same two-step lookup (requested → fallback).
+        var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
+        var trDefault = CreateTranslation(tpl.Id, LanguageCode.DefaultFallback, "Subject", "Body");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, "de-DE", Arg.Any<CancellationToken>())
+            .Returns((EmailTemplateTranslation?)null);
+        _translations.GetAsync(tpl.Id, LanguageCode.DefaultFallback, Arg.Any<CancellationToken>())
+            .Returns(trDefault);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("x", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(lang: "de-DE"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received().SendAsync(Arg.Is<EmailMessage>(m =>
+            m.LanguageCode == LanguageCode.DefaultFallback),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Provider_failure_bubbles_back_unchanged()
     {

@@ -163,14 +163,14 @@ public sealed class ComgateWebhookController(
                     OrderId: order.Id,
                     ProviderRef: payload.ProviderRef,
                     PaymentMethod: payload.PaymentMethod,
-                    // Comgate's PaymentStatus carries PaidAt on PAID, but
-                    // the webhook payload doesn't expose it on the
-                    // controller's path — VerifyPaymentAsync returned it
-                    // into the adapter and only PaymentMethod survives.
-                    // T-0067 widens the WebhookPayload to carry PaidAt;
-                    // at T-0066 we fall back to null and let the handler
-                    // ignore it (T-0067 will persist).
-                    PaidAt: null);
+                    // T-0067: WebhookPayload now carries Comgate's
+                    // authoritative PAID timestamp (from the
+                    // VerifyPaymentAsync re-fetch); pass it through so
+                    // Order.MarkAsPaid records the actual capture moment
+                    // rather than the webhook-receive moment. Null means
+                    // the provider did not include one — handler falls
+                    // back to clock.UtcNow.
+                    PaidAt: payload.PaidAt);
 
                 // Step 7: Dispatch via Mediator. UoW pipeline behavior
                 // commits. A race-loser (another webhook already
