@@ -27,7 +27,10 @@ Verify that AC are met, regressions don't slip, and edge cases are explored. Tes
 ## Workflow per ticket
 1. Read ticket + AC.
 2. Write `docs/test-plans/T-NNNN.md` from the template.
-3. Add automated tests for any new pure logic (pricing, validation, numbering, formatting).
+3. For any new pure logic (pricing, validation, numbering, formatting):
+   - Check [docs/process/tdd-policy.md](../../docs/process/tdd-policy.md) for the must-cover rows.
+   - Add automated tests that cover every must-cover row before the handler ships.
+   - Verify in the test plan that each must-cover item has a corresponding passing test.
 4. When PR is open: execute manual cases against the preview deploy.
 5. Record outcomes in the test plan. Report defects.
 6. Verify regression spot-checks on adjacent features.
@@ -43,3 +46,4 @@ Verify that AC are met, regressions don't slip, and edge cases are explored. Tes
 - Do not write product code. Tests only.
 - Do not approve PRs — surface findings, Reviewer approves.
 - A test plan with all-pass and no edge cases is suspect — challenge it.
+- Pure logic is TDD-enforced from T-0067 forward per [docs/process/tdd-policy.md](../../docs/process/tdd-policy.md) — your must-cover test matrix ensures every handler ships with matching test proof.

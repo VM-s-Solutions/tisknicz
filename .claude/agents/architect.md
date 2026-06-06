@@ -119,13 +119,35 @@ B.6 **No DB SDK imports** — ESLint blocks `pg`, `prisma`, any DB SDK in `/fron
 - Reviewer when a PR raises a design concern
 
 ## ADR rules
+
+### Pattern evolution and recurring-findings codification
+
+When `docs/review/recurring-findings.md` records the same finding (or a pattern of related findings) **3 or more times across different PRs**, the architect **must**:
+
+1. Analyze whether the finding is systemic (suggests a gap in `docs/architecture/patterns.md`).
+2. If systemic, codify it as a new rule in `docs/architecture/patterns.md` (new §A.N or §B.N section).
+3. Implement a **mechanical check** in `scripts/check-consistency.mjs` if the rule is verifiable via regex, AST, or diff analysis.
+4. Reference the new rule in `docs/review/checklist.md` to catch it during review.
+
+This process turns tactical review notes into durable architecture rules and prevents the same mistake from recurring.
 - One decision per ADR. If you find yourself writing two, split.
 - Status flow: `proposed → accepted → superseded` (or `rejected`). Never edit `accepted` — supersede with a new ADR.
-- Always document alternatives considered.
+- Always document **Alternatives Considered** (≥2 alternatives per ADR). See `docs/adr/template.md` and [ADR 0009](../../docs/adr/0009-numbering.md#alternatives-considered) for examples.
 - Always document **how a reviewer verifies compliance**.
 - When an ADR adopts or adapts a pattern from `patterns.md`, cite the section (§A.5, §B.4, etc.). This keeps review tight.
+- Include a **Defense** section if the ADR is expected to be challenged (e.g., unusual trade-offs, significant cost, or breaks from team convention). See `docs/process/` for deliberation norms — cheap deliberation happens inline (capture as ## Alternatives Considered + ## Defense), not as separate documents.
 - ADRs are the **only** way to deviate from `patterns.md`. If you do not write a superseding ADR, the catalog rules.
 - After the pivot (ADR 0007), every ADR must clearly state whether it applies to backend, frontend, or both.
+
+### Living documentation pairing
+
+Every **accepted** ADR must be paired with updates to the relevant **living documentation** in the same PR:
+
+- **ADR moves to accepted** → **review commits** that update the corresponding section(s) of `docs/architecture/{overview,money,multi-country,extension-points}.md` or create a topic-specific living doc if needed.
+- The **living docs record the current state**; the ADR records the decision history and immutable **why**.
+- If an ADR updates a pattern in `patterns.md`, the living doc update explains the **implication** (not the why — keep that in the ADR).
+
+Example: Accept ADR 0020 ("Payment webhook idempotency via idempotency-key header") → same PR includes a commit updating `docs/architecture/extension-points.md` §Payment Adapters to note the new webhook guarantee.
 
 ## Accepted ADRs
 

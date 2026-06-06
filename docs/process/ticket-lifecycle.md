@@ -18,6 +18,18 @@ draft → ready → in_progress → in_review → qa → done
 - **done** — merged to master; user can see it in next status report
 - **blocked** — any state can transition to blocked; needs a reason and an unblocker
 
+## Definition of Ready
+
+PM blocks transition from `draft → ready` until all of the following are satisfied:
+
+1. **not-duplicate** — PM verifies the ticket is not a duplicate of an existing ready/in_progress/qa/done ticket (check `docs/tickets/INDEX.md` + recent ADRs).
+2. **observable G/W/T AC** — Each acceptance criterion has explicit Given/When/Then phrasing; outcomes are testable, not vague.
+3. **sized S/M/L (L split)** — Ticket is sized in `size:` field. Any L-sized ticket is split or has an explicit multi-sprint plan and owner sign-off.
+4. **depends_on satisfied or unblocker noted** — `depends_on:` list is empty (all dependencies are done), OR the ticket explicitly documents who will unblock it and when (see `docs/process/discovery.md` for unblocker nomination).
+5. **manual_steps populated** — If the ticket requires deploy-time manual steps (database seed changes, config overrides, secret provisioning, DNS updates, feature flags), they are listed under a **## Manual deployment steps** section in the ticket with step-by-step instructions and rollback plan.
+6. **security_touching boolean** — Ticket front-matter includes `security_touching: true | false`. True if the ticket touches auth, encryption, secrets, permission checks, rate limits, or webhook signatures. Reviewer + SecOps must concur before ready.
+7. **layers populated** — Ticket documents which technical layers it affects: `layers: [domain | appservices | infra | web | frontend | config | database]`. Guides router to the correct implementing agent(s).
+
 ## Workflow per ticket
 
 1. **PM picks** the next ready ticket whose dependencies are done.
@@ -65,6 +77,7 @@ See `docs/tickets/template.md`.
 - `dotnet-db` must finish before `dotnet-backend` starts (no schema drift; EF Core can't compile against missing entities).
 - `l10n` can run any time after AC is locked.
 - `qa` writes test plans during dev, executes after the PR is open.
+- `reviewer` parallels **every** implementing agent from the moment the ticket enters `in_progress`. Reviewer reviews the branch continuously, not just at PR open — this allows early feedback on architecture, test coverage, and ADR alignment. See [docs/process/routing.md](routing.md) for reviewer assignment rules.
 - NSwag regeneration is a hard gate between `dotnet-backend` and `frontend` for any contract change.
 
 ## Sizing
