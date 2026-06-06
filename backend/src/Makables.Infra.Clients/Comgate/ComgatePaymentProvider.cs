@@ -287,7 +287,8 @@ public sealed class ComgatePaymentProvider(
         return BusinessResult.Success(new WebhookPayload(
             transId,
             verifyResult.Value!.State,
-            verifyResult.Value.PaymentMethod));
+            verifyResult.Value.PaymentMethod,
+            verifyResult.Value.PaidAt));
     }
 
     /// <summary>

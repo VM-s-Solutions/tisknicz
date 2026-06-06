@@ -295,6 +295,78 @@ public class OrderTests
         o.PaymentProviderRef.Should().Be("comgate-tx-original");
     }
 
+    // === T-0067 — extended MarkAsPaid signature ===
+
+    [Fact]
+    public void MarkAsPaid_with_PaymentMethod_persists_the_value()
+    {
+        var o = ValidDefaults();
+
+        var result = o.MarkAsPaid(FixedClock(), "comgate-tx-1", paymentMethod: "CARD_CZ");
+
+        result.IsSuccess.Should().BeTrue();
+        o.PaymentMethod.Should().Be("CARD_CZ");
+    }
+
+    [Fact]
+    public void MarkAsPaid_with_whitespace_PaymentMethod_normalises_to_null()
+    {
+        var o = ValidDefaults();
+
+        var result = o.MarkAsPaid(FixedClock(), "comgate-tx-1", paymentMethod: "   ");
+
+        result.IsSuccess.Should().BeTrue();
+        o.PaymentMethod.Should().BeNull();
+    }
+
+    [Fact]
+    public void MarkAsPaid_with_PaidAtOverride_uses_override_not_clock()
+    {
+        var o = ValidDefaults();
+        var providerPaidAt = Now.AddSeconds(-30);
+
+        var result = o.MarkAsPaid(FixedClock(), "comgate-tx-1",
+            paymentMethod: null, paidAtOverride: providerPaidAt);
+
+        result.IsSuccess.Should().BeTrue();
+        o.PaidAt.Should().Be(providerPaidAt,
+            "Q1 — provider-authoritative timestamp wins over clock.UtcNow when supplied");
+    }
+
+    [Fact]
+    public void MarkAsPaid_with_null_PaidAtOverride_falls_back_to_clock()
+    {
+        var o = ValidDefaults();
+
+        var result = o.MarkAsPaid(FixedClock(), "comgate-tx-1",
+            paymentMethod: null, paidAtOverride: null);
+
+        result.IsSuccess.Should().BeTrue();
+        o.PaidAt.Should().Be(Now,
+            "null override preserves T-0066 clock-wins semantic");
+    }
+
+    [Fact]
+    public void MarkAsPaid_second_call_after_method_stamped_is_refused_by_state_guard()
+    {
+        // T-0067 reviewer M-1: honest naming — today's state graph makes the
+        // belt-and-braces FIELD guard on PaymentMethod unreachable (the state
+        // guard at MarkAsPaid trips first because the second call's State is
+        // already Paid). What we CAN prove here is the original PaymentMethod
+        // survives the rejected second call. If a future state-graph change
+        // allows a Paid order to revisit PendingPayment, the field guard
+        // becomes reachable and a dedicated test should land alongside.
+        var o = ValidDefaults();
+        o.MarkAsPaid(FixedClock(), "comgate-tx-1", paymentMethod: "CARD_CZ");
+
+        var second = o.MarkAsPaid(FixedClock(), "comgate-tx-1", paymentMethod: "CARD_DE");
+
+        second.IsSuccess.Should().BeFalse();
+        second.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
+        o.PaymentMethod.Should().Be("CARD_CZ",
+            "the rejected second call must not overwrite the stamped method");
+    }
+
     // === Accept ===
 
     [Fact]

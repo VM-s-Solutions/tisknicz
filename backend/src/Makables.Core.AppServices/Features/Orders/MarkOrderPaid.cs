@@ -1,33 +1,45 @@
+using System.Text.Json;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
+using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Identity;
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Outbox;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Makables.Core.AppServices.Features.Orders;
 
 /// <summary>
 /// Transition a <see cref="Order"/> from
 /// <see cref="OrderState.PendingPayment"/> to <see cref="OrderState.Paid"/>
-/// in response to a verified Comgate webhook per T-0066. Dispatched only
-/// by <c>ComgateWebhookController</c> after IP allowlist + re-fetch +
+/// in response to a verified Comgate webhook, persist the provider's
+/// payment-method + capture timestamp, and emit the customer +
+/// maker email outbox events. Dispatched only by
+/// <c>ComgateWebhookController</c> after IP allowlist + re-fetch +
 /// ref-mismatch checks have passed.
 ///
 /// <para>
-/// <b>T-0066 stub scope (user decision Q1).</b> The handler does the
-/// state transition only — no outbox event emission, no email side
-/// effects, no invoice generation. T-0067 ships the outbox plumbing for
-/// customer/maker emails + invoice PDF generation; the comment in the
-/// handler marks the insertion point.
+/// <b>T-0067 scope.</b> The handler does the state transition AND
+/// enqueues exactly two outbox events (customer email + maker email).
+/// <c>invoice.generate</c> is deferred to T-0068 per user decision Q2 —
+/// the marker comment between steps 5/6 and step 7 below shows the
+/// insertion point. Both outbox payloads carry pre-baked action URLs
+/// (Q4) and pre-resolved language codes (T-0028 pattern) so the
+/// consumer-side <see cref="Features.Email.EmailSendService"/> stays a
+/// stateless drainer.
 /// </para>
 ///
 /// <para>
-/// <b>PaymentMethod and PaidAt are accepted but ignored.</b> The Command
-/// signature carries them for T-0067's benefit (T-0067 ships the
-/// migration adding nullable columns to <c>orders</c> and the handler
-/// update that persists them). Accepting them now keeps the Command
-/// signature stable across the T-0066 → T-0067 transition.
+/// <b>Atomicity.</b> The order mutation (State → Paid, PaymentProviderRef,
+/// PaymentMethod, PaidAt) AND the 2 outbox rows ship in a single Postgres
+/// transaction via <c>UnitOfWorkPipelineBehavior</c> per ADR 0014. If
+/// anything fails, nothing commits; the webhook returns a failure and
+/// Comgate retries — we never end up with "order is Paid but no email
+/// queued" or vice versa.
 /// </para>
 ///
 /// <para>
@@ -61,15 +73,17 @@ public static class MarkOrderPaid
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
                 .MaximumLength(200).WithErrorCode(BusinessErrorMessage.MaxLength);
-
-            // PaymentMethod + PaidAt accepted as-is — T-0067 will use them
-            // once the persistence migration ships.
         }
     }
 
     public sealed class Handler(
         IOrderRepository orders,
+        IUserRepository users,
+        IMakerRepository makers,
+        IOutbox outbox,
         IClock clock,
+        ILanguageResolver languageResolver,
+        IOptions<PublicAppUrlsOptions> publicAppUrls,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
     {
         public async Task<BusinessResult<Response>> Handle(
@@ -102,24 +116,108 @@ public static class MarkOrderPaid
             }
 
             // Step 3: State transition via the aggregate. Order.MarkAsPaid
-            // enforces PendingPayment → Paid + the set-once invariant on
-            // PaymentProviderRef. Race-loser (a second webhook arriving
-            // after the first already transitioned) surfaces as
-            // OrderInvalidTransition; the controller maps that to 200.
-            var transitionResult = order.MarkAsPaid(clock, command.ProviderRef);
+            // enforces PendingPayment → Paid + the set-once invariants on
+            // PaymentProviderRef AND PaymentMethod. Race-loser (a second
+            // webhook arriving after the first already transitioned)
+            // surfaces as OrderInvalidTransition; the controller maps that
+            // to 200.
+            var transitionResult = order.MarkAsPaid(
+                clock,
+                command.ProviderRef,
+                command.PaymentMethod,
+                command.PaidAt);
             if (!transitionResult.IsSuccess)
             {
                 return BusinessResult.Failure<Response>(transitionResult.Error!);
             }
 
-            // Step 4: T-0067 will persist command.PaymentMethod +
-            // command.PaidAt once the migration ships (new nullable
-            // columns on `orders`). At T-0066 these fields are
-            // accepted-and-ignored on purpose — the Command signature
-            // stays stable across the transition.
+            // Step 4: Enqueue the customer "thanks for your order" email.
+            // Language resolved at enqueue time (T-0028 pattern); ActionUrl
+            // pre-baked from the configured WebBaseUrl (Q4) so the consumer
+            // never has to know the URL convention.
+            //
+            // T-0067 reviewer M-3: customer-user row must exist (FK
+            // invariant). If it's null something is genuinely corrupt — we
+            // refuse to commit (symmetric with the maker-user-missing path
+            // below) and let Comgate retry while ops investigates.
+            var urls = publicAppUrls.Value;
+            var customer = await users.GetByIdAsync(order.CustomerUserId, cancellationToken);
+            if (customer is null)
+            {
+                logger.LogCritical(
+                    "MarkOrderPaid: customer user {UserId} not found for order {OrderId}. " +
+                    "FK invariant violation — refusing to commit.",
+                    order.CustomerUserId, order.Id);
+                return BusinessResult.Failure<Response>(
+                    Error.NotFound("customerUserId", BusinessErrorMessage.OrderCustomerUserMissing));
+            }
+            var customerLanguage = await languageResolver.ResolveForUserAsync(customer, cancellationToken);
+            var customerPayload = new OrderPaidCustomerEmailPayload(
+                OrderId: order.Id,
+                OrderNumber: order.OrderNumber,
+                Email: order.ContactEmail,
+                ContactName: order.ContactName,
+                TotalAmountMinor: order.TotalAmountMinor,
+                Currency: order.Currency,
+                LanguageCode: customerLanguage,
+                ActionUrl: $"{urls.WebBaseUrl.TrimEnd('/')}/objednavka/{order.Id}");
+            outbox.Enqueue(
+                aggregateId: order.Id,
+                eventType: OutboxEventTypes.OrderPaidCustomerEmail,
+                payloadJson: JsonSerializer.Serialize(customerPayload));
 
-            // Step 5: No SaveChangesAsync — UoW pipeline behavior commits
-            // at the end of the request.
+            // Step 5: Enqueue the maker "new order arrived" email. The
+            // maker aggregate has no separate notification email; the
+            // linked User.Email is the channel. Language pre-resolved
+            // from the maker's user account.
+            var maker = await makers.GetByIdAsync(order.MakerId, cancellationToken);
+            if (maker is null)
+            {
+                // Order has a Maker FK at creation; a null here means the
+                // maker was soft-deleted between order creation and now.
+                // Refuse to commit because the maker email would silently
+                // drop on the floor.
+                logger.LogCritical(
+                    "MarkOrderPaid: maker {MakerId} not found for order {OrderId}. " +
+                    "Soft-deleted between order creation and webhook? — refusing to commit.",
+                    order.MakerId, order.Id);
+                return BusinessResult.Failure<Response>(
+                    Error.NotFound("makerId", BusinessErrorMessage.MakerNotFound));
+            }
+            var makerUser = await users.GetByIdAsync(maker.UserId, cancellationToken);
+            if (makerUser is null)
+            {
+                // T-0067 reviewer M-2: distinct error code from MakerNotFound
+                // so ops triage separates "maker soft-deleted" from "maker
+                // exists but its user row is missing" (genuine FK invariant
+                // violation, much more alarming).
+                logger.LogCritical(
+                    "MarkOrderPaid: maker {MakerId} linked user {UserId} not found for order {OrderId}. " +
+                    "FK invariant violation — refusing to commit, maker email would silently drop.",
+                    maker.Id, maker.UserId, order.Id);
+                return BusinessResult.Failure<Response>(
+                    Error.NotFound("makerUserId", BusinessErrorMessage.MakerUserMissing));
+            }
+            var makerLanguage = await languageResolver.ResolveForUserAsync(makerUser, cancellationToken);
+            var makerPayload = new OrderPlacedMakerEmailPayload(
+                OrderId: order.Id,
+                OrderNumber: order.OrderNumber,
+                MakerId: maker.Id,
+                MakerEmail: makerUser.Email,
+                TotalAmountMinor: order.TotalAmountMinor,
+                Currency: order.Currency,
+                LanguageCode: makerLanguage,
+                ActionUrl: $"{urls.WebBaseUrl.TrimEnd('/')}/dashboard/maker/objednavky/{order.Id}");
+            outbox.Enqueue(
+                aggregateId: order.Id,
+                eventType: OutboxEventTypes.OrderPlacedMakerEmail,
+                payloadJson: JsonSerializer.Serialize(makerPayload));
+
+            // T-0068: enqueue invoice.generate here.
+
+            // Step 6: No SaveChangesAsync — UoW pipeline behavior commits
+            // the order mutation AND the 2 outbox rows atomically per ADR
+            // 0014 (patterns §A.20).
             return BusinessResult.Success(new Response(order.Id));
         }
     }

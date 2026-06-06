@@ -393,6 +393,14 @@ export const messages = {
   'payment.webhook.malformed': 'Webhook od platební brány nemá očekávaný formát.',
   'payment.webhook.ipRejected': 'Webhook přišel z neoprávněné IP adresy.',
   'payment.webhook.refIdMismatch': 'Referenční ID ve webhooku se neshoduje s objednávkou.',
+
+  // Email pipeline — consumer-side codes that surface in the admin audit
+  // log only (never customer-facing). T-0067.
+  'email.orderPayloadMalformed': 'Vnitřní chyba při generování e-mailu k objednávce. Tým byl informován.',
+  // FK-invariant codes. Surface only in the admin audit log (the customer
+  // never sees these — a webhook 5xx is the closest UX). T-0067 reviewer M-2/M-3.
+  'maker.userMissing': 'Účet poskytovatele nebyl nalezen. Tým byl informován.',
+  'order.customerUserMissing': 'Účet zákazníka nebyl nalezen. Tým byl informován.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

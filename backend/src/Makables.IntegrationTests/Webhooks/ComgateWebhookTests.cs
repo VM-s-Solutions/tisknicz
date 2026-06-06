@@ -57,6 +57,17 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
     private const string Redirect1 = "https://payments.comgate.test/pay/AB1C-D34E";
 
     /// <summary>
+    /// T-0067: the Comgate-authoritative PAID timestamp returned via
+    /// VerifyPaymentAsync. The fake provider passes this through into
+    /// the WebhookPayload; the controller forwards it to MarkOrderPaid;
+    /// the handler persists it as <c>Order.PaidAt</c> (NOT the test
+    /// clock's UtcNow). The happy-path test asserts the persisted value
+    /// equals this constant.
+    /// </summary>
+    private static readonly DateTimeOffset PaidAtFromProvider =
+        new DateTimeOffset(2026, 6, 5, 9, 59, 30, TimeSpan.Zero);
+
+    /// <summary>
     /// Synthetic remote IP the test middleware stamps on every request
     /// so the IP allowlist filter has something to match against — by
     /// default <c>WebApplicationFactory</c>'s TestServer leaves
@@ -312,7 +323,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
     {
         await SeedOrderInStateAsync(OrderState.PendingPayment);
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         // Sanity: confirm the seed left the row with the expected ref so
         // the controller's GetByPaymentProviderRefAsync lookup will find it.
@@ -337,6 +348,114 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         row.Should().NotBeNull();
         row!.State.Should().Be(OrderState.Paid);
         row.PaymentProviderRef.Should().Be(TransId1);
+
+        // T-0067 — payment_method persisted from the WebhookPayload
+        // (Comgate's label, not derived from anything we computed).
+        row.PaymentMethod.Should().Be("CARD_CZ");
+
+        // T-0067 — paid_at is the provider's authoritative timestamp,
+        // NOT the test clock's UtcNow (the gap is intentional; the
+        // provider-driven value is what the customer-facing invoice
+        // shows).
+        row.PaidAt.Should().Be(PaidAtFromProvider);
+
+        // T-0067 — exactly two outbox events queued, both keyed on the
+        // order id, with the documented event types. invoice.generate
+        // is deferred to T-0068 (Q2 negative pin).
+        var outboxRows = await db.Set<Makables.Core.Domain.Outbox.OutboxEvent>()
+            .AsNoTracking()
+            .Where(e => e.AggregateId == OrderId)
+            .OrderBy(e => e.CreatedAt)
+            .ThenBy(e => e.EventType)
+            .ToListAsync();
+        outboxRows.Should().HaveCount(2);
+        outboxRows.Select(e => e.EventType).Should().BeEquivalentTo(new[]
+        {
+            Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPaidCustomerEmail,
+            Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPlacedMakerEmail,
+        });
+        outboxRows.Should().NotContain(e => e.EventType == "invoice.generate",
+            "T-0067 explicitly defers invoice.generate enqueue to T-0068");
+
+        // Payload JSONs deserialize cleanly (T-0067 ticket §"Tests").
+        var customerRow = outboxRows.Single(e =>
+            e.EventType == Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPaidCustomerEmail);
+        var customerPayload = System.Text.Json.JsonSerializer
+            .Deserialize<Makables.Core.Domain.Outbox.OrderPaidCustomerEmailPayload>(
+                customerRow.PayloadJson);
+        customerPayload.Should().NotBeNull();
+        customerPayload!.OrderId.Should().Be(OrderId);
+        customerPayload.OrderNumber.Should().Be("M-CZ-20260042");
+        customerPayload.Email.Should().Be("a@b.cz");
+        customerPayload.ActionUrl.Should().Be($"https://makables.test/objednavka/{OrderId}");
+
+        var makerRow = outboxRows.Single(e =>
+            e.EventType == Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPlacedMakerEmail);
+        var makerPayload = System.Text.Json.JsonSerializer
+            .Deserialize<Makables.Core.Domain.Outbox.OrderPlacedMakerEmailPayload>(
+                makerRow.PayloadJson);
+        makerPayload.Should().NotBeNull();
+        makerPayload!.OrderId.Should().Be(OrderId);
+        makerPayload.MakerId.Should().Be(MakerId);
+        makerPayload.MakerEmail.Should().Be("maker@example.cz");
+        makerPayload.ActionUrl.Should().Be($"https://makables.test/dashboard/maker/objednavky/{OrderId}");
+    }
+
+    [Fact]
+    public async Task POST_happy_path_persists_payment_method_and_provider_PaidAt()
+    {
+        // Focused T-0067 pin in addition to the broader happy-path test
+        // above. Isolates "payment_method column is non-null" and
+        // "paid_at == provider's PaidAt, not test clock" so a future
+        // refactor of the bigger test still leaves the persistence
+        // invariants explicitly under test.
+        await SeedOrderInStateAsync(OrderState.PendingPayment);
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "BANK_CZ_RB", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+        var row = await db.Set<Order>().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == OrderId);
+        row!.PaymentMethod.Should().Be("BANK_CZ_RB",
+            "exact value from the WebhookPayload is persisted unchanged");
+        row.PaidAt.Should().Be(PaidAtFromProvider,
+            "Q1 — Comgate's PAID timestamp wins; not clock.UtcNow");
+    }
+
+    [Fact]
+    public async Task POST_twice_idempotency_does_NOT_re_enqueue_outbox_events()
+    {
+        // T-0067 — companion to the existing idempotency test that asserts
+        // state stability. This one pins the outbox table: a re-delivered
+        // webhook MUST NOT double-enqueue the side-effect events. The
+        // controller's IsAlreadyInTargetState short-circuit returns 200
+        // BEFORE dispatching the Mediator command, so no second pair of
+        // rows lands.
+        await SeedOrderInStateAsync(OrderState.PendingPayment);
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        var first = await client.PostAsync(WebhookPath, BuildWebhookBody());
+        var second = await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+        var outboxRows = await db.Set<Makables.Core.Domain.Outbox.OutboxEvent>()
+            .AsNoTracking()
+            .Where(e => e.AggregateId == OrderId)
+            .ToListAsync();
+        outboxRows.Should().HaveCount(2,
+            "still 2 rows total — the second webhook was a no-op idempotency short-circuit");
     }
 
     [Fact]
@@ -346,7 +465,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         await ResetAndBuildFactory(Array.Empty<string>());
         await SeedOrderInStateAsync(OrderState.PendingPayment);
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         using var client = _factory.CreateClient();
         var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
@@ -383,7 +502,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         // Critical and returns 200 per Q3.
         await SeedOrderInStateAsync(OrderState.PendingPayment, paymentProviderRef: "different-tx");
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         using var client = _factory.CreateClient();
         var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
@@ -404,7 +523,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         // order.Id ("ord-1") vs body.refId ("ord-spoof") and refuses.
         await SeedOrderInStateAsync(OrderState.PendingPayment);
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         using var client = _factory.CreateClient();
         var response = await client.PostAsync(
@@ -425,9 +544,9 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
     {
         await SeedOrderInStateAsync(OrderState.PendingPayment);
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         using var client = _factory.CreateClient();
         var first = await client.PostAsync(WebhookPath, BuildWebhookBody());
@@ -449,7 +568,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         // Cancelled order has no PaymentProviderRef; the controller will
         // try to look up the order by TransId1 and find null → 200 + Critical.
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ")));
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
 
         using var client = _factory.CreateClient();
         var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
@@ -515,7 +634,7 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         // Order stays in PendingPayment; controller logs Information.
         await SeedOrderInStateAsync(OrderState.PendingPayment);
         _provider.EnqueueWebhook(BusinessResult.Success(
-            new WebhookPayload(TransId1, PaymentState.Cancelled, null)));
+            new WebhookPayload(TransId1, PaymentState.Cancelled, null, null)));
 
         using var client = _factory.CreateClient();
         var response = await client.PostAsync(

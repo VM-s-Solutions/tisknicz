@@ -22,6 +22,21 @@ public static class OutboxEventTypes
     public const string AuthPasswordResetSend = "auth.passwordReset.send";
 
     /// <summary>
+    /// "Thanks for your order" confirmation email to the customer, fired
+    /// by <see cref="Features.Orders.MarkOrderPaid"/> after the Comgate
+    /// webhook transitions the order to <see cref="Orders.OrderState.Paid"/>.
+    /// T-0067 (US-customer-0010 AC-4).
+    /// </summary>
+    public const string OrderPaidCustomerEmail = "order.paid.customerEmail";
+
+    /// <summary>
+    /// "New order arrived" notification email to the maker, fired by
+    /// <see cref="Features.Orders.MarkOrderPaid"/> alongside the customer
+    /// email. T-0067 (US-maker-0006).
+    /// </summary>
+    public const string OrderPlacedMakerEmail = "order.placed.makerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a fourth email event type
@@ -30,5 +45,7 @@ public static class OutboxEventTypes
     public static bool IsEmailSend(string eventType) =>
         eventType is AuthMagicLinkSend
                   or AuthEmailConfirmationSend
-                  or AuthPasswordResetSend;
+                  or AuthPasswordResetSend
+                  or OrderPaidCustomerEmail
+                  or OrderPlacedMakerEmail;
 }

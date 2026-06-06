@@ -103,6 +103,12 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.PaymentRedirectUrl)
             .HasColumnName("payment_redirect_url").HasMaxLength(500);
 
+        // T-0067: provider's payment-method label (e.g. CARD_CZ, BANK_CZ_RB).
+        // Length 40 mirrors the shipping_method column precedent. No index —
+        // admin queries by payment_method are out-of-MVP analytics.
+        builder.Property(o => o.PaymentMethod)
+            .HasColumnName("payment_method").HasMaxLength(40);
+
         builder.Property(o => o.ShippingCarrierRef)
             .HasColumnName("shipping_carrier_ref").HasMaxLength(200);
         builder.Property(o => o.AutoDeliverAt).HasColumnName("auto_deliver_at");

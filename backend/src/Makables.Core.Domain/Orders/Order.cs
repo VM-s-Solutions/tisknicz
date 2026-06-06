@@ -162,6 +162,24 @@ public sealed class Order : Auditable
     public string? PaymentProviderRef { get; private set; }
 
     /// <summary>
+    /// Provider's payment-method label captured at <see cref="MarkAsPaid"/>
+    /// time (e.g. Comgate's <c>CARD_CZ</c>, <c>BANK_CZ_RB</c>). Null until
+    /// the webhook lands; set-once thereafter — a second
+    /// <see cref="MarkAsPaid"/> call with a DIFFERENT non-null
+    /// <c>paymentMethod</c> is refused as
+    /// <see cref="BusinessErrorMessage.OrderInvalidTransition"/>. Matching
+    /// value or null incoming → set / no-op. T-0067.
+    ///
+    /// <para>
+    /// Stored for admin reconciliation reporting ("how many CARD vs. bank
+    /// transfer this month"). Not indexed at MVP per T-0067 ticket §"Why no
+    /// index on payment_method" — MVP volume keeps the ad-hoc
+    /// <c>GROUP BY</c> scan sub-millisecond.
+    /// </para>
+    /// </summary>
+    public string? PaymentMethod { get; private set; }
+
+    /// <summary>
     /// Cached Comgate redirect URL for the 24h retry window
     /// (US-customer-0010 AC-3). Set by <see cref="ReservePaymentSession"/>
     /// (T-0065); read back when the customer revisits an order in
@@ -414,11 +432,37 @@ public sealed class Order : Auditable
 
     /// <summary>
     /// <see cref="OrderState.PendingPayment"/> → <see cref="OrderState.Paid"/>.
-    /// Dispatched from the Comgate webhook handler (T-0066). Set-once
-    /// on <see cref="PaymentProviderRef"/> — a second invocation, even
-    /// from <see cref="OrderState.PendingPayment"/>, is refused.
+    /// Dispatched from the Comgate webhook handler (T-0066 / T-0067).
+    /// Set-once on <see cref="PaymentProviderRef"/> AND
+    /// <see cref="PaymentMethod"/> — a second invocation, even from
+    /// <see cref="OrderState.PendingPayment"/>, is refused if the new
+    /// non-null values differ from the existing ones.
+    ///
+    /// <para>
+    /// <b>T-0067 widening.</b> The signature extends to accept the
+    /// provider's payment-method label and an optional <c>paidAt</c>
+    /// override:
+    /// <list type="bullet">
+    ///   <item><description><paramref name="paymentMethod"/> — e.g.
+    ///     <c>"CARD_CZ"</c>. Null / whitespace is normalised to null.
+    ///     Set-once: a different non-null value vs. the existing
+    ///     non-null <see cref="PaymentMethod"/> is refused as
+    ///     <see cref="BusinessErrorMessage.OrderInvalidTransition"/>.</description></item>
+    ///   <item><description><paramref name="paidAtOverride"/> — the
+    ///     provider's authoritative capture timestamp (Comgate's
+    ///     <c>paymentTime</c>). When supplied it overrides
+    ///     <c>clock.UtcNow</c>; this closes the ~seconds gap between
+    ///     our webhook-receive moment and the actual capture so the
+    ///     customer-facing invoice shows the real payment time.
+    ///     Null → fall back to <c>clock.UtcNow</c> (T-0066 semantic).</description></item>
+    /// </list>
+    /// </para>
     /// </summary>
-    public BusinessResult MarkAsPaid(IClock clock, string paymentProviderRef)
+    public BusinessResult MarkAsPaid(
+        IClock clock,
+        string paymentProviderRef,
+        string? paymentMethod = null,
+        DateTimeOffset? paidAtOverride = null)
     {
         ArgumentNullException.ThrowIfNull(clock);
         if (string.IsNullOrWhiteSpace(paymentProviderRef))
@@ -448,10 +492,31 @@ public sealed class Order : Auditable
                 Error.Conflict("paymentProviderRef", BusinessErrorMessage.OrderInvalidTransition));
         }
 
-        var now = clock.UtcNow;
+        // T-0067 — belt-and-braces set-once on PaymentMethod mirroring the
+        // PaymentProviderRef pattern above. Whitespace-only / null inputs
+        // are normalised to null; a non-null incoming value that differs
+        // from a previously-stored non-null value is refused (real
+        // overwrite attempt).
+        var trimmedMethod = string.IsNullOrWhiteSpace(paymentMethod) ? null : paymentMethod.Trim();
+        if (PaymentMethod is not null
+            && trimmedMethod is not null
+            && !string.Equals(PaymentMethod, trimmedMethod, StringComparison.Ordinal))
+        {
+            return BusinessResult.Failure(
+                Error.Conflict("paymentMethod", BusinessErrorMessage.OrderInvalidTransition));
+        }
+
         State = OrderState.Paid;
-        PaidAt = now;
+        PaidAt = paidAtOverride ?? clock.UtcNow;
         PaymentProviderRef = trimmedRef;
+        // Only assign when the incoming value is non-null so a later
+        // webhook re-delivery (e.g. provider retry after a hiccup) that
+        // happens to drop the method doesn't clear a previously-stored
+        // value.
+        if (trimmedMethod is not null)
+        {
+            PaymentMethod = trimmedMethod;
+        }
         return BusinessResult.Success();
     }
 

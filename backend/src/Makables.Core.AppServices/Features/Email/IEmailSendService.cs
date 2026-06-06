@@ -25,7 +25,10 @@ public interface IEmailSendService
     /// Render and send the email described by an outbox row.
     /// </summary>
     /// <param name="outboxEventType">One of <see cref="OutboxEventTypes"/>.</param>
-    /// <param name="payloadJson">JSON-encoded <see cref="OneTimeTokenOutboxPayload"/>.</param>
+    /// <param name="payloadJson">JSON-encoded payload — type depends on
+    /// the event (auth flows use <see cref="OneTimeTokenOutboxPayload"/>;
+    /// order flows use <see cref="OrderPaidCustomerEmailPayload"/> /
+    /// <see cref="OrderPlacedMakerEmailPayload"/>).</param>
     Task<BusinessResult<EmailSentReceipt>> SendAsync(
         string outboxEventType,
         string payloadJson,
@@ -39,7 +42,7 @@ public sealed class EmailSendService(
     IOptions<PublicAppUrlsOptions> urls,
     ILogger<EmailSendService> logger) : IEmailSendService
 {
-    public async Task<BusinessResult<EmailSentReceipt>> SendAsync(
+    public Task<BusinessResult<EmailSentReceipt>> SendAsync(
         string outboxEventType,
         string payloadJson,
         CancellationToken cancellationToken)
@@ -47,13 +50,36 @@ public sealed class EmailSendService(
         ArgumentException.ThrowIfNullOrWhiteSpace(outboxEventType);
         ArgumentException.ThrowIfNullOrWhiteSpace(payloadJson);
 
-        if (!TryMapEventToTemplateType(outboxEventType, out var templateType))
+        // Per-event-type switch (T-0067 Q3). Each branch deserializes the
+        // matching payload record and routes through a private helper.
+        // Adding a new event = one new case + one new helper; the
+        // discriminated routing is a compile-time check, not a runtime
+        // string lookup.
+        return outboxEventType switch
         {
-            logger.LogWarning("Unknown outbox event type {EventType}.", outboxEventType);
-            return BusinessResult.Failure<EmailSentReceipt>(
-                Error.Permanent(BusinessErrorMessage.EmailEventTypeUnknown,
-                    $"No email template is mapped to outbox event '{outboxEventType}'."));
-        }
+            OutboxEventTypes.AuthMagicLinkSend
+                or OutboxEventTypes.AuthEmailConfirmationSend
+                or OutboxEventTypes.AuthPasswordResetSend
+                    => SendAuthEmailAsync(outboxEventType, payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderPaidCustomerEmail
+                => SendOrderPaidCustomerEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderPlacedMakerEmail
+                => SendOrderPlacedMakerEmailAsync(payloadJson, cancellationToken),
+
+            _ => UnknownEventTypeAsync(outboxEventType),
+        };
+    }
+
+    // === Auth-flow branch — preserves T-0028 behaviour byte-for-byte. ===
+
+    private async Task<BusinessResult<EmailSentReceipt>> SendAuthEmailAsync(
+        string outboxEventType,
+        string payloadJson,
+        CancellationToken cancellationToken)
+    {
+        var templateType = MapAuthEventToTemplateType(outboxEventType);
 
         OneTimeTokenOutboxPayload? payload;
         try
@@ -90,14 +116,7 @@ public sealed class EmailSendService(
                     $"No EmailTemplate row exists for type '{templateType}'."));
         }
 
-        var translation = await translations.GetAsync(template.Id, payload.LanguageCode, cancellationToken);
-        if (translation is null && payload.LanguageCode != LanguageCode.DefaultFallback)
-        {
-            logger.LogInformation(
-                "EmailTemplateTranslation missing for ({TemplateType}, {LanguageCode}); falling back to {Fallback}.",
-                templateType, payload.LanguageCode, LanguageCode.DefaultFallback);
-            translation = await translations.GetAsync(template.Id, LanguageCode.DefaultFallback, cancellationToken);
-        }
+        var translation = await ResolveTranslationAsync(template.Id, payload.LanguageCode, templateType, cancellationToken);
         if (translation is null)
         {
             return BusinessResult.Failure<EmailSentReceipt>(
@@ -127,6 +146,159 @@ public sealed class EmailSendService(
             PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, data),
             Data: data);
 
+        return await SendViaProviderAsync(message, cancellationToken);
+    }
+
+    // === Order-flow branches (T-0067). ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderPaidCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderPaidCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderPaidCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderPaidCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["total_amount_minor"] = payload.TotalAmountMinor,
+                ["total_amount"] = FormatAmount(payload.TotalAmountMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                ["language_code"] = payload.LanguageCode,
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderPlacedMakerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderPlacedMakerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderPlacedMakerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderPlacedMaker,
+            toAddress: payload.MakerEmail,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["maker_id"] = payload.MakerId,
+                ["maker_email"] = payload.MakerEmail,
+                ["total_amount_minor"] = payload.TotalAmountMinor,
+                ["total_amount"] = FormatAmount(payload.TotalAmountMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                ["language_code"] = payload.LanguageCode,
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task<BusinessResult<EmailSentReceipt>> DispatchOrderEmailAsync(
+        EmailTemplateType templateType,
+        string toAddress,
+        string? toName,
+        string languageCode,
+        IReadOnlyDictionary<string, object> substitutions,
+        CancellationToken cancellationToken)
+    {
+        var template = await templates.GetByTypeAsync(templateType, cancellationToken);
+        if (template is null)
+        {
+            logger.LogError("EmailTemplate row missing for type {TemplateType}.", templateType);
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Permanent(BusinessErrorMessage.EmailTemplateNotFound,
+                    $"No EmailTemplate row exists for type '{templateType}'."));
+        }
+
+        var translation = await ResolveTranslationAsync(template.Id, languageCode, templateType, cancellationToken);
+        if (translation is null)
+        {
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Permanent(BusinessErrorMessage.EmailTemplateTranslationMissing,
+                    $"No translation exists for template '{template.Id}' in '{languageCode}' or the fallback '{LanguageCode.DefaultFallback}'."));
+        }
+
+        // Subject is run through the same placeholder-substitution path as
+        // the body — order subjects carry the order number (T-0067 reviewer
+        // B-1) so the customer's inbox shows "Děkujeme za objednávku #M-2026-…"
+        // rather than the raw template literal. SendGrid's Dynamic Template
+        // does NOT substitute the subject header from dynamicTemplateData,
+        // so the producer must inline the substitutions itself.
+        var message = new EmailMessage(
+            ProviderTemplateId: template.ProviderTemplateId,
+            LanguageCode: translation.LanguageCode,
+            ToAddress: toAddress,
+            ToName: toName,
+            FromAddress: template.FromAddress ?? string.Empty,
+            FromName: template.FromName,
+            ReplyToAddress: template.ReplyToAddress,
+            Subject: SubstitutePlainTextPlaceholders(translation.Subject, substitutions),
+            PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, substitutions),
+            Data: substitutions.ToDictionary(kv => kv.Key, kv => kv.Value));
+
+        return await SendViaProviderAsync(message, cancellationToken);
+    }
+
+    // === Helpers shared across branches. ===
+
+    private static BusinessResult<T> DeserializeOrderPayload<T>(string payloadJson, string outboxEventType)
+        where T : class
+    {
+        try
+        {
+            var payload = JsonSerializer.Deserialize<T>(payloadJson);
+            if (payload is null)
+            {
+                return BusinessResult.Failure<T>(
+                    Error.Permanent(BusinessErrorMessage.OrderEmailPayloadMalformed,
+                        $"Outbox payload for '{outboxEventType}' deserialized to null."));
+            }
+            return BusinessResult.Success(payload);
+        }
+        catch (JsonException ex)
+        {
+            return BusinessResult.Failure<T>(
+                Error.Permanent(BusinessErrorMessage.OrderEmailPayloadMalformed,
+                    $"Outbox payload for '{outboxEventType}' could not be JSON-decoded: {ex.Message}"));
+        }
+    }
+
+    private async Task<EmailTemplateTranslation?> ResolveTranslationAsync(
+        string templateId, string languageCode, EmailTemplateType templateType, CancellationToken cancellationToken)
+    {
+        var translation = await translations.GetAsync(templateId, languageCode, cancellationToken);
+        if (translation is null && languageCode != LanguageCode.DefaultFallback)
+        {
+            logger.LogInformation(
+                "EmailTemplateTranslation missing for ({TemplateType}, {LanguageCode}); falling back to {Fallback}.",
+                templateType, languageCode, LanguageCode.DefaultFallback);
+            translation = await translations.GetAsync(templateId, LanguageCode.DefaultFallback, cancellationToken);
+        }
+        return translation;
+    }
+
+    private async Task<BusinessResult<EmailSentReceipt>> SendViaProviderAsync(
+        EmailMessage message, CancellationToken cancellationToken)
+    {
         var result = await provider.SendAsync(message, cancellationToken);
         if (!result.IsSuccess)
         {
@@ -137,24 +309,23 @@ public sealed class EmailSendService(
         return result;
     }
 
-    private static bool TryMapEventToTemplateType(string outboxEventType, out EmailTemplateType templateType)
+    private Task<BusinessResult<EmailSentReceipt>> UnknownEventTypeAsync(string outboxEventType)
     {
-        switch (outboxEventType)
-        {
-            case OutboxEventTypes.AuthMagicLinkSend:
-                templateType = EmailTemplateType.AuthMagicLink;
-                return true;
-            case OutboxEventTypes.AuthEmailConfirmationSend:
-                templateType = EmailTemplateType.AuthEmailConfirmation;
-                return true;
-            case OutboxEventTypes.AuthPasswordResetSend:
-                templateType = EmailTemplateType.AuthPasswordReset;
-                return true;
-            default:
-                templateType = default;
-                return false;
-        }
+        logger.LogWarning("Unknown outbox event type {EventType}.", outboxEventType);
+        return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(
+            Error.Permanent(BusinessErrorMessage.EmailEventTypeUnknown,
+                $"No email template is mapped to outbox event '{outboxEventType}'.")));
     }
+
+    private static EmailTemplateType MapAuthEventToTemplateType(string outboxEventType) =>
+        outboxEventType switch
+        {
+            OutboxEventTypes.AuthMagicLinkSend => EmailTemplateType.AuthMagicLink,
+            OutboxEventTypes.AuthEmailConfirmationSend => EmailTemplateType.AuthEmailConfirmation,
+            OutboxEventTypes.AuthPasswordResetSend => EmailTemplateType.AuthPasswordReset,
+            _ => throw new InvalidOperationException(
+                $"MapAuthEventToTemplateType called with non-auth event '{outboxEventType}'. Switch above is wrong."),
+        };
 
     private static string BuildActionUrl(PublicAppUrlsOptions u, EmailTemplateType type, string rawToken)
     {
@@ -172,6 +343,21 @@ public sealed class EmailSendService(
         var path = pathTemplate.Replace(PublicAppUrlsOptions.TokenPlaceholder, Uri.EscapeDataString(rawToken));
         var basePart = u.WebBaseUrl.TrimEnd('/');
         return path.StartsWith('/') ? basePart + path : $"{basePart}/{path}";
+    }
+
+    /// <summary>
+    /// Format an amount in minor units as a display string (e.g. 57900 →
+    /// "579,00"). The SendGrid Dynamic Template handles
+    /// currency-symbol placement; the plain-text body just shows the
+    /// number. <paramref name="currency"/> is accepted for forward
+    /// compatibility but unused at MVP (CZK only). Plain-text only — no
+    /// HTML in this catalog.
+    /// </summary>
+    private static string FormatAmount(long amountMinor, string currency)
+    {
+        _ = currency;
+        var major = amountMinor / 100m;
+        return major.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     // SECURITY: plain-text only. Do NOT reuse for HTML bodies — there is no

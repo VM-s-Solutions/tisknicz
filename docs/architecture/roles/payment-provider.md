@@ -32,7 +32,7 @@ Initiate a payment session for an order, verify its status authoritatively, pars
 See ADR 0016 for the C# interface. Methods:
 - `CreatePaymentAsync(Order)` → `PaymentSession (ProviderRef, RedirectUrl)`
 - `VerifyPaymentAsync(providerRef)` → `PaymentStatus`
-- `ParseAndVerifyWebhookAsync(HttpRequest)` → `WebhookPayload` — **T-0066 implemented**; three-layer security: IP allowlist + re-fetch + idempotency. No HMAC body signature verification (Comgate doesn't sign; sanctioned defence is IP + re-fetch + ref-mismatch checks).
+- `ParseAndVerifyWebhookAsync(HttpRequest)` → `WebhookPayload` — **T-0066 implemented**; three-layer security: IP allowlist + re-fetch + idempotency. No HMAC body signature verification (Comgate doesn't sign; sanctioned defence is IP + re-fetch + ref-mismatch checks). `WebhookPayload` carries `(ProviderRef, PaymentState, PaymentMethod?, PaidAt?)` — T-0067 widened the record with the nullable `PaidAt` so the customer-facing invoice records the gateway's authoritative capture timestamp instead of our webhook-receive moment.
 - `RefundAsync(providerRef, amount)` → `RefundReceipt`
 
 ## Implementations

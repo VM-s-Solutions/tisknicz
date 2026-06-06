@@ -271,6 +271,44 @@ public class ComgatePaymentProviderWebhookTests
         result.Error.Type.Should().Be(ErrorType.Configuration);
     }
 
+    // ---- T-0067 — PaidAt plumbing through WebhookPayload ----
+
+    [Fact]
+    public async Task ParseAndVerifyWebhookAsync_propagates_PaidAt_from_VerifyPaymentAsync()
+    {
+        // Comgate's status response carries paymentTime when status=PAID.
+        // The adapter's VerifyPaymentAsync parses it; T-0067 extends
+        // ParseAndVerifyWebhookAsync so the WebhookPayload now exposes it.
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK,
+            "code=0&status=PAID&method=CARD_CZ&paymentTime=2026-06-06T09:59:30Z");
+        var request = BuildFormRequest(ValidPaidFormBody());
+
+        var result = await _sut.ParseAndVerifyWebhookAsync(request, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.PaidAt.Should().Be(
+            new DateTimeOffset(2026, 6, 6, 9, 59, 30, TimeSpan.Zero),
+            "T-0067 — the WebhookPayload now exposes Comgate's authoritative paymentTime");
+    }
+
+    [Fact]
+    public async Task ParseAndVerifyWebhookAsync_with_null_PaidAt_from_VerifyPayment_returns_null_in_WebhookPayload()
+    {
+        // Provider returns PAID without a paymentTime field — should
+        // surface as null PaidAt on the WebhookPayload, NOT crash and
+        // NOT fall back to anything else (the consumer/handler is
+        // responsible for the clock.UtcNow fallback).
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK,
+            "code=0&status=PAID&method=CARD_CZ");
+        var request = BuildFormRequest(ValidPaidFormBody());
+
+        var result = await _sut.ParseAndVerifyWebhookAsync(request, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.PaidAt.Should().BeNull(
+            "no paymentTime in the provider response = null on the payload");
+    }
+
     // ---- Stub HTTP handler + in-memory logger (copied from
     //      ComgatePaymentProviderTests so the two suites stay independent.) ----
 
