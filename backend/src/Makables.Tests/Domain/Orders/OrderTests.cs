@@ -253,6 +253,48 @@ public class OrderTests
         o.PaymentProviderRef.Should().Be("comgate-tx-1");
     }
 
+    [Fact]
+    public void MarkAsPaid_with_matching_pre_set_PaymentProviderRef_succeeds()
+    {
+        // T-0066 reviewer L-5 — positive domain pin for the belt-and-braces
+        // relaxation. The normal customer-pays flow is:
+        //   T-0065 ReservePaymentSession(transId) → PaymentProviderRef = transId
+        //   T-0066 webhook fires → MarkAsPaid(clock, SAME transId)
+        // The matching-ref case must succeed; only a DIFFERENT ref trips
+        // the set-once guard (covered by
+        // MarkOrderPaidHandlerTests.Existing_PaymentProviderRef_set_to_different_ref_…
+        // and by the existing OrderReservePaymentSessionTests cluster for
+        // the reserve side).
+        var o = ValidDefaults();
+        o.ReservePaymentSession("comgate-tx-1", "https://payments.comgate.cz/r/01HX", FixedClock());
+
+        var paid = o.MarkAsPaid(FixedClock(), "comgate-tx-1");
+
+        paid.IsSuccess.Should().BeTrue();
+        o.State.Should().Be(OrderState.Paid);
+        o.PaymentProviderRef.Should().Be("comgate-tx-1");
+        o.PaidAt.Should().Be(Now);
+    }
+
+    [Fact]
+    public void MarkAsPaid_with_DIFFERENT_pre_set_PaymentProviderRef_trips_set_once()
+    {
+        // T-0066 reviewer L-5 — companion negative test. The relaxation
+        // accepts the matching ref but the security property (no overwrite
+        // of a different ref) MUST still hold.
+        var o = ValidDefaults();
+        o.ReservePaymentSession("comgate-tx-original", "https://payments.comgate.cz/r/01HX", FixedClock());
+
+        var paid = o.MarkAsPaid(FixedClock(), "comgate-tx-different");
+
+        paid.IsSuccess.Should().BeFalse();
+        paid.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
+        paid.Error.Type.Should().Be(ErrorType.Conflict);
+        // The original ref + state (PendingPayment) must be preserved.
+        o.State.Should().Be(OrderState.PendingPayment);
+        o.PaymentProviderRef.Should().Be("comgate-tx-original");
+    }
+
     // === Accept ===
 
     [Fact]

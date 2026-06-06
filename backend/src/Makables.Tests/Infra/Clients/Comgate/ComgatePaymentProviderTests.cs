@@ -20,8 +20,9 @@ namespace Makables.Tests.Infra.Clients.Comgate;
 /// never in log scope), error mapping (5xx → Transient, code=1100/1102
 /// → Configuration + Critical, code != 0 known business error →
 /// Permanent), Polly retry behaviour, and the
-/// <see cref="NotSupportedException"/> stubs for the T-0066/T-0105
-/// methods.
+/// <see cref="NotSupportedException"/> stub for the T-0105 method.
+/// Webhook parsing coverage lives in
+/// <see cref="ComgatePaymentProviderWebhookTests"/> (T-0066).
 /// </summary>
 public class ComgatePaymentProviderTests
 {
@@ -339,21 +340,7 @@ public class ComgatePaymentProviderTests
         result.Value!.State.Should().Be(expected);
     }
 
-    // ---- NotSupportedException stubs (T-0066 / T-0105) ----
-
-    [Fact]
-    public void ParseAndVerifyWebhookAsync_throws_NotSupportedException_with_T_0066_reference()
-    {
-        // The method throws synchronously (it returns Task by delegating to
-        // an expression-bodied throw), so wrap the invocation in an Action.
-        Action act = () =>
-        {
-            _ = _sut.ParseAndVerifyWebhookAsync(request: null!, CancellationToken.None);
-        };
-
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage("*T-0066*");
-    }
+    // ---- NotSupportedException stub (T-0105 only — T-0066 implemented) ----
 
     [Fact]
     public void RefundAsync_throws_NotSupportedException_with_T_0105_reference()

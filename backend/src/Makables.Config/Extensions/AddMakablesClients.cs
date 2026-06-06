@@ -173,6 +173,27 @@ public static class MakablesClientsExtensions
             .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var u)
                         && u.Scheme == Uri.UriSchemeHttps,
                 "Comgate:BaseUrl must be an absolute https URI.")
+            // T-0066 reviewer M-1: AC-4 requires malformed WebhookAllowedIps
+            // entries to be discovered at startup, not only on the first
+            // webhook request. Every entry must parse as either a bare
+            // IPAddress or a CIDR via System.Net.IPNetwork. Bad entries
+            // crash the host at boot — same fail-loud posture as the
+            // MerchantId/Secret/BaseUrl guards above.
+            .Validate(o =>
+            {
+                foreach (var entry in o.WebhookAllowedIps)
+                {
+                    var trimmed = entry?.Trim();
+                    if (string.IsNullOrEmpty(trimmed))
+                        return false;
+                    if (System.Net.IPNetwork.TryParse(trimmed, out _))
+                        continue;
+                    if (System.Net.IPAddress.TryParse(trimmed, out _))
+                        continue;
+                    return false;
+                }
+                return true;
+            }, "Comgate:WebhookAllowedIps contains an entry that is not a valid IP address or CIDR range.")
             .ValidateOnStart();
 
         services.AddHttpClient(ComgatePaymentProvider.HttpClientName);

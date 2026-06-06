@@ -386,6 +386,13 @@ export const messages = {
   'payment.unknownError': 'Nastala neznámá chyba při zpracování platby. Zkuste to prosím znovu.',
   'order.invalidStateForPayment': 'Tuto objednávku již nelze platit.',
   'order.paymentAlreadyCaptured': 'Tato objednávka už byla zaplacena.',
+
+  // T-0066 Comgate webhook (parity with BusinessErrorMessage).
+  // These keys surface in the admin audit log (T-0118), not customer-
+  // facing — the webhook is server-to-server. PM/UX may refine wording.
+  'payment.webhook.malformed': 'Webhook od platební brány nemá očekávaný formát.',
+  'payment.webhook.ipRejected': 'Webhook přišel z neoprávněné IP adresy.',
+  'payment.webhook.refIdMismatch': 'Referenční ID ve webhooku se neshoduje s objednávkou.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
