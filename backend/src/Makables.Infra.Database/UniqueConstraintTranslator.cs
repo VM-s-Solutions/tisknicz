@@ -79,6 +79,24 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             //   to Error.Conflict would cause Comgate to retry, which
             //   is the wrong resolution. Let it rethrow; the next
             //   delivery hits the pre-check successfully and returns 200.
+            //
+            // Intentionally unmapped (T-0068a):
+            //   ix_invoices_invoice_number — T-0068a's
+            //   IInvoiceNumberGenerator reserves the number under
+            //   FOR UPDATE per ADR 0009; the generator is monotonic so
+            //   two issuances cannot collide. A 23505 here means the
+            //   generator was bypassed or broke — a bug, not a
+            //   user-facing conflict.
+            //
+            //   ix_invoices_order_id — T-0068b's IInvoiceService.IssueAsync
+            //   pre-checks via GetByOrderIdAsync and returns the existing
+            //   row idempotently when an invoice already exists for the
+            //   order. A 23505 race here is a webhook re-delivery the
+            //   pre-check missed; translating to Error.Conflict would
+            //   cause the outbox worker to fail+retry on a transient
+            //   that resolves itself on the next pass. Let it rethrow;
+            //   the next delivery hits the pre-check successfully and
+            //   returns the existing invoice.
         };
 
     public Error? Translate(string constraintName) =>

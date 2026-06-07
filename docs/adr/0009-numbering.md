@@ -101,6 +101,12 @@ The order generator's public interface signature is `NextAsync(string countryCod
 
 Invoice (`IInvoiceNumberGenerator`) and payout-batch (`IPayoutBatchNumberGenerator`) generators retain the explicit-year/week parameter for now. They will migrate to the same TZ-aware pattern in their respective tickets (T-0068 for invoices — legally regulated, so the same year mismatch would be a real compliance issue; T-0101 for payout batches — week derivation is similar). The internal `NumberingSequenceAllocator` is unchanged and still takes `int year`; it remains the shared infrastructure for all three scopes.
 
+### TZ-aware year for invoices (T-0068a amendment, 2026-06-06)
+
+`IInvoiceNumberGenerator.NextAsync(string countryCode, CancellationToken)` — the `int year` parameter is removed. The implementation now mirrors `OrderNumberGenerator` verbatim: resolve `CountryConfiguration.TimeZoneId`, compute `nowLocal = TimeZoneInfo.ConvertTimeFromUtc(clock.UtcNow.UtcDateTime, tz)`, forward `nowLocal.Year` to `NumberingSequenceAllocator.AllocateAsync(..., NumberingScope.Invoice, ...)`. For invoices the mismatch is more than a UX paper-cut — under § 29 zákon o DPH the year on the invoice must match the calendar at issuance time, so shipping a 2026 number for a Jan-1-Prague invoice would be a real compliance bug. Zero callers existed at the migration moment (T-0068b's `IInvoiceService` is the first), so the signature change carried no risk. Race-safety + rollback (gap-free) + year-contract assertions live in `Makables.IntegrationTests/Numbering/InvoiceNumberGenerator{RaceSafety,YearContract}Tests.cs` and follow the OrderNumberGenerator pattern.
+
+The payout-batch generator (`IPayoutBatchNumberGenerator`) is the last remaining caller-supplied-year surface. Migration to TZ-aware is tracked under T-0101 alongside the rest of the payout-batch landing work.
+
 ## Domain types
 
 ```csharp
@@ -114,7 +120,9 @@ public interface IOrderNumberGenerator
 
 public interface IInvoiceNumberGenerator
 {
-    Task<string> NextAsync(string countryCode, int year, CancellationToken ct);
+    // Year is derived from CountryConfiguration.TimeZoneId per the
+    // TZ-aware-year amendment below (T-0068a, 2026-06-06).
+    Task<string> NextAsync(string countryCode, CancellationToken ct);
 }
 
 public interface IPayoutBatchNumberGenerator
