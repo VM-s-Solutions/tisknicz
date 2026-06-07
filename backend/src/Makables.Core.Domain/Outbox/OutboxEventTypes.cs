@@ -37,10 +37,26 @@ public static class OutboxEventTypes
     public const string OrderPlacedMakerEmail = "order.placed.makerEmail";
 
     /// <summary>
+    /// "Generate the invoice PDF" event, fired by
+    /// <see cref="Features.Orders.MarkOrderPaid"/> as its third outbox
+    /// enqueue per T-0068b. Consumer is the <c>GenerateInvoiceFunction</c>
+    /// landing in T-0069 — it dispatches <c>IssueInvoice.Command</c> via
+    /// Mediator. Distinct routing from the email queue because this event
+    /// drives PDF rendering + blob upload, not an email send.
+    /// </summary>
+    public const string InvoiceGenerate = "invoice.generate";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a fourth email event type
     /// is a one-line edit here, not two places.
+    ///
+    /// <para>
+    /// <see cref="InvoiceGenerate"/> is intentionally NOT in this set —
+    /// it routes to a separate queue (T-0069) so PDF render + upload
+    /// failures do not contaminate the email-send retry budget.
+    /// </para>
     /// </summary>
     public static bool IsEmailSend(string eventType) =>
         eventType is AuthMagicLinkSend
