@@ -42,6 +42,8 @@ public class OrderPricingTests
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
             defaultEmailProvider: "resend",
+            issuerName: "JVM YORE s.r.o.",
+            issuerIco: "00000000",
             invoicingMode: invoicingMode,
             platformFeeRateBp: platformFeeRateBp,
             defaultShippingPriceMinor: defaultShippingPriceMinor);

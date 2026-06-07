@@ -54,7 +54,7 @@ public class PaymentProviderFactoryTests
             defaultPaymentProvider: paymentProvider,
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
-            defaultEmailProvider: "sendgrid");
+            defaultEmailProvider: "sendgrid",    issuerName: "JVM YORE s.r.o.",    issuerIco: "00000000");
 
     [Fact]
     public async Task Resolve_returns_keyed_provider_for_configured_country()

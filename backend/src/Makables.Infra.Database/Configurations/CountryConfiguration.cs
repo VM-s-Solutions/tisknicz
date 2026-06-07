@@ -75,6 +75,15 @@ internal sealed class CountryConfigurationEntityConfiguration : IEntityTypeConfi
 
         builder.Property(c => c.LegalRequirementsJson).HasColumnName("legal_requirements_json").HasColumnType("jsonb");
 
+        // T-0068b: invoice issuer + platform IBAN columns (locked
+        // decisions 4 + 8). Lengths chosen to match Invoice's
+        // MaxIssuerNameLength (200) and MaxIssuerIcoLength (40), with
+        // IBAN at 34 chars (ISO 13616 max).
+        builder.Property(c => c.IssuerName).HasColumnName("issuer_name").HasMaxLength(200).IsRequired();
+        builder.Property(c => c.IssuerIco).HasColumnName("issuer_ico").HasMaxLength(8).IsFixedLength().IsRequired();
+        builder.Property(c => c.IssuerDic).HasColumnName("issuer_dic").HasMaxLength(15);
+        builder.Property(c => c.PlatformIban).HasColumnName("platform_iban").HasMaxLength(34);
+
         ConfigureAuditable(builder);
     }
 

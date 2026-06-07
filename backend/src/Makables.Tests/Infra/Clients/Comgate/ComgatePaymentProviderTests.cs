@@ -81,7 +81,7 @@ public class ComgatePaymentProviderTests
         defaultPaymentProvider: "comgate",
         defaultShippingCarrier: "packeta",
         defaultRegistry: "ares",
-        defaultEmailProvider: "sendgrid");
+        defaultEmailProvider: "sendgrid",    issuerName: "JVM YORE s.r.o.",    issuerIco: "00000000");
 
     private static Order BuildOrder(
         long totalMinor = 57900,

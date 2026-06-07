@@ -49,7 +49,22 @@ public static class CountrySeed
                 defaultPaymentProvider: "comgate",
                 defaultShippingCarrier: "packeta",
                 defaultRegistry: "ares",
-                defaultEmailProvider: "sendgrid")
+                defaultEmailProvider: "sendgrid",
+                // T-0068b locked decision 8: CZ seed issuer = JVM YORE s.r.o.
+                // IČO ships with placeholder '00000000' per user direction;
+                // a one-line data migration replaces it pre-production-launch
+                // (tracked by manual_step "country-config-ico-replace-placeholder-pre-launch").
+                // Invoice.Issue validates length only (8 chars), not mod-11,
+                // so the placeholder is build-safe.
+                issuerName: "JVM YORE s.r.o.",
+                issuerIco: "00000000",
+                // T-0068a locked decision 2: JVM YORE not VAT-registered at
+                // MVP launch — DIČ null until cross 2M CZK threshold.
+                // T-0068b locked decision 4: platform IBAN null at MVP —
+                // bank-account decision is open; renderer skips SPAYD QR
+                // when null. Admin populates later via a one-line update.
+                issuerDic: null,
+                platformIban: null)
             .MarkCreatedAs("seed", seededAt);
     }
 
