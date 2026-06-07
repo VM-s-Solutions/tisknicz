@@ -64,6 +64,50 @@ public sealed class CountryConfiguration : Auditable
     // Free-form per-country legal rules (JSON)
     public string? LegalRequirementsJson { get; private set; }
 
+    // Invoice issuer + IBAN (T-0068b locked decisions 4 + 8) ===================
+
+    /// <summary>
+    /// Legal name of the platform's invoicing entity for this country —
+    /// snapshotted onto every <see cref="Invoices.Invoice"/> at issuance
+    /// time. CZ seed value: <c>"JVM YORE s.r.o."</c>. Required; not
+    /// nullable in DB.
+    /// </summary>
+    public string IssuerName { get; private set; } = default!;
+
+    /// <summary>
+    /// Platform issuer's IČO (Czech business registration number — 8
+    /// chars). CZ seed ships with the placeholder <c>"00000000"</c> per
+    /// T-0068b user direction; replaced pre-production-launch via a
+    /// one-line data migration tracked by the
+    /// <c>country-config-ico-replace-placeholder-pre-launch</c>
+    /// manual_step. <see cref="Invoices.Invoice.Issue"/> validates length
+    /// only (NOT mod-11) — the platform's own IČO is not subject to ARES
+    /// validation. Required; not nullable in DB.
+    /// </summary>
+    public string IssuerIco { get; private set; } = default!;
+
+    /// <summary>
+    /// Platform issuer's DIČ (Czech VAT-payer id, e.g. <c>CZ12345678</c>).
+    /// Nullable: JVM YORE is not VAT-registered at MVP launch per
+    /// T-0068a locked decision 2. When JVM YORE crosses the 2M CZK
+    /// threshold and registers for VAT, this gets populated and new
+    /// invoices snapshot the value. Historical rows keep the null they
+    /// were issued with.
+    /// </summary>
+    public string? IssuerDic { get; private set; }
+
+    /// <summary>
+    /// Platform's IBAN for pay-by-QR (SPAYD) rendering on invoice PDFs
+    /// per T-0068b locked decision 4. Nullable at MVP — JVM YORE's
+    /// bank-account decision is open, so the renderer skips SPAYD QR
+    /// rendering when this is null and renders the invoice without a
+    /// QR code. When admin later populates this (via DB seed or admin
+    /// UI in a downstream ticket), SPAYD QR codes automatically appear
+    /// on new invoices. Already-issued invoices are unaffected — PDFs
+    /// are blob-stored and frozen.
+    /// </summary>
+    public string? PlatformIban { get; private set; }
+
     private CountryConfiguration() { }
 
     /// <summary>Factory for seed migrations + admin UI creation.</summary>
@@ -82,6 +126,8 @@ public sealed class CountryConfiguration : Auditable
         string defaultShippingCarrier,
         string defaultRegistry,
         string defaultEmailProvider,
+        string issuerName,
+        string issuerIco,
         int? reducedVatRateBp = null,
         string? zipFormat = null,
         string? taxIdFormat = null,
@@ -92,7 +138,9 @@ public sealed class CountryConfiguration : Auditable
         InvoicingMode invoicingMode = InvoicingMode.None,
         int platformFeeRateBp = 1500,
         long defaultShippingPriceMinor = 0,
-        string? legalRequirementsJson = null)
+        string? legalRequirementsJson = null,
+        string? issuerDic = null,
+        string? platformIban = null)
     {
         if (string.IsNullOrWhiteSpace(countryId) || countryId.Length != 2)
             throw new ArgumentException("CountryId must be 2 chars (ISO 3166-1 alpha-2).", nameof(countryId));
@@ -108,6 +156,10 @@ public sealed class CountryConfiguration : Auditable
             throw new ArgumentException(
                 "DefaultShippingPriceMinor cannot be negative.",
                 nameof(defaultShippingPriceMinor));
+        if (string.IsNullOrWhiteSpace(issuerName))
+            throw new ArgumentException("IssuerName is required.", nameof(issuerName));
+        if (string.IsNullOrWhiteSpace(issuerIco))
+            throw new ArgumentException("IssuerIco is required.", nameof(issuerIco));
 
         var normalized = countryId.ToUpperInvariant();
 
@@ -140,6 +192,10 @@ public sealed class CountryConfiguration : Auditable
             DefaultRegistry = defaultRegistry,
             DefaultEmailProvider = defaultEmailProvider,
             LegalRequirementsJson = legalRequirementsJson,
+            IssuerName = issuerName.Trim(),
+            IssuerIco = issuerIco.Trim(),
+            IssuerDic = string.IsNullOrWhiteSpace(issuerDic) ? null : issuerDic.Trim(),
+            PlatformIban = string.IsNullOrWhiteSpace(platformIban) ? null : platformIban.Trim(),
         };
     }
 

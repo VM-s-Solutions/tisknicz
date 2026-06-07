@@ -294,6 +294,35 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string InvoiceBlobPathAlreadySet = "invoice.blobPathAlreadySet";
 
+    // === Invoice (T-0068b) ===
+    /// <summary>
+    /// <c>IssueInvoice.Handler</c> hit an <see cref="Configuration.InvoicingMode"/>
+    /// that has no renderer template wired (<see cref="Configuration.InvoicingMode.ReverseCharge"/>
+    /// or <see cref="Configuration.InvoicingMode.StrictFiscalReporting"/> per
+    /// T-0068b locked decision 6 — both modes ship a Permanent failure
+    /// until a follow-up ticket adds their templates). The outbox
+    /// processor consumes the event; ops sees the code and triages.
+    /// </summary>
+    public const string InvoicingModeNotImplemented = "invoice.invoicingModeNotImplemented";
+
+    /// <summary>
+    /// QuestPdfInvoiceRenderer threw inside <c>RenderAsync</c> — typically
+    /// a layout DSL bug or a font-loading failure. Classified
+    /// <see cref="ErrorType.Permanent"/> because re-renders won't fix it;
+    /// admin investigates the renderer code path. T-0068b.
+    /// </summary>
+    public const string InvoiceRenderFailed = "invoice.renderFailed";
+
+    /// <summary>
+    /// Blob upload of the rendered PDF failed.
+    /// <see cref="ErrorType.Transient"/> for network-like failures
+    /// (Azure throttled, connection blip) so the outbox replays via the
+    /// stall mechanism; <see cref="ErrorType.Permanent"/> for shape-like
+    /// failures (oversized path, invalid container) so admin sees the
+    /// failed row immediately. T-0068b.
+    /// </summary>
+    public const string InvoiceBlobUploadFailed = "invoice.blobUploadFailed";
+
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
 

@@ -359,23 +359,22 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         // shows).
         row.PaidAt.Should().Be(PaidAtFromProvider);
 
-        // T-0067 — exactly two outbox events queued, both keyed on the
-        // order id, with the documented event types. invoice.generate
-        // is deferred to T-0068 (Q2 negative pin).
+        // T-0067 + T-0068b — exactly three outbox events queued, both
+        // keyed on the order id, with the documented event types. The
+        // third (invoice.generate) lands per T-0068b locked decision 10.
         var outboxRows = await db.Set<Makables.Core.Domain.Outbox.OutboxEvent>()
             .AsNoTracking()
             .Where(e => e.AggregateId == OrderId)
             .OrderBy(e => e.CreatedAt)
             .ThenBy(e => e.EventType)
             .ToListAsync();
-        outboxRows.Should().HaveCount(2);
+        outboxRows.Should().HaveCount(3);
         outboxRows.Select(e => e.EventType).Should().BeEquivalentTo(new[]
         {
             Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPaidCustomerEmail,
             Makables.Core.Domain.Outbox.OutboxEventTypes.OrderPlacedMakerEmail,
+            Makables.Core.Domain.Outbox.OutboxEventTypes.InvoiceGenerate,
         });
-        outboxRows.Should().NotContain(e => e.EventType == "invoice.generate",
-            "T-0067 explicitly defers invoice.generate enqueue to T-0068");
 
         // Payload JSONs deserialize cleanly (T-0067 ticket §"Tests").
         var customerRow = outboxRows.Single(e =>
@@ -454,8 +453,10 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
             .AsNoTracking()
             .Where(e => e.AggregateId == OrderId)
             .ToListAsync();
-        outboxRows.Should().HaveCount(2,
-            "still 2 rows total — the second webhook was a no-op idempotency short-circuit");
+        outboxRows.Should().HaveCount(3,
+            "still 3 rows total — the second webhook was a no-op idempotency short-circuit. " +
+            "T-0068b locked decision 10 bumps the count from 2 (T-0067) to 3 by adding " +
+            "invoice.generate; idempotency math holds.");
     }
 
     [Fact]

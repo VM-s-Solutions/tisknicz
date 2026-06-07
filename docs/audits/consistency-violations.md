@@ -37,6 +37,7 @@
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Invoices/IssueInvoice.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Maker/DeactivateMaker.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Maker/DeactivateMaker.cs:86:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Maker/GetMyMakerProfile.cs:1:T1  feature file must declare a public static class wrapper

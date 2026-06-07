@@ -15,12 +15,13 @@ using NSubstitute;
 namespace Makables.Tests.AppServices.Features.Orders;
 
 /// <summary>
-/// Pins the T-0067 <see cref="MarkOrderPaid.Handler"/> flow:
+/// Pins the T-0067 + T-0068b <see cref="MarkOrderPaid.Handler"/> flow:
 /// resolve by providerRef, defence-in-depth ref check, state transition
-/// via the extended 4-arg <see cref="Order.MarkAsPaid"/>, enqueue
-/// customer + maker email outbox events (and NO invoice.generate — that's
-/// T-0068). NSubstitute over the repositories + clock + outbox; the
-/// aggregate's own coverage is in the domain tests.
+/// via the extended 4-arg <see cref="Order.MarkAsPaid"/>, enqueue THREE
+/// outbox events (customer email + maker email + invoice.generate per
+/// T-0068b locked decision 10 — the prior negative pin flipped). NSubstitute
+/// over the repositories + clock + outbox; the aggregate's own coverage
+/// is in the domain tests.
 /// </summary>
 public class MarkOrderPaidHandlerTests
 {
@@ -339,22 +340,44 @@ public class MarkOrderPaidHandlerTests
     }
 
     [Fact]
-    public async Task Handler_does_NOT_enqueue_invoice_generate_yet()
+    public async Task Handler_enqueues_invoice_generate_outbox_row()
     {
-        // Q2 negative pin — T-0068 owns the third outbox.Enqueue call.
+        // T-0068b locked decision 10: the T-0067 negative pin flipped to
+        // a positive pin. Was 'Handler_does_NOT_enqueue_invoice_generate_yet'
+        // pre-T-0068b; now we assert MarkOrderPaid emits the third outbox
+        // row carrying InvoiceGenerateOutboxPayload (OrderId +
+        // pre-resolved LanguageCode).
         var order = BuildOrderInState(OrderState.PendingPayment);
         _orders.GetByPaymentProviderRefAsync(ProviderRef, Arg.Any<CancellationToken>())
             .Returns(order);
 
         await _sut.Handle(ValidCommand(), CancellationToken.None);
 
-        _outbox.DidNotReceive().Enqueue(
-            Arg.Any<string>(),
-            "invoice.generate",
-            Arg.Any<string>());
-        // And the total Enqueue count is exactly 2.
-        _outbox.Received(2).Enqueue(
+        _outbox.Received(1).Enqueue(
+            OrderId,
+            OutboxEventTypes.InvoiceGenerate,
+            Arg.Is<string>(json => DeserializeInvoicePayload(json)!.OrderId == OrderId));
+        // And the total Enqueue count is now exactly 3.
+        _outbox.Received(3).Enqueue(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Invoice_generate_payload_carries_resolved_LanguageCode()
+    {
+        // T-0068b locked decision 7 + T-0069 attachment-step contract: the
+        // customer's resolved LanguageCode is pre-baked into the
+        // invoice-generate payload so the consumer doesn't re-resolve.
+        var order = BuildOrderInState(OrderState.PendingPayment);
+        _orders.GetByPaymentProviderRefAsync(ProviderRef, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        _outbox.Received(1).Enqueue(
+            OrderId,
+            OutboxEventTypes.InvoiceGenerate,
+            Arg.Is<string>(json => DeserializeInvoicePayload(json)!.LanguageCode == "cs-CZ"));
     }
 
     [Fact]
@@ -478,4 +501,7 @@ public class MarkOrderPaidHandlerTests
 
     private static OrderPlacedMakerEmailPayload? DeserializeMakerPayload(string json) =>
         JsonSerializer.Deserialize<OrderPlacedMakerEmailPayload>(json);
+
+    private static InvoiceGenerateOutboxPayload? DeserializeInvoicePayload(string json) =>
+        JsonSerializer.Deserialize<InvoiceGenerateOutboxPayload>(json);
 }

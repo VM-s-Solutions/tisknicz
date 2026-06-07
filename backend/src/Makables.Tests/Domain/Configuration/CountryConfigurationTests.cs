@@ -148,5 +148,7 @@ public class CountryConfigurationTests
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
             defaultEmailProvider: "resend",
+            issuerName: "JVM YORE s.r.o.",
+            issuerIco: "00000000",
             defaultShippingPriceMinor: defaultShippingPriceMinor);
 }

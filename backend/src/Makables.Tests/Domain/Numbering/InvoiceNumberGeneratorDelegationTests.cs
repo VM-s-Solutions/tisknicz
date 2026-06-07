@@ -77,7 +77,7 @@ public sealed class InvoiceNumberGeneratorDelegationTests : IDisposable
             defaultPaymentProvider: "comgate",
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
-            defaultEmailProvider: "resend");
+            defaultEmailProvider: "resend",    issuerName: "JVM YORE s.r.o.",    issuerIco: "00000000");
         var configs = Substitute.For<ICountryConfigurationRepository>();
         configs.GetByCodeAsync("CZ", Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<CountryConfiguration?>(czConfig));

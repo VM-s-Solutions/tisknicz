@@ -16,6 +16,12 @@ var builder = FunctionsApplication.CreateBuilder(args);
 builder.Services.AddMakablesInfrastructure(builder.Configuration);
 builder.Services.AddMakablesMediator();
 builder.Services.AddMakablesClients(builder.Configuration);
+builder.Services.AddMakablesBlobStorage(builder.Configuration);
+// T-0068b: the GenerateInvoiceFunction (T-0069) dispatches
+// IssueInvoice.Command via Mediator; the handler needs IInvoicePdfRenderer
+// and IBlobStorageClient in DI. Registered here so the Functions host
+// can resolve them at queue-trigger time.
+builder.Services.AddMakablesPdfRendering();
 
 // App Insights wiring lands in T-0014.
 builder.Services.AddApplicationInsightsTelemetryWorkerService();

@@ -7,6 +7,7 @@
   <Project Path="Makables.Infra.Clients/Makables.Infra.Clients.csproj" />
   <Project Path="Makables.Infra.Common/Makables.Infra.Common.csproj" />
   <Project Path="Makables.Infra.Database/Makables.Infra.Database.csproj" />
+  <Project Path="Makables.Infra.PdfRendering/Makables.Infra.PdfRendering.csproj" />
   <Project Path="Makables.IntegrationTests/Makables.IntegrationTests.csproj" />
   <Project Path="Makables.Tests/Makables.Tests.csproj" />
   <Project Path="Makables.TestUtilities/Makables.TestUtilities.csproj" />

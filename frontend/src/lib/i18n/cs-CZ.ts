@@ -401,6 +401,21 @@ export const messages = {
   // never sees these — a webhook 5xx is the closest UX). T-0067 reviewer M-2/M-3.
   'maker.userMissing': 'Účet poskytovatele nebyl nalezen. Tým byl informován.',
   'order.customerUserMissing': 'Účet zákazníka nebyl nalezen. Tým byl informován.',
+
+  // Invoice pipeline (T-0068a + T-0068b). All four codes are admin / log
+  // surface — the customer never sees them directly (the GenerateInvoice
+  // Function consumes the invoice.generate outbox row; a failure parks
+  // the row for admin attention rather than surfacing to the checkout
+  // UI). Kept for parity with BusinessErrorMessage so admin dashboards
+  // can show a localised string.
+  'invoice.blobPathAlreadySet':
+    'Faktura už má přiřazenou cestu k PDF. Tým byl informován.',
+  'invoice.invoicingModeNotImplemented':
+    'Tento režim fakturace zatím není podporován. Tým byl informován.',
+  'invoice.renderFailed':
+    'Generování PDF faktury selhalo. Tým byl informován.',
+  'invoice.blobUploadFailed':
+    'Nahrání PDF faktury do úložiště selhalo. Tým byl informován.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

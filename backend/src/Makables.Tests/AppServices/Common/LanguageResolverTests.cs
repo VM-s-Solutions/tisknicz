@@ -46,7 +46,7 @@ public class LanguageResolverTests
             defaultPaymentProvider: "comgate",
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
-            defaultEmailProvider: "sendgrid");
+            defaultEmailProvider: "sendgrid",    issuerName: "JVM YORE s.r.o.",    issuerIco: "00000000");
         _countries.GetByCodeAsync(code, Arg.Any<CancellationToken>()).Returns(c);
     }
 

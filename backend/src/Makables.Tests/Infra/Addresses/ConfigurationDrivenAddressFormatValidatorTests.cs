@@ -38,6 +38,8 @@ public class ConfigurationDrivenAddressFormatValidatorTests
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
             defaultEmailProvider: "sendgrid",
+            issuerName: "JVM YORE s.r.o.",
+            issuerIco: "00000000",
             zipFormat: zipRegex);
         _countries.GetByCodeAsync(code, Arg.Any<CancellationToken>()).Returns(config);
     }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Makables.Core.Domain\Makables.Core.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- T-0068b locked decision 1: QuestPDF Community license — JVM YORE
+         s.r.o. meets all three criteria (revenue < $1M USD, < 10 employees,
+         not state-funded) so Community is the correct posture at MVP.
+         ADR 0025 documents the revenue-milestone trigger for a Pro switch. -->
+    <PackageReference Include="QuestPDF" />
+  </ItemGroup>
+
+</Project>

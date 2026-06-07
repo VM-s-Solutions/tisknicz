@@ -46,7 +46,7 @@ public class CreateProductHandlerTests
             standardVatRateBp: 2100, taxIdLabel: "DIČ", vatIdLabel: "DIČ",
             registrationNumberLabel: "IČO", defaultPaymentProvider: "comgate",
             defaultShippingCarrier: "packeta", defaultRegistry: "ares",
-            defaultEmailProvider: "sendgrid");
+            defaultEmailProvider: "sendgrid",    issuerName: "JVM YORE s.r.o.",    issuerIco: "00000000");
 
     private static CreateProduct.Command ValidCommand(long price = 25000, PriceType type = PriceType.Fixed) =>
         new(CategoryId: "cat-1", Title: "Hrnek", Description: "popis",
