@@ -161,4 +161,77 @@ public class OutboxDispatcherTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    // === T-0069 — Routing branch for invoice.generate events. ===
+
+    private OutboxEvent InvoiceGenerateEvent(string id) =>
+        OutboxEvent.Enqueue(id, "ord-1", OutboxEventTypes.InvoiceGenerate,
+            "{\"OrderId\":\"ord-1\",\"LanguageCode\":\"cs-CZ\"}",
+            _clock.UtcNow.AddMinutes(-5));
+
+    [Fact]
+    public async Task InvoiceGenerate_event_routes_to_PublishGenerateInvoiceAsync_not_PublishSendEmailAsync()
+    {
+        // T-0069 AC-1: invoice.generate events MUST route to the
+        // generate-invoice queue, NEVER to send-email. Separate queue =
+        // separate retry budget per locked decision 2.
+        var evt = InvoiceGenerateEvent("ob-inv");
+        _outboxConsumer.LoadDueAsync(Arg.Any<int>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { evt });
+
+        var summary = await _sut.DispatchDueAsync(CancellationToken.None);
+
+        summary.Should().Be(new DispatchSummary(Loaded: 1, Routed: 1, Stalled: 0, FailedToPublish: 0));
+        await _queue.Received(1).PublishGenerateInvoiceAsync("ob-inv", Arg.Any<CancellationToken>());
+        await _queue.DidNotReceive().PublishSendEmailAsync("ob-inv", Arg.Any<CancellationToken>());
+        evt.NextRetryAt.Should().Be(_clock.UtcNow + TimeSpan.FromMinutes(_opts.HandoffParkMinutes));
+        evt.RetryCount.Should().Be(0, "park is not a failure");
+    }
+
+    [Fact]
+    public async Task Mixed_batch_routes_each_event_to_its_correct_queue()
+    {
+        // T-0069 AC-1: when MarkOrderPaid's 3 atomic enqueues land in
+        // the same sweep, the email events go to send-email and the
+        // invoice.generate event goes to generate-invoice — independently.
+        var customerEmail = OutboxEvent.Enqueue("ob-cust", "ord-1",
+            OutboxEventTypes.OrderPaidCustomerEmail, "{}", _clock.UtcNow.AddMinutes(-5));
+        var makerEmail = OutboxEvent.Enqueue("ob-maker", "ord-1",
+            OutboxEventTypes.OrderPlacedMakerEmail, "{}", _clock.UtcNow.AddMinutes(-5));
+        var invoiceGen = InvoiceGenerateEvent("ob-inv");
+        _outboxConsumer.LoadDueAsync(Arg.Any<int>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { customerEmail, makerEmail, invoiceGen });
+
+        var summary = await _sut.DispatchDueAsync(CancellationToken.None);
+
+        summary.Should().Be(new DispatchSummary(Loaded: 3, Routed: 3, Stalled: 0, FailedToPublish: 0));
+        await _queue.Received(1).PublishSendEmailAsync("ob-cust", Arg.Any<CancellationToken>());
+        await _queue.Received(1).PublishSendEmailAsync("ob-maker", Arg.Any<CancellationToken>());
+        await _queue.Received(1).PublishGenerateInvoiceAsync("ob-inv", Arg.Any<CancellationToken>());
+        // No cross-routing.
+        await _queue.DidNotReceive().PublishGenerateInvoiceAsync("ob-cust", Arg.Any<CancellationToken>());
+        await _queue.DidNotReceive().PublishGenerateInvoiceAsync("ob-maker", Arg.Any<CancellationToken>());
+        await _queue.DidNotReceive().PublishSendEmailAsync("ob-inv", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Unknown_event_type_still_stalls_and_does_not_publish_to_either_queue()
+    {
+        // T-0069: anything matching NEITHER IsEmailSend NOR IsInvoiceGenerate
+        // stalls Permanent + EmailEventTypeUnknown. The dispatcher refuses
+        // to guess which queue to use.
+        var evt = OutboxEvent.Enqueue("ob-bad", "u", "future.unmapped.event", "{}",
+            _clock.UtcNow.AddMinutes(-5));
+        _outboxConsumer.LoadDueAsync(Arg.Any<int>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { evt });
+
+        var summary = await _sut.DispatchDueAsync(CancellationToken.None);
+
+        summary.Should().Be(new DispatchSummary(Loaded: 1, Routed: 0, Stalled: 1, FailedToPublish: 0));
+        await _queue.DidNotReceive().PublishSendEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _queue.DidNotReceive().PublishGenerateInvoiceAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        evt.LastErrorKind.Should().Be(OutboxErrorKind.Permanent);
+        evt.LastErrorCode.Should().Be(BusinessErrorMessage.EmailEventTypeUnknown);
+        evt.NextRetryAt.Should().BeNull();
+    }
 }
