@@ -416,6 +416,15 @@ export const messages = {
     'Generování PDF faktury selhalo. Tým byl informován.',
   'invoice.blobUploadFailed':
     'Nahrání PDF faktury do úložiště selhalo. Tým byl informován.',
+  // T-0069 invoice email attachment codes. Same admin / log surface as
+  // the other invoice.* codes — the customer never sees these (a Transient
+  // re-delivers the email; a Permanent stalls the row for ops).
+  'invoice.notYetRendered':
+    'Faktura ještě nebyla vygenerována. Email bude odeslán znovu.',
+  'invoice.pdfAttachmentDownloadFailed':
+    'Stažení PDF faktury selhalo. Tým byl informován.',
+  'invoice.pdfAttachmentTooLarge':
+    'PDF faktury překračuje maximální velikost přílohy. Tým byl informován.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

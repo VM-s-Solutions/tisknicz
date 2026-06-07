@@ -57,8 +57,8 @@
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Handler"
-- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:101:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
-- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:139:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
+- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:105:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
+- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:145:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "class Validator"
