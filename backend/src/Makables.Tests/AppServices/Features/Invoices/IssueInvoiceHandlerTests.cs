@@ -359,4 +359,34 @@ public class IssueInvoiceHandlerTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.ErrorCode == BusinessErrorMessage.Required);
     }
+
+    [Fact]
+    public void Validator_accepts_valid_order_id()
+    {
+        // Reviewer M-1 fold: must-cover-tests.md §5 requires one positive
+        // per Validator. The negative-only test above passed without proving
+        // the Validator actually allows valid input — this pins the happy
+        // path.
+        var validator = new IssueInvoice.Validator();
+        var result = validator.Validate(new IssueInvoice.Command("ord-1"));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_rejects_order_id_over_max_length()
+    {
+        // Reviewer M-1 fold: must-cover-tests.md §5 requires one negative
+        // per RuleFor clause. The MaximumLength(40) rule at
+        // IssueInvoice.cs:65-66 lacked coverage — Cascade(CascadeMode.Stop)
+        // means a blank-AND-too-long input would only trip NotEmpty, so
+        // the MaxLength wiring was untested.
+        var validator = new IssueInvoice.Validator();
+        var longId = new string('x', 41);
+
+        var result = validator.Validate(new IssueInvoice.Command(longId));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorCode == BusinessErrorMessage.MaxLength);
+    }
 }

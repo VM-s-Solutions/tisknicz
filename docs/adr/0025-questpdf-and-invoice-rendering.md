@@ -62,6 +62,30 @@ Negative:
 Neutral:
 - Two `IDocument` templates (one per implemented `InvoicingMode`) is more code than a single template with conditional sections, but the legal-format compliance surface is clearer when each mode owns its layout.
 
+## Performance expectations
+
+Added per Optimizer Gate 8 (T-0068b review). Cross-link [ADR 0023 §1](./0023-non-functional-requirements.md) outbox processing budget.
+
+**Per-invoice rendering cost (single-line MVP shape):**
+
+| Metric | Expected | Trigger to revisit |
+|---|---|---|
+| PDF output size | 40–60 KB | Crosses 85 KB (LOH threshold) when Noto Sans subset embeds (~80 KB font) or itemised line items land. |
+| Render CPU time | 100–500 ms on the cheap App Service tier | > 1 s sustained = outbox backlog risk; profile with BenchmarkDotNet. |
+| Memory allocation | Single contiguous `byte[]` per render via `document.GeneratePdf()` | When PDF > 85 KB lands on LOH, switch to streaming overload `document.GeneratePdf(Stream)`. See "Known constraint — LOH" below. |
+
+**Outbox-throughput budget:**
+
+`IssueInvoice.Handler` is invoked by the outbox processor (T-0069, queue-triggered). Per ADR 0023 §1, outbox processing must drain the queue within the configured retention window. Sustained throughput target: **≥ 100 invoices / minute / processor instance** on the production tier (assumes the cheap App Service Plan; midnight reconciliation re-runs are the burst stress test). At 100/min the LOH pressure stays below Gen2 GC triggers; above 500/min Gen2 GC starts contributing to tail latency.
+
+### Known constraints (deferred — track as follow-ups when triggered)
+
+1. **LOH allocation (Gate 8 High finding, T-0068b).** `document.GeneratePdf()` returns the whole PDF as a contiguous `byte[]`; `IssueInvoice.Handler` then wraps it in a `MemoryStream` for the blob upload. At ~40–60 KB single-line invoices today this stays below the 85 KB LOH threshold. **Triggers to revisit:** (a) Noto Sans subset embeds (~80 KB font); (b) itemised line items land (each row adds ~1–3 KB); (c) SkiaSharp SPAYD QR-image rendering lands (~5–10 KB image). When any of those merges, switch `IInvoicePdfRenderer.RenderAsync` to a streaming variant: `RenderAsync(Invoice, CountryConfiguration, Stream destination, CancellationToken)` and have the handler open the blob write stream first, then pass it directly to `document.GeneratePdf(stream)`. Alternative: `Microsoft.IO.RecyclableMemoryStream`. Either eliminates LOH growth.
+
+2. **AsNoTracking on Order read (Gate 8 Medium finding, T-0068b).** `IOrderRepository.GetByIdUnscopedAsync` is shared with `MarkOrderPaid.Handler` which DOES mutate the Order. The current shape tracks the Order graph for the full handler scope (load → idempotency check → render → upload → AttachPdfBlobPath) — ~100–500 ms + 200–1000 ms = up to 1.5 s with the full Order graph in `ChangeTracker`. Negligible today (~1 tracked aggregate + ~50–200 child entities); revisit when the Order graph grows or when handler scope grows. **Fix at that point:** add `GetByIdUnscopedReadOnlyAsync` that wraps `.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync` so `IssueInvoice` opts in without disturbing `MarkOrderPaid`.
+
+3. **CultureInfo allocation per render (Gate 8 Nit, T-0068b).** `CultureInfo.GetCultureInfo("cs-CZ")` is called inside `FormatAmount` and `FormatDate` (per layout cell). For single-line MVP this is ~3–5 calls per render and below noise (the lookup is internally cached in a static dictionary). When itemised lines land, hoist to a `private static readonly CultureInfo CzechCulture` on each `IDocument`.
+
 ## Compliance / verification
 
 A reviewer can verify the decisions hold by checking:

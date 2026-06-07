@@ -114,22 +114,26 @@ public static class IssueInvoice
             var existing = await invoices.GetByOrderIdAsync(order.Id, cancellationToken);
             if (existing is not null)
             {
-                if (string.IsNullOrEmpty(existing.PdfBlobPath))
-                {
-                    // The invoice row exists but the previous IssueInvoice
-                    // attempt crashed between Invoice.AddAsync and
-                    // AttachPdfBlobPath. This is the "stalled-mid-flow"
-                    // shape. We refuse to allocate a new number (the row
-                    // already burned one) but we MUST re-render + re-upload
-                    // + re-attach. Fall through to the render path with
-                    // the existing aggregate.
-                    return await ContinuePartialIssuanceAsync(existing, country, cancellationToken);
-                }
-
+                // Reviewer L-1 fold: the "stalled-mid-flow" branch
+                // (existing != null AND PdfBlobPath empty) is unreachable
+                // under the current UoW commit policy — UnitOfWorkPipelineBehavior
+                // only commits on IsSuccess, so a render or blob failure after
+                // Invoice.AddAsync rolls back the Invoice row AND the
+                // InvoiceNumberGenerator sequence increment. The next outbox
+                // re-delivery finds existing == null and starts fresh from
+                // Step 4. The ContinuePartialIssuanceAsync helper that handled
+                // it was deleted as dead code per CLAUDE.md "no dead code".
+                //
+                // TODO(if IssueInvoice.Command is later marked
+                // IPersistOnFailureCommand for stronger invoice-row durability):
+                // the empty-PdfBlobPath branch becomes reachable and needs the
+                // re-render + re-upload path restored. Add tests at that point.
+                // UoW commit policy guarantees PdfBlobPath is non-null when
+                // the row exists — see the dead-code reasoning above.
                 return BusinessResult.Success(new Response(
                     InvoiceId: existing.Id,
                     InvoiceNumber: existing.InvoiceNumber,
-                    PdfBlobPath: existing.PdfBlobPath));
+                    PdfBlobPath: existing.PdfBlobPath!));
             }
 
             // Step 4: InvoicingMode switch. Per T-0068b locked decision 6,
@@ -246,44 +250,6 @@ public static class IssueInvoice
             return BusinessResult.Success(new Response(
                 InvoiceId: invoice.Id,
                 InvoiceNumber: invoice.InvoiceNumber,
-                PdfBlobPath: blobPath));
-        }
-
-        private async Task<BusinessResult<Response>> ContinuePartialIssuanceAsync(
-            Invoice existing,
-            CountryConfiguration country,
-            CancellationToken cancellationToken)
-        {
-            byte[] pdfBytes;
-            try
-            {
-                pdfBytes = await renderer.RenderAsync(existing, country, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex,
-                    "IssueInvoice (recovery): PDF render failed for invoice {InvoiceNumber}.",
-                    existing.InvoiceNumber);
-                return BusinessResult.Failure<Response>(
-                    Error.Permanent(BusinessErrorMessage.InvoiceRenderFailed));
-            }
-
-            var blobPath = BuildBlobPath(existing);
-            var uploadResult = await UploadPdfAsync(blobPath, pdfBytes, cancellationToken);
-            if (!uploadResult.IsSuccess)
-            {
-                return BusinessResult.Failure<Response>(uploadResult.Error!);
-            }
-
-            var attachResult = existing.AttachPdfBlobPath(blobPath);
-            if (!attachResult.IsSuccess)
-            {
-                return BusinessResult.Failure<Response>(attachResult.Error!);
-            }
-
-            return BusinessResult.Success(new Response(
-                InvoiceId: existing.Id,
-                InvoiceNumber: existing.InvoiceNumber,
                 PdfBlobPath: blobPath));
         }
 
