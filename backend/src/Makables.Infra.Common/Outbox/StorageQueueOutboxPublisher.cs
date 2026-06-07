@@ -23,9 +23,16 @@ namespace Makables.Infra.Common.Outbox;
 public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
 {
     private readonly QueueClient _sendEmailQueue;
+    private readonly QueueClient _generateInvoiceQueue;
     private readonly ILogger<StorageQueueOutboxPublisher> _logger;
-    private bool _ensuredQueueExists;
-    private readonly SemaphoreSlim _ensureLock = new(1, 1);
+
+    // Per-queue ensure-once state. Independent semaphores so a Storage
+    // outage that blocks one queue's CreateIfNotExistsAsync doesn't stall
+    // the other queue's first publish.
+    private bool _ensuredSendEmailQueueExists;
+    private readonly SemaphoreSlim _ensureSendEmailLock = new(1, 1);
+    private bool _ensuredGenerateInvoiceQueueExists;
+    private readonly SemaphoreSlim _ensureGenerateInvoiceLock = new(1, 1);
 
     public StorageQueueOutboxPublisher(
         IOptions<OutboxQueueOptions> options,
@@ -37,33 +44,56 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
             throw new InvalidOperationException("OutboxQueues:ConnectionString is not configured.");
         if (string.IsNullOrWhiteSpace(opts.SendEmailQueueName))
             throw new InvalidOperationException("OutboxQueues:SendEmailQueueName is not configured.");
+        if (string.IsNullOrWhiteSpace(opts.GenerateInvoiceQueueName))
+            throw new InvalidOperationException("OutboxQueues:GenerateInvoiceQueueName is not configured.");
 
-        _sendEmailQueue = new QueueClient(
-            opts.ConnectionString,
-            opts.SendEmailQueueName,
-            new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 });
+        var clientOptions = new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 };
+        _sendEmailQueue = new QueueClient(opts.ConnectionString, opts.SendEmailQueueName, clientOptions);
+        _generateInvoiceQueue = new QueueClient(opts.ConnectionString, opts.GenerateInvoiceQueueName, clientOptions);
         _logger = logger;
     }
 
     public async Task PublishSendEmailAsync(string outboxEventId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outboxEventId);
-        await EnsureQueueAsync(cancellationToken);
+        await EnsureQueueAsync(
+            _sendEmailQueue, _ensureSendEmailLock,
+            () => _ensuredSendEmailQueueExists,
+            () => _ensuredSendEmailQueueExists = true,
+            cancellationToken);
         await _sendEmailQueue.SendMessageAsync(outboxEventId, cancellationToken);
         _logger.LogDebug("Published outbox event {OutboxEventId} to {QueueName}.",
             outboxEventId, _sendEmailQueue.Name);
     }
 
-    private async Task EnsureQueueAsync(CancellationToken cancellationToken)
+    public async Task PublishGenerateInvoiceAsync(string outboxEventId, CancellationToken cancellationToken)
     {
-        if (_ensuredQueueExists) return;
-        await _ensureLock.WaitAsync(cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(outboxEventId);
+        await EnsureQueueAsync(
+            _generateInvoiceQueue, _ensureGenerateInvoiceLock,
+            () => _ensuredGenerateInvoiceQueueExists,
+            () => _ensuredGenerateInvoiceQueueExists = true,
+            cancellationToken);
+        await _generateInvoiceQueue.SendMessageAsync(outboxEventId, cancellationToken);
+        _logger.LogDebug("Published outbox event {OutboxEventId} to {QueueName}.",
+            outboxEventId, _generateInvoiceQueue.Name);
+    }
+
+    private static async Task EnsureQueueAsync(
+        QueueClient queue,
+        SemaphoreSlim ensureLock,
+        Func<bool> isEnsured,
+        Action markEnsured,
+        CancellationToken cancellationToken)
+    {
+        if (isEnsured()) return;
+        await ensureLock.WaitAsync(cancellationToken);
         try
         {
-            if (_ensuredQueueExists) return;
+            if (isEnsured()) return;
             try
             {
-                await _sendEmailQueue.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
+                await queue.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
             }
             finally
             {
@@ -74,12 +104,12 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
                 // The subsequent SendMessageAsync surfaces the real error;
                 // if the queue doesn't exist on retry it will fail loudly
                 // there too.
-                _ensuredQueueExists = true;
+                markEnsured();
             }
         }
         finally
         {
-            _ensureLock.Release();
+            ensureLock.Release();
         }
     }
 }
