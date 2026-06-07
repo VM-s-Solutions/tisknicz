@@ -23,23 +23,30 @@ namespace Makables.Core.AppServices.Features.Orders;
 /// ref-mismatch checks have passed.
 ///
 /// <para>
-/// <b>T-0067 scope.</b> The handler does the state transition AND
-/// enqueues exactly two outbox events (customer email + maker email).
-/// <c>invoice.generate</c> is deferred to T-0068 per user decision Q2 —
-/// the marker comment between steps 5/6 and step 7 below shows the
-/// insertion point. Both outbox payloads carry pre-baked action URLs
-/// (Q4) and pre-resolved language codes (T-0028 pattern) so the
-/// consumer-side <see cref="Features.Email.EmailSendService"/> stays a
-/// stateless drainer.
+/// <b>T-0067 + T-0068b scope.</b> The handler does the state transition
+/// AND enqueues exactly three outbox events:
+/// <list type="bullet">
+///   <item><see cref="OutboxEventTypes.OrderPaidCustomerEmail"/> — customer "thanks" email.</item>
+///   <item><see cref="OutboxEventTypes.OrderPlacedMakerEmail"/> — maker "new order" email.</item>
+///   <item><see cref="OutboxEventTypes.InvoiceGenerate"/> — T-0069's
+///     GenerateInvoiceFunction picks it up and dispatches IssueInvoice
+///     via Mediator (T-0068b locked decision 7). Routes to a separate
+///     queue from the email events so a render/upload failure cannot
+///     contaminate the email-send retry budget.</item>
+/// </list>
+/// Both email payloads carry pre-baked action URLs (Q4) and pre-resolved
+/// language codes (T-0028 pattern); the invoice-generate payload carries
+/// the customer's resolved language so T-0069's attachment step knows
+/// which filename to use.
 /// </para>
 ///
 /// <para>
 /// <b>Atomicity.</b> The order mutation (State → Paid, PaymentProviderRef,
-/// PaymentMethod, PaidAt) AND the 2 outbox rows ship in a single Postgres
+/// PaymentMethod, PaidAt) AND the 3 outbox rows ship in a single Postgres
 /// transaction via <c>UnitOfWorkPipelineBehavior</c> per ADR 0014. If
 /// anything fails, nothing commits; the webhook returns a failure and
 /// Comgate retries — we never end up with "order is Paid but no email
-/// queued" or vice versa.
+/// queued" / "no invoice queued" or vice versa.
 /// </para>
 ///
 /// <para>
@@ -213,10 +220,24 @@ public static class MarkOrderPaid
                 eventType: OutboxEventTypes.OrderPlacedMakerEmail,
                 payloadJson: JsonSerializer.Serialize(makerPayload));
 
-            // T-0068: enqueue invoice.generate here.
+            // Step 6: Enqueue the invoice-generate event (T-0068b). The
+            // T-0069 GenerateInvoiceFunction consumes this off a separate
+            // queue (NOT the send-email queue — see
+            // OutboxEventTypes.IsEmailSend) and dispatches IssueInvoice
+            // via Mediator. LanguageCode is pre-resolved here so T-0069's
+            // invoice-email attachment can name the PDF in the customer's
+            // language without a second resolution. Per T-0068b locked
+            // decisions 7 + 10.
+            var invoicePayload = new InvoiceGenerateOutboxPayload(
+                OrderId: order.Id,
+                LanguageCode: customerLanguage);
+            outbox.Enqueue(
+                aggregateId: order.Id,
+                eventType: OutboxEventTypes.InvoiceGenerate,
+                payloadJson: JsonSerializer.Serialize(invoicePayload));
 
-            // Step 6: No SaveChangesAsync — UoW pipeline behavior commits
-            // the order mutation AND the 2 outbox rows atomically per ADR
+            // Step 7: No SaveChangesAsync — UoW pipeline behavior commits
+            // the order mutation AND the 3 outbox rows atomically per ADR
             // 0014 (patterns §A.20).
             return BusinessResult.Success(new Response(order.Id));
         }
