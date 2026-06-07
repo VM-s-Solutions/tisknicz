@@ -274,6 +274,26 @@ public static class BusinessErrorMessage
     // === Payout batch ===
     public const string PayoutBatchEmpty = "payoutBatch.empty";
 
+    // === Invoice (T-0068a) ===
+    /// <summary>
+    /// <see cref="Invoices.Invoice.AttachPdfBlobPath"/> was called with a
+    /// blob-path value that differs from the one already stored on the
+    /// invoice. The first attach is set-once; an idempotent retry with the
+    /// SAME value succeeds, a real overwrite attempt fails with this code.
+    /// Mirrors the <see cref="Orders.Order.MarkAsPaid"/> set-once pattern
+    /// on <c>PaymentProviderRef</c> / <c>PaymentMethod</c> (T-0067).
+    ///
+    /// <para>
+    /// Czech i18n key intentionally NOT shipped at T-0068a — this surface
+    /// is admin / log only (T-0068b's IInvoiceService is the only caller;
+    /// the renderer's blob upload is deterministic so a real overwrite
+    /// indicates a programmer error or data corruption, not a user-facing
+    /// action). l10n added in T-0068b alongside the StandardVat /
+    /// non-VAT-payer template strings per locked decision absorption.
+    /// </para>
+    /// </summary>
+    public const string InvoiceBlobPathAlreadySet = "invoice.blobPathAlreadySet";
+
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
 

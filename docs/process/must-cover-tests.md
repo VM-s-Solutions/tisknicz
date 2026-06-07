@@ -164,6 +164,7 @@ Known set-once invariants (this list grows; reviewer keeps it current):
 | `Payment` | `PaymentProviderRef` | Comgate webhook first-receive | T-0066 |
 | `Payment` | `PaymentMethod` | Comgate webhook first-receive | T-0067 |
 | `Order` | `ShippingCarrierRef` | Packeta label-issued callback | T-0067 |
+| `Invoice` | `PdfBlobPath` | T-0068b `InvoiceService.IssueAsync` after blob upload | T-0068a |
 
 Add a row here when a new set-once property lands. The test sits next to the entity in `Core.Domain.Tests/Entities/`.
 

@@ -52,7 +52,17 @@ Be the legal record of a payment between two parties (platform↔customer for an
 
 ## Implementation pointer
 
-`backend/src/Makables.Core.Domain/Invoices/Invoice.cs`. Service: `Core.AppServices/Services/InvoiceService.cs` (orchestrates the enforcement-mode branch per ADR 0013).
+**T-0068a shipped (entity + repository + numbering migration; pure-domain + DB slice):**
+
+- Entity + factory + set-once: `backend/src/Makables.Core.Domain/Invoices/Invoice.cs` (sealed `Auditable`, static `Issue(...)` factory enforcing money balance + XOR aggregate link + currency length + None+zero-VAT; `AttachPdfBlobPath(string)` set-once with idempotent same-value semantics).
+- Type discriminator: `backend/src/Makables.Core.Domain/Invoices/InvoiceType.cs` (`Customer = 0`, `Fee = 1`).
+- Repository surface: `backend/src/Makables.Core.Domain/Invoices/IInvoiceRepository.cs` (scoped `ForCustomer` / `ForMaker` / `Unscoped`, `GetByIdFor*`, `GetByInvoiceNumberAsync`, `GetByOrderIdAsync` for T-0068b idempotency; no `UpdateAsync` / `DeleteAsync` per invariant "no updates after issuance").
+- Repository impl: `backend/src/Makables.Infra.Database/Invoices/InvoiceRepository.cs`.
+- EF mapping + migration: `backend/src/Makables.Infra.Database/Configurations/InvoiceConfiguration.cs` + `Migrations/20260606203317_Invoices.cs` (snake_case columns, unique partial indexes on `invoice_number` + `order_id`, composite `(maker_id, created_at DESC)`, single on `type`; FK `order_id → orders(id)` ON DELETE RESTRICT; `payout_batch_id` column ships now, FK deferred to T-0101).
+- Numbering generator migration: `backend/src/Makables.Core.Domain/Numbering/IInvoiceNumberGenerator.cs` + `backend/src/Makables.Infra.Database/Numbering/InvoiceNumberGenerator.cs` (signature drops `int year`; computes country-local year via `TimeZoneInfo.ConvertTimeFromUtc(clock.UtcNow.UtcDateTime, TimeZoneInfo.FindSystemTimeZoneById(config.TimeZoneId))` — mirrors T-0062 `OrderNumberGenerator` verbatim).
+- Error code: `BusinessErrorMessage.InvoiceBlobPathAlreadySet` (Czech i18n key deferred to T-0068b).
+
+**T-0068b will ship:** `Core.AppServices/Services/InvoiceService.cs` (orchestrates the enforcement-mode branch per ADR 0013), `IPdfRenderer` + `QuestPdfInvoiceRenderer`, blob upload to `invoices/{cc}/orders/{orderId}/{invoiceNumber}.pdf`, `MarkOrderPaid.Handler` third outbox enqueue.
 
 ## Related
 
