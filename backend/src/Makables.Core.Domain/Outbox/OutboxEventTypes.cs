@@ -64,4 +64,16 @@ public static class OutboxEventTypes
                   or AuthPasswordResetSend
                   or OrderPaidCustomerEmail
                   or OrderPlacedMakerEmail;
+
+    /// <summary>
+    /// True when <paramref name="eventType"/> routes to the
+    /// <c>generate-invoice</c> queue per T-0069 <c>OutboxDispatcher</c>
+    /// routing branch. Disjoint from <see cref="IsEmailSend"/> —
+    /// a single event type cannot route to both queues. The dispatcher
+    /// classifies once per event, then publishes to the matching
+    /// per-event-type queue. Anything matching neither classifier stalls
+    /// with <see cref="Common.BusinessErrorMessage.EmailEventTypeUnknown"/>.
+    /// </summary>
+    public static bool IsInvoiceGenerate(string eventType) =>
+        eventType == InvoiceGenerate;
 }

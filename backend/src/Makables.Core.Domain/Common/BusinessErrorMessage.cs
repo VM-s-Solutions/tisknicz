@@ -323,6 +323,43 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string InvoiceBlobUploadFailed = "invoice.blobUploadFailed";
 
+    // === Invoice email attachment (T-0069) ===
+    /// <summary>
+    /// <c>EmailSendService.SendOrderPaidCustomerEmailAsync</c> looked up the
+    /// Invoice for the order and found either no row yet, or a row with
+    /// <c>PdfBlobPath</c> still null. The render pipeline (GenerateInvoiceFunction
+    /// → IssueInvoice.Command) has not finished yet — typical when the
+    /// invoice.generate queue lost the FIFO race against the email queue.
+    /// Classified <see cref="ErrorType.Transient"/>: the outbox retry policy
+    /// re-delivers the email event after 1m / 5m / 15m ... and the second
+    /// attempt almost always succeeds (render is sub-second on the happy
+    /// path). T-0069 locked decision 1.
+    /// </summary>
+    public const string InvoiceNotYetRendered = "invoice.notYetRendered";
+
+    /// <summary>
+    /// Blob download of the PDF attachment failed inside
+    /// <c>EmailSendService.SendOrderPaidCustomerEmailAsync</c> — either the
+    /// blob is missing (data-integrity bug), auth is misconfigured (deploy
+    /// bug), or Azure exhausted its internal retry budget (rare). Classified
+    /// <see cref="ErrorType.Permanent"/> because all three are ops-investigation
+    /// territory; retrying via outbox at 1m wastes budget and adds log noise.
+    /// The outbox parks the row + a Critical log fires. T-0069 locked
+    /// decision 1 (and AC-8 commentary).
+    /// </summary>
+    public const string InvoicePdfAttachmentDownloadFailed = "invoice.pdfAttachmentDownloadFailed";
+
+    /// <summary>
+    /// SendGrid rejected the message because the PDF attachment exceeds
+    /// the provider's 30 MB cap. A normal invoice is &lt; 100 KB; surfacing
+    /// this means a rendering bug or data-integrity issue (oversized PDF,
+    /// embedded media). Classified <see cref="ErrorType.Permanent"/> per
+    /// T-0069 locked decision 4: retrying never resolves a fixed size cap.
+    /// The outbox stalls after the policy's attempt budget; the row sits
+    /// in DB until ops investigates the renderer.
+    /// </summary>
+    public const string InvoicePdfAttachmentTooLarge = "invoice.pdfAttachmentTooLarge";
+
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
 
