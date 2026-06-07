@@ -76,6 +76,20 @@ public sealed class SendGridEmailProvider(
         if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
             sgMessage.ReplyTo = new EmailAddress(message.ReplyToAddress);
 
+        // T-0069 locked decision 7: provider only wires bytes; no blob /
+        // storage knowledge in the SDK adapter. EmailSendService has
+        // already downloaded the PDF into the Attachment record. SendGrid
+        // requires base64-encoded content (the SDK's stream-based overload
+        // base64s internally; the bytes-based AddAttachment expects an
+        // already-encoded string).
+        if (message.Attachment is not null)
+        {
+            sgMessage.AddAttachment(
+                filename: message.Attachment.Filename,
+                base64Content: Convert.ToBase64String(message.Attachment.Bytes),
+                type: message.Attachment.MimeType);
+        }
+
         // Hard per-call timeout caps a stuck connection. Linked to the
         // caller's cancellation so a host shutdown still wins.
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -110,6 +124,33 @@ public sealed class SendGridEmailProvider(
 
         if (!IsSuccessStatusCode(response.StatusCode))
         {
+            // T-0069 locked decision 4: SendGrid's 30 MB attachment cap
+            // typically surfaces as HTTP 413 Payload Too Large or a 4xx
+            // with a "too large" / "size" body. Translate to
+            // InvoicePdfAttachmentTooLarge Permanent so the outbox stalls
+            // for ops investigation — retrying never resolves a fixed cap.
+            // Check size-shape BEFORE the generic 4xx → Permanent fallback
+            // so the more-specific code wins. The body is read inside the
+            // size check ONLY when the carrier message had an attachment;
+            // skips the read for vanilla 4xx responses to avoid waste.
+            string? bodyForClassification = null;
+            if (message.Attachment is not null
+                && IsLikelyAttachmentSizeFailure(response.StatusCode))
+            {
+                bodyForClassification = await TryReadResponseBodyAsync(response, timeoutCts.Token);
+                if (response.StatusCode == System.Net.HttpStatusCode.RequestEntityTooLarge
+                    || ContainsSizeKeyword(bodyForClassification))
+                {
+                    logger.LogError(
+                        "SendGrid rejected attachment as too large for template {TemplateId} (status {Status}). " +
+                        "PDF size {BytesLen} bytes; SendGrid caps at 30 MB.",
+                        message.ProviderTemplateId, (int)response.StatusCode,
+                        message.Attachment.Bytes.Length);
+                    return BusinessResult.Failure<EmailSentReceipt>(
+                        Error.Permanent(BusinessErrorMessage.InvoicePdfAttachmentTooLarge));
+                }
+            }
+
             // Per B-1: do NOT propagate the body. Log at Debug under a name
             // the SensitivePropertyMasker already covers ("token") so a
             // SendGrid 4xx echoing the request can't leak.
@@ -131,6 +172,54 @@ public sealed class SendGridEmailProvider(
 
     private static bool IsTransientStatusCode(System.Net.HttpStatusCode code) =>
         (int)code is 408 or 429 or >= 500 and <= 599;
+
+    /// <summary>
+    /// True when the response status code is in the range where SendGrid
+    /// could plausibly be rejecting the attachment for size reasons.
+    /// SendGrid's documented behaviour: 413 Payload Too Large is the
+    /// dedicated code, but some gateway hops collapse the chain into a
+    /// generic 400. We only enable the body sniff when the carrier
+    /// message had an attachment in the first place — vanilla 4xx
+    /// responses skip the read to avoid waste.
+    /// </summary>
+    private static bool IsLikelyAttachmentSizeFailure(System.Net.HttpStatusCode code) =>
+        code == System.Net.HttpStatusCode.RequestEntityTooLarge
+        || code == System.Net.HttpStatusCode.BadRequest;
+
+    private static bool ContainsSizeKeyword(string? body)
+    {
+        if (string.IsNullOrEmpty(body)) return false;
+        // SendGrid surfaces messages like "Payload Too Large", "exceeds the
+        // maximum", "too large". Lowercase + substring lookup is robust
+        // enough for the dispatching decision (a misclassification just
+        // falls through to the generic Permanent code which already triggers
+        // ops attention).
+        var lower = body.ToLowerInvariant();
+        return lower.Contains("too large")
+            || lower.Contains("payload too large")
+            || lower.Contains("exceeds")
+            || lower.Contains("maximum")
+            || lower.Contains(" size");
+    }
+
+    private static async Task<string?> TryReadResponseBodyAsync(Response response, CancellationToken ct)
+    {
+        try
+        {
+            if (response.Body is null) return null;
+            var body = await response.Body.ReadAsStringAsync(ct);
+            // Cap the read so a malicious / runaway body can't blow up the
+            // outbox processor's memory. The classification keywords are all
+            // short; 1 KB is more than enough.
+            return body.Length > 1024 ? body[..1024] : body;
+        }
+        catch
+        {
+            // Body read failed — fall through to the generic Permanent
+            // classification (the same place we'd land for a vanilla 4xx).
+            return null;
+        }
+    }
 
     private async Task LogResponseBodyAtDebugAsync(Response response, string templateId, CancellationToken ct)
     {
