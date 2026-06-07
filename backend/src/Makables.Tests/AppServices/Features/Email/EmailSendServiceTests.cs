@@ -30,7 +30,6 @@ public class EmailSendServiceTests
         Substitute.For<IEmailTemplateTranslationRepository>();
     private readonly IEmailProvider _provider = Substitute.For<IEmailProvider>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
-    private readonly IOrderRepository _orders = Substitute.For<IOrderRepository>();
     private readonly IBlobStorageClient _blobStorage = Substitute.For<IBlobStorageClient>();
     private readonly EmailSendService _sut;
 
@@ -44,7 +43,7 @@ public class EmailSendServiceTests
             PasswordResetPath = "/auth/reset?token={token}",
         });
         _sut = new EmailSendService(_templates, _translations, _provider,
-            _invoices, _orders, _blobStorage,
+            _invoices, _blobStorage,
             urls, NullLogger<EmailSendService>.Instance);
     }
 
@@ -277,19 +276,23 @@ public class EmailSendServiceTests
     /// the seeded invoice + order so individual tests can assert on
     /// specific values when they want to.
     /// </summary>
-    private (Invoice Invoice, Order Order) ArrangeInvoiceReady(string orderNumber = TestOrderNumber)
+    private Invoice ArrangeInvoiceReady(string orderNumber = TestOrderNumber)
     {
+        // T-0069 reviewer DC1/ID5 fold: OrderNumber is pre-baked into
+        // OrderPaidCustomerEmailPayload by MarkOrderPaid.Handler (T-0067).
+        // EmailSendService never needs to load the Order — the orderNumber
+        // parameter is the value the test injects into the payload, returned
+        // for assertion convenience.
+        _ = orderNumber;
         var invoice = CreateRenderedInvoice();
-        var order = CreateOrderForEmail(orderNumber);
         _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(invoice);
-        _orders.GetByIdUnscopedAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(order);
         _blobStorage.DownloadAsync(BlobContainer.Invoices, TestInvoicePdfPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(new BlobDownload(
                 Content: new MemoryStream(TestPdfBytes, writable: false),
                 ContentType: "application/pdf",
                 ContentLength: TestPdfBytes.Length,
                 ETag: null)));
-        return (invoice, order);
+        return invoice;
     }
 
     private static string EncodeCustomerPayload(
@@ -579,9 +582,7 @@ public class EmailSendServiceTests
         // issue worth ops attention).
         ArrangeOrderPaidTemplate();
         var invoice = CreateRenderedInvoice();
-        var order = CreateOrderForEmail();
         _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(invoice);
-        _orders.GetByIdUnscopedAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(order);
         _blobStorage.DownloadAsync(BlobContainer.Invoices, TestInvoicePdfPath, Arg.Any<CancellationToken>())
             .ThrowsAsync(new InvalidOperationException("blob missing"));
 
@@ -668,7 +669,6 @@ public class EmailSendServiceTests
         await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m => m.Attachment == null),
             Arg.Any<CancellationToken>());
         await _invoices.DidNotReceive().GetByOrderIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _orders.DidNotReceive().GetByIdUnscopedAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _blobStorage.DidNotReceive().DownloadAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }

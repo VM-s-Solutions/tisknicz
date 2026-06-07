@@ -3,7 +3,6 @@ using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Invoices;
-using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Storage;
 using Microsoft.Extensions.Logging;
@@ -43,7 +42,6 @@ public sealed class EmailSendService(
     IEmailTemplateTranslationRepository translations,
     IEmailProvider provider,
     IInvoiceRepository invoices,
-    IOrderRepository orders,
     IBlobStorageClient blobStorage,
     IOptions<PublicAppUrlsOptions> urls,
     ILogger<EmailSendService> logger) : IEmailSendService
@@ -190,23 +188,6 @@ public sealed class EmailSendService(
                 Error.Transient(BusinessErrorMessage.InvoiceNotYetRendered));
         }
 
-        // T-0069: also load the Order so we have its OrderNumber for the
-        // filename. The payload carries OrderNumber today but the explicit
-        // Order load is defensive: if the Order is missing under us (race
-        // with admin hard-delete, GDPR anonymisation), surface as Transient
-        // too — the next outbox sweep will either find the Order back or
-        // stall via a separate code path.
-        var order = await orders.GetByIdUnscopedAsync(payload.OrderId, cancellationToken);
-        if (order is null)
-        {
-            logger.LogWarning(
-                "OrderPaidCustomerEmail for order {OrderId}: order row not found at attachment-build time " +
-                "(invoice exists at {InvoiceId}). Returning Transient for outbox re-delivery.",
-                payload.OrderId, invoice.Id);
-            return BusinessResult.Failure<EmailSentReceipt>(
-                Error.Transient(BusinessErrorMessage.InvoiceNotYetRendered));
-        }
-
         // T-0069 AC-5/AC-8: download the rendered PDF from blob. Azure
         // Storage SDK already retries transient blips internally; anything
         // surfacing here is data-integrity (blob missing) or
@@ -249,7 +230,9 @@ public sealed class EmailSendService(
         // (already pre-resolved at MarkOrderPaid enqueue time per T-0067).
         // English locale gets "invoice-..."; everything else (cs-CZ +
         // future Czech variants + fallback) gets "faktura-...".
-        var filename = BuildInvoiceAttachmentFilename(payload.LanguageCode, order.OrderNumber);
+        // OrderNumber is pre-baked into the payload by MarkOrderPaid.Handler at
+        // T-0067 enqueue time — no second Order load needed. Reviewer DC1/ID5 fold.
+        var filename = BuildInvoiceAttachmentFilename(payload.LanguageCode, payload.OrderNumber);
         var attachment = new Attachment(filename, pdfBytes, "application/pdf");
 
         return await DispatchOrderEmailAsync(
