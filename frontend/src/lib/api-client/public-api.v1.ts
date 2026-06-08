@@ -41,6 +41,13 @@ export interface IPublicApi {
     register(body: RegisterMakerRequest): Promise<void>;
 
     /**
+     * @param country (optional) 
+     * @param locale (optional) 
+     * @return OK
+     */
+    widgetConfig(country: string | undefined, locale: string | undefined): Promise<PickupPointWidgetConfig>;
+
+    /**
      * @return OK
      */
     comgate(): Promise<void>;
@@ -376,6 +383,60 @@ export class PublicApi implements IPublicApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param country (optional) 
+     * @param locale (optional) 
+     * @return OK
+     */
+    widgetConfig(country: string | undefined, locale: string | undefined): Promise<PickupPointWidgetConfig> {
+        let url_ = this.baseUrl + "/api/v1/public/shipping/widget-config?";
+        if (country === null)
+            throw new globalThis.Error("The parameter 'country' cannot be null.");
+        else if (country !== undefined)
+            url_ += "country=" + encodeURIComponent("" + country) + "&";
+        if (locale === null)
+            throw new globalThis.Error("The parameter 'locale' cannot be null.");
+        else if (locale !== undefined)
+            url_ += "locale=" + encodeURIComponent("" + locale) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processWidgetConfig(_response);
+        });
+    }
+
+    protected processWidgetConfig(response: Response): Promise<PickupPointWidgetConfig> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PickupPointWidgetConfig.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PickupPointWidgetConfig>(null as any);
     }
 
     /**
@@ -1740,6 +1801,77 @@ export interface IPagedDataOfMakerListItem {
     totalPages?: number;
     hasNextPage?: boolean;
     hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PickupPointWidgetConfig implements IPickupPointWidgetConfig {
+    scriptUrl!: string;
+    publicKey!: string;
+    options!: { [key: string]: string; };
+
+    [key: string]: any;
+
+    constructor(data?: IPickupPointWidgetConfig) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.options = {};
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.scriptUrl = _data["scriptUrl"];
+            this.publicKey = _data["publicKey"];
+            if (_data["options"]) {
+                this.options = {} as any;
+                for (let key in _data["options"]) {
+                    if (_data["options"].hasOwnProperty(key))
+                        (this.options as any)![key] = _data["options"][key];
+                }
+            }
+        }
+    }
+
+    static fromJS(data: any): PickupPointWidgetConfig {
+        data = typeof data === 'object' ? data : {};
+        let result = new PickupPointWidgetConfig();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["scriptUrl"] = this.scriptUrl;
+        data["publicKey"] = this.publicKey;
+        if (this.options) {
+            data["options"] = {};
+            for (let key in this.options) {
+                if (this.options.hasOwnProperty(key))
+                    (data["options"] as any)[key] = (this.options as any)[key];
+            }
+        }
+        return data;
+    }
+}
+
+export interface IPickupPointWidgetConfig {
+    scriptUrl: string;
+    publicKey: string;
+    options: { [key: string]: string; };
 
     [key: string]: any;
 }

@@ -12,6 +12,26 @@ export interface IMakerApi {
     /**
      * @return OK
      */
+    label(orderId: string): Promise<void>;
+
+    /**
+     * @return OK
+     */
+    accept(orderId: string): Promise<Response>;
+
+    /**
+     * @return OK
+     */
+    ship(orderId: string): Promise<Response>;
+
+    /**
+     * @return OK
+     */
+    handover(orderId: string): Promise<Response>;
+
+    /**
+     * @return OK
+     */
     attachments(orderId: string, attachmentId: string): Promise<void>;
 
     /**
@@ -143,6 +163,274 @@ export class MakerApi implements IMakerApi {
     constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
         this.http = http ? http : window as any;
         this.baseUrl = baseUrl ?? "http://localhost:5002/";
+    }
+
+    /**
+     * @return OK
+     */
+    label(orderId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/maker/files/orders/{orderId}/label";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLabel(_response);
+        });
+    }
+
+    protected processLabel(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    accept(orderId: string): Promise<Response> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/accept";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAccept(_response);
+        });
+    }
+
+    protected processAccept(response: Response): Promise<Response> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = Response.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<Response>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    ship(orderId: string): Promise<Response> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/ship";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processShip(_response);
+        });
+    }
+
+    protected processShip(response: Response): Promise<Response> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = Response.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<Response>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    handover(orderId: string): Promise<Response> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/handover";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processHandover(_response);
+        });
+    }
+
+    protected processHandover(response: Response): Promise<Response> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = Response.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<Response>(null as any);
     }
 
     /**
@@ -2106,6 +2394,54 @@ export class RequestPasswordResetRequest implements IRequestPasswordResetRequest
 
 export interface IRequestPasswordResetRequest {
     email: string;
+
+    [key: string]: any;
+}
+
+export class Response implements IResponse {
+    orderId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+        }
+    }
+
+    static fromJS(data: any): Response {
+        data = typeof data === 'object' ? data : {};
+        let result = new Response();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        return data;
+    }
+}
+
+export interface IResponse {
+    orderId: string;
 
     [key: string]: any;
 }
