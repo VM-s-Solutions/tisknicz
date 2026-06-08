@@ -41,9 +41,9 @@ namespace Makables.Core.AppServices.Features.Orders;
 /// </summary>
 public static class AcceptOrder
 {
-    public sealed record Command(string OrderId) : ICommand<Response>;
+    public sealed record Command(string OrderId) : ICommand<AcceptOrderResponse>;
 
-    public sealed record Response(string OrderId);
+    public sealed record AcceptOrderResponse(string OrderId);
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -65,9 +65,9 @@ public static class AcceptOrder
         IClock clock,
         ILanguageResolver languageResolver,
         IOptions<PublicAppUrlsOptions> publicAppUrls,
-        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
+        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<AcceptOrderResponse>>
     {
-        public async Task<BusinessResult<Response>> Handle(
+        public async Task<BusinessResult<AcceptOrderResponse>> Handle(
             Command command, CancellationToken cancellationToken)
         {
             // Step 1: Resolve maker session. [Authorize] handles 401 before
@@ -75,7 +75,7 @@ public static class AcceptOrder
             var userId = session.GetUserId();
             if (string.IsNullOrEmpty(userId))
             {
-                return BusinessResult.Failure<Response>(Error.Unauthorized());
+                return BusinessResult.Failure<AcceptOrderResponse>(Error.Unauthorized());
             }
 
             // Step 2: Resolve maker for the authenticated user. Defensive —
@@ -84,7 +84,7 @@ public static class AcceptOrder
             var maker = await makers.GetByUserIdAsync(userId, cancellationToken);
             if (maker is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<AcceptOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -93,7 +93,7 @@ public static class AcceptOrder
                 command.OrderId, maker.Id, cancellationToken);
             if (order is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<AcceptOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -101,7 +101,7 @@ public static class AcceptOrder
             var transitionResult = order.Accept(clock);
             if (!transitionResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(transitionResult.Error!);
+                return BusinessResult.Failure<AcceptOrderResponse>(transitionResult.Error!);
             }
 
             // Step 5: Resolve customer + language + build payload.
@@ -112,7 +112,7 @@ public static class AcceptOrder
                     "AcceptOrder: customer user {UserId} not found for order {OrderId}. " +
                     "FK invariant violation — refusing to commit.",
                     order.CustomerUserId, order.Id);
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<AcceptOrderResponse>(
                     Error.NotFound("customerUserId", BusinessErrorMessage.OrderCustomerUserMissing));
             }
             var customerLanguage = await languageResolver.ResolveForUserAsync(customer, cancellationToken);
@@ -131,7 +131,7 @@ public static class AcceptOrder
 
             // Step 6: No SaveChangesAsync — UoW pipeline behavior commits
             // the order mutation AND the outbox row atomically per ADR 0014.
-            return BusinessResult.Success(new Response(order.Id));
+            return BusinessResult.Success(new AcceptOrderResponse(order.Id));
         }
     }
 }

@@ -17,17 +17,17 @@ export interface IMakerApi {
     /**
      * @return OK
      */
-    accept(orderId: string): Promise<Response>;
+    accept(orderId: string): Promise<AcceptOrderResponse>;
 
     /**
      * @return OK
      */
-    ship(orderId: string): Promise<Response>;
+    ship(orderId: string): Promise<ShipOrderResponse>;
 
     /**
      * @return OK
      */
-    handover(orderId: string): Promise<Response>;
+    handover(orderId: string): Promise<HandOverOrderResponse>;
 
     /**
      * @return OK
@@ -225,7 +225,7 @@ export class MakerApi implements IMakerApi {
     /**
      * @return OK
      */
-    accept(orderId: string): Promise<Response> {
+    accept(orderId: string): Promise<AcceptOrderResponse> {
         let url_ = this.baseUrl + "/api/v1/orders/{orderId}/accept";
         if (orderId === undefined || orderId === null)
             throw new globalThis.Error("The parameter 'orderId' must be defined.");
@@ -244,14 +244,14 @@ export class MakerApi implements IMakerApi {
         });
     }
 
-    protected processAccept(response: Response): Promise<Response> {
+    protected processAccept(response: Response): Promise<AcceptOrderResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = Response.fromJS(resultData200);
+            result200 = AcceptOrderResponse.fromJS(resultData200);
             return result200;
             });
         } else if (status === 400) {
@@ -287,13 +287,13 @@ export class MakerApi implements IMakerApi {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Response>(null as any);
+        return Promise.resolve<AcceptOrderResponse>(null as any);
     }
 
     /**
      * @return OK
      */
-    ship(orderId: string): Promise<Response> {
+    ship(orderId: string): Promise<ShipOrderResponse> {
         let url_ = this.baseUrl + "/api/v1/orders/{orderId}/ship";
         if (orderId === undefined || orderId === null)
             throw new globalThis.Error("The parameter 'orderId' must be defined.");
@@ -312,14 +312,14 @@ export class MakerApi implements IMakerApi {
         });
     }
 
-    protected processShip(response: Response): Promise<Response> {
+    protected processShip(response: Response): Promise<ShipOrderResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = Response.fromJS(resultData200);
+            result200 = ShipOrderResponse.fromJS(resultData200);
             return result200;
             });
         } else if (status === 400) {
@@ -362,13 +362,13 @@ export class MakerApi implements IMakerApi {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Response>(null as any);
+        return Promise.resolve<ShipOrderResponse>(null as any);
     }
 
     /**
      * @return OK
      */
-    handover(orderId: string): Promise<Response> {
+    handover(orderId: string): Promise<HandOverOrderResponse> {
         let url_ = this.baseUrl + "/api/v1/orders/{orderId}/handover";
         if (orderId === undefined || orderId === null)
             throw new globalThis.Error("The parameter 'orderId' must be defined.");
@@ -387,14 +387,14 @@ export class MakerApi implements IMakerApi {
         });
     }
 
-    protected processHandover(response: Response): Promise<Response> {
+    protected processHandover(response: Response): Promise<HandOverOrderResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = Response.fromJS(resultData200);
+            result200 = HandOverOrderResponse.fromJS(resultData200);
             return result200;
             });
         } else if (status === 400) {
@@ -430,7 +430,7 @@ export class MakerApi implements IMakerApi {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Response>(null as any);
+        return Promise.resolve<HandOverOrderResponse>(null as any);
     }
 
     /**
@@ -1470,6 +1470,54 @@ export class MakerApi implements IMakerApi {
     }
 }
 
+export class AcceptOrderResponse implements IAcceptOrderResponse {
+    orderId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IAcceptOrderResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+        }
+    }
+
+    static fromJS(data: any): AcceptOrderResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AcceptOrderResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        return data;
+    }
+}
+
+export interface IAcceptOrderResponse {
+    orderId: string;
+
+    [key: string]: any;
+}
+
 export class ChangePasswordRequest implements IChangePasswordRequest {
     currentPassword!: string;
     newPassword!: string;
@@ -1856,6 +1904,54 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export class HandOverOrderResponse implements IHandOverOrderResponse {
+    orderId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IHandOverOrderResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+        }
+    }
+
+    static fromJS(data: any): HandOverOrderResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new HandOverOrderResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        return data;
+    }
+}
+
+export interface IHandOverOrderResponse {
+    orderId: string;
+
+    [key: string]: any;
 }
 
 export class LoginRequest implements ILoginRequest {
@@ -2398,12 +2494,14 @@ export interface IRequestPasswordResetRequest {
     [key: string]: any;
 }
 
-export class Response implements IResponse {
+export class ShipOrderResponse implements IShipOrderResponse {
     orderId!: string;
+    carrierRef!: string;
+    trackingUrl!: string;
 
     [key: string]: any;
 
-    constructor(data?: IResponse) {
+    constructor(data?: IShipOrderResponse) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -2419,12 +2517,14 @@ export class Response implements IResponse {
                     this[property] = _data[property];
             }
             this.orderId = _data["orderId"];
+            this.carrierRef = _data["carrierRef"];
+            this.trackingUrl = _data["trackingUrl"];
         }
     }
 
-    static fromJS(data: any): Response {
+    static fromJS(data: any): ShipOrderResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new Response();
+        let result = new ShipOrderResponse();
         result.init(data);
         return result;
     }
@@ -2436,12 +2536,16 @@ export class Response implements IResponse {
                 data[property] = this[property];
         }
         data["orderId"] = this.orderId;
+        data["carrierRef"] = this.carrierRef;
+        data["trackingUrl"] = this.trackingUrl;
         return data;
     }
 }
 
-export interface IResponse {
+export interface IShipOrderResponse {
     orderId: string;
+    carrierRef: string;
+    trackingUrl: string;
 
     [key: string]: any;
 }

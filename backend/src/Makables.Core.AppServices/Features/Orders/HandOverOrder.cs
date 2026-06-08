@@ -35,9 +35,9 @@ namespace Makables.Core.AppServices.Features.Orders;
 /// </summary>
 public static class HandOverOrder
 {
-    public sealed record Command(string OrderId) : ICommand<Response>;
+    public sealed record Command(string OrderId) : ICommand<HandOverOrderResponse>;
 
-    public sealed record Response(string OrderId);
+    public sealed record HandOverOrderResponse(string OrderId);
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -59,23 +59,23 @@ public static class HandOverOrder
         IClock clock,
         ILanguageResolver languageResolver,
         IOptions<PublicAppUrlsOptions> publicAppUrls,
-        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
+        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<HandOverOrderResponse>>
     {
-        public async Task<BusinessResult<Response>> Handle(
+        public async Task<BusinessResult<HandOverOrderResponse>> Handle(
             Command command, CancellationToken cancellationToken)
         {
             // Step 1: Resolve maker session.
             var userId = session.GetUserId();
             if (string.IsNullOrEmpty(userId))
             {
-                return BusinessResult.Failure<Response>(Error.Unauthorized());
+                return BusinessResult.Failure<HandOverOrderResponse>(Error.Unauthorized());
             }
 
             // Step 2: Resolve maker for the authenticated user.
             var maker = await makers.GetByUserIdAsync(userId, cancellationToken);
             if (maker is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<HandOverOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -84,7 +84,7 @@ public static class HandOverOrder
                 command.OrderId, maker.Id, cancellationToken);
             if (order is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<HandOverOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -92,7 +92,7 @@ public static class HandOverOrder
             // Zásilkovna orders route to ShipOrder.
             if (order.ShippingMethod != ShippingMethod.PersonalPickup)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<HandOverOrderResponse>(
                     Error.Validation("shippingMethod", BusinessErrorMessage.ShippingMethodNotEligible));
             }
 
@@ -104,7 +104,7 @@ public static class HandOverOrder
                 trackingUrl: null);
             if (!transitionResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(transitionResult.Error!);
+                return BusinessResult.Failure<HandOverOrderResponse>(transitionResult.Error!);
             }
 
             // Step 6: Resolve customer language + build payload (TrackingUrl null).
@@ -115,7 +115,7 @@ public static class HandOverOrder
                     "HandOverOrder: customer user {UserId} not found for order {OrderId}. " +
                     "FK invariant violation — refusing to commit.",
                     order.CustomerUserId, order.Id);
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<HandOverOrderResponse>(
                     Error.NotFound("customerUserId", BusinessErrorMessage.OrderCustomerUserMissing));
             }
             var customerLanguage = await languageResolver.ResolveForUserAsync(customer, cancellationToken);
@@ -138,7 +138,7 @@ public static class HandOverOrder
                 payloadJson: JsonSerializer.Serialize(payload));
 
             // Step 8: No SaveChangesAsync — UoW pipeline commits atomically.
-            return BusinessResult.Success(new Response(order.Id));
+            return BusinessResult.Success(new HandOverOrderResponse(order.Id));
         }
     }
 }

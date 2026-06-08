@@ -40,9 +40,9 @@ namespace Makables.Core.AppServices.Features.Orders;
 /// </summary>
 public static class ShipOrder
 {
-    public sealed record Command(string OrderId) : ICommand<Response>;
+    public sealed record Command(string OrderId) : ICommand<ShipOrderResponse>;
 
-    public sealed record Response(string OrderId, string CarrierRef, string TrackingUrl);
+    public sealed record ShipOrderResponse(string OrderId, string CarrierRef, string TrackingUrl);
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -65,23 +65,23 @@ public static class ShipOrder
         IClock clock,
         ILanguageResolver languageResolver,
         IOptions<PublicAppUrlsOptions> publicAppUrls,
-        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
+        ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<ShipOrderResponse>>
     {
-        public async Task<BusinessResult<Response>> Handle(
+        public async Task<BusinessResult<ShipOrderResponse>> Handle(
             Command command, CancellationToken cancellationToken)
         {
             // Step 1: Resolve maker session.
             var userId = session.GetUserId();
             if (string.IsNullOrEmpty(userId))
             {
-                return BusinessResult.Failure<Response>(Error.Unauthorized());
+                return BusinessResult.Failure<ShipOrderResponse>(Error.Unauthorized());
             }
 
             // Step 2: Resolve maker for the authenticated user.
             var maker = await makers.GetByUserIdAsync(userId, cancellationToken);
             if (maker is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<ShipOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -90,7 +90,7 @@ public static class ShipOrder
                 command.OrderId, maker.Id, cancellationToken);
             if (order is null)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<ShipOrderResponse>(
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
@@ -98,7 +98,7 @@ public static class ShipOrder
             // PersonalPickup orders route to HandOverOrder.
             if (order.ShippingMethod != ShippingMethod.ZasilkovnaPickupPoint)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<ShipOrderResponse>(
                     Error.Validation("shippingMethod", BusinessErrorMessage.ShippingMethodNotEligible));
             }
 
@@ -106,7 +106,7 @@ public static class ShipOrder
             var carrierResult = await shippingCarrierFactory.ResolveAsync(order.CountryCode, cancellationToken);
             if (!carrierResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(carrierResult.Error!);
+                return BusinessResult.Failure<ShipOrderResponse>(carrierResult.Error!);
             }
 
             // Step 6: Create the shipment at Packeta. Carrier-side error
@@ -115,7 +115,7 @@ public static class ShipOrder
             var shipmentResult = await carrierResult.Value!.CreateShipmentAsync(order, cancellationToken);
             if (!shipmentResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(shipmentResult.Error!);
+                return BusinessResult.Failure<ShipOrderResponse>(shipmentResult.Error!);
             }
             var shipment = shipmentResult.Value!;
 
@@ -129,7 +129,7 @@ public static class ShipOrder
                 trackingUrl: shipment.TrackingUrl);
             if (!transitionResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(transitionResult.Error!);
+                return BusinessResult.Failure<ShipOrderResponse>(transitionResult.Error!);
             }
 
             // Step 8: Resolve customer language + build customer payload.
@@ -140,7 +140,7 @@ public static class ShipOrder
                     "ShipOrder: customer user {UserId} not found for order {OrderId}. " +
                     "FK invariant violation — refusing to commit.",
                     order.CustomerUserId, order.Id);
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<ShipOrderResponse>(
                     Error.NotFound("customerUserId", BusinessErrorMessage.OrderCustomerUserMissing));
             }
             var customerLanguage = await languageResolver.ResolveForUserAsync(customer, cancellationToken);
@@ -171,7 +171,7 @@ public static class ShipOrder
 
             // Step 11: No SaveChangesAsync — UoW pipeline commits the
             // Order mutation + both outbox rows atomically per ADR 0014.
-            return BusinessResult.Success(new Response(
+            return BusinessResult.Success(new ShipOrderResponse(
                 OrderId: order.Id,
                 CarrierRef: shipment.CarrierRef,
                 TrackingUrl: shipment.TrackingUrl));

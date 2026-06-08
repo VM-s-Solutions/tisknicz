@@ -44,7 +44,7 @@ public sealed class OrdersController(
     /// T-0071 (US-maker-0006).
     /// </summary>
     [HttpPost("{orderId}/accept")]
-    [ProducesResponseType(typeof(AcceptOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AcceptOrder.AcceptOrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
@@ -60,7 +60,7 @@ public sealed class OrdersController(
     /// generate-label). T-0072 (US-maker-0007).
     /// </summary>
     [HttpPost("{orderId}/ship")]
-    [ProducesResponseType(typeof(ShipOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ShipOrder.ShipOrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
@@ -76,7 +76,7 @@ public sealed class OrdersController(
     /// T-0073 (US-maker-0008).
     /// </summary>
     [HttpPost("{orderId}/handover")]
-    [ProducesResponseType(typeof(HandOverOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HandOverOrder.HandOverOrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
