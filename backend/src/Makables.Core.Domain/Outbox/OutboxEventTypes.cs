@@ -47,15 +47,44 @@ public static class OutboxEventTypes
     public const string InvoiceGenerate = "invoice.generate";
 
     /// <summary>
+    /// "Your maker accepted the order" customer notification, fired by
+    /// <c>AcceptOrder.Handler</c> after the Paid → Accepted state
+    /// transition. T-0071 (US-maker-0006).
+    /// </summary>
+    public const string OrderAcceptedCustomerEmail = "order.accepted.customerEmail";
+
+    /// <summary>
+    /// "Your order has shipped" customer notification, fired by both the
+    /// Zásilkovna <c>ShipOrder.Handler</c> (T-0072) and the personal-pickup
+    /// <c>HandOverOrder.Handler</c> (T-0073). Single unified event; the
+    /// payload's nullable <c>TrackingUrl</c> field discriminates between
+    /// the two paths (template conditionally renders the tracking row).
+    /// </summary>
+    public const string OrderShippedCustomerEmail = "order.shipped.customerEmail";
+
+    /// <summary>
+    /// "Generate the shipping label PDF" event, fired by Zásilkovna
+    /// <c>ShipOrder.Handler</c> (T-0072) atomically with the customer
+    /// shipped-email event. Consumer is <c>GenerateLabelFunction</c>
+    /// (T-0074) — it dispatches <c>FetchAndStoreShippingLabel.Command</c>
+    /// via Mediator. Routes to its own <c>generate-label</c> queue per
+    /// ADR 0020 queue-per-event-class split so a slow Packeta label PDF
+    /// download doesn't contaminate the email or invoice retry budgets.
+    /// Personal-pickup (T-0073) does NOT emit this event — no label.
+    /// </summary>
+    public const string ShippingGenerateLabel = "shipping.generate.label";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
-    /// routing table is one place — adding a fourth email event type
+    /// routing table is one place — adding a new email event type
     /// is a one-line edit here, not two places.
     ///
     /// <para>
-    /// <see cref="InvoiceGenerate"/> is intentionally NOT in this set —
-    /// it routes to a separate queue (T-0069) so PDF render + upload
-    /// failures do not contaminate the email-send retry budget.
+    /// <see cref="InvoiceGenerate"/> and <see cref="ShippingGenerateLabel"/>
+    /// are intentionally NOT in this set — they route to separate queues
+    /// (T-0069 / T-0074) so PDF render + upload failures do not
+    /// contaminate the email-send retry budget.
     /// </para>
     /// </summary>
     public static bool IsEmailSend(string eventType) =>
@@ -63,17 +92,28 @@ public static class OutboxEventTypes
                   or AuthEmailConfirmationSend
                   or AuthPasswordResetSend
                   or OrderPaidCustomerEmail
-                  or OrderPlacedMakerEmail;
+                  or OrderPlacedMakerEmail
+                  or OrderAcceptedCustomerEmail
+                  or OrderShippedCustomerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>generate-invoice</c> queue per T-0069 <c>OutboxDispatcher</c>
-    /// routing branch. Disjoint from <see cref="IsEmailSend"/> —
-    /// a single event type cannot route to both queues. The dispatcher
-    /// classifies once per event, then publishes to the matching
-    /// per-event-type queue. Anything matching neither classifier stalls
-    /// with <see cref="Common.BusinessErrorMessage.EmailEventTypeUnknown"/>.
+    /// routing branch. Disjoint from <see cref="IsEmailSend"/> +
+    /// <see cref="IsGenerateLabel"/> — a single event type cannot route
+    /// to multiple queues. The dispatcher classifies once per event,
+    /// then publishes to the matching per-event-type queue.
     /// </summary>
     public static bool IsInvoiceGenerate(string eventType) =>
         eventType == InvoiceGenerate;
+
+    /// <summary>
+    /// True when <paramref name="eventType"/> routes to the
+    /// <c>generate-label</c> queue per T-0074 <c>OutboxDispatcher</c>
+    /// routing branch. Disjoint from <see cref="IsEmailSend"/> +
+    /// <see cref="IsInvoiceGenerate"/>. Per ADR 0020 queue-per-event-class
+    /// split — a slow Packeta label download cannot stall email sends.
+    /// </summary>
+    public static bool IsGenerateLabel(string eventType) =>
+        eventType == ShippingGenerateLabel;
 }

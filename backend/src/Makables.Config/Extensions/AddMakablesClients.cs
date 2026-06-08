@@ -3,10 +3,12 @@ using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Payments;
 using Makables.Core.Domain.Registry;
+using Makables.Core.Domain.Shipping;
 using Makables.Infra.Clients.Ares;
 using Makables.Infra.Clients.Comgate;
 using Makables.Infra.Clients.Google;
 using Makables.Infra.Clients.Mapbox;
+using Makables.Infra.Clients.Packeta;
 using Makables.Infra.Clients.SendGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -204,6 +206,23 @@ public static class MakablesClientsExtensions
             ComgatePaymentProvider.ProviderCode);
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
 
+        // === Packeta (T-0070) ===
+        // ValidateOnStart so missing/typo'd Packeta:ApiKey or
+        // Packeta:PublicWidgetKey crashes the host at boot, not on the
+        // first ship call. Validator surfaces every problem at once.
+        services.AddOptions<PacketaOptions>()
+            .Bind(configuration.GetSection(PacketaOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<PacketaOptions>,
+            PacketaOptionsValidator>();
+        services.AddHttpClient(PacketaShippingCarrier.HttpClientName);
+
+        // Keyed registration — selection via CountryConfiguration.DefaultShippingCarrier
+        // through ShippingCarrierFactory.
+        services.AddKeyedScoped<IShippingCarrier, PacketaShippingCarrier>(
+            PacketaShippingCarrier.CarrierCode);
+        services.AddScoped<IShippingCarrierFactory, ShippingCarrierFactory>();
+
         // === Shared Polly registry for every HttpResponseMessage-typed
         // pipeline across adapters (T-0032 follow-up to a latent T-0031
         // collision: two adapters registering ResiliencePipeline<HttpResponseMessage>
@@ -234,6 +253,13 @@ public static class MakablesClientsExtensions
             // the constants live inline rather than on ComgateOptions.
             registry.TryAddBuilder<HttpResponseMessage>(
                 ComgatePaymentProvider.HttpClientName,
+                (builder, _) => builder.AddRetry(HttpRetryStrategy(
+                    retryCount: 3, baseDelayMs: 200)));
+
+            // Packeta (T-0070): same 3-attempt + 200ms baseline as Comgate.
+            // Packeta has no per-call options surface for retry count.
+            registry.TryAddBuilder<HttpResponseMessage>(
+                PacketaShippingCarrier.HttpClientName,
                 (builder, _) => builder.AddRetry(HttpRetryStrategy(
                     retryCount: 3, baseDelayMs: 200)));
 

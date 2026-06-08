@@ -40,4 +40,20 @@ public enum EmailTemplateType
     /// <see cref="Outbox.OutboxEventTypes.OrderPlacedMakerEmail"/>. T-0067.
     /// </summary>
     OrderPlacedMaker = 5,
+
+    /// <summary>
+    /// "Your maker accepted the order" customer notification. Outbox
+    /// event: <see cref="Outbox.OutboxEventTypes.OrderAcceptedCustomerEmail"/>.
+    /// T-0071.
+    /// </summary>
+    OrderAcceptedCustomer = 6,
+
+    /// <summary>
+    /// "Your order has shipped" customer notification — unified across
+    /// the Zásilkovna (T-0072) + personal-pickup (T-0073) paths. Outbox
+    /// event: <see cref="Outbox.OutboxEventTypes.OrderShippedCustomerEmail"/>.
+    /// Template conditionally renders the tracking-URL row only when the
+    /// payload's <c>TrackingUrl</c> field is non-empty.
+    /// </summary>
+    OrderShippedCustomer = 7,
 }
