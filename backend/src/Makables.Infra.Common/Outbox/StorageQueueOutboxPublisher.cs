@@ -24,6 +24,7 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
 {
     private readonly QueueClient _sendEmailQueue;
     private readonly QueueClient _generateInvoiceQueue;
+    private readonly QueueClient _generateLabelQueue;
     private readonly ILogger<StorageQueueOutboxPublisher> _logger;
 
     // Per-queue ensure-once state. Independent semaphores so a Storage
@@ -33,6 +34,8 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
     private readonly SemaphoreSlim _ensureSendEmailLock = new(1, 1);
     private bool _ensuredGenerateInvoiceQueueExists;
     private readonly SemaphoreSlim _ensureGenerateInvoiceLock = new(1, 1);
+    private bool _ensuredGenerateLabelQueueExists;
+    private readonly SemaphoreSlim _ensureGenerateLabelLock = new(1, 1);
 
     public StorageQueueOutboxPublisher(
         IOptions<OutboxQueueOptions> options,
@@ -46,10 +49,13 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
             throw new InvalidOperationException("OutboxQueues:SendEmailQueueName is not configured.");
         if (string.IsNullOrWhiteSpace(opts.GenerateInvoiceQueueName))
             throw new InvalidOperationException("OutboxQueues:GenerateInvoiceQueueName is not configured.");
+        if (string.IsNullOrWhiteSpace(opts.GenerateLabelQueueName))
+            throw new InvalidOperationException("OutboxQueues:GenerateLabelQueueName is not configured.");
 
         var clientOptions = new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 };
         _sendEmailQueue = new QueueClient(opts.ConnectionString, opts.SendEmailQueueName, clientOptions);
         _generateInvoiceQueue = new QueueClient(opts.ConnectionString, opts.GenerateInvoiceQueueName, clientOptions);
+        _generateLabelQueue = new QueueClient(opts.ConnectionString, opts.GenerateLabelQueueName, clientOptions);
         _logger = logger;
     }
 
@@ -77,6 +83,19 @@ public sealed class StorageQueueOutboxPublisher : IOutboxQueuePublisher
         await _generateInvoiceQueue.SendMessageAsync(outboxEventId, cancellationToken);
         _logger.LogDebug("Published outbox event {OutboxEventId} to {QueueName}.",
             outboxEventId, _generateInvoiceQueue.Name);
+    }
+
+    public async Task PublishGenerateLabelAsync(string outboxEventId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outboxEventId);
+        await EnsureQueueAsync(
+            _generateLabelQueue, _ensureGenerateLabelLock,
+            () => _ensuredGenerateLabelQueueExists,
+            () => _ensuredGenerateLabelQueueExists = true,
+            cancellationToken);
+        await _generateLabelQueue.SendMessageAsync(outboxEventId, cancellationToken);
+        _logger.LogDebug("Published outbox event {OutboxEventId} to {QueueName}.",
+            outboxEventId, _generateLabelQueue.Name);
     }
 
     private static async Task EnsureQueueAsync(

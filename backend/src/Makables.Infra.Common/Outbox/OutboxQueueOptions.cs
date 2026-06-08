@@ -39,6 +39,17 @@ public sealed class OutboxQueueOptions
     /// invoice rendering).
     /// </summary>
     public string GenerateInvoiceQueueName { get; set; } = "generate-invoice";
+
+    /// <summary>
+    /// Queue name for outbox-driven Packeta shipping-label PDF storage.
+    /// <c>GenerateLabelFunction</c> listens here and dispatches
+    /// <c>FetchAndStoreShippingLabel.Command</c> via Mediator. Per T-0072
+    /// + ADR 0020 queue-per-event-class: distinct from
+    /// <see cref="SendEmailQueueName"/> and <see cref="GenerateInvoiceQueueName"/>
+    /// so a slow Packeta label download doesn't contaminate either retry
+    /// budget. T-0074 owns the consumer.
+    /// </summary>
+    public string GenerateLabelQueueName { get; set; } = "generate-label";
 }
 
 /// <summary>
@@ -63,6 +74,10 @@ public static class OutboxQueueOptionsValidator
             return (false, "OutboxQueues:GenerateInvoiceQueueName is required.");
         if (!IsValidAzureQueueName(options.GenerateInvoiceQueueName))
             return (false, "OutboxQueues:GenerateInvoiceQueueName must match Azure queue naming rules (^[a-z0-9-]{3,63}$).");
+        if (string.IsNullOrWhiteSpace(options.GenerateLabelQueueName))
+            return (false, "OutboxQueues:GenerateLabelQueueName is required.");
+        if (!IsValidAzureQueueName(options.GenerateLabelQueueName))
+            return (false, "OutboxQueues:GenerateLabelQueueName must match Azure queue naming rules (^[a-z0-9-]{3,63}$).");
         return (true, null);
     }
 

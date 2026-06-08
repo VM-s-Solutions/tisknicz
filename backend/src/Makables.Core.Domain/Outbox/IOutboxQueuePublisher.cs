@@ -30,4 +30,15 @@ public interface IOutboxQueuePublisher
     /// failures cannot contaminate the email-send retry budget.
     /// </summary>
     Task PublishGenerateInvoiceAsync(string outboxEventId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Publish an "process this outbox event" message to the
+    /// <c>generate-label</c> queue so a <c>GenerateLabelFunction</c>
+    /// picks it up and dispatches <c>FetchAndStoreShippingLabel.Command</c>
+    /// via Mediator. Per T-0072 + ADR 0020 queue-per-event-class:
+    /// separate queue, separate retry budget — Packeta label-PDF
+    /// downloads can be slow + flaky without contaminating the email
+    /// or invoice queues. T-0074 owns the consumer.
+    /// </summary>
+    Task PublishGenerateLabelAsync(string outboxEventId, CancellationToken cancellationToken);
 }

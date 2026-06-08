@@ -72,8 +72,86 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderPlacedMakerEmail
                 => SendOrderPlacedMakerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderAcceptedCustomerEmail
+                => SendOrderAcceptedCustomerEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderShippedCustomerEmail
+                => SendOrderShippedCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0071: Order accepted (maker → customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderAcceptedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderAcceptedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderAcceptedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderAcceptedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["language_code"] = payload.LanguageCode,
+            },
+            // No PDF attachment — invoice rides only on the OrderPaidCustomer
+            // email per T-0069 locked decision 10. Subsequent state-change
+            // emails are reference-only.
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0072 / T-0073: Order shipped (customer) email branch — unified. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderShippedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderShippedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderShippedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // T-0073: TrackingUrl is nullable — personal-pickup passes null. The
+        // SendGrid template conditionally renders the tracking-URL row only
+        // when the substitution is non-empty. We pass the empty string for
+        // null so the substitution variable is always present in the dict.
+        var trackingUrlSubstitution = payload.TrackingUrl ?? string.Empty;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderShippedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["tracking_url"] = trackingUrlSubstitution,
+                ["language_code"] = payload.LanguageCode,
+            },
+            // No PDF attachment — the label is for the maker. Customer gets
+            // the tracking URL instead (or no link for personal-pickup).
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === Auth-flow branch — preserves T-0028 behaviour byte-for-byte. ===

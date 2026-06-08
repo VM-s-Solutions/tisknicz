@@ -1,9 +1,11 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Storage;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -33,8 +35,55 @@ public sealed class OrdersController(
     IOrderRepository orders,
     IMakerRepository makers,
     IBlobStorageClient blobs,
-    IUserSessionProvider session) : MakablesApiController
+    IUserSessionProvider session,
+    IMediator mediator) : MakablesApiController
 {
+    /// <summary>
+    /// Maker accepts a Paid order. Transitions to Accepted and enqueues
+    /// the customer-notification outbox event atomically per ADR 0014.
+    /// T-0071 (US-maker-0006).
+    /// </summary>
+    [HttpPost("{orderId}/accept")]
+    [ProducesResponseType(typeof(AcceptOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Accept(string orderId, CancellationToken ct) =>
+        HandleResult(await mediator.Send(new AcceptOrder.Command(orderId), ct));
+
+    /// <summary>
+    /// Maker confirms shipment of an Accepted Zásilkovna order. Calls
+    /// the Packeta adapter to create the shipment, stamps the carrier
+    /// ref + tracking URL onto the Order, transitions Accepted → Shipped,
+    /// and atomically enqueues 2 outbox events (customer email +
+    /// generate-label). T-0072 (US-maker-0007).
+    /// </summary>
+    [HttpPost("{orderId}/ship")]
+    [ProducesResponseType(typeof(ShipOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Ship(string orderId, CancellationToken ct) =>
+        HandleResult(await mediator.Send(new ShipOrder.Command(orderId), ct));
+
+    /// <summary>
+    /// Maker confirms in-person handover of an Accepted PersonalPickup
+    /// order. Transitions Accepted → Shipped with no carrier call + null
+    /// tracking URL; enqueues a single customer shipped-email event.
+    /// T-0073 (US-maker-0008).
+    /// </summary>
+    [HttpPost("{orderId}/handover")]
+    [ProducesResponseType(typeof(HandOverOrder.Response), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> HandOver(string orderId, CancellationToken ct) =>
+        HandleResult(await mediator.Send(new HandOverOrder.Command(orderId), ct));
+
     /// <summary>
     /// Streaming download of a customer-uploaded order attachment. Same
     /// body as the customer-host equivalent except the ownership scope
