@@ -27,6 +27,15 @@
     <ProjectReference Include="..\Makables.Web.Admin\Makables.Web.Admin.csproj" />
     <ProjectReference Include="..\Makables.Web.Public\Makables.Web.Public.csproj" />
     <ProjectReference Include="..\Makables.TestUtilities\Makables.TestUtilities.csproj" />
+    <!-- T-0069: integration test for the outbox routing branch wires the
+         real OutboxConsumerRepository (Infra.Database) against a fake
+         IOutboxQueuePublisher, dispatched through the real OutboxDispatcher
+         (Core.AppServices) so the EF entity round-trip + classifier +
+         publisher branch all line up against the canonical event-type
+         string. The Web.* hosts already transitively reference all three
+         projects but the explicit edges keep the dependency graph honest. -->
+    <ProjectReference Include="..\Makables.Core.AppServices\Makables.Core.AppServices.csproj" />
+    <ProjectReference Include="..\Makables.Infra.Database\Makables.Infra.Database.csproj" />
   </ItemGroup>
 
 </Project>

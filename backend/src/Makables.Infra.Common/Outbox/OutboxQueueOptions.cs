@@ -28,6 +28,17 @@ public sealed class OutboxQueueOptions
     /// <c>send-email</c>.
     /// </summary>
     public string SendEmailQueueName { get; set; } = "send-email";
+
+    /// <summary>
+    /// Queue name for outbox-driven invoice PDF generation.
+    /// <c>GenerateInvoiceFunction</c> listens here and dispatches
+    /// <c>IssueInvoice.Command</c> via Mediator. Per T-0069 locked
+    /// decision 2: distinct from <see cref="SendEmailQueueName"/> so
+    /// render/upload failures don't contaminate the email-send retry
+    /// budget (and vice versa — a stuck SendGrid call doesn't stall
+    /// invoice rendering).
+    /// </summary>
+    public string GenerateInvoiceQueueName { get; set; } = "generate-invoice";
 }
 
 /// <summary>
@@ -46,6 +57,25 @@ public static class OutboxQueueOptionsValidator
             return (false, "OutboxQueues:ConnectionString is required.");
         if (string.IsNullOrWhiteSpace(options.SendEmailQueueName))
             return (false, "OutboxQueues:SendEmailQueueName is required.");
+        if (!IsValidAzureQueueName(options.SendEmailQueueName))
+            return (false, "OutboxQueues:SendEmailQueueName must match Azure queue naming rules (^[a-z0-9-]{3,63}$).");
+        if (string.IsNullOrWhiteSpace(options.GenerateInvoiceQueueName))
+            return (false, "OutboxQueues:GenerateInvoiceQueueName is required.");
+        if (!IsValidAzureQueueName(options.GenerateInvoiceQueueName))
+            return (false, "OutboxQueues:GenerateInvoiceQueueName must match Azure queue naming rules (^[a-z0-9-]{3,63}$).");
         return (true, null);
     }
+
+    /// <summary>
+    /// Azure Storage queue name rules per
+    /// <see href="https://learn.microsoft.com/en-us/rest/api/storageservices/naming-queues-and-metadata"/>:
+    /// 3-63 chars, lowercase letters / digits / hyphens, must start and end
+    /// with letter or digit (no leading / trailing / consecutive hyphens).
+    /// The regex below is a tightening of that contract — the storage SDK
+    /// will reject anything that slips past on its first publish, but
+    /// failing at boot is the right place to catch a typo.
+    /// </summary>
+    private static bool IsValidAzureQueueName(string name) =>
+        System.Text.RegularExpressions.Regex.IsMatch(
+            name, "^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$");
 }

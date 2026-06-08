@@ -37,6 +37,14 @@ public interface IEmailProvider
 /// <summary>
 /// Self-contained dispatch unit. Carries everything the provider needs
 /// to deliver one email — no further DB lookups.
+///
+/// <para>
+/// <see cref="Attachment"/> is optional (default <c>null</c>). Only the
+/// T-0069 <c>order.paid.customerEmail</c> branch populates it (with the
+/// rendered invoice PDF); every other sender keeps it null and the
+/// provider skips the attachment SDK call entirely. Single-attachment
+/// only at MVP per T-0069 locked decision 8.
+/// </para>
 /// </summary>
 public sealed record EmailMessage(
     string ProviderTemplateId,
@@ -48,7 +56,17 @@ public sealed record EmailMessage(
     string? ReplyToAddress,
     string Subject,
     string PlainTextBody,
-    IReadOnlyDictionary<string, object> Data);
+    IReadOnlyDictionary<string, object> Data)
+{
+    /// <summary>
+    /// Optional inline attachment. <c>null</c> for auth / maker / generic
+    /// emails; populated for <c>order.paid.customerEmail</c> with the
+    /// rendered invoice PDF (T-0069). Per locked decision 8 the shape is
+    /// a single optional record, not a list — every current sender attaches
+    /// at most one file.
+    /// </summary>
+    public Attachment? Attachment { get; init; }
+}
 
 /// <summary>
 /// Provider-issued acknowledgement of a successful send. <see cref="ProviderMessageId"/>

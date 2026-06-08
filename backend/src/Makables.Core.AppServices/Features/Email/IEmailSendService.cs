@@ -2,7 +2,9 @@ using System.Text.Json;
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Email;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Outbox;
+using Makables.Core.Domain.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -39,6 +41,8 @@ public sealed class EmailSendService(
     IEmailTemplateRepository templates,
     IEmailTemplateTranslationRepository translations,
     IEmailProvider provider,
+    IInvoiceRepository invoices,
+    IBlobStorageClient blobStorage,
     IOptions<PublicAppUrlsOptions> urls,
     ILogger<EmailSendService> logger) : IEmailSendService
 {
@@ -151,18 +155,87 @@ public sealed class EmailSendService(
 
     // === Order-flow branches (T-0067). ===
 
-    private Task<BusinessResult<EmailSentReceipt>> SendOrderPaidCustomerEmailAsync(
+    private async Task<BusinessResult<EmailSentReceipt>> SendOrderPaidCustomerEmailAsync(
         string payloadJson, CancellationToken cancellationToken)
     {
         var payloadResult = DeserializeOrderPayload<OrderPaidCustomerEmailPayload>(
             payloadJson, OutboxEventTypes.OrderPaidCustomerEmail);
         if (!payloadResult.IsSuccess)
         {
-            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+            return BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!);
         }
         var payload = payloadResult.Value!;
 
-        return DispatchOrderEmailAsync(
+        // T-0069: lookup-at-send-time + retry-based eventual consistency.
+        // If the invoice.generate queue lost the FIFO race against the
+        // send-email queue, the Invoice row may not exist yet (or may
+        // exist with PdfBlobPath still null because IssueInvoice.Handler
+        // is mid-flight). Return Transient(InvoiceNotYetRendered) so the
+        // outbox retry policy re-delivers in 1m; the second attempt
+        // almost always succeeds. Atomic enqueue of the 3 events stays
+        // unchanged per locked decision 1.
+        var invoice = await invoices.GetByOrderIdAsync(payload.OrderId, cancellationToken);
+        if (invoice is null || string.IsNullOrWhiteSpace(invoice.PdfBlobPath))
+        {
+            logger.LogDebug(
+                "OrderPaidCustomerEmail for order {OrderId}: invoice not yet rendered " +
+                "(invoice null = {InvoiceNull}, PdfBlobPath null/blank = {PdfPathMissing}). " +
+                "Returning Transient for outbox re-delivery.",
+                payload.OrderId,
+                invoice is null,
+                invoice is not null && string.IsNullOrWhiteSpace(invoice.PdfBlobPath));
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Transient(BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        // T-0069 AC-5/AC-8: download the rendered PDF from blob. Azure
+        // Storage SDK already retries transient blips internally; anything
+        // surfacing here is data-integrity (blob missing) or
+        // mis-configuration (auth) — both Permanent so the outbox parks
+        // the row for ops attention rather than burning the retry budget.
+        byte[] pdfBytes;
+        try
+        {
+            var downloadResult = await blobStorage.DownloadAsync(
+                BlobContainer.Invoices, invoice.PdfBlobPath!, cancellationToken);
+            if (!downloadResult.IsSuccess)
+            {
+                logger.LogCritical(
+                    "OrderPaidCustomerEmail for order {OrderId}: blob download failed for invoice {InvoiceNumber} " +
+                    "at {BlobPath}: {Code}. Returning Permanent — data-integrity issue.",
+                    payload.OrderId, invoice.InvoiceNumber, invoice.PdfBlobPath, downloadResult.Error!.Code);
+                return BusinessResult.Failure<EmailSentReceipt>(
+                    Error.Permanent(BusinessErrorMessage.InvoicePdfAttachmentDownloadFailed));
+            }
+            using var stream = downloadResult.Value!.Content;
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            pdfBytes = buffer.ToArray();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex,
+                "OrderPaidCustomerEmail for order {OrderId}: blob download threw for invoice {InvoiceNumber} " +
+                "at {BlobPath}. Returning Permanent — data-integrity issue.",
+                payload.OrderId, invoice.InvoiceNumber, invoice.PdfBlobPath);
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Permanent(BusinessErrorMessage.InvoicePdfAttachmentDownloadFailed));
+        }
+
+        // T-0069 AC-6: language-aware filename. Reuses payload.LanguageCode
+        // (already pre-resolved at MarkOrderPaid enqueue time per T-0067).
+        // English locale gets "invoice-..."; everything else (cs-CZ +
+        // future Czech variants + fallback) gets "faktura-...".
+        // OrderNumber is pre-baked into the payload by MarkOrderPaid.Handler at
+        // T-0067 enqueue time — no second Order load needed. Reviewer DC1/ID5 fold.
+        var filename = BuildInvoiceAttachmentFilename(payload.LanguageCode, payload.OrderNumber);
+        var attachment = new Attachment(filename, pdfBytes, "application/pdf");
+
+        return await DispatchOrderEmailAsync(
             templateType: EmailTemplateType.OrderPaidCustomer,
             toAddress: payload.Email,
             toName: payload.ContactName,
@@ -178,8 +251,22 @@ public sealed class EmailSendService(
                 ["currency"] = payload.Currency,
                 ["language_code"] = payload.LanguageCode,
             },
+            attachment: attachment,
             cancellationToken: cancellationToken);
     }
+
+    /// <summary>
+    /// Filename for the invoice PDF attachment. English → <c>invoice-{n}.pdf</c>;
+    /// everything else (cs-CZ + future Czech variants + the default fallback)
+    /// → <c>faktura-{n}.pdf</c>. Per T-0069 locked decision 6: the filename
+    /// surfaces in the customer's inbox preview pane BEFORE they open the
+    /// attachment, so it gets the locale-aware label even though the PDF
+    /// body itself is Czech-only at MVP.
+    /// </summary>
+    private static string BuildInvoiceAttachmentFilename(string languageCode, string orderNumber) =>
+        languageCode == "en-US"
+            ? $"invoice-{orderNumber}.pdf"
+            : $"faktura-{orderNumber}.pdf";
 
     private Task<BusinessResult<EmailSentReceipt>> SendOrderPlacedMakerEmailAsync(
         string payloadJson, CancellationToken cancellationToken)
@@ -209,6 +296,10 @@ public sealed class EmailSendService(
                 ["currency"] = payload.Currency,
                 ["language_code"] = payload.LanguageCode,
             },
+            // T-0069 AC-10: maker email does NOT carry the invoice PDF —
+            // only the customer email does. Pass null explicitly so the
+            // intent is on the call site, not implicit in a default.
+            attachment: null,
             cancellationToken: cancellationToken);
     }
 
@@ -218,6 +309,7 @@ public sealed class EmailSendService(
         string? toName,
         string languageCode,
         IReadOnlyDictionary<string, object> substitutions,
+        Attachment? attachment,
         CancellationToken cancellationToken)
     {
         var template = await templates.GetByTypeAsync(templateType, cancellationToken);
@@ -253,7 +345,13 @@ public sealed class EmailSendService(
             ReplyToAddress: template.ReplyToAddress,
             Subject: SubstitutePlainTextPlaceholders(translation.Subject, substitutions),
             PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, substitutions),
-            Data: substitutions.ToDictionary(kv => kv.Key, kv => kv.Value));
+            Data: substitutions.ToDictionary(kv => kv.Key, kv => kv.Value))
+        {
+            // T-0069: customer invoice PDF rides as an inline attachment;
+            // maker email passes null explicitly. Provider skips its
+            // attachment SDK call when null.
+            Attachment = attachment,
+        };
 
         return await SendViaProviderAsync(message, cancellationToken);
     }

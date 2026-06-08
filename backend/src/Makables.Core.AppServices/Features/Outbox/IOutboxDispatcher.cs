@@ -70,7 +70,10 @@ public sealed class OutboxDispatcher(
         if (due.Count == 0) return new DispatchSummary(0, 0, 0, 0);
 
         var parkDuration = TimeSpan.FromMinutes(Math.Max(1, dispatcherOptions.Value.HandoffParkMinutes));
-        var toPublish = new List<OutboxEvent>(due.Count);
+        // T-0069: classify each event once at Phase 1 + remember the verdict
+        // so Phase 3 can publish to the right per-event-type queue without
+        // re-classifying (single source of truth for the routing table).
+        var toPublish = new List<(OutboxEvent Event, RouteTarget Target)>(due.Count);
         var stalled = 0;
 
         // Phase 1: classify + park-or-stall in the entity tracker.
@@ -78,7 +81,8 @@ public sealed class OutboxDispatcher(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!OutboxEventTypes.IsEmailSend(evt.EventType))
+            var target = ClassifyRoute(evt.EventType);
+            if (target == RouteTarget.Unknown)
             {
                 logger.LogError(
                     "OutboxEvent {OutboxEventId} has unknown event_type {EventType}; stalling.",
@@ -92,7 +96,7 @@ public sealed class OutboxDispatcher(
             }
 
             evt.ParkPendingConsumer(now + parkDuration);
-            toPublish.Add(evt);
+            toPublish.Add((evt, target));
         }
 
         // Phase 2: commit the park + stall mutations BEFORE publishing.
@@ -100,17 +104,18 @@ public sealed class OutboxDispatcher(
         // see the row already-parked, not the original NextRetryAt.
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Phase 3: publish each parked row. Failures here happen AFTER
-        // the park is committed; we record them as Transient with
-        // policy-driven nextRetryAt in a second SaveChanges below.
+        // Phase 3: publish each parked row to its destination queue per
+        // the Phase 1 verdict. Failures here happen AFTER the park is
+        // committed; we record them as Transient with policy-driven
+        // nextRetryAt in a second SaveChanges below.
         var routed = 0;
         var failedToPublish = 0;
-        foreach (var evt in toPublish)
+        foreach (var (evt, target) in toPublish)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                await queuePublisher.PublishSendEmailAsync(evt.Id, cancellationToken);
+                await PublishToTargetAsync(target, evt.Id, cancellationToken);
                 routed++;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -120,7 +125,8 @@ public sealed class OutboxDispatcher(
             catch (Exception ex)
             {
                 logger.LogWarning(ex,
-                    "Failed to publish OutboxEvent {OutboxEventId} to send-email queue.", evt.Id);
+                    "Failed to publish OutboxEvent {OutboxEventId} ({EventType}) to {Target} queue.",
+                    evt.Id, evt.EventType, target);
                 var newRetryCount = evt.RetryCount + 1;
                 var nextRetry = OutboxRetryPolicy.NextAttempt(
                     OutboxErrorKind.Transient, newRetryCount, now);
@@ -143,5 +149,36 @@ public sealed class OutboxDispatcher(
             "Outbox sweep complete: loaded={Loaded} routed={Routed} stalled={Stalled} failedToPublish={FailedToPublish}",
             due.Count, routed, stalled, failedToPublish);
         return new DispatchSummary(due.Count, routed, stalled, failedToPublish);
+    }
+
+    private Task PublishToTargetAsync(RouteTarget target, string outboxEventId, CancellationToken cancellationToken) =>
+        target switch
+        {
+            RouteTarget.SendEmail => queuePublisher.PublishSendEmailAsync(outboxEventId, cancellationToken),
+            RouteTarget.GenerateInvoice => queuePublisher.PublishGenerateInvoiceAsync(outboxEventId, cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Internal error: ClassifyRoute returned {target} which should have stalled before reaching Phase 3."),
+        };
+
+    /// <summary>
+    /// Classify <paramref name="eventType"/> into its destination queue per
+    /// T-0069 locked decision 2. Disjoint by construction
+    /// (<see cref="OutboxEventTypes.IsEmailSend"/> and
+    /// <see cref="OutboxEventTypes.IsInvoiceGenerate"/> share zero values);
+    /// anything matching neither is <see cref="RouteTarget.Unknown"/> and
+    /// stalls.
+    /// </summary>
+    private static RouteTarget ClassifyRoute(string eventType)
+    {
+        if (OutboxEventTypes.IsEmailSend(eventType)) return RouteTarget.SendEmail;
+        if (OutboxEventTypes.IsInvoiceGenerate(eventType)) return RouteTarget.GenerateInvoice;
+        return RouteTarget.Unknown;
+    }
+
+    private enum RouteTarget
+    {
+        Unknown = 0,
+        SendEmail,
+        GenerateInvoice,
     }
 }

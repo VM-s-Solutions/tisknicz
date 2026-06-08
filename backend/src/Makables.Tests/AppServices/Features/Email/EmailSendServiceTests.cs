@@ -4,10 +4,14 @@ using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Email;
+using Makables.Core.Domain.Invoices;
+using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
+using Makables.Core.Domain.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace Makables.Tests.AppServices.Features.Email;
 
@@ -25,6 +29,8 @@ public class EmailSendServiceTests
     private readonly IEmailTemplateTranslationRepository _translations =
         Substitute.For<IEmailTemplateTranslationRepository>();
     private readonly IEmailProvider _provider = Substitute.For<IEmailProvider>();
+    private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
+    private readonly IBlobStorageClient _blobStorage = Substitute.For<IBlobStorageClient>();
     private readonly EmailSendService _sut;
 
     public EmailSendServiceTests()
@@ -36,8 +42,9 @@ public class EmailSendServiceTests
             EmailConfirmationPath = "/auth/confirm?token={token}",
             PasswordResetPath = "/auth/reset?token={token}",
         });
-        _sut = new EmailSendService(_templates, _translations, _provider, urls,
-            NullLogger<EmailSendService>.Instance);
+        _sut = new EmailSendService(_templates, _translations, _provider,
+            _invoices, _blobStorage,
+            urls, NullLogger<EmailSendService>.Instance);
     }
 
     private static EmailTemplate CreateTemplate(EmailTemplateType type) =>
@@ -199,6 +206,95 @@ public class EmailSendServiceTests
 
     // === T-0067 — Order email branches. ===
 
+    private const string TestOrderId = "ord-1";
+    private const string TestOrderNumber = "M-CZ-20260042";
+    private const string TestInvoicePdfPath = "cz/orders/ord-1/FV-CZ-20260042.pdf";
+    private static readonly byte[] TestPdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37 };
+
+    /// <summary>
+    /// Build a rendered (PDF-attached) invoice for the order-paid happy
+    /// path. <see cref="Invoice.AttachPdfBlobPath"/> is called so the
+    /// EmailSendService passes the "invoice rendered" gate.
+    /// </summary>
+    private static Invoice CreateRenderedInvoice(string orderId = TestOrderId, string blobPath = TestInvoicePdfPath)
+    {
+        var inv = Invoice.Issue(
+            id: "inv-1",
+            invoiceNumber: "FV-CZ-20260042",
+            type: InvoiceType.Customer,
+            orderId: orderId,
+            payoutBatchId: null,
+            makerId: "maker-1",
+            issuerName: "JVM YORE s.r.o.",
+            issuerIco: "00000000",
+            issuerDic: null,
+            issuerBankAccount: null,
+            recipientName: "Anna Nováková",
+            recipientEmail: "anna@example.cz",
+            recipientTaxId: null,
+            recipientVatId: null,
+            issueDate: new DateOnly(2026, 6, 7),
+            taxableSupplyDate: null,
+            dueDate: new DateOnly(2026, 6, 21),
+            invoicingMode: Makables.Core.Domain.Configuration.InvoicingMode.None,
+            amountWithoutVatMinor: 57_900,
+            vatRateBp: 0,
+            vatAmountMinor: 0,
+            amountWithVatMinor: 57_900,
+            currency: "CZK",
+            countryCode: "CZ");
+        inv.AttachPdfBlobPath(blobPath);
+        return inv;
+    }
+
+    private static Order CreateOrderForEmail(string orderNumber = TestOrderNumber)
+    {
+        return Order.Create(
+            id: TestOrderId,
+            orderNumber: orderNumber,
+            customerUserId: "user-1",
+            makerId: "maker-1",
+            productId: "prod-1",
+            contactName: "Anna Nováková",
+            contactEmail: "anna@example.cz",
+            contactPhone: "+420 777 123 456",
+            productPriceAmountMinor: 50_000,
+            shippingPriceAmountMinor: 7_900,
+            platformFeeAmountMinor: 7_500,
+            makerPayoutAmountMinor: 50_400,
+            totalAmountMinor: 57_900,
+            currency: "CZK",
+            vatRateBp: 2100,
+            shippingMethod: ShippingMethod.ZasilkovnaPickupPoint,
+            zasilkovnaPickupPointId: "pp-42",
+            countryCode: "CZ");
+    }
+
+    /// <summary>
+    /// Pre-stub the new T-0069 deps (Invoice + Order + blob download)
+    /// so the existing OrderPaidCustomerEmail tests stay green. Returns
+    /// the seeded invoice + order so individual tests can assert on
+    /// specific values when they want to.
+    /// </summary>
+    private Invoice ArrangeInvoiceReady(string orderNumber = TestOrderNumber)
+    {
+        // T-0069 reviewer DC1/ID5 fold: OrderNumber is pre-baked into
+        // OrderPaidCustomerEmailPayload by MarkOrderPaid.Handler (T-0067).
+        // EmailSendService never needs to load the Order — the orderNumber
+        // parameter is the value the test injects into the payload, returned
+        // for assertion convenience.
+        _ = orderNumber;
+        var invoice = CreateRenderedInvoice();
+        _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(invoice);
+        _blobStorage.DownloadAsync(BlobContainer.Invoices, TestInvoicePdfPath, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new BlobDownload(
+                Content: new MemoryStream(TestPdfBytes, writable: false),
+                ContentType: "application/pdf",
+                ContentLength: TestPdfBytes.Length,
+                ETag: null)));
+        return invoice;
+    }
+
     private static string EncodeCustomerPayload(
         string lang = LanguageCode.CsCZ,
         string actionUrl = "https://makables.test/objednavka/ord-1") =>
@@ -228,6 +324,7 @@ public class EmailSendServiceTests
     [Fact]
     public async Task SendAsync_with_OrderPaidCustomerEmail_routes_to_OrderEmail_branch()
     {
+        ArrangeInvoiceReady();
         var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
         var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
             "Děkujeme za objednávku", "Pre-baked URL: {{action_url}}");
@@ -267,6 +364,7 @@ public class EmailSendServiceTests
         // the customer's inbox shows the raw "#{{order_number}}" literal.
         // Pin the contract so a future template-engine change can't silently
         // regress.
+        ArrangeInvoiceReady();
         var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
         var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
             "Děkujeme za objednávku #{{order_number}}",
@@ -347,6 +445,7 @@ public class EmailSendServiceTests
     {
         // Mirror the auth-flow translation-fallback behaviour for the
         // order branch — same two-step lookup (requested → fallback).
+        ArrangeInvoiceReady();
         var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
         var trDefault = CreateTranslation(tpl.Id, LanguageCode.DefaultFallback, "Subject", "Body");
         _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>())
@@ -386,5 +485,216 @@ public class EmailSendServiceTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.EmailProviderTransientFailure);
         result.Error.Type.Should().Be(ErrorType.Transient);
+    }
+
+    // === T-0069 — Invoice PDF attachment on the customer order-paid branch. ===
+
+    private void ArrangeOrderPaidTemplate()
+    {
+        var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, "Subject", "Body");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>()).Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-msg-69", DateTimeOffset.UtcNow)));
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_with_invoice_not_yet_rendered_returns_Transient_InvoiceNotYetRendered()
+    {
+        // T-0069 AC-4: race-loser path. The invoice.generate queue lost the
+        // FIFO race; EmailSendService finds no Invoice row yet and returns
+        // Transient so the outbox retries.
+        ArrangeOrderPaidTemplate();
+        _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns((Invoice?)null);
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.InvoiceNotYetRendered);
+        result.Error.Type.Should().Be(ErrorType.Transient);
+        await _provider.DidNotReceive().SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_with_invoice_PdfBlobPath_null_returns_Transient_InvoiceNotYetRendered()
+    {
+        // Defensive variant of AC-4: the Invoice row exists but the render
+        // step hasn't committed PdfBlobPath yet (mid-flight). Same outcome
+        // — Transient → retry → second attempt succeeds.
+        ArrangeOrderPaidTemplate();
+        var halfBaked = Invoice.Issue(
+            id: "inv-1", invoiceNumber: "FV-CZ-20260042",
+            type: InvoiceType.Customer, orderId: TestOrderId, payoutBatchId: null,
+            makerId: "maker-1", issuerName: "JVM YORE", issuerIco: "00000000",
+            issuerDic: null, issuerBankAccount: null,
+            recipientName: "Anna", recipientEmail: "anna@example.cz",
+            recipientTaxId: null, recipientVatId: null,
+            issueDate: new DateOnly(2026, 6, 7), taxableSupplyDate: null,
+            dueDate: new DateOnly(2026, 6, 21),
+            invoicingMode: Makables.Core.Domain.Configuration.InvoicingMode.None,
+            amountWithoutVatMinor: 57_900, vatRateBp: 0, vatAmountMinor: 0,
+            amountWithVatMinor: 57_900, currency: "CZK", countryCode: "CZ");
+        // NB: NO AttachPdfBlobPath call — PdfBlobPath is null.
+        _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(halfBaked);
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.InvoiceNotYetRendered);
+        result.Error.Type.Should().Be(ErrorType.Transient);
+        await _blobStorage.DidNotReceive().DownloadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_happy_path_attaches_PDF_to_EmailMessage()
+    {
+        // T-0069 AC-5: invoice rendered + blob download succeeds →
+        // EmailMessage.Attachment populated; SendGrid provider receives it.
+        ArrangeOrderPaidTemplate();
+        ArrangeInvoiceReady();
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.Attachment != null
+            && m.Attachment.MimeType == "application/pdf"
+            && m.Attachment.Bytes.Length == TestPdfBytes.Length
+            && m.Attachment.Filename.EndsWith(".pdf")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_blob_download_throws_returns_Permanent_InvoicePdfAttachmentDownloadFailed()
+    {
+        // T-0069 AC-8: blob download throws → Permanent (data-integrity
+        // issue worth ops attention).
+        ArrangeOrderPaidTemplate();
+        var invoice = CreateRenderedInvoice();
+        _invoices.GetByOrderIdAsync(TestOrderId, Arg.Any<CancellationToken>()).Returns(invoice);
+        _blobStorage.DownloadAsync(BlobContainer.Invoices, TestInvoicePdfPath, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("blob missing"));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.InvoicePdfAttachmentDownloadFailed);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+        await _provider.DidNotReceive().SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_filename_is_faktura_when_LanguageCode_is_cs_CZ()
+    {
+        // T-0069 AC-6: cs-CZ → "faktura-{OrderNumber}.pdf".
+        ArrangeOrderPaidTemplate();
+        ArrangeInvoiceReady();
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(lang: LanguageCode.CsCZ),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.Attachment != null && m.Attachment.Filename == $"faktura-{TestOrderNumber}.pdf"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPaidCustomerEmail_filename_is_invoice_when_LanguageCode_is_en_US()
+    {
+        // T-0069 AC-6: en-US → "invoice-{OrderNumber}.pdf". The PDF body
+        // is still Czech-only at MVP; only the filename gets the locale
+        // label per locked decision 6.
+        ArrangeOrderPaidTemplate();
+        // The English-locale lookup needs the same translation fallback
+        // path that the existing fallback test exercises — the requested
+        // en-US translation is null, default cs-CZ wins.
+        var tpl = CreateTemplate(EmailTemplateType.OrderPaidCustomer);
+        var trDefault = CreateTranslation(tpl.Id, LanguageCode.DefaultFallback, "Subject", "Body");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPaidCustomer, Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(tpl.Id, "en-US", Arg.Any<CancellationToken>())
+            .Returns((EmailTemplateTranslation?)null);
+        _translations.GetAsync(tpl.Id, LanguageCode.DefaultFallback, Arg.Any<CancellationToken>())
+            .Returns(trDefault);
+        ArrangeInvoiceReady();
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPaidCustomerEmail,
+            EncodeCustomerPayload(lang: "en-US"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.Attachment != null && m.Attachment.Filename == $"invoice-{TestOrderNumber}.pdf"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderPlacedMakerEmail_does_NOT_carry_an_attachment()
+    {
+        // T-0069 AC-10: the maker email is regression-pinned to never
+        // populate Attachment — only the customer email carries the PDF.
+        // Belt-and-braces: also pin that the Invoice/Order/blob deps are
+        // NEVER touched on the maker branch (no perf regression / no
+        // accidental blob download).
+        var tpl = CreateTemplate(EmailTemplateType.OrderPlacedMaker);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, "Nová", "Body");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderPlacedMaker, Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>()).Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-maker-69", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderPlacedMakerEmail,
+            EncodeMakerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m => m.Attachment == null),
+            Arg.Any<CancellationToken>());
+        await _invoices.DidNotReceive().GetByOrderIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _blobStorage.DidNotReceive().DownloadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AuthMagicLinkSend_does_NOT_carry_an_attachment()
+    {
+        // T-0069 AC-9: auth-flow regression pin — Attachment stays null
+        // and none of the new deps are touched.
+        var tpl = CreateTemplate(EmailTemplateType.AuthMagicLink);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, "S", "B");
+        _templates.GetByTypeAsync(Arg.Any<EmailTemplateType>(), Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-auth-69", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.AuthMagicLinkSend,
+            EncodePayload(LanguageCode.CsCZ),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m => m.Attachment == null),
+            Arg.Any<CancellationToken>());
+        await _invoices.DidNotReceive().GetByOrderIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _blobStorage.DidNotReceive().DownloadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }

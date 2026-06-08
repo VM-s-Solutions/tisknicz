@@ -20,4 +20,14 @@ public interface IOutboxQueuePublisher
     /// <c>send-email</c> queue so a <c>SendEmailFunction</c> picks it up.
     /// </summary>
     Task PublishSendEmailAsync(string outboxEventId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Publish an "process this outbox event" message to the
+    /// <c>generate-invoice</c> queue so a <c>GenerateInvoiceFunction</c>
+    /// picks it up and dispatches <c>IssueInvoice.Command</c> via
+    /// Mediator. Per T-0069 locked decision 2: separate queue, separate
+    /// retry budget, separate poison-message dead-letter — render/upload
+    /// failures cannot contaminate the email-send retry budget.
+    /// </summary>
+    Task PublishGenerateInvoiceAsync(string outboxEventId, CancellationToken cancellationToken);
 }

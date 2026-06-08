@@ -34,6 +34,13 @@
          with a synthetic AuthorizationFilterContext, so the reference
          keeps Web.Public's filter class reachable from the unit project. -->
     <ProjectReference Include="..\Makables.Web.Public\Makables.Web.Public.csproj" />
+    <!-- T-0069: GenerateInvoiceFunction lives on Makables.Functions. The
+         unit tests construct it directly with NSubstitute mocks of
+         IOutboxConsumerRepository + ISender — same shape as the existing
+         SendEmailHandler tests. The reference keeps the Function class
+         reachable from the unit project without bringing the Functions
+         worker runtime into the test discovery. -->
+    <ProjectReference Include="..\Makables.Functions\Makables.Functions.csproj" />
   </ItemGroup>
 
 </Project>

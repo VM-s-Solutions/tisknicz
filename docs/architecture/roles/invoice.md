@@ -37,10 +37,11 @@ Be the legal record of a payment between two parties (platform↔customer for an
 
 ## Lifecycle
 
-- **Created by:** `IssueInvoice.Command` — called as part of `MarkOrderPaid` (customer invoice) or `CreatePayoutBatch` (fee invoices)
+- **Created by:** `IssueInvoice.Command` — rendered via T-0068b's `IssueInvoice.Handler`, dispatched by T-0069's `GenerateInvoiceFunction` (queue-triggered) from the `invoice.generate` outbox event that `MarkOrderPaid.Handler` enqueues alongside the customer + maker email events. Same shape for fee invoices once `CreatePayoutBatch` lands (T-0101 / T-0102).
 - **Modified by:** no updates after issuance. Errata require a credit-note invoice (separate invoice with negative amounts, post-MVP).
 - **Persisted by:** `IInvoiceRepository`
 - **Destroyed by:** never. Even GDPR delete anonymizes — the legal record remains.
+- **Attached to email:** the customer's `order.paid.customerEmail` event picks up the rendered PDF by `OrderId` at send time via `EmailSendService.SendOrderPaidCustomerEmailAsync` — language-aware filename (`faktura-{n}.pdf` for cs-CZ + `invoice-{n}.pdf` for en-US) → SendGrid `AddAttachment`. Eventual consistency: if the invoice.generate queue lost the FIFO race, the email returns `Transient(InvoiceNotYetRendered)` and the outbox retry re-delivers (T-0069 locked decision 1).
 
 ## Invariants
 
@@ -75,14 +76,26 @@ Be the legal record of a payment between two parties (platform↔customer for an
 - Font deviation: locked-decision-2 Noto Sans subset deferred — renderer uses QuestPDF default (DejaVu Sans, decent Czech-glyph coverage) pending the `pyftsubset` toolchain in the build env. Documented in `QuestPdfInvoiceRenderer.cs` class XML doc + the status log of T-0068b.
 - SPAYD QR rendering: at T-0068b the renderer emits the SPAYD payload as visible plain text in a "Platba QR kódem" box; full QR-image generation (QRCoder + SkiaSharp) lands in a follow-up. Format-compliance surface (`Spayd.ForInvoice`) ships now.
 
-**Out of scope at T-0068b (deferred):**
+**T-0069 shipped (queue-trigger dispatcher + customer email PDF attachment):**
 
-- Customer-facing PDF download endpoint (T-0086 per locked decision 9 — strict OOS).
-- `GenerateInvoiceFunction` queue-trigger dispatcher (T-0069).
+- Queue-triggered Function: `backend/src/Makables.Functions/Outbox/GenerateInvoiceFunction.cs` — thin MediatR dispatch wrapper per locked decision 3. Loads the outbox row by id, deserialises `InvoiceGenerateOutboxPayload`, dispatches `IssueInvoice.Command(payload.OrderId)`, throws on every failure path so the queue retry policy fires (idempotency owned by `IssueInvoice.Handler` per locked decision 5).
+- Dispatcher routing branch: `backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs` — `OutboxDispatcher.DispatchDueAsync` now classifies each event into `SendEmail` / `GenerateInvoice` / `Unknown` (disjoint by construction since `OutboxEventTypes.IsEmailSend` and `IsInvoiceGenerate` share zero values). Email events → `PublishSendEmailAsync`; invoice.generate events → `PublishGenerateInvoiceAsync`. Unknown still stalls Permanent.
+- Per-queue config: `OutboxQueueOptions.GenerateInvoiceQueueName` (default `"generate-invoice"`) + validator regex `^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$` so typo'd queue names crash the host at boot.
+- Storage queue publisher: `StorageQueueOutboxPublisher.PublishGenerateInvoiceAsync` mirrors the send-email path; independent semaphores so a Storage outage that blocks one queue's `CreateIfNotExistsAsync` doesn't stall the other.
+- Email attachment seam: `EmailSendService.SendOrderPaidCustomerEmailAsync` extends with Invoice lookup → blob download → `Attachment` construction → wired into `EmailMessage`. Race against the invoice.generate queue is handled via `BusinessResult.Failure(Error.Transient(InvoiceNotYetRendered))` — the outbox retries, the second attempt almost always succeeds.
+- Domain shape: new sealed record `backend/src/Makables.Core.Domain/Email/Attachment.cs` (`Filename` + `Bytes` + `MimeType` with non-empty invariants). `EmailMessage.Attachment` optional field defaulting to null per locked decision 8 (single attachment, not a list).
+- SendGrid adapter: `SendGridEmailProvider.SendAsync` calls `sgMessage.AddAttachment` with base64-encoded bytes when `EmailMessage.Attachment` is non-null. 30 MB cap surfaces as `Error.Permanent(InvoicePdfAttachmentTooLarge)` — sniffed via HTTP 413 or 4xx body containing "too large" / "exceeds" / similar (locked decision 4 — outbox stalls for ops, retry can't resolve a fixed cap).
+- 3 new error codes + Czech i18n: `InvoiceNotYetRendered` (Transient), `InvoicePdfAttachmentDownloadFailed` (Permanent), `InvoicePdfAttachmentTooLarge` (Permanent). All three are admin / log surface only — customer never sees them directly.
+
+**Out of scope at T-0069 (deferred):**
+
+- Customer-facing PDF download endpoint (T-0086 per T-0068b locked decision 9 — strict OOS).
 - Fee invoices (`InvoiceType.Fee` rendering + PayoutBatch FK) — T-0101 / T-0102.
 - ReverseCharge / StrictFiscalReporting renderers — post-MVP.
 - Noto Sans subset .ttf embedding — follow-up.
 - QR-image rendering (QRCoder + SkiaSharp) — follow-up.
+- Admin UI for outbox / poison-queue triage — follow-up admin ticket.
+- SendGrid bounce webhook (forwarded email failures) — deferred from T-0028.
 
 ## Related
 

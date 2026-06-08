@@ -184,4 +184,102 @@ public class SendGridEmailProviderTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    // === T-0069 — Attachment wiring + size-error translation. ===
+
+    [Fact]
+    public async Task EmailMessage_with_non_null_Attachment_calls_AddAttachment_with_base64_filename_and_mime()
+    {
+        // T-0069 AC-5: provider only wires bytes per locked decision 7.
+        // SendGrid SDK's AddAttachment expects an ALREADY-base64-encoded
+        // content string + filename + mime type.
+        SendGridMessage? captured = null;
+        _client.SendEmailAsync(Arg.Do<SendGridMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(CreateResponse(HttpStatusCode.Accepted, "sg-x"));
+        var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // "%PDF"
+        var attachment = new Makables.Core.Domain.Email.Attachment(
+            "faktura-M-CZ-20260042.pdf", pdfBytes, "application/pdf");
+
+        await _sut.SendAsync(CreateMessage() with { Attachment = attachment }, CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.Attachments.Should().HaveCount(1);
+        var sgAtt = captured.Attachments[0];
+        sgAtt.Filename.Should().Be("faktura-M-CZ-20260042.pdf");
+        sgAtt.Type.Should().Be("application/pdf");
+        sgAtt.Content.Should().Be(Convert.ToBase64String(pdfBytes));
+    }
+
+    [Fact]
+    public async Task EmailMessage_with_null_Attachment_does_NOT_call_AddAttachment()
+    {
+        // T-0069 AC-9 / AC-10: auth-flow + maker emails pass null
+        // attachment; SendGrid message has no attachments list populated.
+        SendGridMessage? captured = null;
+        _client.SendEmailAsync(Arg.Do<SendGridMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(CreateResponse(HttpStatusCode.Accepted, "sg-x"));
+
+        await _sut.SendAsync(CreateMessage(), CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        // SendGrid's Attachments is null until AddAttachment lands at least
+        // one — either null or empty is acceptable for "no attachment".
+        (captured!.Attachments is null || captured.Attachments.Count == 0)
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SendGrid_413_response_with_attachment_translates_to_InvoicePdfAttachmentTooLarge_Permanent()
+    {
+        // T-0069 AC-7: SendGrid 30 MB cap → Permanent + outbox stall. The
+        // adapter classifies 413 (or 4xx with "too large" body) when the
+        // outgoing message carried an attachment.
+        _client.SendEmailAsync(Arg.Any<SendGridMessage>(), Arg.Any<CancellationToken>())
+            .Returns(CreateResponse(HttpStatusCode.RequestEntityTooLarge));
+        var attachment = new Makables.Core.Domain.Email.Attachment(
+            "faktura-big.pdf", new byte[] { 0x25, 0x50, 0x44, 0x46 }, "application/pdf");
+
+        var result = await _sut.SendAsync(CreateMessage() with { Attachment = attachment }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.InvoicePdfAttachmentTooLarge);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+    }
+
+    [Fact]
+    public async Task SendGrid_400_with_too_large_body_and_attachment_translates_to_InvoicePdfAttachmentTooLarge()
+    {
+        // Defensive variant: some SendGrid responses collapse to 400 with
+        // a "Payload too large" message body. The adapter sniffs the body
+        // when an attachment was on the outgoing message.
+        var http = new HttpResponseMessage(HttpStatusCode.BadRequest);
+        var body = new StringContent("{\"errors\":[{\"message\":\"Payload too large\"}]}");
+        var responseWithBody = new Response(HttpStatusCode.BadRequest, body, http.Headers);
+        _client.SendEmailAsync(Arg.Any<SendGridMessage>(), Arg.Any<CancellationToken>())
+            .Returns(responseWithBody);
+        var attachment = new Makables.Core.Domain.Email.Attachment(
+            "faktura-big.pdf", new byte[] { 0x25 }, "application/pdf");
+
+        var result = await _sut.SendAsync(CreateMessage() with { Attachment = attachment }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.InvoicePdfAttachmentTooLarge);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+    }
+
+    [Fact]
+    public async Task SendGrid_413_without_attachment_still_classifies_as_generic_Permanent()
+    {
+        // Edge: a 413 without an attachment (carrier message had none)
+        // skips the size-sniff entirely; the generic 4xx path wins. This
+        // pins that the attachment-size code only fires when the failing
+        // message actually carried an attachment.
+        _client.SendEmailAsync(Arg.Any<SendGridMessage>(), Arg.Any<CancellationToken>())
+            .Returns(CreateResponse(HttpStatusCode.RequestEntityTooLarge));
+
+        var result = await _sut.SendAsync(CreateMessage(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.EmailProviderPermanentFailure);
+    }
 }
