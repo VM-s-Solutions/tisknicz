@@ -80,3 +80,37 @@ Cheap-deliberation principle from `CLAUDE.md`: user is the challenger. If the ta
 - Agent charters: `../../.claude/agents/{architect,ba,dotnet-backend,dotnet-db,frontend,l10n,optimizer,pm,qa,reviewer,secops}.md`
 - Extension points that trigger architect routing: `../architecture/extension-points.md`
 - Patterns that handlers / pages must follow: `../architecture/patterns.md`
+
+## Bundling related tickets into one PR
+
+A "bundle" is 3-6 tightly-coupled tickets in the same subsystem that ship as a single PR. Bundling reduces PR count and review overhead when tickets share a dep chain and a subsystem boundary.
+
+### When to bundle
+
+- Same subsystem (e.g., "shipping pipeline" = order-accept + ship-zasilkovna + ship-pickup + label-fetch + label-download).
+- Same domain (orders, payments, identity, etc.).
+- Dep chain is sequential and tight (each ticket depends on the previous; no external blockers between them).
+- Total bundle size ≤ ~3000 LOC of production code + ~1500 LOC of tests.
+
+### When NOT to bundle
+
+- Tickets span multiple subsystems (e.g., one shipping + one auth — too much blast radius).
+- A ticket has external blockers (waiting on a third-party API change, design approval, etc.).
+- Bundle would exceed ~6 tickets or ~3000 LOC — split into two bundles.
+
+### Bundle workflow
+
+1. **Grooming:** PM grooms ALL tickets in the bundle BEFORE implementation starts. User answers all AskUserQuestion deliberations up front (batched across tickets). Each ticket's `## Locked design decisions` section is populated; `status: ready`.
+2. **Branch:** single feature branch (e.g., `feat/shipping-pipeline-bundle`).
+3. **Implementation:** dotnet-backend (or relevant implementer) processes tickets sequentially in the same branch. One `feat(T-NNNN):` commit per ticket (or per logical sub-feature within a ticket). TDD-with-commit-order still applies per ticket.
+4. **Parallel reviewer:** runs ONCE for the whole bundle from `in_progress` state. Draft notes at `docs/review/runs/<bundle-name>-draft.md`. Per-ticket draft notes are NOT required for bundles.
+5. **Final review + Gate 8 + Gate 9:** single pass over the full bundle diff at PR-open. Reviewer reads ALL ticket files in the bundle + all modified source files.
+6. **Fold:** single `chore(<bundle>): fold reviewer findings` commit.
+7. **PR:** one PR for the entire bundle. PR description summarizes which tickets are included + AC traceability + test counts before/after.
+8. **L-split rule:** still triggers per ticket. L tickets split into a/b at grooming; both halves can join the bundle.
+
+### Charter overrides
+
+- **`/feature` command:** when invoked with bundle scope (e.g., `/feature shipping-pipeline`), the workflow grooms all tickets in parallel and writes a single bundle plan instead of N per-ticket plans.
+- **`/execute` command:** picks up the next ready bundle from INDEX if one exists; else falls back to single-ticket execution.
+- **DoR check:** PM verifies every ticket in the bundle satisfies DoR before transitioning the bundle to in_progress.

@@ -64,6 +64,21 @@ Do **not** use `/feature` for:
 
    If the PR introduced a new pattern, primary-constructor handler shape, provider seam, or i18n convention, PM also nudges `architect` to backfill the pattern catalogue so the next `/feature` run can cite it in step 1.
 
+## Bundling related tickets
+
+When the work spans 3-6 tightly-coupled tickets in the same subsystem (e.g., `shipping-pipeline = T-0070 + T-0071 + T-0072 + T-0073 + T-0074 + T-0075`), use `/feature` with bundle scope.
+
+**Workflow:**
+1. PM grooms ALL bundle tickets in parallel. AskUserQuestion deliberations are batched across tickets (max 4 questions per round).
+2. Each ticket's `## Locked design decisions` populated; all transition `draft → ready`.
+3. Single feature branch (`feat/<bundle-name>`).
+4. Implementer processes tickets sequentially in the same branch with TDD commit order.
+5. Single reviewer pass + single Gate 8 + single Gate 9 at PR-open.
+6. Single `chore(<bundle>): fold` commit at the end.
+7. One PR for the entire bundle.
+
+See `docs/process/routing.md §"Bundling related tickets into one PR"` for the full rule. See `docs/process/ticket-lifecycle.md §"Bundle DoR"` for the gating criteria.
+
 ## See also
 
 - [CLAUDE.md](../../CLAUDE.md) — project-wide non-negotiables.
