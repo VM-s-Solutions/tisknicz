@@ -68,8 +68,12 @@ public sealed class FilesController(
             return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
         }
 
-        // Step 3: Owner-scoped order load.
-        var order = await orders.GetByIdForMakerAsync(orderId, maker.Id, ct);
+        // Step 3: Owner-scoped order load. Read-only variant: this
+        // endpoint only inspects ShippingCarrierRef + CountryCode and
+        // verifies maker ownership; it never mutates the Order, so the
+        // AsNoTracking variant saves change-tracking overhead per
+        // ADR 0025 §Performance expectations item 2.
+        var order = await orders.GetByIdForMakerReadOnlyAsync(orderId, maker.Id, ct);
         if (order is null)
         {
             return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
@@ -121,15 +125,23 @@ public sealed class FilesController(
         }
         buffer.Position = 0;
 
-        // Snapshot bytes for the background upload — a second MemoryStream
-        // so the response writer + background uploader don't race on Position.
-        var uploadBytes = buffer.ToArray();
+        // Snapshot the underlying byte[] for the background upload —
+        // zero-copy via MemoryStream over the same buffer. The response
+        // writer reads `buffer` from Position=0→Length when ASP.NET
+        // pumps the response; the background Task.Run executes
+        // asynchronously and uses its own Position cursor on a
+        // separate MemoryStream over the shared byte[]. The Task
+        // closure keeps the array reachable until upload completes.
+        var sharedArray = buffer.GetBuffer();
+        var sharedLength = (int)buffer.Length;
         var orderIdForLog = order.Id;
         _ = Task.Run(async () =>
         {
             try
             {
-                using var uploadBuffer = new MemoryStream(uploadBytes, writable: false);
+                using var uploadBuffer = new MemoryStream(
+                    sharedArray, 0, sharedLength,
+                    writable: false, publiclyVisible: true);
                 var uploadResult = await blobs.UploadAsync(
                     BlobContainer.Invoices, path, uploadBuffer, "application/pdf",
                     CancellationToken.None);

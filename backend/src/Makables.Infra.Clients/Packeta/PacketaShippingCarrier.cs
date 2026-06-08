@@ -105,8 +105,10 @@ public sealed class PacketaShippingCarrier(
             new XElement("addressId", order.ZasilkovnaPickupPointId ?? string.Empty),
             new XElement("cod", "0"),
             new XElement("value", (order.TotalAmountMinor / 100m).ToString("0.00", CultureInfo.InvariantCulture)),
-            // TODO: Product.Weight is not on the entity at MVP. Per
-            // ADR 0017 risk register, weight is platform-default 1.0kg.
+            // Tracked: Product.Weight is not on the entity at MVP per
+            // ADR 0017 risk register (§"Weight/value sourcing"). Weight is
+            // platform-default 1.0 kg until a future ticket adds the field
+            // + validation. See docs/adr/0017-shipping-packeta.md.
             new XElement("weight", "1.0"),
             new XElement("currency", order.Currency),
             new XElement("eshop", opts.SenderLabel));
@@ -466,6 +468,8 @@ public sealed class PacketaShippingCarrier(
         public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => _inner.ReadAsync(buffer, offset, count, cancellationToken);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => _inner.ReadAsync(buffer, cancellationToken);
         public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
         public override void SetLength(long value) => _inner.SetLength(value);
         public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);

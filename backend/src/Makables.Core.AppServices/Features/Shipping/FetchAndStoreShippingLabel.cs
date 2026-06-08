@@ -58,9 +58,13 @@ public static class FetchAndStoreShippingLabel
         public async Task<BusinessResult<Response>> Handle(
             Command request, CancellationToken cancellationToken)
         {
-            // Step 1: Load the order unscoped (Function context has no
-            // user identity — same pattern as IssueInvoice).
-            var order = await orders.GetByIdUnscopedAsync(request.OrderId, cancellationToken);
+            // Step 1: Load the order unscoped + read-only (Function
+            // context has no user identity — same pattern as
+            // IssueInvoice). This handler only inspects
+            // ShippingCarrierRef + CountryCode and never mutates the
+            // Order, so the AsNoTracking variant saves change-tracking
+            // overhead per ADR 0025 §Performance expectations item 2.
+            var order = await orders.GetByIdUnscopedReadOnlyAsync(request.OrderId, cancellationToken);
             if (order is null)
             {
                 return BusinessResult.Failure<Response>(

@@ -215,7 +215,17 @@ public static class MakablesClientsExtensions
             .ValidateOnStart();
         services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<PacketaOptions>,
             PacketaOptionsValidator>();
-        services.AddHttpClient(PacketaShippingCarrier.HttpClientName);
+        // Single-attempt cap for Packeta REST calls. The Polly pipeline
+        // (registered below) wraps this with a 3-attempt retry chain, so
+        // the worst-case wall-clock is bounded by 30s × retry budget rather
+        // than HttpClient's default 100s — which would let a hung Packeta
+        // socket pin a request thread for nearly two minutes before the
+        // first retry. 30s mirrors the standard tisknicz external-integration
+        // ceiling (Comgate T-0065).
+        services.AddHttpClient(PacketaShippingCarrier.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         // Keyed registration — selection via CountryConfiguration.DefaultShippingCarrier
         // through ShippingCarrierFactory.

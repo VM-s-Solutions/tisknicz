@@ -59,7 +59,7 @@ public class FetchAndStoreShippingLabelHandlerTests
     public async Task Happy_path_fetches_carrier_label_and_uploads_to_blob()
     {
         var order = BuildShippedOrder();
-        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        _orders.GetByIdUnscopedReadOnlyAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
         _blobStorage.ExistsAsync(BlobContainer.Invoices, ExpectedBlobPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(false));
         _carrier.GetLabelPdfAsync(CarrierRef, Arg.Any<CancellationToken>())
@@ -83,7 +83,7 @@ public class FetchAndStoreShippingLabelHandlerTests
     public async Task Idempotent_when_blob_already_exists_carrier_not_called()
     {
         var order = BuildShippedOrder();
-        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        _orders.GetByIdUnscopedReadOnlyAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
         _blobStorage.ExistsAsync(BlobContainer.Invoices, ExpectedBlobPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(true));
 
@@ -101,7 +101,7 @@ public class FetchAndStoreShippingLabelHandlerTests
     [Fact]
     public async Task Order_not_found_returns_Permanent_OrderNotFound()
     {
-        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns((Order?)null);
+        _orders.GetByIdUnscopedReadOnlyAsync(OrderId, Arg.Any<CancellationToken>()).Returns((Order?)null);
 
         var result = await _sut.Handle(
             new FetchAndStoreShippingLabel.Command(OrderId), CancellationToken.None);
@@ -130,7 +130,7 @@ public class FetchAndStoreShippingLabelHandlerTests
         order.MarkAsPaid(clock, "tx-1");
         order.Accept(clock);
         order.Ship(clock, null, 7, null);
-        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        _orders.GetByIdUnscopedReadOnlyAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
 
         var result = await _sut.Handle(
             new FetchAndStoreShippingLabel.Command(OrderId), CancellationToken.None);
@@ -144,7 +144,7 @@ public class FetchAndStoreShippingLabelHandlerTests
     public async Task Carrier_transient_propagates_no_upload()
     {
         var order = BuildShippedOrder();
-        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        _orders.GetByIdUnscopedReadOnlyAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
         _blobStorage.ExistsAsync(BlobContainer.Invoices, ExpectedBlobPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(false));
         _carrier.GetLabelPdfAsync(CarrierRef, Arg.Any<CancellationToken>())
