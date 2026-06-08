@@ -4,12 +4,15 @@ using Microsoft.EntityFrameworkCore;
 namespace Makables.Infra.Database.Orders;
 
 /// <summary>
-/// EF Core <see cref="IOrderRepository"/> impl. Tracked reads on every
-/// <c>GetByIdFor*</c> because the state-machine command handlers (T-0067
-/// mark paid, T-0071 accept, T-0072 ship, T-0076 deliver, T-0083 cancel,
-/// T-0105 refund, T-0106 dispute, T-0107 admin manual) all mutate the
-/// returned aggregate and rely on the
-/// <c>UnitOfWorkPipelineBehavior</c> to commit.
+/// EF Core <see cref="IOrderRepository"/> impl. Tracked reads on the
+/// <c>GetByIdFor*</c> / <c>GetByIdUnscopedAsync</c> variants because the
+/// state-machine command handlers (T-0067 mark paid, T-0071 accept,
+/// T-0072 ship, T-0073 hand over, T-0076 deliver, T-0083 cancel, T-0105
+/// refund, T-0106 dispute, T-0107 admin manual) all mutate the returned
+/// aggregate and rely on the <c>UnitOfWorkPipelineBehavior</c> to commit.
+/// Read-only callers (T-0074 label fetch, T-0075 label download) use the
+/// paired <c>*ReadOnlyAsync</c> variants which add <c>.AsNoTracking()</c>
+/// per ADR 0025 §Performance expectations item 2.
 ///
 /// <para>
 /// Soft-delete filtering is automatic via
@@ -71,6 +74,26 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
                 cancellationToken);
     }
 
+    public Task<Order?> GetByIdForMakerReadOnlyAsync(
+        string orderId,
+        string makerId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(makerId))
+            return Task.FromResult<Order?>(null);
+
+        // AsNoTracking: read-only callers (T-0075 maker-host label
+        // download) only inspect ShippingCarrierRef + CountryCode and
+        // verify maker ownership; they never call methods on the
+        // returned aggregate. Skipping change-tracking + the snapshot
+        // allocation per ADR 0025 §Performance expectations item 2.
+        return db.Set<Order>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                o => o.Id == orderId && o.MakerId == makerId,
+                cancellationToken);
+    }
+
     public Task<Order?> GetByIdUnscopedAsync(string orderId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(orderId))
@@ -84,6 +107,27 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         // or GetByIdForMakerAsync. T-0060 Copilot review C-6.
         return db.Set<Order>()
             .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+    }
+
+    public Task<Order?> GetByIdUnscopedReadOnlyAsync(
+        string orderId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+            return Task.FromResult<Order?>(null);
+
+        // IgnoreQueryFilters: matches GetByIdUnscopedAsync — admin /
+        // reconciliation / Function-context callers may legitimately
+        // need to see soft-deleted rows.
+        // AsNoTracking: read-only callers (T-0074
+        // FetchAndStoreShippingLabel) only inspect ShippingCarrierRef +
+        // CountryCode; they never call methods on the returned
+        // aggregate. Skipping change-tracking + the snapshot allocation
+        // per ADR 0025 §Performance expectations item 2.
+        return db.Set<Order>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
     }
 

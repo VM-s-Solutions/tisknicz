@@ -124,6 +124,14 @@ jobs:
           Comgate__MerchantId: 'ci-spec-parity-stub-merchant'
           Comgate__Secret: 'ci-spec-parity-stub-secret'
           Comgate__BaseUrl: 'https://payments.comgate.cz'
+          # T-0070: Packeta carrier stub values for spec-parity host boot.
+          # Validator requires ApiKey + PublicWidgetKey non-empty and BaseUrl
+          # / WidgetScriptUrl absolute. Hosts don't call Packeta on startup.
+          Packeta__ApiKey: 'ci-spec-parity-stub-packeta-api-key'
+          Packeta__PublicWidgetKey: 'ci-spec-parity-stub-packeta-public-widget-key'
+          Packeta__BaseUrl: 'https://api.packeta.com'
+          Packeta__SenderLabel: 'makables-cz'
+          Packeta__WidgetScriptUrl: 'https://widget.packeta.com/v6/www/js/library.js'
           ASPNETCORE_ENVIRONMENT: Production
         run: |
           mkdir -p /tmp/host-logs

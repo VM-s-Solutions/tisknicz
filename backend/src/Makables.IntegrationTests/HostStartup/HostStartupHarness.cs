@@ -68,6 +68,15 @@ internal static class HostStartupHarness
                     ["Comgate:MerchantId"] = "12345",
                     ["Comgate:Secret"] = "integration-test-secret",
                     ["Comgate:BaseUrl"] = "https://payments.comgate.test",
+                    // T-0070: PacketaOptions ValidateOnStart needs ApiKey +
+                    // PublicWidgetKey + absolute-https BaseUrl/WidgetScriptUrl.
+                    // Stub values keep the host bootable; tests that exercise
+                    // shipping flows override the keyed IShippingCarrier.
+                    ["Packeta:ApiKey"] = "integration-test-packeta-key",
+                    ["Packeta:PublicWidgetKey"] = "integration-test-packeta-public-key",
+                    ["Packeta:BaseUrl"] = "https://api.packeta.test",
+                    ["Packeta:WidgetScriptUrl"] = "https://widget.packeta.test/v6/library.js",
+                    ["Packeta:SenderLabel"] = "makables-test",
                     // T-0042: AddMakablesBlobStorage requires either
                     // ConnectionString (dev/CI) or ServiceUri (Managed
                     // Identity). Stub connection string for tests.

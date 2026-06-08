@@ -111,6 +111,15 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(o => o.ShippingCarrierRef)
             .HasColumnName("shipping_carrier_ref").HasMaxLength(200);
+
+        // T-0070: pre-computed customer-facing tracking URL. Set by T-0072
+        // ShipOrder.Handler; null for personal-pickup (T-0073) + any
+        // pre-T-0072 orders. Length 500 matches Order.MaxShippingCarrierTrackingUrlLength
+        // (Packeta URLs are ~50 chars; 500 gives generous headroom).
+        builder.Property(o => o.ShippingCarrierTrackingUrl)
+            .HasColumnName("shipping_carrier_tracking_url")
+            .HasMaxLength(Order.MaxShippingCarrierTrackingUrlLength);
+
         builder.Property(o => o.AutoDeliverAt).HasColumnName("auto_deliver_at");
 
         // === Customer notes ===

@@ -1571,6 +1571,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("shipping_carrier_ref");
 
+                    b.Property<string>("ShippingCarrierTrackingUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("shipping_carrier_tracking_url");
+
                     b.Property<string>("ShippingMethod")
                         .IsRequired()
                         .HasMaxLength(40)

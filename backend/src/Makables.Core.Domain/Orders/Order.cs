@@ -199,6 +199,18 @@ public sealed class Order : Auditable
     public string? ShippingCarrierRef { get; private set; }
 
     /// <summary>
+    /// Pre-computed customer-facing tracking URL (e.g.
+    /// <c>https://tracking.packeta.com/Z{ShippingCarrierRef}</c>), set on
+    /// <see cref="Ship"/> when the carrier path provides one. Null for
+    /// personal-pickup orders (T-0073) and for any pre-T-0072 orders.
+    /// <b>Set-once</b> — any prior non-null value is sticky; mirrors the
+    /// <see cref="ShippingCarrierRef"/> + <see cref="PaymentProviderRef"/>
+    /// patterns. Length-capped at 500 chars to match the column. T-0070
+    /// ships the column; T-0072 wires the writer. T-0070 locked decision A.1.
+    /// </summary>
+    public string? ShippingCarrierTrackingUrl { get; private set; }
+
+    /// <summary>
     /// When the auto-deliver job will flip <see cref="OrderState.Shipped"/>
     /// to <see cref="OrderState.Delivered"/> if no manual / carrier
     /// confirmation arrives. Set atomically with <see cref="ShippedAt"/>
@@ -535,11 +547,15 @@ public sealed class Order : Auditable
         return BusinessResult.Success();
     }
 
+    /// <summary>Max length of <see cref="ShippingCarrierTrackingUrl"/>. Matches the column.</summary>
+    public const int MaxShippingCarrierTrackingUrlLength = 500;
+
     /// <summary>
     /// <see cref="OrderState.Accepted"/> → <see cref="OrderState.Shipped"/>.
     /// Sets <see cref="ShippedAt"/>, <see cref="AutoDeliverAt"/> =
     /// <see cref="ShippedAt"/> + <paramref name="autoDeliverWindowDays"/>,
-    /// and <see cref="ShippingCarrierRef"/> when supplied.
+    /// and <see cref="ShippingCarrierRef"/> / <see cref="ShippingCarrierTrackingUrl"/>
+    /// when supplied.
     ///
     /// <para>
     /// <paramref name="shippingCarrierRef"/> is nullable because the
@@ -549,14 +565,25 @@ public sealed class Order : Auditable
     /// </para>
     ///
     /// <para>
-    /// <paramref name="autoDeliverWindowDays"/> must be positive. The
-    /// caller (T-0072 <c>ShipOrder.Handler</c>) supplies the constant
-    /// 7 per role/order.md / ADR 0017. The parameter exists so a future
-    /// <c>CountryConfiguration</c>-driven window can be plumbed without
-    /// re-shaping the entity.
+    /// <paramref name="trackingUrl"/> (T-0072) is nullable for the same
+    /// reason — personal-pickup passes null. When non-null it's length-
+    /// validated (max <see cref="MaxShippingCarrierTrackingUrlLength"/>)
+    /// and trimmed; the set-once guard fires if a prior non-null value
+    /// is on the entity. Mirrors the <see cref="ShippingCarrierRef"/>
+    /// pattern.
+    /// </para>
+    ///
+    /// <para>
+    /// <paramref name="autoDeliverWindowDays"/> must be positive. T-0072 /
+    /// T-0073 both supply 7 per T-0070 locked decision A.4 (uniform window
+    /// across shipping methods).
     /// </para>
     /// </summary>
-    public BusinessResult Ship(IClock clock, string? shippingCarrierRef, int autoDeliverWindowDays)
+    public BusinessResult Ship(
+        IClock clock,
+        string? shippingCarrierRef,
+        int autoDeliverWindowDays,
+        string? trackingUrl = null)
     {
         ArgumentNullException.ThrowIfNull(clock);
         if (autoDeliverWindowDays <= 0)
@@ -577,12 +604,29 @@ public sealed class Order : Auditable
             return BusinessResult.Failure(
                 Error.Conflict("shippingCarrierRef", BusinessErrorMessage.OrderInvalidTransition));
 
+        // T-0072: symmetric set-once guard on ShippingCarrierTrackingUrl.
+        // Any prior non-null value is sticky.
+        if (ShippingCarrierTrackingUrl is not null)
+            return BusinessResult.Failure(
+                Error.Conflict("trackingUrl", BusinessErrorMessage.OrderInvalidTransition));
+
+        var trimmedTrackingUrl = string.IsNullOrWhiteSpace(trackingUrl) ? null : trackingUrl.Trim();
+        if (trimmedTrackingUrl is not null
+            && trimmedTrackingUrl.Length > MaxShippingCarrierTrackingUrlLength)
+        {
+            throw new ArgumentException(
+                $"TrackingUrl must be at most {MaxShippingCarrierTrackingUrlLength} chars.",
+                nameof(trackingUrl));
+        }
+
         var now = clock.UtcNow;
         State = OrderState.Shipped;
         ShippedAt = now;
         AutoDeliverAt = now.AddDays(autoDeliverWindowDays);
         if (!string.IsNullOrWhiteSpace(shippingCarrierRef))
             ShippingCarrierRef = shippingCarrierRef.Trim();
+        if (trimmedTrackingUrl is not null)
+            ShippingCarrierTrackingUrl = trimmedTrackingUrl;
         return BusinessResult.Success();
     }
 

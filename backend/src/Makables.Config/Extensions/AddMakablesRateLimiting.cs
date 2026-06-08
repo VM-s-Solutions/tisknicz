@@ -31,6 +31,14 @@ public static class MakablesRateLimitingExtensions
     public const string PolicyName = "default";
     public const string AddressesAutocompletePolicyName = "addresses-autocomplete";
 
+    /// <summary>
+    /// T-0070: per-IP rate-limit policy on the public Packeta widget-config
+    /// endpoint. 100 req/min/IP — with the 1h client cache on success, a
+    /// legitimate customer hits this 1–2x per checkout. Bots / scrapers
+    /// get blocked.
+    /// </summary>
+    public const string ShippingWidgetConfigPolicyName = "shipping-widget-config";
+
     public static IServiceCollection AddMakablesRateLimiting(
         this IServiceCollection services,
         string audience)
@@ -60,6 +68,10 @@ public static class MakablesRateLimitingExtensions
             // free quota in minutes.
             options.AddPolicy(AddressesAutocompletePolicyName, http =>
                 PartitionAutocomplete(http));
+
+            // T-0070: per-IP 100/min on the public shipping widget-config.
+            options.AddPolicy(ShippingWidgetConfigPolicyName, http =>
+                PartitionShippingWidgetConfig(http));
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
@@ -103,6 +115,27 @@ public static class MakablesRateLimitingExtensions
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                AutoReplenishment = true,
+            });
+    }
+
+    /// <summary>
+    /// T-0070 partitioned per-IP limiter for the public shipping
+    /// widget-config endpoint. 100/min/IP. The endpoint is anonymous,
+    /// so JWT-claim partitioning never applies — we go straight to IP.
+    /// </summary>
+    private static RateLimitPartition<string> PartitionShippingWidgetConfig(HttpContext http)
+    {
+        var ip = http.Connection.RemoteIpAddress?.ToString();
+        var partitionKey = string.IsNullOrWhiteSpace(ip) ? "ip:unknown" : $"ip:{ip}";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,

@@ -53,4 +53,57 @@ public class OutboxEventTypesTests
         OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.InvoiceGenerate).Should().BeTrue();
         OutboxEventTypes.IsEmailSend(OutboxEventTypes.InvoiceGenerate).Should().BeFalse();
     }
+
+    // ---- T-0072: IsGenerateLabel classifier (test-first per TDD policy) ----
+
+    [Fact]
+    public void IsGenerateLabel_returns_true_for_the_shipping_generate_label_constant()
+    {
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.ShippingGenerateLabel).Should().BeTrue();
+        // Pin the literal too — adding the constant + classifier in the same
+        // commit could silently rename the string without the classifier
+        // noticing; this assertion catches that drift.
+        OutboxEventTypes.IsGenerateLabel("shipping.generate.label").Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(OutboxEventTypes.AuthMagicLinkSend)]
+    [InlineData(OutboxEventTypes.AuthEmailConfirmationSend)]
+    [InlineData(OutboxEventTypes.AuthPasswordResetSend)]
+    [InlineData(OutboxEventTypes.OrderPaidCustomerEmail)]
+    [InlineData(OutboxEventTypes.OrderPlacedMakerEmail)]
+    [InlineData(OutboxEventTypes.OrderAcceptedCustomerEmail)]
+    [InlineData(OutboxEventTypes.OrderShippedCustomerEmail)]
+    [InlineData(OutboxEventTypes.InvoiceGenerate)]
+    [InlineData("future.unknown.event")]
+    [InlineData("")]
+    public void IsGenerateLabel_returns_false_for_other_event_types(string eventType)
+    {
+        OutboxEventTypes.IsGenerateLabel(eventType).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsGenerateLabel_and_IsEmailSend_are_disjoint_for_shipping_generate_label()
+    {
+        // T-0072 locked decision: queue-per-event-class. The dispatcher
+        // routes shipping.generate.label to its OWN queue, not the email
+        // queue. Disjoint classifiers prevent silent mis-routing.
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.ShippingGenerateLabel).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.ShippingGenerateLabel).Should().BeFalse();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.ShippingGenerateLabel).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderAcceptedCustomerEmail()
+    {
+        // T-0071: the customer-acceptance email rides the send-email queue.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderAcceptedCustomerEmail).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderShippedCustomerEmail()
+    {
+        // T-0072: the customer-shipped email rides the send-email queue.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderShippedCustomerEmail).Should().BeTrue();
+    }
 }

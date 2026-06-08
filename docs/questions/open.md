@@ -90,3 +90,16 @@
   - Pass-through always: drop the resolver, surface the raw code, let the frontend render its own translation. Pro: zero domain-knowledge here. Con: same ugly-code problem, plus loses the server-side rendering hook for invoices / labels.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0007 — Comgate HttpClient missing timeout (parity with Packeta T-0070 fold)
+- **From:** dotnet-backend (T-0070 Gate 8 fold)
+- **Ticket / context:** T-0070 — shipping-pipeline bundle Gate 8 review
+- **Asked:** 2026-06-08
+- **Blocking:** no — Polly retry pipeline caps total wall-clock; HttpClient default ~100s only matters during a hung-socket scenario that the retry budget would not recover from anyway.
+- **Question:** The T-0070 Gate 8 fold added `client.Timeout = TimeSpan.FromSeconds(30)` to the Packeta `AddHttpClient` registration to cap single-attempt latency. While applying it, the agent noticed `services.AddHttpClient(ComgatePaymentProvider.HttpClientName)` at `AddMakablesClients.cs:201` registers Comgate with NO explicit timeout — same bug pattern Gate 8 flagged for Packeta. Should we apply the same 30s timeout to Comgate?
+- **Options the agent has considered:**
+  - Apply 30s timeout to Comgate now in a follow-up ticket (T-0091?). Pro: closes the same hot-path risk for payments. Con: needs its own PR + reviewer pass.
+  - Wait for Gate 8 to flag it during a payment-ticket review. Pro: scope-creep avoidance. Con: latent risk during payment 5xx storms.
+  - Add `Comgate:TimeoutSeconds` to ComgateOptions + bind from config. Pro: more flexible. Con: bigger change; out of scope for a Comgate timeout fix.
+- **Status:** open
+- **Answer (filled by user):**

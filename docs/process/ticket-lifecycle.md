@@ -30,6 +30,19 @@ PM blocks transition from `draft → ready` until all of the following are satis
 6. **security_touching boolean** — Ticket front-matter includes `security_touching: true | false`. True if the ticket touches auth, encryption, secrets, permission checks, rate limits, or webhook signatures. Reviewer + SecOps must concur before ready.
 7. **layers populated** — Ticket documents which technical layers it affects: `layers: [domain | appservices | infra | web | frontend | config | database]`. Guides router to the correct implementing agent(s).
 
+### Bundle DoR
+
+When tickets are bundled into a single PR (3-6 tickets per `docs/process/routing.md §"Bundling related tickets into one PR"`), the bundle as a whole satisfies DoR when:
+
+1. **Every ticket in the bundle individually satisfies the 7 DoR items above.** PM does not skip per-ticket DoR for bundled tickets.
+2. **Bundle scope is named** in the branch name (e.g., `feat/shipping-pipeline-bundle`) and called out in each ticket's `## Context` section.
+3. **Bundle order is documented** in each ticket's `## Context`: which ticket comes first, which last, why this ordering.
+4. **No external blockers between tickets in the bundle.** If a ticket in the middle of the bundle blocks on external work, split the bundle.
+5. **Single parallel-reviewer artifact** lives at `docs/review/runs/<bundle-name>-draft.md` (not per-ticket).
+6. **L-split rule still triggers per ticket.** L tickets in a bundle split into a/b at grooming; both halves can join the bundle.
+
+PM blocks `draft → ready` on the bundle's first ticket until ALL bundle tickets are individually ready.
+
 ## Workflow per ticket
 
 1. **PM picks** the next ready ticket whose dependencies are done.

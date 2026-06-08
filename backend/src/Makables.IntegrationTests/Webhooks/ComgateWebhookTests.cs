@@ -135,6 +135,12 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
                         ["Comgate:MerchantId"] = "12345",
                         ["Comgate:Secret"] = "integration-test-secret",
                         ["Comgate:BaseUrl"] = "https://payments.comgate.test",
+                        // T-0070 PacketaOptions ValidateOnStart stubs.
+                        ["Packeta:ApiKey"] = "integration-test-packeta-key",
+                        ["Packeta:PublicWidgetKey"] = "integration-test-packeta-public-key",
+                        ["Packeta:BaseUrl"] = "https://api.packeta.test",
+                        ["Packeta:WidgetScriptUrl"] = "https://widget.packeta.test/v6/library.js",
+                        ["Packeta:SenderLabel"] = "makables-test",
                         ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
                         ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
                         ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",

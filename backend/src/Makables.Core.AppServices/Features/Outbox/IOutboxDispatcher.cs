@@ -156,22 +156,22 @@ public sealed class OutboxDispatcher(
         {
             RouteTarget.SendEmail => queuePublisher.PublishSendEmailAsync(outboxEventId, cancellationToken),
             RouteTarget.GenerateInvoice => queuePublisher.PublishGenerateInvoiceAsync(outboxEventId, cancellationToken),
+            RouteTarget.GenerateLabel => queuePublisher.PublishGenerateLabelAsync(outboxEventId, cancellationToken),
             _ => throw new InvalidOperationException(
                 $"Internal error: ClassifyRoute returned {target} which should have stalled before reaching Phase 3."),
         };
 
     /// <summary>
     /// Classify <paramref name="eventType"/> into its destination queue per
-    /// T-0069 locked decision 2. Disjoint by construction
-    /// (<see cref="OutboxEventTypes.IsEmailSend"/> and
-    /// <see cref="OutboxEventTypes.IsInvoiceGenerate"/> share zero values);
-    /// anything matching neither is <see cref="RouteTarget.Unknown"/> and
-    /// stalls.
+    /// T-0069 locked decision 2 + T-0072 (label) split. Disjoint by
+    /// construction — anything matching no classifier is
+    /// <see cref="RouteTarget.Unknown"/> and stalls.
     /// </summary>
     private static RouteTarget ClassifyRoute(string eventType)
     {
         if (OutboxEventTypes.IsEmailSend(eventType)) return RouteTarget.SendEmail;
         if (OutboxEventTypes.IsInvoiceGenerate(eventType)) return RouteTarget.GenerateInvoice;
+        if (OutboxEventTypes.IsGenerateLabel(eventType)) return RouteTarget.GenerateLabel;
         return RouteTarget.Unknown;
     }
 
@@ -180,5 +180,6 @@ public sealed class OutboxDispatcher(
         Unknown = 0,
         SendEmail,
         GenerateInvoice,
+        GenerateLabel,
     }
 }

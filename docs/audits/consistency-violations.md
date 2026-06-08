@@ -52,7 +52,11 @@
 - backend/src/Makables.Core.AppServices/Features/Orders/AddOrderAttachment.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CreateOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CreatePaymentSession.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/HandOverOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderPaid.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreShippingLabel.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Validator"

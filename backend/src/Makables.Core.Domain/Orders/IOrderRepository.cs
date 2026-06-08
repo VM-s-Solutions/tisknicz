@@ -87,6 +87,25 @@ public interface IOrderRepository
     Task<Order?> GetByIdForMakerAsync(string orderId, string makerId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Read-only maker-scoped variant of <see cref="GetByIdForMakerAsync"/>.
+    /// Same IDOR shield + return shape, but applies <c>.AsNoTracking()</c>
+    /// so EF Core skips change-tracking and the snapshot allocation. Use
+    /// this when the handler does NOT call methods on the returned
+    /// <see cref="Order"/> — saves change-tracking overhead per
+    /// ADR 0025 §Performance expectations item 2.
+    ///
+    /// <para>
+    /// Read-only callers (T-0075 maker-host label download) only inspect
+    /// <see cref="Order.ShippingCarrierRef"/> + <see cref="Common.Auditable.CountryCode"/>
+    /// and verify maker ownership; mutating callers
+    /// (<c>AcceptOrder</c> / <c>ShipOrder</c> / <c>HandOverOrder</c> /
+    /// <c>MarkOrderPaid</c>) keep using the tracked
+    /// <see cref="GetByIdForMakerAsync"/>.
+    /// </para>
+    /// </summary>
+    Task<Order?> GetByIdForMakerReadOnlyAsync(string orderId, string makerId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Load a single order without ownership scoping. <b>Admin host
     /// only</b> per ADR 0013. Used by admin lookups (T-0107 manual
     /// state change, T-0105 refund) and GDPR reconciliation (T-0110).
@@ -101,6 +120,24 @@ public interface IOrderRepository
     /// </para>
     /// </summary>
     Task<Order?> GetByIdUnscopedAsync(string orderId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Read-only variant of <see cref="GetByIdUnscopedAsync"/>. Applies
+    /// <c>.IgnoreQueryFilters()</c> (admin/reconciliation rows still
+    /// visible) and <c>.AsNoTracking()</c> so EF Core skips change-tracking
+    /// and the snapshot allocation. Use this when the handler does NOT
+    /// call methods on the returned <see cref="Order"/> — saves
+    /// change-tracking overhead per ADR 0025 §Performance expectations
+    /// item 2.
+    ///
+    /// <para>
+    /// Read-only callers (T-0074 <c>FetchAndStoreShippingLabel</c>) only
+    /// inspect <see cref="Order.ShippingCarrierRef"/> +
+    /// <see cref="Common.Auditable.CountryCode"/>; mutating callers
+    /// keep using the tracked <see cref="GetByIdUnscopedAsync"/>.
+    /// </para>
+    /// </summary>
+    Task<Order?> GetByIdUnscopedReadOnlyAsync(string orderId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Look up an order by its payment provider reference (Comgate

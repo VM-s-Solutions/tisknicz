@@ -260,7 +260,43 @@ public static class BusinessErrorMessage
     public const string PaymentWebhookRefIdMismatch = "payment.webhook.refIdMismatch";
 
     // === Shipping ===
+    /// <summary>
+    /// HTTP-level transient failure talking to the carrier — network blip,
+    /// timeout, 5xx, 408, 429. Classified <see cref="ErrorType.Transient"/>.
+    /// T-0070.
+    /// </summary>
     public const string ShippingCarrierUnavailable = "shipping.carrierUnavailable";
+
+    /// <summary>
+    /// Carrier rejected the shipment because the order's weight is out of
+    /// the supported range. Classified <see cref="ErrorType.Permanent"/> —
+    /// retrying won't help. T-0070.
+    /// </summary>
+    public const string ShippingCarrierInvalidWeight = "shipping.invalidWeight";
+
+    /// <summary>
+    /// Carrier rejected the shipment because the supplied pickup-point
+    /// (Packeta <c>addressId</c>) is no longer valid (deprecated branch).
+    /// Classified <see cref="ErrorType.Permanent"/>; customer picks a new
+    /// branch. T-0070.
+    /// </summary>
+    public const string ShippingCarrierAddressIdNotFound = "shipping.addressIdNotFound";
+
+    /// <summary>
+    /// Carrier rejected the API call with an auth / configuration error
+    /// (wrong API key, wrong sender label). Classified
+    /// <see cref="ErrorType.Configuration"/> — ops must intervene; logged
+    /// at Critical so an alert fires. T-0070.
+    /// </summary>
+    public const string ShippingCarrierConfigurationError = "shipping.configurationError";
+
+    /// <summary>
+    /// Maker called the wrong shipping endpoint for this order's
+    /// <c>ShippingMethod</c> (e.g. POSTed /handover for a Zásilkovna order
+    /// or /ship for a PersonalPickup order). Classified
+    /// <see cref="ErrorType.Validation"/>. T-0072.
+    /// </summary>
+    public const string ShippingMethodNotEligible = "shipping.methodNotEligible";
 
     // === Review ===
     public const string ReviewAlreadyExists = "review.alreadyExists";
