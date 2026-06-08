@@ -425,6 +425,21 @@ export const messages = {
     'Stažení PDF faktury selhalo. Tým byl informován.',
   'invoice.pdfAttachmentTooLarge':
     'PDF faktury překračuje maximální velikost přílohy. Tým byl informován.',
+  // T-0070 shipping carrier codes. Customer-facing (carrierUnavailable +
+  // addressIdNotFound) and admin/log-facing (invalidWeight +
+  // configurationError) surfaces. Mirror of the payment-provider codes.
+  'shipping.carrierUnavailable':
+    'Doprava je momentálně nedostupná. Zkuste to prosím za chvíli.',
+  'shipping.invalidWeight':
+    'Hmotnost zásilky překračuje povolený limit. Tým byl informován.',
+  'shipping.addressIdNotFound':
+    'Vybrané výdejní místo již není dostupné. Vyberte prosím jiné.',
+  'shipping.configurationError':
+    'Konfigurace dopravce není správně nastavena. Tým byl informován.',
+  // T-0072: maker called the wrong shipping endpoint for this order's
+  // shipping method. Frontend dashboard surfaces this on the order detail.
+  'shipping.methodNotEligible':
+    'Tato objednávka není zásilkovnová — použijte tlačítko Předat osobně.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
