@@ -33,9 +33,9 @@ namespace Makables.Infra.Database.Migrations
             // === T-0070 §A.7 + §B: CZ default shipping carrier = 'packeta'. ===
             // The provider seed for CZ may already have a value (admin edits
             // possible); we deliberately overwrite to anchor the launch
-            // posture. country_configurations.id == 'CZ' per Country.Create.
+            // posture. country_configuration.id == 'CZ' per Country.Create.
             migrationBuilder.Sql(@"
-                UPDATE country_configurations
+                UPDATE country_configuration
                    SET default_shipping_carrier = 'packeta'
                  WHERE id = 'CZ';
             ");
@@ -114,7 +114,7 @@ namespace Makables.Infra.Database.Migrations
 
                 -- Restore the prior CZ default carrier to NULL/empty —
                 -- best-effort reversal; admin can re-seed manually.
-                UPDATE country_configurations
+                UPDATE country_configuration
                    SET default_shipping_carrier = ''
                  WHERE id = 'CZ' AND default_shipping_carrier = 'packeta';
             ");
