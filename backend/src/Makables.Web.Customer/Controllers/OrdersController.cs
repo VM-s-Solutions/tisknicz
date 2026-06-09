@@ -3,6 +3,7 @@ using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Orders.Sorting;
 using Makables.Core.Domain.Orders.Validators;
 using Makables.Core.Domain.Storage;
 using Microsoft.AspNetCore.Authorization;
@@ -90,6 +91,48 @@ public sealed class OrdersController(
     public sealed record MarkOrderDeliveredApiResponse(
         string OrderId,
         OrderState State);
+
+    /// <summary>
+    /// Paged customer order list (T-0080 / US-customer-0016). Default
+    /// sort is newest-first; filter by <see cref="OrderState"/> and / or
+    /// a <c>CreatedAt</c> date range; page size clamped to
+    /// <see cref="GetCustomerOrders.MaxPageSize"/>.
+    ///
+    /// <para>
+    /// The owning customer is resolved from the JWT inside the handler;
+    /// there is no customer-id query parameter. Cross-tenant probes
+    /// surface as an empty page (TotalCount = 0), not 404.
+    /// </para>
+    /// </summary>
+    [HttpGet("")]
+    [ProducesResponseType(typeof(GetCustomerOrders.GetCustomerOrdersResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = GetCustomerOrders.DefaultPageSize,
+        [FromQuery] OrderState? state = null,
+        [FromQuery] DateTimeOffset? dateFrom = null,
+        [FromQuery] DateTimeOffset? dateTo = null,
+        [FromQuery] OrderSort sort = OrderSort.CreatedAtDesc,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(
+            new GetCustomerOrders.Query(page, pageSize, state, dateFrom, dateTo, sort), ct));
+
+    /// <summary>
+    /// Customer order detail (T-0082 / US-customer-0012). Returns the
+    /// full lifecycle snapshot plus inline attachments + invoice PDF URL.
+    /// Cross-customer probes return 404 (same shape as nonexistent).
+    /// </summary>
+    [HttpGet("{orderId}")]
+    [ProducesResponseType(typeof(GetCustomerOrderDetails.GetCustomerOrderDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(string orderId, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(new GetCustomerOrderDetails.Query(orderId), ct));
 
     /// <summary>
     /// Create a customer order in <see cref="OrderState.PendingPayment"/>.

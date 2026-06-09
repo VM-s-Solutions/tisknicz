@@ -156,6 +156,12 @@ public static class MakablesInfrastructureExtensions
         // === Orders (T-0060) ===
         services.AddScoped<IOrderRepository, OrderRepository>();
 
+        // === Order read-side queries (T-0080 / T-0081 / T-0082) ===
+        // Separate from IOrderRepository per ADR 0023 — projection-only
+        // reads (AsNoTracking + IgnoreAutoIncludes) split from the
+        // write-scoped repository.
+        services.AddScoped<IOrderQueries, OrderQueries>();
+
         // === Invoices (T-0068a) ===
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
