@@ -158,4 +158,76 @@ public class OutboxEventTypesTests
     {
         OutboxEventTypes.OrderDisputedCarrierSourced.Should().Be("order.disputed.carrierSourced");
     }
+
+    // ---- T-0079: OrderMessagePosted{Customer,Maker}Email routing (test-first) ----
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderMessagePostedCustomerEmail()
+    {
+        // T-0079: the maker-posted-message digest email rides the
+        // send-email queue. Pin the constant + classifier in one assert
+        // so renaming either side trips this test.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderMessagePostedCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.message.posted.customerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderMessagePostedMakerEmail()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderMessagePostedMakerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.message.posted.makerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OrderMessagePostedCustomerEmail_constant_equals_canonical_string()
+    {
+        OutboxEventTypes.OrderMessagePostedCustomerEmail.Should().Be("order.message.posted.customerEmail");
+    }
+
+    [Fact]
+    public void OrderMessagePostedMakerEmail_constant_equals_canonical_string()
+    {
+        OutboxEventTypes.OrderMessagePostedMakerEmail.Should().Be("order.message.posted.makerEmail");
+    }
+
+    [Fact]
+    public void OrderMessagePostedCustomerEmail_routes_to_email_queue_only()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderMessagePostedCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderMessagePostedCustomerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderMessagePostedCustomerEmail).Should().BeFalse();
+    }
+
+    [Fact]
+    public void OrderMessagePostedMakerEmail_routes_to_email_queue_only()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderMessagePostedMakerEmail).Should().BeTrue();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderMessagePostedMakerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderMessagePostedMakerEmail).Should().BeFalse();
+    }
+
+    // ---- T-0083: OrderCancelledCustomerEmail routing (test-first) ----
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderCancelledCustomerEmail()
+    {
+        // T-0083: the auto-cancel customer notification rides the
+        // send-email queue. Pin constant + classifier in one assert.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.cancelled.customerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OrderCancelledCustomerEmail_constant_equals_canonical_string()
+    {
+        OutboxEventTypes.OrderCancelledCustomerEmail.Should().Be("order.cancelled.customerEmail");
+    }
+
+    [Fact]
+    public void OrderCancelledCustomerEmail_routes_to_email_queue_only()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeFalse();
+    }
 }
