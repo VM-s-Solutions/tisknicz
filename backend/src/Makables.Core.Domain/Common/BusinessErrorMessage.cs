@@ -90,6 +90,19 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderPaymentAlreadyCaptured = "order.paymentAlreadyCaptured";
 
+    // === Order messages (T-0079) ===
+    /// <summary>
+    /// Validator rejected an empty / whitespace-only message body on
+    /// PostCustomer/MakerOrderMessage. T-0079 §C.13.
+    /// </summary>
+    public const string OrderMessageBodyEmpty = "order.message.bodyEmpty";
+
+    /// <summary>
+    /// Validator rejected a message body exceeding 2000 characters on
+    /// PostCustomer/MakerOrderMessage. T-0079 §C.13.
+    /// </summary>
+    public const string OrderMessageBodyTooLong = "order.message.bodyTooLong";
+
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
     /// The maker's row exists but <c>Auditable.IsActive</c> is false (or

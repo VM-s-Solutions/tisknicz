@@ -13,6 +13,13 @@ namespace Makables.Core.Domain.Orders.Queries;
 /// </para>
 ///
 /// <para>
+/// <see cref="UnreadMessageCount"/> is the customer's outstanding unread
+/// count on the order message thread (T-0079). Reads
+/// <c>orders.customer_unread_message_count</c> verbatim — O(1) per row,
+/// no per-row JOIN/subquery on the messages table.
+/// </para>
+///
+/// <para>
 /// Lives in <c>Core.Domain</c> alongside <see cref="IOrderQueries"/> per
 /// the T-0049a precedent (<c>MakerProductListItem</c> ships in the same
 /// domain folder as <c>IMakerProductQueries</c>). The DTO carries no
@@ -27,4 +34,5 @@ public sealed record CustomerOrderListItemDto(
     string Currency,
     DateTimeOffset CreatedAt,
     string MakerName,
-    string? ProductTitle);
+    string? ProductTitle,
+    int UnreadMessageCount);

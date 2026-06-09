@@ -91,7 +91,9 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
                     : db.Set<Product>()
                         .Where(p => p.Id == o.ProductId)
                         .Select(p => p.Title)
-                        .FirstOrDefault()))
+                        .FirstOrDefault(),
+                // T-0079: denormalized unread count from the order row.
+                o.CustomerUnreadMessageCount))
             .ToListAsync(ct);
 
         return new PagedData<CustomerOrderListItemDto>(items, page, pageSize, totalCount);
@@ -131,8 +133,9 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
 
         // Customer email DELIBERATELY NOT projected — T-0081 §A.2 GDPR
         // data-minimization lock. The expression tree below carries no
-        // reference to o.ContactEmail. UnreadMessageCount is reserved
-        // null for T-0079.
+        // reference to o.ContactEmail. T-0079 now populates
+        // UnreadMessageCount from the denormalized maker_unread_message_count
+        // column (was forward-compat null at T-0081 ship time).
         var items = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -152,7 +155,7 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
                         .Where(p => p.Id == o.ProductId)
                         .Select(p => p.Title)
                         .FirstOrDefault(),
-                (int?)null)) // UnreadMessageCount — T-0079
+                o.MakerUnreadMessageCount))  // T-0079
             .ToListAsync(ct);
 
         return new PagedData<MakerOrderListItemDto>(items, page, pageSize, totalCount);

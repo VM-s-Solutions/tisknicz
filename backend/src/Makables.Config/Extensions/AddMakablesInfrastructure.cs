@@ -13,6 +13,7 @@ using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
+using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
@@ -32,6 +33,7 @@ using Makables.Infra.Database.Catalog;
 using Makables.Infra.Database.Categories;
 using Makables.Infra.Database.Invoices;
 using Makables.Infra.Database.Makers;
+using Makables.Infra.Database.OrderMessages;
 using Makables.Infra.Database.Orders;
 using Makables.Infra.Database.Products;
 using Makables.Infra.Database.Numbering;
@@ -161,6 +163,12 @@ public static class MakablesInfrastructureExtensions
         // reads (AsNoTracking + IgnoreAutoIncludes) split from the
         // write-scoped repository.
         services.AddScoped<IOrderQueries, OrderQueries>();
+
+        // === Order messages (T-0079) ===
+        // Write-side + read-side split per ADR 0023. Both scoped lifetime
+        // (the underlying DbContext is request-scoped).
+        services.AddScoped<IOrderMessageRepository, OrderMessageRepository>();
+        services.AddScoped<IOrderMessageQueries, OrderMessageQueries>();
 
         // === Invoices (T-0068a) ===
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();

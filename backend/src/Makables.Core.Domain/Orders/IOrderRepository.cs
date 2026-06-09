@@ -199,6 +199,27 @@ public interface IOrderRepository
     IAsyncEnumerable<Order> GetCarrierSyncableUnscopedReadOnlyAsync(
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Projection-only stream of <see cref="Order.Id"/> values for orders
+    /// in <see cref="OrderState.PendingPayment"/> whose
+    /// <see cref="Common.Auditable.CreatedAt"/> is older than
+    /// <c>asOf - 24h</c>. Unscoped + read-only — the T-0083 Function
+    /// context has no user identity and only needs the id to dispatch
+    /// <c>CancelExpiredOrder.Command</c> per row.
+    ///
+    /// <para>
+    /// Soft-deleted rows excluded via the global query filter
+    /// (auto-cancel MUST NOT resurrect deactivated orders).
+    /// <c>AsNoTracking</c>; ORDER BY <c>CreatedAt ASC</c> (oldest
+    /// expirations first — mirrors T-0077's AutoDeliverAt ascending sort).
+    /// Stream materializes one row at a time so memory stays flat under
+    /// any batch size. T-0083 §C.
+    /// </para>
+    /// </summary>
+    IAsyncEnumerable<string> GetExpiredPendingPaymentUnscopedReadOnlyAsync(
+        DateTimeOffset asOf,
+        CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
 

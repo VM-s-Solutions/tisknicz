@@ -165,6 +165,27 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
             .AsAsyncEnumerable();
     }
 
+    public IAsyncEnumerable<string> GetExpiredPendingPaymentUnscopedReadOnlyAsync(
+        DateTimeOffset asOf,
+        CancellationToken cancellationToken)
+    {
+        // T-0083: projection-only id stream. Mirrors
+        // GetAutoDeliverableUnscopedReadOnlyAsync verbatim. Predicate
+        // pre-computed once below so the EF expression tree carries a
+        // constant instead of evaluating .AddHours(-24) per-row. Soft-
+        // deleted rows excluded by global query filter (auto-cancel MUST
+        // NOT resurrect deactivated orders). Ordered by CreatedAt asc so
+        // the oldest expirations dispatch first.
+        var cutoff = asOf.AddHours(-24);
+        return db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.State == OrderState.PendingPayment
+                     && o.CreatedAt < cutoff)
+            .OrderBy(o => o.CreatedAt)
+            .Select(o => o.Id)
+            .AsAsyncEnumerable();
+    }
+
     public IAsyncEnumerable<Order> GetCarrierSyncableUnscopedReadOnlyAsync(
         CancellationToken cancellationToken)
     {

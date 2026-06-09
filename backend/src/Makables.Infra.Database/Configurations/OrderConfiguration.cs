@@ -131,6 +131,33 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasColumnName("delivery_source")
             .HasConversion<short?>();
 
+        // T-0083: cancellation source (Customer/AutoExpiry/Admin). SMALLINT
+        // NULL — nullable so non-cancelled orders carry null; matches the
+        // DeliverySource pattern.
+        builder.Property(o => o.CancellationSource)
+            .HasColumnName("cancellation_source")
+            .HasConversion<short?>();
+
+        // T-0079: denormalized unread-message counters per locked decision
+        // A.3. Default 0 so backfill is trivial. Drive O(1) reads on the
+        // T-0080 / T-0081 list endpoints without a per-row subquery.
+        builder.Property(o => o.CustomerUnreadMessageCount)
+            .HasColumnName("customer_unread_message_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+        builder.Property(o => o.MakerUnreadMessageCount)
+            .HasColumnName("maker_unread_message_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        // T-0079: 5-min notification-debounce pointers per locked decision
+        // A.2. Nullable so a fresh order has neither pointer set; null
+        // means "next post fires immediately".
+        builder.Property(o => o.CustomerPendingNotificationEmailAt)
+            .HasColumnName("customer_pending_notification_email_at");
+        builder.Property(o => o.MakerPendingNotificationEmailAt)
+            .HasColumnName("maker_pending_notification_email_at");
+
         // === Customer notes ===
         builder.Property(o => o.CustomerNotes)
             .HasColumnName("customer_notes").HasMaxLength(Order.MaxCustomerNotesLength);
