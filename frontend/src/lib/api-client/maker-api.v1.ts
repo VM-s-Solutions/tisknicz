@@ -15,6 +15,22 @@ export interface IMakerApi {
     label(orderId: string): Promise<void>;
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param state (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @param sort (optional) 
+     * @return OK
+     */
+    orders(page: number | undefined, pageSize: number | undefined, state: OrderState | undefined, dateFrom: Date | undefined, dateTo: Date | undefined, sort: OrderSort | undefined): Promise<GetMakerOrdersResponse>;
+
+    /**
+     * @return OK
+     */
+    orders2(orderId: string): Promise<GetMakerOrderDetailsResponse>;
+
+    /**
      * @return OK
      */
     accept(orderId: string): Promise<AcceptOrderResponse>;
@@ -220,6 +236,155 @@ export class MakerApi implements IMakerApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param state (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @param sort (optional) 
+     * @return OK
+     */
+    orders(page: number | undefined, pageSize: number | undefined, state: OrderState | undefined, dateFrom: Date | undefined, dateTo: Date | undefined, sort: OrderSort | undefined): Promise<GetMakerOrdersResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        if (state === null)
+            throw new globalThis.Error("The parameter 'state' cannot be null.");
+        else if (state !== undefined)
+            url_ += "state=" + encodeURIComponent("" + state) + "&";
+        if (dateFrom === null)
+            throw new globalThis.Error("The parameter 'dateFrom' cannot be null.");
+        else if (dateFrom !== undefined)
+            url_ += "dateFrom=" + encodeURIComponent(dateFrom ? "" + dateFrom.toISOString() : "") + "&";
+        if (dateTo === null)
+            throw new globalThis.Error("The parameter 'dateTo' cannot be null.");
+        else if (dateTo !== undefined)
+            url_ += "dateTo=" + encodeURIComponent(dateTo ? "" + dateTo.toISOString() : "") + "&";
+        if (sort === null)
+            throw new globalThis.Error("The parameter 'sort' cannot be null.");
+        else if (sort !== undefined)
+            url_ += "sort=" + encodeURIComponent("" + sort) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processOrders(_response);
+        });
+    }
+
+    protected processOrders(response: Response): Promise<GetMakerOrdersResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerOrdersResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerOrdersResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    orders2(orderId: string): Promise<GetMakerOrderDetailsResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processOrders2(_response);
+        });
+    }
+
+    protected processOrders2(response: Response): Promise<GetMakerOrderDetailsResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerOrderDetailsResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerOrderDetailsResponse>(null as any);
     }
 
     /**
@@ -1906,6 +2071,108 @@ export enum ErrorType {
     Unknown = "Unknown",
 }
 
+export class GetMakerOrderDetailsResponse implements IGetMakerOrderDetailsResponse {
+    detail!: MakerOrderDetailDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerOrderDetailsResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.detail = new MakerOrderDetailDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.detail = _data["detail"] ? MakerOrderDetailDto.fromJS(_data["detail"]) : new MakerOrderDetailDto();
+        }
+    }
+
+    static fromJS(data: any): GetMakerOrderDetailsResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerOrderDetailsResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["detail"] = this.detail ? this.detail.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetMakerOrderDetailsResponse {
+    detail: MakerOrderDetailDto;
+
+    [key: string]: any;
+}
+
+export class GetMakerOrdersResponse implements IGetMakerOrdersResponse {
+    orders!: PagedDataOfMakerOrderListItemDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerOrdersResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.orders = new PagedDataOfMakerOrderListItemDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orders = _data["orders"] ? PagedDataOfMakerOrderListItemDto.fromJS(_data["orders"]) : new PagedDataOfMakerOrderListItemDto();
+        }
+    }
+
+    static fromJS(data: any): GetMakerOrdersResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerOrdersResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orders"] = this.orders ? this.orders.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetMakerOrdersResponse {
+    orders: PagedDataOfMakerOrderListItemDto;
+
+    [key: string]: any;
+}
+
 export class HandOverOrderResponse implements IHandOverOrderResponse {
     orderId!: string;
 
@@ -2002,6 +2269,253 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class MakerOrderDetailDto implements IMakerOrderDetailDto {
+    orderId!: string;
+    orderNumber!: string;
+    state!: OrderState;
+    paidAt!: Date | undefined;
+    acceptedAt!: Date | undefined;
+    shippedAt!: Date | undefined;
+    deliveredAt!: Date | undefined;
+    cancelledAt!: Date | undefined;
+    totalAmountMinor!: number;
+    productPriceMinor!: number;
+    shippingPriceMinor!: number;
+    vatAmountMinor!: number;
+    vatRateBp!: number;
+    makerPayoutAmountMinor!: number;
+    currency!: string;
+    customerContactName!: string;
+    customerContactPhone!: string;
+    productTitle!: string | undefined;
+    shippingMethod!: ShippingMethod;
+    shippingCarrierRef!: string | undefined;
+    shippingCarrierTrackingUrl!: string | undefined;
+    zasilkovnaPickupPointId!: string | undefined;
+    attachments!: OrderAttachmentSummaryDto[];
+    invoicePdfUrl!: string | undefined;
+    createdAt!: Date;
+    updatedAt!: Date | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerOrderDetailDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.attachments = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.state = _data["state"];
+            this.paidAt = _data["paidAt"] ? new Date(_data["paidAt"].toString()) : undefined as any;
+            this.acceptedAt = _data["acceptedAt"] ? new Date(_data["acceptedAt"].toString()) : undefined as any;
+            this.shippedAt = _data["shippedAt"] ? new Date(_data["shippedAt"].toString()) : undefined as any;
+            this.deliveredAt = _data["deliveredAt"] ? new Date(_data["deliveredAt"].toString()) : undefined as any;
+            this.cancelledAt = _data["cancelledAt"] ? new Date(_data["cancelledAt"].toString()) : undefined as any;
+            this.totalAmountMinor = _data["totalAmountMinor"];
+            this.productPriceMinor = _data["productPriceMinor"];
+            this.shippingPriceMinor = _data["shippingPriceMinor"];
+            this.vatAmountMinor = _data["vatAmountMinor"];
+            this.vatRateBp = _data["vatRateBp"];
+            this.makerPayoutAmountMinor = _data["makerPayoutAmountMinor"];
+            this.currency = _data["currency"];
+            this.customerContactName = _data["customerContactName"];
+            this.customerContactPhone = _data["customerContactPhone"];
+            this.productTitle = _data["productTitle"];
+            this.shippingMethod = _data["shippingMethod"];
+            this.shippingCarrierRef = _data["shippingCarrierRef"];
+            this.shippingCarrierTrackingUrl = _data["shippingCarrierTrackingUrl"];
+            this.zasilkovnaPickupPointId = _data["zasilkovnaPickupPointId"];
+            if (Array.isArray(_data["attachments"])) {
+                this.attachments = [] as any;
+                for (let item of _data["attachments"])
+                    this.attachments!.push(OrderAttachmentSummaryDto.fromJS(item));
+            }
+            this.invoicePdfUrl = _data["invoicePdfUrl"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.updatedAt = _data["updatedAt"] ? new Date(_data["updatedAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MakerOrderDetailDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerOrderDetailDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["state"] = this.state;
+        data["paidAt"] = this.paidAt ? this.paidAt.toISOString() : undefined as any;
+        data["acceptedAt"] = this.acceptedAt ? this.acceptedAt.toISOString() : undefined as any;
+        data["shippedAt"] = this.shippedAt ? this.shippedAt.toISOString() : undefined as any;
+        data["deliveredAt"] = this.deliveredAt ? this.deliveredAt.toISOString() : undefined as any;
+        data["cancelledAt"] = this.cancelledAt ? this.cancelledAt.toISOString() : undefined as any;
+        data["totalAmountMinor"] = this.totalAmountMinor;
+        data["productPriceMinor"] = this.productPriceMinor;
+        data["shippingPriceMinor"] = this.shippingPriceMinor;
+        data["vatAmountMinor"] = this.vatAmountMinor;
+        data["vatRateBp"] = this.vatRateBp;
+        data["makerPayoutAmountMinor"] = this.makerPayoutAmountMinor;
+        data["currency"] = this.currency;
+        data["customerContactName"] = this.customerContactName;
+        data["customerContactPhone"] = this.customerContactPhone;
+        data["productTitle"] = this.productTitle;
+        data["shippingMethod"] = this.shippingMethod;
+        data["shippingCarrierRef"] = this.shippingCarrierRef;
+        data["shippingCarrierTrackingUrl"] = this.shippingCarrierTrackingUrl;
+        data["zasilkovnaPickupPointId"] = this.zasilkovnaPickupPointId;
+        if (Array.isArray(this.attachments)) {
+            data["attachments"] = [];
+            for (let item of this.attachments)
+                data["attachments"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["invoicePdfUrl"] = this.invoicePdfUrl;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["updatedAt"] = this.updatedAt ? this.updatedAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IMakerOrderDetailDto {
+    orderId: string;
+    orderNumber: string;
+    state: OrderState;
+    paidAt: Date | undefined;
+    acceptedAt: Date | undefined;
+    shippedAt: Date | undefined;
+    deliveredAt: Date | undefined;
+    cancelledAt: Date | undefined;
+    totalAmountMinor: number;
+    productPriceMinor: number;
+    shippingPriceMinor: number;
+    vatAmountMinor: number;
+    vatRateBp: number;
+    makerPayoutAmountMinor: number;
+    currency: string;
+    customerContactName: string;
+    customerContactPhone: string;
+    productTitle: string | undefined;
+    shippingMethod: ShippingMethod;
+    shippingCarrierRef: string | undefined;
+    shippingCarrierTrackingUrl: string | undefined;
+    zasilkovnaPickupPointId: string | undefined;
+    attachments: OrderAttachmentSummaryDto[];
+    invoicePdfUrl: string | undefined;
+    createdAt: Date;
+    updatedAt: Date | undefined;
+
+    [key: string]: any;
+}
+
+export class MakerOrderListItemDto implements IMakerOrderListItemDto {
+    orderId!: string;
+    orderNumber!: string;
+    state!: OrderState;
+    totalAmountMinor!: number;
+    makerPayoutAmountMinor!: number;
+    currency!: string;
+    createdAt!: Date;
+    customerContactName!: string;
+    shippingMethod!: ShippingMethod;
+    productTitle!: string | undefined;
+    unreadMessageCount!: number | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerOrderListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.state = _data["state"];
+            this.totalAmountMinor = _data["totalAmountMinor"];
+            this.makerPayoutAmountMinor = _data["makerPayoutAmountMinor"];
+            this.currency = _data["currency"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.customerContactName = _data["customerContactName"];
+            this.shippingMethod = _data["shippingMethod"];
+            this.productTitle = _data["productTitle"];
+            this.unreadMessageCount = _data["unreadMessageCount"];
+        }
+    }
+
+    static fromJS(data: any): MakerOrderListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerOrderListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["state"] = this.state;
+        data["totalAmountMinor"] = this.totalAmountMinor;
+        data["makerPayoutAmountMinor"] = this.makerPayoutAmountMinor;
+        data["currency"] = this.currency;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["customerContactName"] = this.customerContactName;
+        data["shippingMethod"] = this.shippingMethod;
+        data["productTitle"] = this.productTitle;
+        data["unreadMessageCount"] = this.unreadMessageCount;
+        return data;
+    }
+}
+
+export interface IMakerOrderListItemDto {
+    orderId: string;
+    orderNumber: string;
+    state: OrderState;
+    totalAmountMinor: number;
+    makerPayoutAmountMinor: number;
+    currency: string;
+    createdAt: Date;
+    customerContactName: string;
+    shippingMethod: ShippingMethod;
+    productTitle: string | undefined;
+    unreadMessageCount: number | undefined;
 
     [key: string]: any;
 }
@@ -2189,6 +2703,173 @@ export interface IMakerProductListItem {
     primaryImageBlobPath: string | undefined;
     imageCount: number;
     createdOn: Date;
+
+    [key: string]: any;
+}
+
+export class OrderAttachmentSummaryDto implements IOrderAttachmentSummaryDto {
+    id!: string;
+    filename!: string;
+    contentType!: string;
+    sizeBytes!: number;
+    downloadUrl!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IOrderAttachmentSummaryDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.filename = _data["filename"];
+            this.contentType = _data["contentType"];
+            this.sizeBytes = _data["sizeBytes"];
+            this.downloadUrl = _data["downloadUrl"];
+        }
+    }
+
+    static fromJS(data: any): OrderAttachmentSummaryDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new OrderAttachmentSummaryDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["filename"] = this.filename;
+        data["contentType"] = this.contentType;
+        data["sizeBytes"] = this.sizeBytes;
+        data["downloadUrl"] = this.downloadUrl;
+        return data;
+    }
+}
+
+export interface IOrderAttachmentSummaryDto {
+    id: string;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+    downloadUrl: string;
+
+    [key: string]: any;
+}
+
+export enum OrderSort {
+    CreatedAtDesc = "CreatedAtDesc",
+    CreatedAtAsc = "CreatedAtAsc",
+    TotalAmountDesc = "TotalAmountDesc",
+    TotalAmountAsc = "TotalAmountAsc",
+    StateAsc = "StateAsc",
+}
+
+export enum OrderState {
+    PendingPayment = "PendingPayment",
+    Paid = "Paid",
+    Accepted = "Accepted",
+    Shipped = "Shipped",
+    Delivered = "Delivered",
+    Completed = "Completed",
+    Cancelled = "Cancelled",
+    Refunded = "Refunded",
+    Disputed = "Disputed",
+}
+
+export class PagedDataOfMakerOrderListItemDto implements IPagedDataOfMakerOrderListItemDto {
+    items!: MakerOrderListItemDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfMakerOrderListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(MakerOrderListItemDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfMakerOrderListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfMakerOrderListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfMakerOrderListItemDto {
+    items: MakerOrderListItemDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
 
     [key: string]: any;
 }
@@ -2548,6 +3229,11 @@ export interface IShipOrderResponse {
     trackingUrl: string;
 
     [key: string]: any;
+}
+
+export enum ShippingMethod {
+    ZasilkovnaPickupPoint = "ZasilkovnaPickupPoint",
+    PersonalPickup = "PersonalPickup",
 }
 
 export class UpdateMakerProfileRequest implements IUpdateMakerProfileRequest {
