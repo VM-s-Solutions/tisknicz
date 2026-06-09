@@ -69,6 +69,20 @@ public sealed class OrdersController(
             new GetMakerOrders.Query(page, pageSize, state, dateFrom, dateTo, sort), ct));
 
     /// <summary>
+    /// Maker order detail (T-0082 / US-maker-0010). Lifecycle snapshot
+    /// + price breakdown including the maker's net payout + customer
+    /// contact name + phone (never email) + carrier ref + inline
+    /// attachments + invoice PDF URL. Cross-maker probes return 404.
+    /// </summary>
+    [HttpGet("{orderId}")]
+    [ProducesResponseType(typeof(GetMakerOrderDetails.GetMakerOrderDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(string orderId, CancellationToken ct) =>
+        HandleResult(await mediator.Send(new GetMakerOrderDetails.Query(orderId), ct));
+
+    /// <summary>
     /// Maker accepts a Paid order. Transitions to Accepted and enqueues
     /// the customer-notification outbox event atomically per ADR 0014.
     /// T-0071 (US-maker-0006).
