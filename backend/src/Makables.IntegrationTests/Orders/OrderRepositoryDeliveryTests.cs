@@ -99,15 +99,36 @@ public sealed class OrderRepositoryDeliveryTests
             zasilkovnaPickupPointId: method == ShippingMethod.ZasilkovnaPickupPoint ? "pp-42" : null,
             countryCode: CountryCode);
 
+        // Stamp audit fields explicitly: the harness's CreateDbContext does
+        // not register the AuditableSaveChangesInterceptor, so the seed path
+        // must MarkCreated before SaveChangesAsync or the NOT NULL
+        // created_by constraint trips. Same pattern as
+        // ComgateWebhookTests.SeedOrderInStateAsync /
+        // ShipOrderIntegrationTests.SeedShippedOrderAsync.
+        const string seedActor = "test-seed";
+        var seedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
+
         var clock = Substitute.For<IClock>();
         clock.UtcNow.Returns(Now.AddDays(-10));
-        if (targetState == OrderState.PendingPayment) return o;
+        if (targetState == OrderState.PendingPayment)
+        {
+            o.MarkCreated(seedActor, seedAt);
+            return o;
+        }
 
         o.MarkAsPaid(clock, $"tx-{id}");
-        if (targetState == OrderState.Paid) return o;
+        if (targetState == OrderState.Paid)
+        {
+            o.MarkCreated(seedActor, seedAt);
+            return o;
+        }
 
         o.Accept(clock);
-        if (targetState == OrderState.Accepted) return o;
+        if (targetState == OrderState.Accepted)
+        {
+            o.MarkCreated(seedActor, seedAt);
+            return o;
+        }
 
         // Ship — using a fixed clock so we can plug AutoDeliverAt deterministically.
         // Pass the shippingCarrierRef parameter only when carrierRef is non-null.
@@ -116,11 +137,16 @@ public sealed class OrderRepositoryDeliveryTests
             ? autoDeliverAt.Value.AddDays(-7)
             : Now.AddDays(-5));
         o.Ship(shipClock, carrierRef, autoDeliverWindowDays: 7);
-        if (targetState == OrderState.Shipped) return o;
+        if (targetState == OrderState.Shipped)
+        {
+            o.MarkCreated(seedActor, seedAt);
+            return o;
+        }
 
         var deliverClock = Substitute.For<IClock>();
         deliverClock.UtcNow.Returns(Now.AddDays(-2));
         o.MarkAsDelivered(deliverClock, OrderDeliverySource.Auto);
+        o.MarkCreated(seedActor, seedAt);
         return o;
     }
 

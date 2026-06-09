@@ -49,14 +49,15 @@
 - backend/src/Makables.Core.AppServices/Features/Maker/UpdateMakerProfile.cs:97:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Maker/VerifyMaker.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Maker/VerifyMaker.cs:79:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/AddOrderAttachment.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CreateOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CreatePaymentSession.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/DisputeShipment.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/HandOverOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderDelivered.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderPaid.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreShippingLabel.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Validator"
@@ -94,6 +95,7 @@
 - backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:43:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:56:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreShippingLabel.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Infra.Azure.Storage.Blobs/AzureBlobStorageClient.cs:92:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Infra.Clients/Ares/AresCompanyRegistry.cs:186:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Infra.Database/Auditing/AdminAuditLogWriter.cs:79:T4  `dynamic` is forbidden — model the contract with a concrete type
@@ -106,6 +108,6 @@
 - backend/src/Makables.Tests/Common/BusinessResultTests.cs:40:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/ErrorTests.cs:11:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/ErrorTests.cs:21:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Web.Customer/Controllers/OrdersController.cs:232:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Web.Customer/Controllers/OrdersController.cs:241:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Web.Maker/Controllers/ProductController.cs:193:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Web.Maker/Controllers/ProductController.cs:211:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X

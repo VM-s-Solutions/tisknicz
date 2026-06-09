@@ -200,7 +200,19 @@ public sealed class SyncShipmentStatusesIntegrationTests : IAsyncLifetime
         var carrierFactory = scope.ServiceProvider.GetRequiredService<IShippingCarrierFactory>();
         var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
 
+        // Materialise the AsAsyncEnumerable stream BEFORE dispatching the
+        // mutating Mediator commands. Npgsql does not support MARS, so
+        // holding the streaming reader open while the per-row Send loads
+        // the tracked Order on the same DbContext raises
+        // NpgsqlOperationInProgressException. Same pattern as the
+        // AutoDeliverOrders integration test.
+        var orders = new List<Order>();
         await foreach (var order in repo.GetCarrierSyncableUnscopedReadOnlyAsync(default))
+        {
+            orders.Add(order);
+        }
+
+        foreach (var order in orders)
         {
             var carrierResult = await carrierFactory.ResolveAsync(order.CountryCode, default);
             carrierResult.IsSuccess.Should().BeTrue();

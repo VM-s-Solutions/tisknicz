@@ -174,14 +174,14 @@ public sealed class AutoDeliverOrdersIntegrationTests : IAsyncLifetime
         // = shipped + 7 days; we choose daysAgo > 7 (expired) vs < 7 (future).
         for (var i = 1; i <= 3; i++)
         {
-            db.Set<Order>().Add(BuildShipped($"expired-{i}", Now.AddDays(-(7 + i))));
+            db.Set<Order>().Add(BuildShipped($"expired-{i}", Now.AddDays(-(7 + i)), seedActor, seedAt));
         }
-        db.Set<Order>().Add(BuildShipped("future", Now.AddDays(-3)));  // AutoDeliverAt = now+4d
+        db.Set<Order>().Add(BuildShipped("future", Now.AddDays(-3), seedActor, seedAt));  // AutoDeliverAt = now+4d
 
         await db.SaveChangesAsync();
     }
 
-    private static Order BuildShipped(string id, DateTimeOffset shippedAt)
+    private static Order BuildShipped(string id, DateTimeOffset shippedAt, string seedActor, DateTimeOffset seedAt)
     {
         var o = Order.Create(
             id: id, orderNumber: $"M-CZ-{id}",
@@ -198,6 +198,13 @@ public sealed class AutoDeliverOrdersIntegrationTests : IAsyncLifetime
         o.MarkAsPaid(clock, $"tx-{id}");
         o.Accept(clock);
         o.Ship(clock, $"PKT-{id}", 7);
+        // Stamp audit fields explicitly: the harness's CreateDbContext does
+        // not register the AuditableSaveChangesInterceptor, so the seed path
+        // must MarkCreated before SaveChangesAsync or the NOT NULL
+        // created_by constraint trips. Same pattern as
+        // ComgateWebhookTests.SeedOrderInStateAsync /
+        // ShipOrderIntegrationTests.SeedShippedOrderAsync.
+        o.MarkCreated(seedActor, seedAt);
         return o;
     }
 
@@ -217,7 +224,23 @@ public sealed class AutoDeliverOrdersIntegrationTests : IAsyncLifetime
         var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
         var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
 
+        // Materialise the projection-only stream into a list BEFORE
+        // dispatching the mutating Mediator commands. Npgsql does not
+        // support MARS, so holding the AsAsyncEnumerable reader open while
+        // the per-row Send loads the tracked Order on the same DbContext
+        // raises NpgsqlOperationInProgressException. The production
+        // Function is unaffected because its IOrderRepository + ISender
+        // are resolved from a scope that itself yields a fresh DbContext
+        // per Mediator request through the UoW pipeline; an integration
+        // test that reproduces the Function body inline must close the
+        // streaming reader before each Send.
+        var orderIds = new List<string>();
         await foreach (var orderId in repo.GetAutoDeliverableUnscopedReadOnlyAsync(Now, default))
+        {
+            orderIds.Add(orderId);
+        }
+
+        foreach (var orderId in orderIds)
         {
             await mediator.Send(
                 new MarkOrderDelivered.Command(orderId, OrderDeliverySource.Auto),
