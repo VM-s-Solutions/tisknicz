@@ -3,6 +3,7 @@ using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Shipping;
 using MediatR;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Makables.Functions.Delivery;
@@ -59,9 +60,20 @@ public sealed class SyncShipmentStatusesFunction(
         var disputed = 0;
         var failed = 0;
 
-        await foreach (var order in orderRepository
+        // Materialize the streaming projection BEFORE the per-row mediator.Send
+        // loop. Q-0008 + Gate 8 BLOCKER fold: Npgsql does NOT support MARS
+        // (Multiple Active Result Sets). The downstream MarkOrderDelivered /
+        // DisputeShipment handlers re-use the same scoped DbContext to load +
+        // mutate or read the tracked Order. If we kept this as `await foreach`,
+        // the open NpgsqlDataReader would race the handler's connection use
+        // and throw NpgsqlOperationInProgressException. At MVP volume
+        // (~10-200 rows/run, 6h cadence) the eager-list cost is negligible.
+        // Q-0008 is the architect-led future posture.
+        var orders = await orderRepository
             .GetCarrierSyncableUnscopedReadOnlyAsync(cancellationToken)
-            .WithCancellation(cancellationToken))
+            .ToListAsync(cancellationToken);
+
+        foreach (var order in orders)
         {
             synced++;
             try

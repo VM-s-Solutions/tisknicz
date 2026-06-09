@@ -103,3 +103,17 @@
   - Add `Comgate:TimeoutSeconds` to ComgateOptions + bind from config. Pro: more flexible. Con: bigger change; out of scope for a Comgate timeout fix.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0008 — Function-host DbContext MARS race with iterate-while-mutating pattern
+- **From:** dotnet-backend (T-0077/T-0078 integration test fix)
+- **Ticket / context:** T-0077 AutoDeliverOrdersFunction + T-0078 SyncShipmentStatusesFunction
+- **Asked:** 2026-06-09
+- **Blocking:** no — workaround applied in the production Function code at T-0078 Gate 8 fold (BLOCKER finding; commit applied option 1: materialize-up-front before per-row `mediator.Send`). Architect input still wanted for the longer-term posture (option 2 per-row IServiceScope is the cleaner end-state; option 1 is the pragmatic MVP solution).
+- **Question:** Both new Timer-trigger Functions iterate an `IAsyncEnumerable<Order>` (or `<string>`) returned from a repository method while dispatching `mediator.Send` per row. The mediator's command handlers load + mutate the same Order via the SAME scoped DbContext. PostgreSQL/Npgsql does NOT support MARS (Multiple Active Result Sets) — the AsyncEnumerable reader is still open when the handler tries to reuse the connection. The integration tests work around this by materializing the stream into `List<T>` BEFORE the loop. Should the Functions adopt the same pattern, OR open per-row scopes, OR is there a cleaner architectural solution?
+- **Options the agent has considered:**
+  - Materialize the enumerable up-front in the Function (matches the integration test workaround; simple; loses streaming benefit at high batch sizes — MVP volume is ~10-200/day so non-issue).
+  - Open a per-row IServiceScope inside the Function loop (each row gets a fresh DbContext; clean separation; more allocations per run; matches AspNetCore request-scope semantics).
+  - Configure the repository method to return materialized `IReadOnlyList<T>` instead of `IAsyncEnumerable` (changes the interface contract; explicit non-streaming).
+  - Wait for evidence of production issues — current MVP volume is small and Function runs are infrequent (daily/6h).
+- **Status:** open
+- **Answer (filled by user):**

@@ -173,8 +173,14 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         // decision time. AsNoTracking; mutating dispatch happens through
         // the MediatR Commands which re-load via the tracked path. Soft-
         // deleted rows are hidden by the global query filter.
+        // T-0078 Gate 8 fold: IgnoreAutoIncludes opts out of any AutoInclude
+        // navigations (Order has Attachments aggregate that EF eager-loads
+        // by default per its configuration). The Function only reads scalar
+        // fields; the child collection materialisation would add an N+1-shape
+        // cost on every sweep that this method never benefits from.
         return db.Set<Order>()
             .AsNoTracking()
+            .IgnoreAutoIncludes()
             .Where(o => o.State == OrderState.Shipped
                      && o.ShippingMethod == ShippingMethod.ZasilkovnaPickupPoint
                      && o.ShippingCarrierRef != null)
