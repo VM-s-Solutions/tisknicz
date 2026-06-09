@@ -4,6 +4,7 @@ using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Orders.Sorting;
 using Makables.Core.Domain.Storage;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -38,6 +39,35 @@ public sealed class OrdersController(
     IUserSessionProvider session,
     IMediator mediator) : MakablesApiController
 {
+    /// <summary>
+    /// Paged maker order list (T-0081 / US-maker-0005). Default sort is
+    /// newest-first; filter by <see cref="OrderState"/> and / or a
+    /// <c>CreatedAt</c> date range; page size clamped to
+    /// <see cref="GetMakerOrders.MaxPageSize"/>.
+    ///
+    /// <para>
+    /// The owning maker is resolved from the JWT inside the handler; there
+    /// is no maker-id query parameter. Cross-maker probes surface as an
+    /// empty page (TotalCount = 0). Customer email is NEVER on the wire
+    /// per T-0081 §A.2.
+    /// </para>
+    /// </summary>
+    [HttpGet("")]
+    [ProducesResponseType(typeof(GetMakerOrders.GetMakerOrdersResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = GetMakerOrders.DefaultPageSize,
+        [FromQuery] OrderState? state = null,
+        [FromQuery] DateTimeOffset? dateFrom = null,
+        [FromQuery] DateTimeOffset? dateTo = null,
+        [FromQuery] OrderSort sort = OrderSort.CreatedAtDesc,
+        CancellationToken ct = default) =>
+        HandleResult(await mediator.Send(
+            new GetMakerOrders.Query(page, pageSize, state, dateFrom, dateTo, sort), ct));
+
     /// <summary>
     /// Maker accepts a Paid order. Transitions to Accepted and enqueues
     /// the customer-notification outbox event atomically per ADR 0014.

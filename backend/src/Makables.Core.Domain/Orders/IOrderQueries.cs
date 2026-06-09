@@ -50,4 +50,24 @@ public interface IOrderQueries
         int page,
         int pageSize,
         CancellationToken ct);
+
+    /// <summary>
+    /// Paged maker-scoped order list (T-0081). Predicate
+    /// <c>o.MakerId == makerId</c>. Returns an empty page when the maker
+    /// has no matching orders.
+    ///
+    /// <para>
+    /// Implementation MUST NOT reference <c>o.ContactEmail</c> anywhere
+    /// in the projection — T-0081 §A.2 GDPR data-minimization lock. The
+    /// <see cref="MakerOrderListItemDto.UnreadMessageCount"/> field is
+    /// populated as <c>null</c> at T-0081 (forward-compat slot for T-0079).
+    /// </para>
+    /// </summary>
+    Task<PagedData<MakerOrderListItemDto>> GetMakerOrdersPagedAsync(
+        string makerId,
+        OrderFilter filter,
+        OrderSort sort,
+        int page,
+        int pageSize,
+        CancellationToken ct);
 }

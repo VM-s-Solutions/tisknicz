@@ -96,6 +96,67 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
         return new PagedData<CustomerOrderListItemDto>(items, page, pageSize, totalCount);
     }
 
+    public async Task<PagedData<MakerOrderListItemDto>> GetMakerOrdersPagedAsync(
+        string makerId,
+        OrderFilter filter,
+        OrderSort sort,
+        int page,
+        int pageSize,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+
+        if (string.IsNullOrWhiteSpace(makerId))
+        {
+            return PagedData<MakerOrderListItemDto>.Empty(page, pageSize);
+        }
+
+        // Predicate IS the IDOR shield: defence-in-depth alongside the
+        // handler-layer makerId resolution from session → IMakerRepository.
+        var baseQuery = db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => o.MakerId == makerId);
+
+        baseQuery = ApplyFilter(baseQuery, filter);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount == 0)
+        {
+            return PagedData<MakerOrderListItemDto>.Empty(page, pageSize);
+        }
+
+        var ordered = ApplySort(baseQuery, sort);
+
+        // Customer email DELIBERATELY NOT projected — T-0081 §A.2 GDPR
+        // data-minimization lock. The expression tree below carries no
+        // reference to o.ContactEmail. UnreadMessageCount is reserved
+        // null for T-0079.
+        var items = await ordered
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(o => new MakerOrderListItemDto(
+                o.Id,
+                o.OrderNumber,
+                o.State,
+                o.TotalAmountMinor,
+                o.MakerPayoutAmountMinor,
+                o.Currency,
+                o.CreatedAt,
+                o.ContactName, // snapshotted contact NAME (NOT email)
+                o.ShippingMethod,
+                o.ProductId == null
+                    ? null
+                    : db.Set<Product>()
+                        .Where(p => p.Id == o.ProductId)
+                        .Select(p => p.Title)
+                        .FirstOrDefault(),
+                (int?)null)) // UnreadMessageCount — T-0079
+            .ToListAsync(ct);
+
+        return new PagedData<MakerOrderListItemDto>(items, page, pageSize, totalCount);
+    }
+
     private static IQueryable<Order> ApplyFilter(IQueryable<Order> q, OrderFilter filter)
     {
         if (filter.State.HasValue)
