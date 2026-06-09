@@ -117,3 +117,29 @@
   - Wait for evidence of production issues — current MVP volume is small and Function runs are infrequent (daily/6h).
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0009 — IMakerRepository.GetByUserIdAsync over-fetch on Maker host read paths
+- **From:** optimizer (T-0081/T-0082 Gate 8 fold)
+- **Ticket / context:** order-queries-bundle Gate 8 review
+- **Asked:** 2026-06-09
+- **Blocking:** no — current cost is small on the 400 ms p95 budget; concern is CPU/change-tracker overhead per request, not SQL.
+- **Question:** Both Maker-host order-list and order-detail handlers call `IMakerRepository.GetByUserIdAsync(userId)` to resolve `makerId` from session. This returns a fully tracked `Maker` aggregate (~15-20 columns + AutoIncludes) when only `maker.Id` is read. Should we add a projection-only `GetIdByUserIdAsync(string userId, CancellationToken) -> Task<string?>` and switch the Maker-host read paths to it?
+- **Options the agent has considered:**
+  - Add the projection-only method + swap call sites. Two-line repo change + 2 controller/handler swaps. Drops change-tracker cost from every Maker dashboard render. ~30 min work.
+  - Wait for evidence of perf issue in production (Maker dashboard is the lowest-traffic surface — orders only fetched on-demand). Accept the wart as part of consistent repository surface.
+  - Cache the makerId in a per-request scoped IMakerSessionContext so multiple handlers in the same request resolve it once.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0010 — Composite indexes for alternate sort orders on Orders
+- **From:** optimizer (T-0080/T-0081 Gate 8 audit)
+- **Ticket / context:** order-queries-bundle Gate 8 review
+- **Asked:** 2026-06-09
+- **Blocking:** no — MVP scale (<100K orders); sequential scan + in-memory sort under 400 ms p95 budget. Degrades past ~500K rows.
+- **Question:** `OrderSort` exposes 5 arms (CreatedAtDesc default, CreatedAtAsc, TotalAmountDesc, TotalAmountAsc, StateAsc). Default `CreatedAtDesc` is covered by composite indexes (`ix_orders_customer_created`, `ix_orders_maker_state_created`). The alternate sort arms (`TotalAmountDesc/Asc`, `StateAsc`) trigger a sequential scan + in-memory ORDER BY at the database. Index migrations to cover them are out-of-bundle (reads-only bundle). Should we add covering indexes now or wait for production volume to warrant?
+- **Options the agent has considered:**
+  - Add per-customer + per-maker composite indexes on (CustomerUserId, TotalAmountMinor) etc — 3-4 new indexes. Pre-emptive but cheap in PG.
+  - Wait for production volume past ~100K orders / per-customer cardinality past ~50 orders to trigger.
+  - Drop the alternate sort options at MVP — UI only ships CreatedAtDesc as the default; alternate sorts are a forward-looking feature for power users.
+- **Status:** open
+- **Answer (filled by user):**
