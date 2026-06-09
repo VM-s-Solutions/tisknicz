@@ -159,6 +159,46 @@ public interface IOrderRepository
     /// </summary>
     Task<Order?> GetByPaymentProviderRefAsync(string paymentProviderRef, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Projection-only stream of <see cref="Order.Id"/> values for orders
+    /// that have crossed their auto-delivery window. Unscoped + read-only
+    /// (<c>AsNoTracking</c>): the T-0077 Function context has no user
+    /// identity and only needs the id to dispatch
+    /// <c>MarkOrderDelivered.Command</c> per row.
+    ///
+    /// <para>
+    /// Predicate: <c>State == Shipped AND AutoDeliverAt != null AND
+    /// AutoDeliverAt &lt; asOf</c>. Soft-deleted rows excluded via the
+    /// global query filter (auto-deliver MUST NOT resurrect deactivated
+    /// orders). Stream materializes one row at a time — keeps memory
+    /// flat under any batch size. Ordered by <c>AutoDeliverAt</c>
+    /// ascending (oldest expirations first). T-0077.
+    /// </para>
+    /// </summary>
+    IAsyncEnumerable<string> GetAutoDeliverableUnscopedReadOnlyAsync(
+        DateTimeOffset asOf,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stream of <see cref="Order"/> aggregates for the T-0078 Packeta
+    /// status-sync sweep. Predicate:
+    /// <c>State == Shipped AND ShippingMethod == ZasilkovnaPickupPoint
+    /// AND ShippingCarrierRef != null</c>. PersonalPickup orders are
+    /// skipped (no carrier ref to query); they rely on T-0076 + T-0077
+    /// for delivery close.
+    ///
+    /// <para>
+    /// Full Order projection (not just id) because the Function reads
+    /// <see cref="Order.ShippingMethod"/>, <see cref="Order.ShippingCarrierRef"/>,
+    /// <see cref="Common.Auditable.CountryCode"/>, and
+    /// <see cref="Order.State"/> at decision time. Unscoped + read-only
+    /// (<c>AsNoTracking</c>) — mutating dispatch happens through
+    /// MediatR Commands which re-load via the tracked path. T-0078.
+    /// </para>
+    /// </summary>
+    IAsyncEnumerable<Order> GetCarrierSyncableUnscopedReadOnlyAsync(
+        CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
 

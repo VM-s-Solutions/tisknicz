@@ -74,7 +74,7 @@ public class OrderAddAttachmentTests
         o.Ship(FixedClock(), "PKT-1", 7);
         if (target == OrderState.Shipped) return o;
 
-        o.MarkAsDelivered(FixedClock());
+        o.MarkAsDelivered(FixedClock(), OrderDeliverySource.Auto);
         if (target == OrderState.Delivered) return o;
 
         o.Complete(FixedClock());

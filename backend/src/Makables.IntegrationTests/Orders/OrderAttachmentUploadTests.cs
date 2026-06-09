@@ -262,7 +262,7 @@ public sealed class OrderAttachmentUploadTests : IAsyncLifetime
         if (target == OrderState.Accepted) return o;
         o.Ship(fixedClock, "PKT-1", 7);
         if (target == OrderState.Shipped) return o;
-        o.MarkAsDelivered(fixedClock);
+        o.MarkAsDelivered(fixedClock, OrderDeliverySource.Auto);
         if (target == OrderState.Delivered) return o;
         throw new ArgumentOutOfRangeException(nameof(target), target, "Unsupported");
     }

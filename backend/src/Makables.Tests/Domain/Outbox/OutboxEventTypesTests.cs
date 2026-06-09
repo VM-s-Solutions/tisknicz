@@ -106,4 +106,56 @@ public class OutboxEventTypesTests
         // T-0072: the customer-shipped email rides the send-email queue.
         OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderShippedCustomerEmail).Should().BeTrue();
     }
+
+    // ---- T-0076: OrderDeliveredCustomerEmail email-routing classifier (test-first per TDD policy) ----
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderDeliveredCustomerEmail()
+    {
+        // T-0076: the customer-delivered email rides the send-email queue.
+        // Pin the constant + classifier in one assert so renaming either
+        // side trips this test.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDeliveredCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.delivered.customerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OrderDeliveredCustomerEmail_constant_equals_canonical_string()
+    {
+        // Drift defence: if a future refactor renames the constant, this
+        // test will fail loudly so the seed migration + EmailSendService
+        // branch can be kept in sync.
+        OutboxEventTypes.OrderDeliveredCustomerEmail.Should().Be("order.delivered.customerEmail");
+    }
+
+    [Fact]
+    public void OrderDeliveredCustomerEmail_routes_to_email_queue_only()
+    {
+        // Disjoint classifier invariant from T-0069/T-0072: a single event
+        // type cannot route to multiple queues. The delivered email goes
+        // through send-email; never invoice-generate, never generate-label.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDeliveredCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderDeliveredCustomerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDeliveredCustomerEmail).Should().BeFalse();
+    }
+
+    // ---- T-0078: OrderDisputedCarrierSourced is NOT email-routed at MVP (test-first) ----
+
+    [Fact]
+    public void IsEmailSend_returns_false_for_OrderDisputedCarrierSourced()
+    {
+        // T-0078: the dispute event is NOT email-routed at MVP. T-0106 will
+        // wire the consumer + email branch; until then the dispatcher's
+        // "unrouted" branch logs it visibly. Pin the contract so an
+        // accidental IsEmailSend extension is caught.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
+    }
+
+    [Fact]
+    public void OrderDisputedCarrierSourced_constant_equals_canonical_string()
+    {
+        OutboxEventTypes.OrderDisputedCarrierSourced.Should().Be("order.disputed.carrierSourced");
+    }
 }

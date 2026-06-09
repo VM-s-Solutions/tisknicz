@@ -78,8 +78,43 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderShippedCustomerEmail
                 => SendOrderShippedCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderDeliveredCustomerEmail
+                => SendOrderDeliveredCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0076: Order delivered (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderDeliveredCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderDeliveredCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderDeliveredCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderDeliveredCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["language_code"] = payload.LanguageCode,
+            },
+            // No PDF attachment — invoice rides only on the
+            // OrderPaidCustomer email per T-0069 locked decision 10.
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0071: Order accepted (maker → customer) email branch. ===

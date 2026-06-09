@@ -71,7 +71,7 @@ public class AddOrderAttachmentHandlerTests
         if (target == OrderState.Accepted) return o;
         o.Ship(clock, "PKT-1", 7);
         if (target == OrderState.Shipped) return o;
-        o.MarkAsDelivered(clock);
+        o.MarkAsDelivered(clock, OrderDeliverySource.Auto);
         if (target == OrderState.Delivered) return o;
 
         throw new ArgumentOutOfRangeException(nameof(target), target,
