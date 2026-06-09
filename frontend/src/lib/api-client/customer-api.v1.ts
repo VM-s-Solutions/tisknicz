@@ -28,6 +28,11 @@ export interface ICustomerApi {
     /**
      * @return OK
      */
+    deliver(orderId: string): Promise<MarkOrderDeliveredApiResponse>;
+
+    /**
+     * @return OK
+     */
     attachmentsGET(orderId: string, attachmentId: string): Promise<void>;
 
     /**
@@ -348,6 +353,74 @@ export class CustomerApi implements ICustomerApi {
             });
         }
         return Promise.resolve<UploadOrderAttachmentResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    deliver(orderId: string): Promise<MarkOrderDeliveredApiResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/deliver";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDeliver(_response);
+        });
+    }
+
+    protected processDeliver(response: Response): Promise<MarkOrderDeliveredApiResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = MarkOrderDeliveredApiResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<MarkOrderDeliveredApiResponse>(null as any);
     }
 
     /**
@@ -1508,6 +1581,70 @@ export interface ILoginRequest {
     password: string;
 
     [key: string]: any;
+}
+
+export class MarkOrderDeliveredApiResponse implements IMarkOrderDeliveredApiResponse {
+    orderId!: string;
+    state!: OrderState;
+
+    [key: string]: any;
+
+    constructor(data?: IMarkOrderDeliveredApiResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.state = _data["state"];
+        }
+    }
+
+    static fromJS(data: any): MarkOrderDeliveredApiResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new MarkOrderDeliveredApiResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["state"] = this.state;
+        return data;
+    }
+}
+
+export interface IMarkOrderDeliveredApiResponse {
+    orderId: string;
+    state: OrderState;
+
+    [key: string]: any;
+}
+
+export enum OrderState {
+    PendingPayment = "PendingPayment",
+    Paid = "Paid",
+    Accepted = "Accepted",
+    Shipped = "Shipped",
+    Delivered = "Delivered",
+    Completed = "Completed",
+    Cancelled = "Cancelled",
+    Refunded = "Refunded",
+    Disputed = "Disputed",
 }
 
 export class RegisterRequest implements IRegisterRequest {
