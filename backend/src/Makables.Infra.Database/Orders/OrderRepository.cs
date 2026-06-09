@@ -143,6 +143,44 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
             .FirstOrDefaultAsync(o => o.PaymentProviderRef == trimmed, cancellationToken);
     }
 
+    public IAsyncEnumerable<string> GetAutoDeliverableUnscopedReadOnlyAsync(
+        DateTimeOffset asOf,
+        CancellationToken cancellationToken)
+    {
+        // Projection-only stream — the T-0077 Function dispatches a
+        // Command per yielded id, which loads the Order fresh via the
+        // tracked path. AsNoTracking saves change-tracking overhead per
+        // ADR 0025 §Performance expectations item 2. Soft-deleted rows
+        // are hidden by the global query filter (no IgnoreQueryFilters
+        // call) — auto-deliver MUST NOT resurrect deactivated orders.
+        // Ordered by AutoDeliverAt ascending so the oldest expirations
+        // process first.
+        return db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.State == OrderState.Shipped
+                     && o.AutoDeliverAt != null
+                     && o.AutoDeliverAt < asOf)
+            .OrderBy(o => o.AutoDeliverAt)
+            .Select(o => o.Id)
+            .AsAsyncEnumerable();
+    }
+
+    public IAsyncEnumerable<Order> GetCarrierSyncableUnscopedReadOnlyAsync(
+        CancellationToken cancellationToken)
+    {
+        // Full Order projection — the T-0078 Function reads
+        // ShippingMethod + ShippingCarrierRef + CountryCode + State at
+        // decision time. AsNoTracking; mutating dispatch happens through
+        // the MediatR Commands which re-load via the tracked path. Soft-
+        // deleted rows are hidden by the global query filter.
+        return db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.State == OrderState.Shipped
+                     && o.ShippingMethod == ShippingMethod.ZasilkovnaPickupPoint
+                     && o.ShippingCarrierRef != null)
+            .AsAsyncEnumerable();
+    }
+
     public Task AddAsync(Order order, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(order);
