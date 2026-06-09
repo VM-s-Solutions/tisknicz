@@ -70,4 +70,28 @@ public interface IOrderQueries
         int page,
         int pageSize,
         CancellationToken ct);
+
+    /// <summary>
+    /// Customer-scoped order detail (T-0082). Predicate
+    /// <c>o.Id == orderId AND o.CustomerUserId == customerUserId</c>.
+    /// Returns <c>null</c> for unknown ids OR cross-customer ids — same
+    /// shape so order ids aren't enumerable across customers (IDOR
+    /// shield).
+    /// </summary>
+    Task<CustomerOrderDetailDto?> GetCustomerOrderDetailsAsync(
+        string orderId,
+        string customerUserId,
+        CancellationToken ct);
+
+    /// <summary>
+    /// Maker-scoped order detail (T-0082). Predicate
+    /// <c>o.Id == orderId AND o.MakerId == makerId</c>. Returns
+    /// <c>null</c> for unknown ids OR cross-maker ids. Projection MUST
+    /// NOT reference <c>o.ContactEmail</c> anywhere (T-0081 §A.2 GDPR
+    /// lock — same as <see cref="GetMakerOrdersPagedAsync"/>).
+    /// </summary>
+    Task<MakerOrderDetailDto?> GetMakerOrderDetailsAsync(
+        string orderId,
+        string makerId,
+        CancellationToken ct);
 }

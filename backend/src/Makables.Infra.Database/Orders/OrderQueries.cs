@@ -1,4 +1,5 @@
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Orders.Queries;
@@ -155,6 +156,158 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
             .ToListAsync(ct);
 
         return new PagedData<MakerOrderListItemDto>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<CustomerOrderDetailDto?> GetCustomerOrderDetailsAsync(
+        string orderId,
+        string customerUserId,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(customerUserId))
+        {
+            return null;
+        }
+
+        // Predicate IS the IDOR shield: a customer cannot read another
+        // customer's row because the SQL never references it. Cross-
+        // tenant probes surface as null — same shape as nonexistent so
+        // there's no IDOR oracle.
+        return await db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => o.Id == orderId && o.CustomerUserId == customerUserId)
+            .Select(o => new CustomerOrderDetailDto(
+                o.Id,
+                o.OrderNumber,
+                o.State,
+                o.PaidAt,
+                o.AcceptedAt,
+                o.ShippedAt,
+                o.DeliveredAt,
+                o.CancelledAt,
+                o.TotalAmountMinor,
+                o.ProductPriceAmountMinor,
+                o.ShippingPriceAmountMinor,
+                ComputeVatAmount(o.ProductPriceAmountMinor + o.ShippingPriceAmountMinor, o.VatRateBp),
+                o.VatRateBp,
+                o.Currency,
+                o.ContactName,
+                o.ContactPhone,
+                db.Set<Maker>()
+                    .Where(m => m.Id == o.MakerId)
+                    .Select(m => m.CompanyName)
+                    .FirstOrDefault() ?? string.Empty,
+                o.ProductId == null
+                    ? null
+                    : db.Set<Product>()
+                        .Where(p => p.Id == o.ProductId)
+                        .Select(p => p.Title)
+                        .FirstOrDefault(),
+                o.ShippingMethod,
+                o.ShippingCarrierTrackingUrl,
+                db.Set<OrderAttachment>()
+                    .Where(a => a.OrderId == o.Id)
+                    .OrderBy(a => a.CreatedAt)
+                    .Select(a => new OrderAttachmentSummaryDto(
+                        a.Id,
+                        a.OriginalFilename,
+                        a.ContentType,
+                        a.SizeBytes,
+                        "/api/v1/orders/" + o.Id + "/attachments/" + a.Id))
+                    .ToList(),
+                db.Set<Invoice>()
+                    .Where(i => i.OrderId == o.Id && i.PdfBlobPath != null)
+                    .Select(i => "/api/v1/orders/" + o.Id + "/invoice")
+                    .FirstOrDefault(),
+                o.CreatedAt,
+                o.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<MakerOrderDetailDto?> GetMakerOrderDetailsAsync(
+        string orderId,
+        string makerId,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(makerId))
+        {
+            return null;
+        }
+
+        // Predicate IS the IDOR shield. Customer email DELIBERATELY NOT
+        // projected — T-0081 §A.2 GDPR data-minimization lock. The
+        // expression tree below carries no reference to o.ContactEmail.
+        return await db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => o.Id == orderId && o.MakerId == makerId)
+            .Select(o => new MakerOrderDetailDto(
+                o.Id,
+                o.OrderNumber,
+                o.State,
+                o.PaidAt,
+                o.AcceptedAt,
+                o.ShippedAt,
+                o.DeliveredAt,
+                o.CancelledAt,
+                o.TotalAmountMinor,
+                o.ProductPriceAmountMinor,
+                o.ShippingPriceAmountMinor,
+                ComputeVatAmount(o.ProductPriceAmountMinor + o.ShippingPriceAmountMinor, o.VatRateBp),
+                o.VatRateBp,
+                o.MakerPayoutAmountMinor,
+                o.Currency,
+                o.ContactName,  // contact NAME — never email
+                o.ContactPhone,
+                o.ProductId == null
+                    ? null
+                    : db.Set<Product>()
+                        .Where(p => p.Id == o.ProductId)
+                        .Select(p => p.Title)
+                        .FirstOrDefault(),
+                o.ShippingMethod,
+                o.ShippingCarrierRef,
+                o.ShippingCarrierTrackingUrl,
+                o.ZasilkovnaPickupPointId,
+                db.Set<OrderAttachment>()
+                    .Where(a => a.OrderId == o.Id)
+                    .OrderBy(a => a.CreatedAt)
+                    .Select(a => new OrderAttachmentSummaryDto(
+                        a.Id,
+                        a.OriginalFilename,
+                        a.ContentType,
+                        a.SizeBytes,
+                        "/api/v1/orders/" + o.Id + "/attachments/" + a.Id))
+                    .ToList(),
+                db.Set<Invoice>()
+                    .Where(i => i.OrderId == o.Id && i.PdfBlobPath != null)
+                    .Select(i => "/api/v1/orders/" + o.Id + "/invoice")
+                    .FirstOrDefault(),
+                o.CreatedAt,
+                o.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// Compute the VAT-portion of the gross total in minor units, given
+    /// the gross and the rate in basis points (2100 = 21%). The gross
+    /// already includes VAT in our snapshot model (T-0060 / T-0061 +
+    /// patterns §A.13); rearranging
+    /// <c>gross = net + net * (rate / 10000)</c> gives
+    /// <c>vat = gross - net = gross * rate / (10000 + rate)</c>. Integer
+    /// rounding is half-up via the +half trick to match the platform's
+    /// money-math convention.
+    /// </summary>
+    private static long ComputeVatAmount(long grossMinor, int vatRateBp)
+    {
+        if (vatRateBp <= 0)
+        {
+            return 0;
+        }
+        var denom = 10_000L + vatRateBp;
+        var numerator = grossMinor * vatRateBp;
+        // Half-up rounding.
+        return (numerator + denom / 2) / denom;
     }
 
     private static IQueryable<Order> ApplyFilter(IQueryable<Order> q, OrderFilter filter)

@@ -121,6 +121,20 @@ public sealed class OrdersController(
             new GetCustomerOrders.Query(page, pageSize, state, dateFrom, dateTo, sort), ct));
 
     /// <summary>
+    /// Customer order detail (T-0082 / US-customer-0012). Returns the
+    /// full lifecycle snapshot plus inline attachments + invoice PDF URL.
+    /// Cross-customer probes return 404 (same shape as nonexistent).
+    /// </summary>
+    [HttpGet("{orderId}")]
+    [ProducesResponseType(typeof(GetCustomerOrderDetails.GetCustomerOrderDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(string orderId, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(new GetCustomerOrderDetails.Query(orderId), ct));
+
+    /// <summary>
     /// Create a customer order in <see cref="OrderState.PendingPayment"/>.
     /// Returns the four fields the frontend uses to navigate to the
     /// order page and trigger T-0065's payment-session creation.
