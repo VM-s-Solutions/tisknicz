@@ -82,6 +82,15 @@ public sealed class OrdersController(
         string PaymentProviderRef,
         string RedirectUrl);
 
+    // Same schema-collision dodge for the mark-delivered action. T-0076.
+    // Mirrors the controller-level wrapper pattern used elsewhere on this
+    // host so the NSwag-generated client gets a stable schema name and
+    // doesn't collide with other Response records compiled into the same
+    // OpenAPI document.
+    public sealed record MarkOrderDeliveredApiResponse(
+        string OrderId,
+        OrderState State);
+
     /// <summary>
     /// Create a customer order in <see cref="OrderState.PendingPayment"/>.
     /// Returns the four fields the frontend uses to navigate to the
@@ -277,6 +286,42 @@ public sealed class OrdersController(
             OriginalFilename: attach.Value.OriginalFilename,
             SizeBytes: attach.Value.SizeBytes,
             UploadedOn: attach.Value.UploadedOn)));
+    }
+
+    /// <summary>
+    /// Mark a Shipped order as Delivered. Single canonical writer for the
+    /// Shipped → Delivered transition; the same handler is dispatched by
+    /// T-0077 (auto-deliver Function) and T-0078 (Packeta status-sync
+    /// Function). Source = <see cref="OrderDeliverySource.Customer"/>
+    /// stamped on the order so dispute trails can distinguish
+    /// customer-confirmed deliveries from the timer / carrier paths.
+    /// T-0076 (US-customer-0013).
+    ///
+    /// <para>
+    /// Already-Delivered re-calls return 200 (Silent Success — the
+    /// customer + T-0078 carrier-sync race is the expected concurrent
+    /// path under MVP traffic). Non-Shipped / non-Delivered states (e.g.
+    /// Cancelled) surface as 409.
+    /// </para>
+    /// </summary>
+    [HttpPost("{orderId}/deliver")]
+    [ProducesResponseType(typeof(MarkOrderDeliveredApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> MarkDelivered(string orderId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new MarkOrderDelivered.Command(orderId, OrderDeliverySource.Customer), ct);
+
+        // Project the handler's nested Response into the controller-level
+        // shape so the OpenAPI schema gets a unique top-level name.
+        return result.IsSuccess
+            ? HandleResult(BusinessResult.Success(new MarkOrderDeliveredApiResponse(
+                result.Value!.OrderId,
+                result.Value.State)))
+            : HandleResult(BusinessResult.Failure<MarkOrderDeliveredApiResponse>(result.Error!));
     }
 
     /// <summary>

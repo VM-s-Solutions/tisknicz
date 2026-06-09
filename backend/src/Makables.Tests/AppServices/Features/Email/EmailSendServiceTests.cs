@@ -673,6 +673,83 @@ public class EmailSendServiceTests
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
+    // === T-0076 — OrderDeliveredCustomerEmail branch. ===
+
+    private static string EncodeDeliveredCustomerPayload(
+        string lang = LanguageCode.CsCZ,
+        string actionUrl = "https://makables.test/objednavka/ord-1") =>
+        JsonSerializer.Serialize(new OrderDeliveredCustomerEmailPayload(
+            OrderId: "ord-1",
+            OrderNumber: TestOrderNumber,
+            Email: "anna@example.cz",
+            ContactName: "Anna",
+            LanguageCode: lang,
+            ActionUrl: actionUrl));
+
+    [Fact]
+    public async Task SendAsync_with_OrderDeliveredCustomerEmail_loads_template_and_sends()
+    {
+        // T-0076 AC-9: the new EmailTemplateType.OrderDeliveredCustomer
+        // branch loads the template, applies the substitutions, and calls
+        // SendGrid with the pre-baked action URL verbatim.
+        var tpl = CreateTemplate(EmailTemplateType.OrderDeliveredCustomer);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
+            "Doručeno #{{order_number}}", "URL: {{action_url}}");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderDeliveredCustomer, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>())
+            .Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-delivered", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderDeliveredCustomerEmail,
+            EncodeDeliveredCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ProviderMessageId.Should().Be("sg-delivered");
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m =>
+            m.ProviderTemplateId == "d-fake-OrderDeliveredCustomer"
+            && m.ToAddress == "anna@example.cz"
+            && m.ToName == "Anna"
+            && m.LanguageCode == LanguageCode.CsCZ
+            && m.Data.ContainsKey("action_url")
+            && ((string)m.Data["action_url"]) == "https://makables.test/objednavka/ord-1"
+            && m.Subject == $"Doručeno #{TestOrderNumber}"
+            && m.PlainTextBody.Contains("https://makables.test/objednavka/ord-1")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderDeliveredCustomerEmail_does_NOT_carry_an_attachment()
+    {
+        // T-0076: no PDF attachment — the invoice rode the OrderPaidCustomer
+        // email per T-0069 locked decision 10. Regression-pin so a future
+        // refactor doesn't accidentally route through DispatchOrderEmail
+        // with an Attachment populated.
+        var tpl = CreateTemplate(EmailTemplateType.OrderDeliveredCustomer);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, "Doručeno", "Body");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderDeliveredCustomer, Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>()).Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-delivered", DateTimeOffset.UtcNow)));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderDeliveredCustomerEmail,
+            EncodeDeliveredCustomerPayload(),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _provider.Received(1).SendAsync(Arg.Is<EmailMessage>(m => m.Attachment == null),
+            Arg.Any<CancellationToken>());
+        // Belt-and-braces: the delivered branch never touches Invoice
+        // or blob storage (no perf regression / no spurious blob download).
+        await _invoices.DidNotReceive().GetByOrderIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _blobStorage.DidNotReceive().DownloadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task AuthMagicLinkSend_does_NOT_carry_an_attachment()
     {
