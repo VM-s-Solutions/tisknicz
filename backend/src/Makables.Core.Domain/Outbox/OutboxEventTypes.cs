@@ -75,6 +75,26 @@ public static class OutboxEventTypes
     public const string ShippingGenerateLabel = "shipping.generate.label";
 
     /// <summary>
+    /// "Your order has been delivered" customer notification email, fired
+    /// by <see cref="Features.Orders.MarkOrderDelivered"/> after the
+    /// Shipped → Delivered transition. Single email per delivery (no
+    /// maker email per T-0076 locked decision A.2). Routes through the
+    /// existing <c>send-email</c> queue. T-0076 (US-customer-0013).
+    /// </summary>
+    public const string OrderDeliveredCustomerEmail = "order.delivered.customerEmail";
+
+    /// <summary>
+    /// "Order disputed (carrier-sourced)" event, fired by T-0078
+    /// <c>DisputeShipment.Handler</c> as a STUB when Packeta reports
+    /// Returned / Failed. NOT email-routed at MVP — the OutboxDispatcher
+    /// logs it via the "unrouted" branch until T-0106 wires the consumer
+    /// (real Disputed state transition + customer + admin email).
+    /// Intentionally absent from <see cref="IsEmailSend"/>,
+    /// <see cref="IsInvoiceGenerate"/>, <see cref="IsGenerateLabel"/>.
+    /// </summary>
+    public const string OrderDisputedCarrierSourced = "order.disputed.carrierSourced";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -94,7 +114,8 @@ public static class OutboxEventTypes
                   or OrderPaidCustomerEmail
                   or OrderPlacedMakerEmail
                   or OrderAcceptedCustomerEmail
-                  or OrderShippedCustomerEmail;
+                  or OrderShippedCustomerEmail
+                  or OrderDeliveredCustomerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the
