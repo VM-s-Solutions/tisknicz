@@ -122,6 +122,15 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(o => o.AutoDeliverAt).HasColumnName("auto_deliver_at");
 
+        // T-0076: delivery source (Customer/Auto/Carrier). SMALLINT NULL —
+        // nullable so historical Delivered orders pre-T-0076 stay valid;
+        // the enum's `: short` backing keeps the column at 2 bytes per row.
+        // Per ADR 0013 — queryable from analytics + dispute trails
+        // (Phase 5 T-0106 / T-0118) without joining outbox / audit logs.
+        builder.Property(o => o.DeliverySource)
+            .HasColumnName("delivery_source")
+            .HasConversion<short?>();
+
         // === Customer notes ===
         builder.Property(o => o.CustomerNotes)
             .HasColumnName("customer_notes").HasMaxLength(Order.MaxCustomerNotesLength);

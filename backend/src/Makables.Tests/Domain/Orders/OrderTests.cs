@@ -503,11 +503,12 @@ public class OrderTests
         o.Ship(FixedClock(), "PKT-1", 7);
 
         var deliveredAt = Now.AddDays(2);
-        var result = o.MarkAsDelivered(FixedClock(deliveredAt));
+        var result = o.MarkAsDelivered(FixedClock(deliveredAt), OrderDeliverySource.Customer);
 
         result.IsSuccess.Should().BeTrue();
         o.State.Should().Be(OrderState.Delivered);
         o.DeliveredAt.Should().Be(deliveredAt);
+        o.DeliverySource.Should().Be(OrderDeliverySource.Customer);
     }
 
     [Fact]
@@ -517,9 +518,78 @@ public class OrderTests
         o.MarkAsPaid(FixedClock(), "tx-1");
         o.Accept(FixedClock());
 
-        var result = o.MarkAsDelivered(FixedClock());
+        var result = o.MarkAsDelivered(FixedClock(), OrderDeliverySource.Auto);
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
+        // DeliverySource is NOT stamped on a rejected transition (the
+        // rejected call must not mutate the entity).
+        o.DeliverySource.Should().BeNull();
+        o.DeliveredAt.Should().BeNull();
+    }
+
+    // === T-0076: extended MarkAsDelivered signature ===
+
+    [Fact]
+    public void MarkAsDelivered_stamps_source_Auto_on_shipped_order()
+    {
+        // T-0077 auto-deliver path: 2-arg call shape (deliveredAtOverride
+        // defaults to null → falls back to clock.UtcNow).
+        var o = ValidDefaults();
+        o.MarkAsPaid(FixedClock(), "tx-1");
+        o.Accept(FixedClock());
+        o.Ship(FixedClock(), "PKT-1", 7);
+
+        var result = o.MarkAsDelivered(FixedClock(), OrderDeliverySource.Auto);
+
+        result.IsSuccess.Should().BeTrue();
+        o.State.Should().Be(OrderState.Delivered);
+        o.DeliveredAt.Should().Be(Now);
+        o.DeliverySource.Should().Be(OrderDeliverySource.Auto);
+    }
+
+    [Fact]
+    public void MarkAsDelivered_with_deliveredAtOverride_uses_override_timestamp()
+    {
+        // T-0078 carrier-sync path: Packeta's authoritative timestamp wins
+        // over clock.UtcNow when supplied (mirrors MarkAsPaid's paidAtOverride
+        // semantic from T-0067).
+        var o = ValidDefaults();
+        o.MarkAsPaid(FixedClock(), "tx-1");
+        o.Accept(FixedClock());
+        o.Ship(FixedClock(), "PKT-1", 7);
+
+        var carrierTimestamp = new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        var result = o.MarkAsDelivered(
+            FixedClock(),
+            OrderDeliverySource.Carrier,
+            deliveredAtOverride: carrierTimestamp);
+
+        result.IsSuccess.Should().BeTrue();
+        o.DeliveredAt.Should().Be(carrierTimestamp,
+            "carrier-provided timestamp wins over clock.UtcNow when supplied");
+        o.DeliverySource.Should().Be(OrderDeliverySource.Carrier);
+    }
+
+    [Fact]
+    public void MarkAsDelivered_with_null_deliveredAtOverride_falls_back_to_clock()
+    {
+        // T-0078 carrier-sync path when Packeta omits the timestamp: the
+        // override is null → clock.UtcNow wins. Pin the fallback so the
+        // Function's Warning log + this default behaviour stay coupled.
+        var o = ValidDefaults();
+        o.MarkAsPaid(FixedClock(), "tx-1");
+        o.Accept(FixedClock());
+        o.Ship(FixedClock(), "PKT-1", 7);
+
+        var result = o.MarkAsDelivered(
+            FixedClock(),
+            OrderDeliverySource.Carrier,
+            deliveredAtOverride: null);
+
+        result.IsSuccess.Should().BeTrue();
+        o.DeliveredAt.Should().Be(Now,
+            "null override preserves clock-wins semantic for carrier without timestamp");
+        o.DeliverySource.Should().Be(OrderDeliverySource.Carrier);
     }
 
     // === Complete ===
@@ -652,7 +722,7 @@ public class OrderTests
         ((Action)(() => o.MarkAsPaid(null!, "tx-1"))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Accept(null!))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Ship(null!, "PKT", 7))).Should().Throw<ArgumentNullException>();
-        ((Action)(() => o.MarkAsDelivered(null!))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => o.MarkAsDelivered(null!, OrderDeliverySource.Customer))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Complete(null!))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Cancel(null!))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Refund(null!))).Should().Throw<ArgumentNullException>();
@@ -675,7 +745,7 @@ public class OrderTests
         o.MarkAsPaid(FixedClock(), "tx-1");
         o.Accept(FixedClock());
         o.Ship(FixedClock(), "PKT-1", 7);
-        o.MarkAsDelivered(FixedClock());
+        o.MarkAsDelivered(FixedClock(), OrderDeliverySource.Auto);
         return o;
     }
 
@@ -698,7 +768,7 @@ public class OrderTests
         o.Ship(FixedClock(), "PKT-1", 7);
         if (target == OrderState.Shipped) return o;
 
-        o.MarkAsDelivered(FixedClock());
+        o.MarkAsDelivered(FixedClock(), OrderDeliverySource.Auto);
         if (target == OrderState.Delivered) return o;
 
         o.Complete(FixedClock());

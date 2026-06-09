@@ -218,6 +218,17 @@ public sealed class Order : Auditable
     /// </summary>
     public DateTimeOffset? AutoDeliverAt { get; private set; }
 
+    /// <summary>
+    /// Identifies which caller drove the <see cref="OrderState.Shipped"/> →
+    /// <see cref="OrderState.Delivered"/> transition. Stamped by
+    /// <see cref="MarkAsDelivered"/> at transition time. <b>Nullable</b> —
+    /// orders that completed delivery before T-0076 landed (none on
+    /// launch day, but defensive for the schema) have no source recorded.
+    /// Queryable for dispute trails + analytics ("what fraction of orders
+    /// close via auto-deliver?"). T-0076 locked decision A.1.
+    /// </summary>
+    public OrderDeliverySource? DeliverySource { get; private set; }
+
     // === Customer notes ===
 
     /// <summary>Free-form note from the customer to the maker.</summary>
@@ -632,17 +643,49 @@ public sealed class Order : Auditable
 
     /// <summary>
     /// <see cref="OrderState.Shipped"/> → <see cref="OrderState.Delivered"/>.
-    /// Dispatched from the customer-confirm command (T-0076), the
-    /// auto-deliver job (T-0077), or a carrier webhook.
+    /// Dispatched from one of three callers in the delivery-close bundle:
+    /// <list type="bullet">
+    ///   <item><description>Customer-confirm endpoint (T-0076) with
+    ///     <see cref="OrderDeliverySource.Customer"/>.</description></item>
+    ///   <item><description>Auto-deliver timer Function (T-0077) with
+    ///     <see cref="OrderDeliverySource.Auto"/>.</description></item>
+    ///   <item><description>Packeta carrier-status sync Function (T-0078)
+    ///     with <see cref="OrderDeliverySource.Carrier"/> and the
+    ///     carrier's authoritative <c>DeliveredAt</c> timestamp.</description></item>
+    /// </list>
+    ///
+    /// <para>
+    /// <b>T-0076 signature extension.</b>
+    /// <list type="bullet">
+    ///   <item><paramref name="source"/> — stamped on
+    ///     <see cref="DeliverySource"/> for dispute / analytics queries.</item>
+    ///   <item><paramref name="deliveredAtOverride"/> — Packeta's
+    ///     authoritative timestamp (T-0078). When supplied it overrides
+    ///     <c>clock.UtcNow</c>; null falls back to clock semantics.
+    ///     Mirrors <see cref="MarkAsPaid"/>'s <c>paidAtOverride</c>.</item>
+    /// </list>
+    /// </para>
+    ///
+    /// <para>
+    /// On a rejected transition (state != Shipped) the entity is NOT
+    /// mutated — <see cref="DeliverySource"/> and <see cref="DeliveredAt"/>
+    /// retain whatever they had on entry. The handler treats an
+    /// already-Delivered re-call as silent Success (no outbox emission)
+    /// per T-0076 locked decision A.3.
+    /// </para>
     /// </summary>
-    public BusinessResult MarkAsDelivered(IClock clock)
+    public BusinessResult MarkAsDelivered(
+        IClock clock,
+        OrderDeliverySource source,
+        DateTimeOffset? deliveredAtOverride = null)
     {
         ArgumentNullException.ThrowIfNull(clock);
         if (State != OrderState.Shipped)
             return InvalidTransition();
 
         State = OrderState.Delivered;
-        DeliveredAt = clock.UtcNow;
+        DeliveredAt = deliveredAtOverride ?? clock.UtcNow;
+        DeliverySource = source;
         return BusinessResult.Success();
     }
 

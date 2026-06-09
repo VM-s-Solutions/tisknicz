@@ -56,4 +56,12 @@ public enum EmailTemplateType
     /// payload's <c>TrackingUrl</c> field is non-empty.
     /// </summary>
     OrderShippedCustomer = 7,
+
+    /// <summary>
+    /// "Your order has been delivered" customer notification. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderDeliveredCustomerEmail"/>.
+    /// Single email per delivery transition; no maker notification (T-0076
+    /// locked decision A.2). T-0076.
+    /// </summary>
+    OrderDeliveredCustomer = 8,
 }
