@@ -287,4 +287,108 @@ public sealed class GetMakerOrdersIntegrationTests : IAsyncLifetime
         var body = await response.Content.ReadFromJsonAsync<GetMakerOrders.GetMakerOrdersResponse>(JsonOpts);
         body!.Orders.Items.Should().OnlyContain(i => i.UnreadMessageCount == null);
     }
+
+    // Gate 9 test-catchup item 5 — mirror Customer-side
+    // Pagination_returns_correct_window for the Maker host. Seeds 5 orders
+    // for the requesting maker and asserts Page=2 / PageSize=2 returns the
+    // exact 2-row middle window with TotalCount=5. Default sort is
+    // CreatedAtDesc, so page 1 = day 5/4, page 2 = day 3/2, page 3 = day 1.
+    [Fact]
+    public async Task GET_orders_pagination_returns_correct_window()
+    {
+        var seedActor = "test-seed";
+        var seedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
+
+        await using (var db = _harness.CreateDbContext())
+        {
+            var customer = User.Create(
+                id: CustomerUserId, email: "c@example.cz", role: UserRole.Customer,
+                fullName: "Customer", countryCodePrimary: CountryCode,
+                passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+            customer.ConfirmEmail(seedAt);
+            customer.MarkCreated(seedActor, seedAt);
+            db.Set<User>().Add(customer);
+
+            var category = Category.Create(
+                id: CategoryId, name: "3D tisk", slug: "3d-tisk",
+                icon: null, description: null, sortOrder: 10, countryCode: CountryCode);
+            category.MarkCreated(seedActor, seedAt);
+            db.Set<Category>().Add(category);
+
+            var makerUser = User.Create(
+                id: MakerAUserId, email: "a@maker.cz", role: UserRole.Maker,
+                fullName: "Maker", countryCodePrimary: CountryCode,
+                passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+            makerUser.ConfirmEmail(seedAt);
+            makerUser.MarkCreated(seedActor, seedAt);
+            db.Set<User>().Add(makerUser);
+
+            var address = AddressEntity.Create(
+                id: AddressAId, street: "Pikrtova", houseNumber: "1737",
+                city: "Praha", zip: "14000", countryCodeIso: CountryCode,
+                auditCountryCode: CountryCode);
+            address.MarkCreated(seedActor, seedAt);
+            db.Set<AddressEntity>().Add(address);
+
+            var maker = MakerEntity.Create(
+                id: MakerAId, userId: MakerAUserId,
+                registrationNumber: "27074358", vatId: null,
+                companyName: "Avast s.r.o.", legalForm: null,
+                registeredAddressId: AddressAId,
+                incorporatedOn: null, isActiveInRegistry: true,
+                sourceRegistry: "ares",
+                snapshotFetchedAt: seedAt, snapshotIsStale: false,
+                countryCode: CountryCode, slug: "avast-a");
+            maker.MarkVerified();
+            maker.UpdateProfile(bio: null, bankAccount: null, personalPickupEnabled: true, pickupNote: null);
+            maker.MarkCreated(seedActor, seedAt);
+            db.Set<MakerEntity>().Add(maker);
+
+            var product = Product.Create(
+                id: ProductAId, makerId: MakerAId, categoryId: CategoryId,
+                title: "Vase A", description: null,
+                price: new Money(50000, Currency),
+                priceType: PriceType.Fixed, weightGrams: 300,
+                countryCode: CountryCode);
+            product.MarkCreated(seedActor, seedAt);
+            db.Set<Product>().Add(product);
+
+            // 5 orders for Maker A, one per day May 1..May 5.
+            for (var i = 1; i <= 5; i++)
+            {
+                var createdAt = new DateTimeOffset(2026, 5, i, 9, 0, 0, TimeSpan.Zero);
+                var o = Order.Create(
+                    id: $"o-{i}", orderNumber: $"M-CZ-2026-{i:D4}",
+                    customerUserId: CustomerUserId, makerId: MakerAId, productId: ProductAId,
+                    contactName: $"Contact-{i}", contactEmail: "c@example.cz",
+                    contactPhone: "+420 723 456 789",
+                    productPriceAmountMinor: 30000, shippingPriceAmountMinor: 5000,
+                    platformFeeAmountMinor: 5000, makerPayoutAmountMinor: 30000,
+                    totalAmountMinor: 35000, currency: Currency, vatRateBp: 2100,
+                    shippingMethod: ShippingMethod.ZasilkovnaPickupPoint,
+                    zasilkovnaPickupPointId: "pp-42",
+                    countryCode: CountryCode);
+                o.MarkCreated(seedActor, createdAt);
+                db.Set<Order>().Add(o);
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IssueMakerToken(MakerAUserId, "a@maker.cz"));
+
+        var response = await client.GetAsync("/api/v1/orders?page=2&pageSize=2");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<GetMakerOrders.GetMakerOrdersResponse>(JsonOpts);
+        body!.Orders.TotalCount.Should().Be(5);
+        body.Orders.Page.Should().Be(2);
+        body.Orders.PageSize.Should().Be(2);
+        body.Orders.Items.Should().HaveCount(2);
+        // Default sort = CreatedAtDesc → page 1 = May 5,4 → page 2 = May 3,2.
+        body.Orders.Items[0].OrderId.Should().Be("o-3");
+        body.Orders.Items[1].OrderId.Should().Be("o-2");
+    }
 }

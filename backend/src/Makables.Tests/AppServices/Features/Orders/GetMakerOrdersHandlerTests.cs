@@ -217,4 +217,21 @@ public class GetMakerOrdersHandlerTests
             new GetMakerOrders.Query(1, GetMakerOrders.MaxPageSize + 1, null, null, null, OrderSort.CreatedAtDesc));
         result.IsValid.Should().BeFalse();
     }
+
+    // Gate 9 test-catchup item 2 — mirror the Customer-side
+    // Validator_rejects_inverted_date_range test for the Maker validator.
+    // Validators are coded identically; this guards against a future drift.
+    [Fact]
+    public void Validator_rejects_inverted_date_range()
+    {
+        var validator = new GetMakerOrders.Validator();
+        var from = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
+        var to = new DateTimeOffset(2026, 5, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var result = validator.Validate(
+            new GetMakerOrders.Query(1, 20, null, from, to, OrderSort.CreatedAtDesc));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName.Contains("DateFrom"));
+    }
 }

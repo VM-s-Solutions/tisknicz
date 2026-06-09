@@ -138,6 +138,61 @@ public class GetCustomerOrdersHandlerTests
             CustomerUserId, Arg.Any<OrderFilter>(), OrderSort.TotalAmountDesc, 1, 20, Arg.Any<CancellationToken>());
     }
 
+    // Gate 9 test-catchup item 1 — cover the remaining 3 OrderSort arms.
+    // Existing tests cover CreatedAtDesc (default) + TotalAmountDesc; this
+    // [Theory] closes the projection-arm gap on CreatedAtAsc, TotalAmountAsc
+    // and StateAsc. Handler is a pure pass-through, so the assertion is on
+    // the forwarded sort enum.
+    [Theory]
+    [InlineData(OrderSort.CreatedAtAsc)]
+    [InlineData(OrderSort.TotalAmountAsc)]
+    [InlineData(OrderSort.StateAsc)]
+    public async Task Sort_variant_passes_through_for_remaining_arms(OrderSort sort)
+    {
+        _orderQueries.GetCustomerOrdersPagedAsync(
+                CustomerUserId, Arg.Any<OrderFilter>(), sort, 1, 20, Arg.Any<CancellationToken>())
+            .Returns(PagedData<CustomerOrderListItemDto>.Empty(1, 20));
+
+        var result = await _sut.Handle(
+            new GetCustomerOrders.Query(1, 20, null, null, null, sort),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _orderQueries.Received(1).GetCustomerOrdersPagedAsync(
+            CustomerUserId, Arg.Any<OrderFilter>(), sort, 1, 20, Arg.Any<CancellationToken>());
+    }
+
+    // Gate 9 test-catchup item 4 — ProductTitle null projection (custom order
+    // path: order has no Product). Verifies the handler passes the null
+    // through to the response DTO unchanged.
+    [Fact]
+    public async Task Custom_order_with_null_ProductTitle_is_passed_through()
+    {
+        var item = new CustomerOrderListItemDto(
+            OrderId: "ord-custom",
+            OrderNumber: "M-CZ-2026ord-custom",
+            State: OrderState.Paid,
+            TotalAmountMinor: 12345,
+            Currency: "CZK",
+            CreatedAt: new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero),
+            MakerName: "Avast s.r.o.",
+            ProductTitle: null);
+        var paged = new PagedData<CustomerOrderListItemDto>(
+            new[] { item }, Page: 1, PageSize: 20, TotalCount: 1);
+        _orderQueries.GetCustomerOrdersPagedAsync(
+                CustomerUserId, Arg.Any<OrderFilter>(), Arg.Any<OrderSort>(),
+                1, 20, Arg.Any<CancellationToken>())
+            .Returns(paged);
+
+        var result = await _sut.Handle(
+            new GetCustomerOrders.Query(1, 20, null, null, null, OrderSort.CreatedAtDesc),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Orders.Items.Should().HaveCount(1);
+        result.Value.Orders.Items[0].ProductTitle.Should().BeNull();
+    }
+
     [Fact]
     public async Task Empty_result_returns_empty_PagedData_with_TotalCount_zero()
     {
@@ -234,6 +289,32 @@ public class GetCustomerOrdersHandlerTests
                 new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero),
                 OrderSort.CreatedAtDesc));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    // Gate 9 test-catchup item 3 — PageSize boundary accept tests. Reject
+    // tests for PageSize=0 and PageSize=Max+1 already exist; these guard
+    // against an accidental off-by-one in the InclusiveBetween clamp.
+    [Fact]
+    public void Validator_accepts_PageSize_of_1()
+    {
+        var validator = new GetCustomerOrders.Validator();
+
+        var result = validator.Validate(
+            new GetCustomerOrders.Query(1, 1, null, null, null, OrderSort.CreatedAtDesc));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_accepts_PageSize_at_MaxPageSize()
+    {
+        var validator = new GetCustomerOrders.Validator();
+
+        var result = validator.Validate(
+            new GetCustomerOrders.Query(
+                1, GetCustomerOrders.MaxPageSize, null, null, null, OrderSort.CreatedAtDesc));
 
         result.IsValid.Should().BeTrue();
     }
