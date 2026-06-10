@@ -447,6 +447,91 @@ export const messages = {
   'order.message.bodyTooLong': 'Zpráva může mít nejvýše 2000 znaků.',
   'order.message.notAllowedInState':
     'Zprávy lze odesílat až po zaplacení objednávky.',
+
+  // Error-code parity keys consumed by the checkout-flow bundle
+  // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
+  // RequireEmailConfirmedMiddleware 403; file.* from the T-0064
+  // attachment validator. PM/UX to refine on PR review.
+  'auth.emailNotConfirmed':
+    'Váš e-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
+  'file.invalid':
+    'Soubor se nepodařilo nahrát. Zkontrolujte jej a zkuste to znovu.',
+  'file.tooLarge': 'Soubor je příliš velký. Maximum je 10 MB.',
+  'file.unsupportedType':
+    'Nepodporovaný formát souboru. Použijte PDF, JPEG, PNG nebo WebP.',
+
+  // Checkout — order form at /objednavka (T-0084a, US-customer-0010/0011).
+  // Vykání throughout (customer audience). The {count} keys follow the
+  // plural-neutral "Label: N" convention from the catalog block above.
+  'checkout.title': 'Objednávka',
+  'checkout.subtitle':
+    'Zkontrolujte údaje a odešlete objednávku. Platba proběhne v dalším kroku.',
+  'checkout.metadata.title': 'Objednávka — Makables',
+  'checkout.invalidLink.title': 'Neplatný odkaz na objednávku',
+  'checkout.invalidLink.cta': 'Přejít do katalogu',
+  'checkout.loadError.title': 'Objednávku nyní nelze připravit',
+  'checkout.loadError.body': 'Zkuste prosím obnovit stránku za chvíli.',
+
+  'checkout.contact.legend': 'Kontaktní údaje',
+  'checkout.contact.name': 'Jméno a příjmení',
+  'checkout.contact.namePlaceholder': 'např. Jan Novák',
+  'checkout.contact.email': 'E-mail',
+  'checkout.contact.phone': 'Telefon',
+  'checkout.contact.phonePlaceholder': '+420 777 123 456',
+  'checkout.contact.notes': 'Poznámka pro výrobce (nepovinné)',
+  'checkout.contact.notesCounter': 'Znaků: {count}/{max}',
+
+  'checkout.validation.name': 'Zadejte jméno a příjmení (2–100 znaků).',
+  'checkout.validation.email': 'Zadejte platný e-mail.',
+  'checkout.validation.phone':
+    'Zadejte platné české telefonní číslo, např. +420 777 123 456.',
+  'checkout.validation.notes': 'Poznámka může mít nejvýše 2000 znaků.',
+
+  'checkout.shipping.legend': 'Doprava',
+  'checkout.shipping.zasilkovna': 'Zásilkovna — výdejní místo',
+  'checkout.shipping.personalPickup': 'Osobní odběr u výrobce',
+  'checkout.shipping.personalPickupDisabled':
+    'Tento výrobce osobní odběr nenabízí.',
+  'checkout.shipping.pickupInfo':
+    'Osobní odběr ve městě {city}. Přesné místo a čas si domluvíte s výrobcem po zaplacení objednávky.',
+  'checkout.shipping.unavailable':
+    'Momentálně není dostupný žádný způsob dopravy. Zkuste to prosím později.',
+
+  'checkout.pickupPoint.choose': 'Vybrat výdejní místo',
+  'checkout.pickupPoint.change': 'Změnit',
+  'checkout.pickupPoint.chosen': 'Vybrané výdejní místo: {name}',
+  'checkout.pickupPoint.required': 'Vyberte prosím výdejní místo.',
+  'checkout.widget.error':
+    'Mapu výdejních míst se nepodařilo načíst. Zásilkovna je dočasně nedostupná.',
+  'checkout.widget.retry': 'Zkusit znovu',
+
+  'checkout.attachments.label': 'Přílohy (nepovinné)',
+  'checkout.attachments.hint':
+    'Až 10 souborů ve formátu PDF, JPEG, PNG nebo WebP, každý do 10 MB.',
+  'checkout.attachments.add': 'Vybrat soubory',
+  'checkout.attachments.remove': 'Odebrat',
+  'checkout.attachments.statePending': 'Čeká',
+  'checkout.attachments.stateUploading': 'Nahrává se…',
+  'checkout.attachments.stateDone': 'Hotovo',
+  'checkout.attachments.stateFailed': 'Chyba',
+  'checkout.attachments.rejectedType':
+    'Soubor {name} má nepodporovaný formát. Použijte PDF, JPEG, PNG nebo WebP.',
+  'checkout.attachments.rejectedSize':
+    'Soubor {name} je příliš velký. Maximum je 10 MB.',
+  'checkout.attachments.rejectedCount':
+    'K objednávce lze přiložit nejvýše 10 souborů.',
+
+  'checkout.summary.product': 'Souhrn objednávky',
+  'checkout.summary.shippingNote':
+    'Cena dopravy bude vyčíslena v souhrnu objednávky po odeslání.',
+  'checkout.summary.totalNote':
+    'Konečnou cenu včetně dopravy uvidíte před platbou.',
+
+  'checkout.submit': 'Odeslat objednávku',
+  'checkout.submitting': 'Odesílám…',
+  'checkout.uploadProgress': 'Nahrávání příloh: {done}/{total}',
+  'checkout.emailNotConfirmedHint':
+    'Nový potvrzovací odkaz si můžete poslat ze svého profilu.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
