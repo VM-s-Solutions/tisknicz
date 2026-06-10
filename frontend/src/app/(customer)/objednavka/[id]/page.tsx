@@ -12,6 +12,7 @@ import {
 } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { orderStateLabelKey } from '@/lib/orders/state-labels';
+import { ORDER_ATTACHMENT_MAX_FILES } from '@/lib/utils/validation';
 import { AttachmentManagerClient } from './attachment-manager-client';
 import { OrderBreakdown } from './order-breakdown';
 import { PayButtonClient } from './pay-button-client';
@@ -72,8 +73,14 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
   }
 
   // ?attachmentsFailed=<n> — presentational handoff from the T-0084a
-  // form (uploads that failed after a successful create).
-  const attachmentsFailed = Number.parseInt(readString(sp.attachmentsFailed), 10);
+  // form (uploads that failed after a successful create). Clamped to
+  // the T-0064 per-order cap as a defensive upper bound for crafted
+  // URLs (review N-2); Math.min propagates NaN, so the render guard
+  // below still rejects non-numeric input.
+  const attachmentsFailed = Math.min(
+    Number.parseInt(readString(sp.attachmentsFailed), 10),
+    ORDER_ATTACHMENT_MAX_FILES,
+  );
 
   return (
     <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">

@@ -22,9 +22,12 @@ import { formatDateTime } from '@/lib/utils/dates';
 
 const AUTO_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+/** Display scaling only — VAT rates travel as basis points (CLAUDE.md money rules). */
+const BASIS_POINTS_PER_PERCENT = 100;
+
 export function OrderBreakdown({ detail }: { readonly detail: CustomerOrderDetail }) {
   const vatRate = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(
-    detail.vatRateBp / 100,
+    detail.vatRateBp / BASIS_POINTS_PER_PERCENT,
   );
   const shippingMethodLabel =
     detail.shippingMethod === ShippingMethod.PersonalPickup

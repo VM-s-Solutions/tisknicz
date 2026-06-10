@@ -47,10 +47,23 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
     return <InvalidLinkState />;
   }
 
+  // SSR fetch batch 1 (Gate 8 fold MEDIUM-1) — profile, product and
+  // widget config are mutually independent, so they fire in parallel;
+  // only the maker fetch (batch 2 below) needs the product's makerSlug.
+  // Trade-off: an unauthenticated visitor wastes the product/widget
+  // fetches before the redirect — cheap, both endpoints are anonymous
+  // and widget-config is Cache-Control 1h. The guards below run in the
+  // original order, so the auth redirect still fires before anything
+  // sensitive renders.
+  const [profileResult, productResult, widgetResult] = await Promise.all([
+    getMyProfile('customer'),
+    getProductById(productId),
+    getWidgetConfig(),
+  ]);
+
   // Entry guard 2 — unauthenticated → login redirect with the original
   // URL (the login page consumes `?redirect=`). NOTE: the login page
   // serves at /login — the (auth) route group adds no URL segment.
-  const profileResult = await getMyProfile('customer');
   if (!profileResult.success) {
     if (profileResult.error.type === 'Unauthorized') {
       const target = `/objednavka?productId=${encodeURIComponent(productId)}`;
@@ -60,7 +73,6 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
   }
 
   // Entry guard 3 — unknown/inactive product → 404.
-  const productResult = await getProductById(productId);
   if (!productResult.success) {
     if (productResult.error.type === 'NotFound') {
       notFound();
@@ -75,13 +87,11 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
     redirect(`/produkt/${encodeURIComponent(productId)}`);
   }
 
-  // Maker profile drives the personal-pickup gate (US-customer-0011
-  // AC-3); the widget config feeds the Packeta widget. A failed widget
-  // fetch degrades to a disabled Zásilkovna option (AC-6) — pass null.
-  const [makerResult, widgetResult] = await Promise.all([
-    getMakerBySlug(product.makerSlug),
-    getWidgetConfig(),
-  ]);
+  // Batch 2 — the maker profile drives the personal-pickup gate
+  // (US-customer-0011 AC-3) and needs product.makerSlug. A failed
+  // widget fetch degrades to a disabled Zásilkovna option (AC-6) —
+  // pass null.
+  const makerResult = await getMakerBySlug(product.makerSlug);
   if (!makerResult.success) {
     return <LoadErrorState />;
   }

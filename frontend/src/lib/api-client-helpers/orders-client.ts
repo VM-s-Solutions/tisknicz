@@ -33,6 +33,16 @@ import { type ApiError, type Result, ok } from '../runtime/result';
 // (same convention as profile.ts).
 const Base = '/api/v1/orders';
 
+/**
+ * Per-attachment upload budget (checkout-flow review B-1). The T-0064
+ * server cap is 10 MiB per file (`ORDER_ATTACHMENT_MAX_BYTES` mirror);
+ * at a worst-tolerable ~0.7 Mbps mobile uplink that is ≈2 minutes of
+ * transfer, so 120 s replaces the default 8 s apiFetch ceiling that
+ * would deterministically abort large uploads. JSON endpoints keep the
+ * 8 s default.
+ */
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 // ---- DTO re-exports (route code never imports lib/api-client/ directly) ----
 
 /**
@@ -143,7 +153,7 @@ export async function uploadOrderAttachment(
   return apiFetch<OrderAttachmentUploadResult>(
     'customer',
     `${Base}/${encodeURIComponent(orderId)}/attachments`,
-    { method: 'POST', body: formData },
+    { method: 'POST', body: formData, timeoutMs: UPLOAD_TIMEOUT_MS },
   );
 }
 

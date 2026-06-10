@@ -34,12 +34,23 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
    */
   readonly accessToken?: string;
   /**
-   * Provide your own AbortSignal. The wrapper composes it with an 8 s
+   * Provide your own AbortSignal. The wrapper composes it with the
    * timeout via `AbortSignal.any`, so the request aborts on whichever
    * fires first.
    */
   readonly signal?: AbortSignal;
+  /**
+   * Per-call timeout budget in milliseconds. Defaults to
+   * {@link DEFAULT_TIMEOUT_MS} (8 s) — the long-standing ceiling for
+   * every JSON round trip. Only long-running transfers (e.g. multipart
+   * attachment uploads, checkout-flow review B-1) should override it;
+   * a caller-supplied `signal` can still abort earlier.
+   */
+  readonly timeoutMs?: number;
 }
+
+/** Default request timeout — unchanged behaviour for every JSON call site (T-0015 reviewer M1). */
+const DEFAULT_TIMEOUT_MS = 8000;
 
 /**
  * The single entry point for calling the .NET backend from the frontend.
@@ -115,9 +126,11 @@ export async function apiFetch<TValue>(
     }
   }
 
-  // Compose any caller-supplied signal with our 8 s timeout so the request
-  // aborts on whichever fires first (T-0015 reviewer M1).
-  const timeoutSignal = AbortSignal.timeout(8000);
+  // Compose any caller-supplied signal with the timeout budget so the
+  // request aborts on whichever fires first (T-0015 reviewer M1). The
+  // budget defaults to 8 s; uploads opt into a longer one via
+  // `timeoutMs` (checkout-flow review B-1).
+  const timeoutSignal = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const signal = options.signal
     ? AbortSignal.any([options.signal, timeoutSignal])
     : timeoutSignal;
