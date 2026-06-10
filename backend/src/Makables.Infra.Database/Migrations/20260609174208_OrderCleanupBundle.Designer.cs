@@ -1491,6 +1491,9 @@ namespace Makables.Infra.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_order_messages_author_user");
+
                     b.HasIndex("OrderId", "AuthorRole")
                         .HasDatabaseName("ix_order_messages_order_author_unread")
                         .HasFilter("read_by_counterparty_at IS NULL AND is_active");
@@ -2057,6 +2060,21 @@ namespace Makables.Infra.Database.Migrations
                         .WithMany()
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Makables.Core.Domain.OrderMessages.OrderMessage", b =>
+                {
+                    b.HasOne("Makables.Core.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Makables.Core.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.Orders.OrderAttachment", b =>

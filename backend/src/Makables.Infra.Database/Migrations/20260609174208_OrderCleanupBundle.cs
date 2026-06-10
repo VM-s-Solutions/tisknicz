@@ -8,7 +8,8 @@ namespace Makables.Infra.Database.Migrations
     /// <summary>
     /// Order-cleanup bundle migration (T-0079 + T-0083):
     /// <list type="bullet">
-    ///   <item><description>T-0079: <c>order_messages</c> table + 2 indexes;
+    ///   <item><description>T-0079: <c>order_messages</c> table + 2 FKs
+    ///     (orders.id CASCADE, users.id RESTRICT) + 3 indexes;
     ///     <c>orders.customer_unread_message_count</c> +
     ///     <c>orders.maker_unread_message_count</c> (INT NOT NULL DEFAULT 0);
     ///     <c>orders.customer_pending_notification_email_at</c> +
@@ -74,10 +75,12 @@ namespace Makables.Infra.Database.Migrations
                 defaultValue: 0);
 
             // === T-0079 §C.3: order_messages child table. ===
-            // FK relationships are NOT declared via EF navigations (the
-            // Order aggregate stays lightweight per ADR 0013). The
-            // application enforces the relationships via the repository
-            // surface; the DB only enforces the column shapes + indexes.
+            // FKs are declared as shadow relationships (no EF navigation
+            // properties — the Order aggregate stays lightweight per
+            // ADR 0013): orders.id CASCADE per the order_attachments
+            // precedent; users.id RESTRICT so a user row can never
+            // cascade-delete the message audit trail (GDPR erasure is an
+            // explicit T-0110 flow). Review fold HIGH-1 / AC-12.
             migrationBuilder.CreateTable(
                 name: "order_messages",
                 columns: table => new
@@ -100,7 +103,25 @@ namespace Makables.Infra.Database.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_order_messages", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_order_messages_orders_order_id",
+                        column: x => x.order_id,
+                        principalTable: "orders",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_order_messages_users_author_user_id",
+                        column: x => x.author_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
                 });
+
+            // Backs the users FK (RESTRICT checks on user deletion).
+            migrationBuilder.CreateIndex(
+                name: "ix_order_messages_author_user",
+                table: "order_messages",
+                column: "author_user_id");
 
             // Partial index — only unread rows are scanned by the
             // MarkAsRead bulk UPDATE. WHERE filter is Postgres-specific;

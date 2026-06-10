@@ -588,6 +588,44 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         row!.State.Should().Be(OrderState.Cancelled, "no transition — webhook found nothing actionable");
     }
 
+    // T-0083 review fold (SecOps Gate 3 check 7): the pay-after-auto-
+    // cancel race. The order was cancelled by the 02:00 UTC sweep AFTER a
+    // payment session was reserved; Comgate then delivers PAID. Contract:
+    // 200 (stop the retries — a 4xx would only re-deliver the same
+    // refusal), the order STAYS Cancelled (MarkAsPaid state guard), and
+    // the controller logs the refund liability at Warning level.
+    [Fact]
+    public async Task POST_PAID_for_cancelled_order_with_providerRef_returns_200_and_stays_Cancelled()
+    {
+        // Reserve the payment session first so the providerRef lookup
+        // resolves the order, then auto-cancel it (the T-0083 sweep path).
+        await SeedOrderInStateAsync(OrderState.PendingPayment, paymentProviderRef: TransId1);
+        await using (var seedDb = _harness.CreateDbContext())
+        {
+            var seeded = await seedDb.Set<Order>().FirstAsync(o => o.Id == OrderId);
+            seeded.Cancel(
+                new FixedClock(new DateTimeOffset(2026, 6, 6, 2, 0, 0, TimeSpan.Zero)),
+                OrderCancellationSource.AutoExpiry);
+            await seedDb.SaveChangesAsync();
+        }
+
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            "idempotency contract — Comgate retries must stop even though the transition was refused");
+
+        await using var db = _harness.CreateDbContext();
+        var row = await db.Set<Order>().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == OrderId);
+        row!.State.Should().Be(OrderState.Cancelled, "MarkAsPaid refuses Cancelled → Paid");
+        row.CancellationSource.Should().Be(OrderCancellationSource.AutoExpiry);
+        row.PaidAt.Should().BeNull("the refused webhook must not stamp a payment timestamp");
+    }
+
     [Fact]
     public async Task POST_when_adapter_returns_Transient_propagates_as_503()
     {

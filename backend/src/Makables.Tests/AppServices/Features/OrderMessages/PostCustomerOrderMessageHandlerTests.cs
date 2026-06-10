@@ -81,7 +81,21 @@ public class PostCustomerOrderMessageHandlerTests
             NullLogger<PostCustomerOrderMessage.Handler>.Instance);
     }
 
-    private static Order BuildOrder() => Order.Create(
+    /// <summary>
+    /// Default test order is PAID — the review-fold state guard blocks
+    /// posting on PendingPayment, so the happy paths exercise the
+    /// open-channel default on a paid order.
+    /// </summary>
+    private static Order BuildOrder()
+    {
+        var order = BuildPendingPaymentOrder();
+        var paidClock = Substitute.For<IClock>();
+        paidClock.UtcNow.Returns(Now.AddMinutes(-30));
+        order.MarkAsPaid(paidClock, "tx-1");
+        return order;
+    }
+
+    private static Order BuildPendingPaymentOrder() => Order.Create(
         id: OrderId, orderNumber: "M-CZ-20260042",
         customerUserId: CustomerUserId, makerId: MakerId, productId: "prod-1",
         contactName: "Anna", contactEmail: "anna@example.cz", contactPhone: "+420",
@@ -210,5 +224,111 @@ public class PostCustomerOrderMessageHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.Unauthorized);
         _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    // === Review-fold state guard (MEDIUM-2 user ruling) ===
+
+    [Fact]
+    public async Task PendingPayment_order_returns_OrderMessageNotAllowedInState()
+    {
+        var order = BuildPendingPaymentOrder();
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _sut.Handle(
+            new PostCustomerOrderMessage.Command(OrderId, "Too early"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.OrderMessageNotAllowedInState);
+        await _messages.DidNotReceive().AddAsync(Arg.Any<OrderMessage>(), Arg.Any<CancellationToken>());
+        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        order.MakerUnreadMessageCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Cancelled_order_still_accepts_messages()
+    {
+        // Post-cancel coordination stays open per the user ruling —
+        // PendingPayment is the ONLY guarded state.
+        var order = BuildOrder();
+        order.Cancel(_clock);
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _sut.Handle(
+            new PostCustomerOrderMessage.Command(OrderId, "About the cancellation"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _messages.Received(1).AddAsync(Arg.Any<OrderMessage>(), Arg.Any<CancellationToken>());
+        order.MakerUnreadMessageCount.Should().Be(1);
+    }
+
+    // === Must-cover §9 — FK-invariant failure paths ===
+
+    [Fact]
+    public async Task Missing_maker_row_returns_MakerNotFound_during_emit()
+    {
+        var order = BuildOrder();
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _makers.GetByIdAsync(MakerId, Arg.Any<CancellationToken>())
+            .Returns((MakerEntity?)null);
+
+        var result = await _sut.Handle(
+            new PostCustomerOrderMessage.Command(OrderId, "Hi"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.MakerNotFound);
+        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Missing_maker_user_returns_MakerUserMissing_during_emit()
+    {
+        var order = BuildOrder();
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _users.GetByIdAsync(MakerUserId, Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var result = await _sut.Handle(
+            new PostCustomerOrderMessage.Command(OrderId, "Hi"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.MakerUserMissing);
+        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    // === Must-cover §5 — Validator body rules ===
+
+    [Fact]
+    public void Validator_rejects_empty_body_with_OrderMessageBodyEmpty()
+    {
+        var validator = new PostCustomerOrderMessage.Validator();
+
+        var result = validator.Validate(new PostCustomerOrderMessage.Command(OrderId, ""));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.PropertyName == nameof(PostCustomerOrderMessage.Command.Body)
+            && e.ErrorCode == BusinessErrorMessage.OrderMessageBodyEmpty);
+    }
+
+    [Fact]
+    public void Validator_rejects_2001_char_body_with_OrderMessageBodyTooLong()
+    {
+        var validator = new PostCustomerOrderMessage.Validator();
+
+        var result = validator.Validate(new PostCustomerOrderMessage.Command(
+            OrderId, new string('a', OrderMessage.MaxBodyLength + 1)));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.PropertyName == nameof(PostCustomerOrderMessage.Command.Body)
+            && e.ErrorCode == BusinessErrorMessage.OrderMessageBodyTooLong);
     }
 }

@@ -93,6 +93,16 @@ public static class PostMakerOrderMessage
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
+            // Step 2b: State guard (review fold, user ruling on MEDIUM-2).
+            // PendingPayment is the ONLY blocked state — all post-payment
+            // states (incl. Cancelled / Disputed) stay open. Mirrors the
+            // customer-side guard in PostCustomerOrderMessage.
+            if (order.State == OrderState.PendingPayment)
+            {
+                return BusinessResult.Failure<PostMakerOrderMessageResponse>(
+                    Error.Conflict("order", BusinessErrorMessage.OrderMessageNotAllowedInState));
+            }
+
             // Step 3: Build + persist the message + bump customer counter.
             var now = clock.UtcNow;
             var message = OrderMessage.Create(

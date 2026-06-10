@@ -440,6 +440,13 @@ export const messages = {
   // shipping method. Frontend dashboard surfaces this on the order detail.
   'shipping.methodNotEligible':
     'Tato objednávka není zásilkovnová — použijte tlačítko Předat osobně.',
+
+  // T-0079 order-message thread error codes (parity with
+  // BusinessErrorMessage). PM/UX to refine on PR review.
+  'order.message.bodyEmpty': 'Zpráva nesmí být prázdná.',
+  'order.message.bodyTooLong': 'Zpráva může mít nejvýše 2000 znaků.',
+  'order.message.notAllowedInState':
+    'Zprávy lze odesílat až po zaplacení objednávky.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

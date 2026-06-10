@@ -16,10 +16,11 @@ namespace Makables.Core.Domain.Orders.Queries;
 /// </para>
 ///
 /// <para>
-/// <see cref="UnreadMessageCount"/> is reserved for T-0079; populated as
-/// null until that ticket ships. The field appears in the wire contract
-/// today so T-0079 is a pure projection-logic edit with zero NSwag /
-/// frontend churn.
+/// <see cref="UnreadMessageCount"/> reads the denormalized
+/// <c>orders.maker_unread_message_count</c> column verbatim since T-0079
+/// (0 for orders with no unread messages). The type stays <c>int?</c>
+/// because the T-0081 wire contract shipped nullable; tightening it is
+/// NSwag churn for zero gain.
 /// </para>
 /// </summary>
 public sealed record MakerOrderListItemDto(

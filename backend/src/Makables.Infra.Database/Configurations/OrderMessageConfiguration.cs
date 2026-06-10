@@ -1,4 +1,6 @@
+using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.OrderMessages;
+using Makables.Core.Domain.Orders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -24,7 +26,12 @@ namespace Makables.Infra.Database.Configurations;
 /// to messages — the aggregate stays lightweight; the messages thread is
 /// read independently via <see cref="IOrderMessageQueries"/>. Mirrors
 /// the <see cref="Core.Domain.Orders.Order"/> ↔ <c>Invoice</c> pattern
-/// (Invoices are loaded by OrderId, not via a HasMany navigation).
+/// (Invoices are loaded by OrderId, not via a HasMany navigation). The
+/// FKs are shadow relationships (<c>HasOne&lt;T&gt;().WithMany()</c>, no
+/// navigation property): orders → CASCADE (a hard-deleted order takes
+/// its thread with it, per the order_attachments precedent); users →
+/// RESTRICT (a user row must never cascade-delete the audit trail of
+/// messages it authored — GDPR erasure is an explicit T-0110 flow).
 /// </para>
 /// </summary>
 internal sealed class OrderMessageEntityConfiguration : IEntityTypeConfiguration<OrderMessage>
@@ -70,6 +77,26 @@ internal sealed class OrderMessageEntityConfiguration : IEntityTypeConfiguration
         builder.HasIndex(m => new { m.OrderId, m.AuthorRole })
             .HasDatabaseName("ix_order_messages_order_author_unread")
             .HasFilter("read_by_counterparty_at IS NULL AND is_active");
+
+        // Backs the users FK below (RESTRICT checks on user deletion +
+        // future "messages by author" admin lookups). Explicit so the
+        // name follows the house lowercase convention instead of the
+        // EF FK-convention default.
+        builder.HasIndex(m => m.AuthorUserId)
+            .HasDatabaseName("ix_order_messages_author_user");
+
+        // === FKs (review fold HIGH-1 / T-0079 AC-12 + §C.3) ===
+        // Shadow relationships — no navigation properties; the Order
+        // aggregate stays lightweight per ADR 0013.
+        builder.HasOne<Order>()
+            .WithMany()
+            .HasForeignKey(m => m.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(m => m.AuthorUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         ConfigureAuditable(builder);
     }

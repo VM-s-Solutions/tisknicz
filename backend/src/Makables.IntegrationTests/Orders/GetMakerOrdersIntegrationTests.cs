@@ -9,6 +9,7 @@ using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Money;
+using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
 using Makables.Infra.Common.Auth;
@@ -30,7 +31,9 @@ namespace Makables.IntegrationTests.Orders;
 /// - happy path returns rows owned by the requesting maker only,
 /// - cross-maker isolation (maker A's request never surfaces maker B's orders
 ///   even with a generous pageSize),
-/// - UnreadMessageCount is always null at T-0081 (forward-compat pin for T-0079).
+/// - UnreadMessageCount surfaces the denormalized
+///   <c>orders.maker_unread_message_count</c> column (T-0079 — replaces
+///   the pre-T-0079 null pin).
 /// Real Postgres via <see cref="PostgresHarness"/>.
 /// </summary>
 [Collection(PostgresCollection.Name)]
@@ -272,10 +275,25 @@ public sealed class GetMakerOrdersIntegrationTests : IAsyncLifetime
         body.Orders.Items.Should().NotContain(i => i.OrderId == "o-3" || i.OrderId == "o-4");
     }
 
+    // T-0079 re-point of the former GET_orders_UnreadMessageCount_is_null
+    // pin: the maker list projection now reads the denormalized
+    // orders.maker_unread_message_count column. Doubles as the AC-11
+    // maker-side proof — a bumped counter flows through to the wire DTO;
+    // orders without messages surface 0 (NOT null).
     [Fact]
-    public async Task GET_orders_UnreadMessageCount_is_null_pin_until_T_0079()
+    public async Task GET_orders_UnreadMessageCount_returns_denormalized_value()
     {
         await SeedTwoMakersWithOrdersAsync();
+
+        // Bump maker A's unread counter on o-1 (two customer-authored
+        // posts) directly at the DB level; o-2 stays untouched.
+        await using (var db = _harness.CreateDbContext())
+        {
+            var order = await db.Set<Order>().FirstAsync(o => o.Id == "o-1");
+            order.IncrementUnreadFor(OrderMessageAuthorRole.Customer);
+            order.IncrementUnreadFor(OrderMessageAuthorRole.Customer);
+            await db.SaveChangesAsync();
+        }
 
         using var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
@@ -285,7 +303,11 @@ public sealed class GetMakerOrdersIntegrationTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<GetMakerOrders.GetMakerOrdersResponse>(JsonOpts);
-        body!.Orders.Items.Should().OnlyContain(i => i.UnreadMessageCount == null);
+        body!.Orders.Items.Should().HaveCount(2);
+        body.Orders.Items.Single(i => i.OrderId == "o-1")
+            .UnreadMessageCount.Should().Be(2, "the denormalized counter flows through the projection");
+        body.Orders.Items.Single(i => i.OrderId == "o-2")
+            .UnreadMessageCount.Should().Be(0, "no-message orders surface 0, not null");
     }
 
     // Gate 9 test-catchup item 5 — mirror Customer-side

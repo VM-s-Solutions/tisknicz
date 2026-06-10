@@ -103,6 +103,15 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderMessageBodyTooLong = "order.message.bodyTooLong";
 
+    /// <summary>
+    /// PostCustomer/MakerOrderMessage refused because the order is still
+    /// in <see cref="Orders.OrderState.PendingPayment"/>. Per the T-0079
+    /// review fold (user ruling on MEDIUM-2): the thread opens once the
+    /// order is paid; ALL later states — including Cancelled and Disputed
+    /// — stay open for post-cancel coordination.
+    /// </summary>
+    public const string OrderMessageNotAllowedInState = "order.message.notAllowedInState";
+
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
     /// The maker's row exists but <c>Auditable.IsActive</c> is false (or

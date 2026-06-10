@@ -9,7 +9,11 @@ using MediatR;
 namespace Makables.Core.AppServices.Features.OrderMessages;
 
 /// <summary>
-/// Symmetric maker-host MarkAsRead (T-0079 US-maker-0011).
+/// Symmetric maker-host MarkAsRead (T-0079 US-maker-0011). Same
+/// two-transaction commit shape as <see cref="MarkCustomerOrderMessagesAsRead"/>:
+/// the bulk sweep commits immediately via <c>ExecuteUpdateAsync</c>; the
+/// counter reset + pointer clear commit later via the UoW pipeline.
+/// Self-healing on counter drift because the reset is unconditional.
 /// </summary>
 public static class MarkMakerOrderMessagesAsRead
 {

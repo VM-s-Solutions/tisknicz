@@ -14,13 +14,17 @@ namespace Makables.Core.AppServices.Features.OrderMessages;
 /// — single SQL round-trip regardless of thread length.
 ///
 /// <para>
-/// Side effects on the parent <see cref="Order"/> in the same UoW:
-/// <list type="bullet">
-///   <item><description><c>CustomerUnreadMessageCount = 0</c>.</description></item>
-///   <item><description><c>CustomerPendingNotificationEmailAt = null</c>
-///     so the next maker post fires immediately, not silenced by a
-///     stale debounce window (per locked decision A.2 reset rule).</description></item>
-/// </list>
+/// <b>Commit shape — TWO transactions, not one</b> (Gate 8 M-2 fold).
+/// <c>ExecuteUpdateAsync</c> executes immediately in its own implicit
+/// transaction; the side effects on the parent <see cref="Order"/>
+/// (<c>CustomerUnreadMessageCount = 0</c> +
+/// <c>CustomerPendingNotificationEmailAt = null</c>, the locked-decision
+/// A.2 reset rule) commit LATER via the UoW pipeline's
+/// <c>SaveChangesAsync</c>. A crash between the two commits can leave
+/// messages stamped read while the counter is still &gt; 0 — transient
+/// drift that self-heals on the next MarkAsRead because
+/// <see cref="Order.ResetUnreadFor"/> is an unconditional reset (not a
+/// decrement).
 /// </para>
 ///
 /// <para>
