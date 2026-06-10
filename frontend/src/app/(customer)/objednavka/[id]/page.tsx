@@ -57,8 +57,10 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
       notFound();
     }
     if (result.error.type === 'Unauthorized') {
+      // The login page serves at /login — the (auth) route group adds
+      // no URL segment.
       redirect(
-        `/auth/login?redirect=${encodeURIComponent(`/objednavka/${encodeURIComponent(id)}`)}`,
+        `/login?redirect=${encodeURIComponent(`/objednavka/${encodeURIComponent(id)}`)}`,
       );
     }
     return <LoadErrorState orderId={id} />;

@@ -48,12 +48,13 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
   }
 
   // Entry guard 2 — unauthenticated → login redirect with the original
-  // URL (the login page consumes `?redirect=`).
+  // URL (the login page consumes `?redirect=`). NOTE: the login page
+  // serves at /login — the (auth) route group adds no URL segment.
   const profileResult = await getMyProfile('customer');
   if (!profileResult.success) {
     if (profileResult.error.type === 'Unauthorized') {
       const target = `/objednavka?productId=${encodeURIComponent(productId)}`;
-      redirect(`/auth/login?redirect=${encodeURIComponent(target)}`);
+      redirect(`/login?redirect=${encodeURIComponent(target)}`);
     }
     return <LoadErrorState />;
   }

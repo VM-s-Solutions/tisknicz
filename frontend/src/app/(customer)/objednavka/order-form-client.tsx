@@ -448,5 +448,7 @@ function buildFormError(error: ApiError): string {
 
 function buildLoginUrl(productId: string): string {
   const target = `/objednavka?productId=${encodeURIComponent(productId)}`;
-  return `/auth/login?redirect=${encodeURIComponent(target)}`;
+  // The login page serves at /login — the (auth) route group adds no
+  // URL segment.
+  return `/login?redirect=${encodeURIComponent(target)}`;
 }
