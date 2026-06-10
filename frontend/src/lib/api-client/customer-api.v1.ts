@@ -12,6 +12,23 @@ export interface ICustomerApi {
     /**
      * @param page (optional) 
      * @param pageSize (optional) 
+     * @return OK
+     */
+    messagesGET(orderId: string, page: number | undefined, pageSize: number | undefined): Promise<GetCustomerOrderMessagesResponse>;
+
+    /**
+     * @return OK
+     */
+    messagesPOST(orderId: string, body: PostOrderMessageRequest): Promise<PostCustomerOrderMessageResponse>;
+
+    /**
+     * @return OK
+     */
+    markRead(orderId: string): Promise<MarkCustomerOrderMessagesAsReadResponse>;
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
      * @param state (optional) 
      * @param dateFrom (optional) 
      * @param dateTo (optional) 
@@ -142,6 +159,217 @@ export class CustomerApi implements ICustomerApi {
     constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
         this.http = http ? http : window as any;
         this.baseUrl = baseUrl ?? "http://localhost:5001/";
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    messagesGET(orderId: string, page: number | undefined, pageSize: number | undefined): Promise<GetCustomerOrderMessagesResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/messages?";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMessagesGET(_response);
+        });
+    }
+
+    protected processMessagesGET(response: Response): Promise<GetCustomerOrderMessagesResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetCustomerOrderMessagesResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetCustomerOrderMessagesResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    messagesPOST(orderId: string, body: PostOrderMessageRequest): Promise<PostCustomerOrderMessageResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/messages";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMessagesPOST(_response);
+        });
+    }
+
+    protected processMessagesPOST(response: Response): Promise<PostCustomerOrderMessageResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PostCustomerOrderMessageResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PostCustomerOrderMessageResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    markRead(orderId: string): Promise<MarkCustomerOrderMessagesAsReadResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/messages/mark-read";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMarkRead(_response);
+        });
+    }
+
+    protected processMarkRead(response: Response): Promise<MarkCustomerOrderMessagesAsReadResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = MarkCustomerOrderMessagesAsReadResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<MarkCustomerOrderMessagesAsReadResponse>(null as any);
     }
 
     /**
@@ -1791,6 +2019,7 @@ export class CustomerOrderListItemDto implements ICustomerOrderListItemDto {
     createdAt!: Date;
     makerName!: string;
     productTitle!: string | undefined;
+    unreadMessageCount!: number;
 
     [key: string]: any;
 
@@ -1817,6 +2046,7 @@ export class CustomerOrderListItemDto implements ICustomerOrderListItemDto {
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
             this.makerName = _data["makerName"];
             this.productTitle = _data["productTitle"];
+            this.unreadMessageCount = _data["unreadMessageCount"];
         }
     }
 
@@ -1841,6 +2071,7 @@ export class CustomerOrderListItemDto implements ICustomerOrderListItemDto {
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
         data["makerName"] = this.makerName;
         data["productTitle"] = this.productTitle;
+        data["unreadMessageCount"] = this.unreadMessageCount;
         return data;
     }
 }
@@ -1854,6 +2085,7 @@ export interface ICustomerOrderListItemDto {
     createdAt: Date;
     makerName: string;
     productTitle: string | undefined;
+    unreadMessageCount: number;
 
     [key: string]: any;
 }
@@ -1981,6 +2213,57 @@ export interface IGetCustomerOrderDetailsResponse {
     [key: string]: any;
 }
 
+export class GetCustomerOrderMessagesResponse implements IGetCustomerOrderMessagesResponse {
+    messages!: PagedDataOfOrderMessageDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetCustomerOrderMessagesResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.messages = new PagedDataOfOrderMessageDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.messages = _data["messages"] ? PagedDataOfOrderMessageDto.fromJS(_data["messages"]) : new PagedDataOfOrderMessageDto();
+        }
+    }
+
+    static fromJS(data: any): GetCustomerOrderMessagesResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetCustomerOrderMessagesResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["messages"] = this.messages ? this.messages.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetCustomerOrderMessagesResponse {
+    messages: PagedDataOfOrderMessageDto;
+
+    [key: string]: any;
+}
+
 export class GetCustomerOrdersResponse implements IGetCustomerOrdersResponse {
     orders!: PagedDataOfCustomerOrderListItemDto;
 
@@ -2080,6 +2363,54 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class MarkCustomerOrderMessagesAsReadResponse implements IMarkCustomerOrderMessagesAsReadResponse {
+    markedCount!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IMarkCustomerOrderMessagesAsReadResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.markedCount = _data["markedCount"];
+        }
+    }
+
+    static fromJS(data: any): MarkCustomerOrderMessagesAsReadResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new MarkCustomerOrderMessagesAsReadResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["markedCount"] = this.markedCount;
+        return data;
+    }
+}
+
+export interface IMarkCustomerOrderMessagesAsReadResponse {
+    markedCount: number;
 
     [key: string]: any;
 }
@@ -2200,6 +2531,83 @@ export interface IOrderAttachmentSummaryDto {
     [key: string]: any;
 }
 
+export enum OrderMessageAuthorRole {
+    Customer = "Customer",
+    Maker = "Maker",
+}
+
+export class OrderMessageDto implements IOrderMessageDto {
+    id!: string;
+    orderId!: string;
+    authorRole!: OrderMessageAuthorRole;
+    authorName!: string;
+    body!: string;
+    createdAt!: Date;
+    isMine!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IOrderMessageDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.orderId = _data["orderId"];
+            this.authorRole = _data["authorRole"];
+            this.authorName = _data["authorName"];
+            this.body = _data["body"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.isMine = _data["isMine"];
+        }
+    }
+
+    static fromJS(data: any): OrderMessageDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new OrderMessageDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["orderId"] = this.orderId;
+        data["authorRole"] = this.authorRole;
+        data["authorName"] = this.authorName;
+        data["body"] = this.body;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["isMine"] = this.isMine;
+        return data;
+    }
+}
+
+export interface IOrderMessageDto {
+    id: string;
+    orderId: string;
+    authorRole: OrderMessageAuthorRole;
+    authorName: string;
+    body: string;
+    createdAt: Date;
+    isMine: boolean;
+
+    [key: string]: any;
+}
+
 export enum OrderSort {
     CreatedAtDesc = "CreatedAtDesc",
     CreatedAtAsc = "CreatedAtAsc",
@@ -2299,6 +2707,189 @@ export interface IPagedDataOfCustomerOrderListItemDto {
     totalPages?: number;
     hasNextPage?: boolean;
     hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfOrderMessageDto implements IPagedDataOfOrderMessageDto {
+    items!: OrderMessageDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfOrderMessageDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(OrderMessageDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfOrderMessageDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfOrderMessageDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfOrderMessageDto {
+    items: OrderMessageDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PostCustomerOrderMessageResponse implements IPostCustomerOrderMessageResponse {
+    messageId!: string;
+    createdAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IPostCustomerOrderMessageResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.messageId = _data["messageId"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): PostCustomerOrderMessageResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PostCustomerOrderMessageResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["messageId"] = this.messageId;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IPostCustomerOrderMessageResponse {
+    messageId: string;
+    createdAt: Date;
+
+    [key: string]: any;
+}
+
+export class PostOrderMessageRequest implements IPostOrderMessageRequest {
+    body!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IPostOrderMessageRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.body = _data["body"];
+        }
+    }
+
+    static fromJS(data: any): PostOrderMessageRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new PostOrderMessageRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["body"] = this.body;
+        return data;
+    }
+}
+
+export interface IPostOrderMessageRequest {
+    body: string;
 
     [key: string]: any;
 }
