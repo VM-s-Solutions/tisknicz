@@ -37,3 +37,21 @@ export function orderStateLabelKey(state: OrderState): MessageKey {
     }
   }
 }
+
+/**
+ * Display-only classification used by the T-0085 confirmation page:
+ * Paid and every later state render the success/thank-you frame — a
+ * customer revisiting the bookmark days later sees the thank-you, not
+ * a poller. NOT a transition rule; the state machine stays backend-side.
+ */
+const PAID_OR_LATER_STATES: ReadonlySet<OrderState> = new Set([
+  OrderState.Paid,
+  OrderState.Accepted,
+  OrderState.Shipped,
+  OrderState.Delivered,
+  OrderState.Completed,
+]);
+
+export function isPaidOrLater(state: OrderState): boolean {
+  return PAID_OR_LATER_STATES.has(state);
+}

@@ -570,6 +570,30 @@ export const messages = {
   'order.page.banner.detailComing':
     'Kompletní detail objednávky pro vás připravujeme. O každé změně vás budeme informovat e-mailem.',
   'order.page.banner.backToCatalog': 'Zpět do katalogu',
+
+  // Payment confirmation page at /objednavka/[id]/potvrzeni (T-0085).
+  // Vykání throughout. Success is granted ONLY by the backend-read Paid
+  // state — never by the Comgate redirect params (CLAUDE.md payments rule).
+  'checkout.confirm.metadata.title': 'Potvrzení platby — Makables',
+  'checkout.confirm.verifying.title': 'Děkujeme! Ověřujeme platbu…',
+  'checkout.confirm.verifying.subtitle':
+    'Potvrzení od platební brány obvykle dorazí během několika sekund. Stránku prosím nezavírejte.',
+  'checkout.confirm.success.title': 'Platba proběhla úspěšně',
+  'checkout.confirm.success.orderNumber': 'Objednávka {orderNumber}',
+  'checkout.confirm.success.whatNext': 'Co bude dál',
+  'checkout.confirm.success.step1': 'Výrobce vaši objednávku přijme.',
+  'checkout.confirm.success.step2': 'Vyrobí ji a odešle.',
+  'checkout.confirm.success.step3': 'Po převzetí potvrdíte doručení.',
+  'checkout.confirm.success.detailCta': 'Zobrazit objednávku',
+  'checkout.confirm.success.catalogCta': 'Zpět do katalogu',
+  'checkout.confirm.pendingTitle': 'Platbu stále ověřujeme',
+  'checkout.confirm.pendingEmailNote':
+    'Potvrzení vám pošleme e-mailem, jakmile platbu ověříme.',
+  'checkout.confirm.pendingDetailLink': 'Přejít na objednávku',
+  'checkout.confirm.failed.title': 'Platba nebyla dokončena',
+  'checkout.confirm.failed.heldNote':
+    'Objednávku pro vás držíme 24 hodin — platbu můžete dokončit z detailu objednávky.',
+  'checkout.confirm.failed.retryCta': 'Dokončit platbu',
 } as const;
 
 export type MessageKey = keyof typeof messages;
