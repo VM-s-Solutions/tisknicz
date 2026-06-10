@@ -143,3 +143,30 @@
   - Drop the alternate sort options at MVP — UI only ships CreatedAtDesc as the default; alternate sorts are a forward-looking feature for power users.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0011 — Rate limiter "default" policy mounted nowhere
+- **From:** secops (order-cleanup-bundle Gate 3, check 13)
+- **Ticket / context:** order-cleanup-bundle (T-0079 + T-0083); pre-existing gap, not introduced by this bundle
+- **Asked:** 2026-06-09
+- **Blocking:** no
+- **Question:** `AddMakablesRateLimiting.cs:57-63` defines a *named* "default" fixed-window policy, but there is no `GlobalLimiter` and no `[EnableRateLimiting]` attribute on any controller — only `addresses-autocomplete` and `shipping-widget-config` are actually limited. `PostMessage` (2000-char bodies, authenticated) and every other endpoint are effectively unlimited. Email spam is already capped by the 5-min digest debounce (1 email / 5 min / order / direction); the residual risk is DB-bloat spam from a valid-JWT caller. How should the "default" policy be mounted?
+- **Options the agent has considered:**
+  - Mount "default" globally per host (`RateLimiterOptions.GlobalLimiter` or `[EnableRateLimiting("default")]` on `MakablesApiController`) + add a per-user partition for message posting, mirroring the autocomplete policy shape.
+  - Per-endpoint attribute on `PostMessage` only — narrowest change, leaves the rest of the surface unlimited.
+  - Defer until traffic data exists — the surface requires a valid JWT and MVP volume is small.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0012 — Email-enrichment collaborator sprawl (ADR 0015 budget)
+- **From:** reviewer (order-cleanup-bundle Gate 4, MEDIUM-3)
+- **Ticket / context:** order-cleanup-bundle (T-0079 + T-0083); escalated to Architect per ADR 0015
+- **Asked:** 2026-06-09
+- **Blocking:** no
+- **Question:** `PostCustomerOrderMessage.Handler` + `PostMakerOrderMessage.Handler` take 11 constructor dependencies (ADR 0015 budget ~5); `CancelExpiredOrder.Handler` takes 7. The repeated email-payload enrichment block (users + makers + languageResolver + publicAppUrls to resolve recipient email/name/language/action-URL at enqueue time) is the 3rd+ occurrence of this pattern (T-0067/T-0071/T-0076 precedents). Should the enrichment collapse behind a seam, and if so where?
+- **Options the agent has considered:**
+  - Extract a single `IEmailRecipientResolver` collaborator that owns the users + makers + languageResolver + publicAppUrls cluster (Architect to design the seam; handlers drop to ~7 deps).
+  - Accept the sprawl as inherent to enrichment-at-enqueue — the deps are real, the pattern is consistent, and the budget is a heuristic.
+  - Move enrichment to dispatch-time (`EmailSendService` side) so handlers only emit `{orderId, messageId}` — minimal payloads per the original T-0079 §C.7 shape, at the cost of dispatch-time DB reads and losing the snapshot-at-enqueue semantics.
+  - Harvest-duty candidate for `docs/review/recurring-findings.md` once a direction is approved.
+- **Status:** open
+- **Answer (filled by user):**

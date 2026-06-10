@@ -30,6 +30,8 @@ Capture a customer's intent to purchase from a specific maker and track the stat
 - `PaymentProviderRef` once a payment session is created
 - `ShippingCarrierRef` once a shipment is created
 - `AutoDeliverAt` (set when shipped; null otherwise)
+- `CancellationSource` (`Customer | AutoExpiry | Admin`, nullable — stamped by `Cancel(source)`; null on orders cancelled before T-0083). T-0083.
+- Message-thread denormalization (T-0079, five columns): `CustomerUnreadMessageCount` + `MakerUnreadMessageCount` (INT NOT NULL DEFAULT 0 — O(1) dashboard badges) and `CustomerPendingNotificationEmailAt` + `MakerPendingNotificationEmailAt` (nullable TIMESTAMPTZ — the 5-min notification-debounce pointers), plus `cancellation_source` above
 - Customer-supplied attachments (file paths)
 - Customer notes
 
@@ -50,11 +52,21 @@ Capture a customer's intent to purchase from a specific maker and track the stat
   - `Accepted` → `Shipped` (`ShipOrder.Command`, maker action; creates Packeta shipment)
   - `Shipped` → `Delivered` (`MarkOrderDelivered.Command`, customer action OR auto-deliver after 7 days OR carrier-confirmed)
   - `Delivered` → `Completed` (`CompletePayout.Command`, when paid out)
-  - Most states → `Cancelled` (with rules)
+  - `PendingPayment | Paid | Accepted` → `Cancelled` via `Cancel(IClock clock, OrderCancellationSource source = OrderCancellationSource.Customer)` — the entity exposes the edge; which audience may take it is enforced by the command layer. T-0083's `CancelExpiredOrder.Command` (daily `CancelExpiredPendingPaymentOrdersFunction`, 02:00 UTC) cancels `PendingPayment` orders older than 24 h with `source: AutoExpiry` and Silent-Success no-ops when the order already left `PendingPayment`; T-0105/T-0107 pass their own source explicitly. The default `Customer` exists only for pre-T-0083 caller compatibility.
   - `Paid` and later → `Refunded` (admin action only)
   - `Shipped`+ → `Disputed` (customer or maker can open)
 - **Persisted by:** `IOrderRepository`
 - **Destroyed by:** never (soft delete only, and only by admin via `DeleteUserPermanently` for GDPR — and even then, the order persists in anonymized form for legal retention)
+
+## Message-thread surface (T-0079)
+
+`Order` owns the denormalized state for the order-message thread (see `order-message.md` for the thread itself) via five domain methods:
+
+- `IncrementUnreadFor(authorRole)` — on a posted message, bump the **opposite** party's unread counter (the sender never increments their own; clamped at `int.MaxValue`).
+- `ResetUnreadFor(readerRole)` — zero the reader's counter on a MarkAsRead sweep. Unconditional reset, not a decrement — idempotent and self-healing.
+- `ShouldEmitNotificationFor(authorRole, now)` — the 5-min debounce predicate: true when the recipient's pending pointer is null OR strictly older than `now − NotificationDebounceWindow` (5 min); at exactly the boundary the pointer still suppresses.
+- `MarkNotificationEmittedFor(authorRole, now)` — set the recipient's pointer after the outbox digest row is enqueued.
+- `ClearPendingNotificationFor(readerRole)` — null the reader's pointer on MarkAsRead so the next message to them notifies immediately.
 
 ## Invariants
 
@@ -65,13 +77,15 @@ Capture a customer's intent to purchase from a specific maker and track the stat
 - `PaymentMethod` is set at most once on `MarkAsPaid` — a different non-null incoming value vs. the existing non-null value is refused with `OrderInvalidTransition`. T-0067.
 - `ShippingCarrierRef` is set at most once (on first `Shipped`).
 - `AutoDeliverAt` = `ShippedAt + 7 days`. Set atomically with `ShippedAt`.
+- `CancellationSource` is stamped exactly once, at `Cancel` time, atomically with `CancelledAt`. Nullable only for orders cancelled before T-0083.
+- The unread counters never go negative — `ResetUnreadFor` is an unconditional zero, `IncrementUnreadFor` only ever adds.
 
 ## Implementation pointer
 
-`backend/src/Makables.Core.Domain/Orders/Order.cs`. State machine logic encapsulated in Order methods (`MarkAsPaid`, `Accept`, `Ship`, `MarkDelivered`, etc.) that return `BusinessResult` on invalid transitions.
+`backend/src/Makables.Core.Domain/Orders/Order.cs`. State machine logic encapsulated in Order methods (`MarkAsPaid`, `Accept`, `Ship`, `MarkDelivered`, `Cancel(clock, source)`, etc.) that return `BusinessResult` on invalid transitions. `OrderCancellationSource` lives alongside in `backend/src/Makables.Core.Domain/Orders/OrderCancellationSource.cs`. The T-0079/T-0083 columns ship in migration `20260609174208_OrderCleanupBundle.cs`.
 
 ## Related
 
 - ADRs: 0002, 0003, 0004, 0009, 0016, 0017, 0020
 - Stories: most customer + maker stories
-- Roles: `customer`, `maker`, `product`, `order-pricing`, `payment-provider`, `shipping-carrier`, `order-numbering`
+- Roles: `customer`, `maker`, `product`, `order-pricing`, `payment-provider`, `shipping-carrier`, `order-numbering`, `order-message`
