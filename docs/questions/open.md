@@ -170,3 +170,43 @@
   - Harvest-duty candidate for `docs/review/recurring-findings.md` once a direction is approved.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0013 — /auth/login latent 404 (middleware + ~10 links)
+- **From:** reviewer (checkout-flow-bundle final review, N-6)
+- **Ticket / context:** checkout-flow-bundle (T-0084a + T-0084b + T-0085); pre-existing, not introduced by the bundle
+- **Asked:** 2026-06-09
+- **Blocking:** no
+- **Question:** The `(auth)` route group adds no URL segment, so the login page serves at `/login`, but `middleware.ts:24` redirects dashboard routes to `/auth/login` and ~10 `<Link href="/auth/login">` exist repo-wide (`register-form.tsx`, `verify-client.tsx`, `reset-client.tsx`, `profile-client.tsx`, `pro-makery/page.tsx`, `register-maker-form.tsx`) — all 404. The checkout bundle's new redirects correctly use `/login`. How should the stale references be fixed?
+- **Options the agent has considered:**
+  - Quick-fix ticket (S): sweep the ~10 references + middleware to `/login`. Recommended.
+  - Rename the folder to un-grouped `auth/` so `/auth/login` becomes real — URL churn for an already-live route.
+  - Leave until the next auth-area ticket picks it up — latent 404 on every affected link in the meantime.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0014 — i18n dictionary inlined into 17 client chunks
+- **From:** optimizer (checkout-flow-bundle Gate 8, HIGH finding)
+- **Ticket / context:** checkout-flow-bundle Gate 8; pre-existing pattern, inflated by every dictionary growth
+- **Asked:** 2026-06-09
+- **Blocking:** no
+- **Question:** `cs-CZ.ts` (~10 kB gzip) is bundled into every client chunk that imports `t()` — 17 private copies, 44–63% of each new checkout route chunk; every cross-route navigation re-downloads ~10 kB gzip that a shared chunk would cache once. How should the dictionary be de-duplicated?
+- **Options the agent has considered:**
+  - Extract `lib/i18n` into a shared cached chunk (Turbopack chunking / `optimizePackageImports` config).
+  - Split the catalog per domain (`checkout.*`, `order.*`, …) with per-route imports so client leaves carry only their slice.
+  - Server-only `t()` + prop-drilling resolved strings into client leaves.
+  - Standalone perf ticket recommended — single largest measurable win available (~10 kB gzip saved on every route transition, shrinks all 17 client chunks).
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0015 — Frontend bundle budget undefined (ADR 0023 gap)
+- **From:** optimizer (checkout-flow-bundle Gate 8, same run)
+- **Ticket / context:** checkout-flow-bundle Gate 8; ADR 0023 §1
+- **Asked:** 2026-06-09
+- **Blocking:** no
+- **Question:** ADR 0023 defines no First Load JS budget (and no checkout TTFB row); the shared root baseline alone is 131.8 kB gzip, so the de-facto ~150 kB Gate 8 review line is mathematically unreachable for any route (all routes measure 157–170 kB). What budget should Gate 8 enforce? Architect input wanted.
+- **Options the agent has considered:**
+  - Amend ADR 0023 with a realistic absolute budget (e.g. baseline + 40 kB marginal per route).
+  - Adopt a marginal-cost budget (per-route delta over the shared baseline) instead of an absolute line.
+  - Reduce the root baseline first (Q-0014 helps materially), then set the absolute line.
+- **Status:** open
+- **Answer (filled by user):**
