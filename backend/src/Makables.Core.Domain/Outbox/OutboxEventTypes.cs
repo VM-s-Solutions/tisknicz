@@ -95,6 +95,32 @@ public static class OutboxEventTypes
     public const string OrderDisputedCarrierSourced = "order.disputed.carrierSourced";
 
     /// <summary>
+    /// "Customer has a new message on order #..." digest email, enqueued
+    /// by <see cref="Features.OrderMessages.PostMakerOrderMessage"/> when
+    /// a maker posts to the thread AND the customer's recipient
+    /// debounce window has elapsed (or is null). T-0079 (US-customer-0014
+    /// AC-3 / US-maker-0011 AC-1).
+    /// </summary>
+    public const string OrderMessagePostedCustomerEmail = "order.message.posted.customerEmail";
+
+    /// <summary>
+    /// "Maker has a new message on order #..." symmetric digest email,
+    /// enqueued by <see cref="Features.OrderMessages.PostCustomerOrderMessage"/>
+    /// when a customer posts AND the maker's recipient debounce window
+    /// has elapsed. T-0079 (US-maker-0011 AC-2).
+    /// </summary>
+    public const string OrderMessagePostedMakerEmail = "order.message.posted.makerEmail";
+
+    /// <summary>
+    /// "Your order expired without payment" customer notification, fired
+    /// by <see cref="Features.Orders.CancelExpiredOrder"/> after the
+    /// auto-cancel transition. T-0083 (US-customer-0010 AC-3). No maker
+    /// counterpart per T-0083 locked decision A.2 — the maker never knew
+    /// about the order at PendingPayment state.
+    /// </summary>
+    public const string OrderCancelledCustomerEmail = "order.cancelled.customerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -115,7 +141,10 @@ public static class OutboxEventTypes
                   or OrderPlacedMakerEmail
                   or OrderAcceptedCustomerEmail
                   or OrderShippedCustomerEmail
-                  or OrderDeliveredCustomerEmail;
+                  or OrderDeliveredCustomerEmail
+                  or OrderMessagePostedCustomerEmail
+                  or OrderMessagePostedMakerEmail
+                  or OrderCancelledCustomerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

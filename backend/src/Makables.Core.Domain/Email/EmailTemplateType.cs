@@ -64,4 +64,28 @@ public enum EmailTemplateType
     /// locked decision A.2). T-0076.
     /// </summary>
     OrderDeliveredCustomer = 8,
+
+    /// <summary>
+    /// "Nová zpráva k objednávce {orderNumber}" customer-recipient digest.
+    /// Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderMessagePostedCustomerEmail"/>.
+    /// T-0079.
+    /// </summary>
+    OrderMessagePostedCustomer = 9,
+
+    /// <summary>
+    /// Symmetric maker-recipient digest. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderMessagePostedMakerEmail"/>.
+    /// T-0079.
+    /// </summary>
+    OrderMessagePostedMaker = 10,
+
+    /// <summary>
+    /// "Vaše objednávka {orderNumber} byla zrušena (platba neproběhla)"
+    /// customer notification on auto-expiry. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderCancelledCustomerEmail"/>.
+    /// T-0083 ships AutoExpiry copy; Customer / Admin source extensions
+    /// in T-0105 / T-0107.
+    /// </summary>
+    OrderCancelledAutoExpiryCustomer = 11,
 }

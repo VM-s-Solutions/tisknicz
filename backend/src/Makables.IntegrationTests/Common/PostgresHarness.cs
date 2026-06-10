@@ -117,8 +117,11 @@ public sealed class PostgresHarness : IAsyncLifetime
         // start each test with a clean slate. The order matters for FK
         // RESTRICT (order_id → orders) but CASCADE on TRUNCATE bypasses
         // FK constraints anyway.
+        // T-0079: extended to truncate order_messages (the CASCADE off
+        // orders would catch it via the new FK, but explicit is cheaper
+        // to reason about).
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, invoices, orders, products, makers, categories, addresses, users, outbox_event RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, invoices, order_messages, orders, products, makers, categories, addresses, users, outbox_event RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

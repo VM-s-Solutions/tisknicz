@@ -1,4 +1,5 @@
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.OrderMessages;
 
 namespace Makables.Core.Domain.Orders;
 
@@ -228,6 +229,56 @@ public sealed class Order : Auditable
     /// close via auto-deliver?"). T-0076 locked decision A.1.
     /// </summary>
     public OrderDeliverySource? DeliverySource { get; private set; }
+
+    /// <summary>
+    /// Identifies which caller drove the
+    /// <see cref="OrderState.PendingPayment"/> /
+    /// <see cref="OrderState.Paid"/> /
+    /// <see cref="OrderState.Accepted"/> →
+    /// <see cref="OrderState.Cancelled"/> transition. Stamped by
+    /// <see cref="Cancel"/>. <b>Nullable</b> — orders that cancelled
+    /// before T-0083 landed have no source recorded. Queryable for
+    /// dispute trails + analytics ("what fraction of orders auto-expired
+    /// vs were customer/admin cancelled?"). T-0083 §C.
+    /// </summary>
+    public OrderCancellationSource? CancellationSource { get; private set; }
+
+    // === T-0079: messages thread denormalized counters + debounce pointers ===
+
+    /// <summary>5-minute notification-email digest window per locked decision A.2.</summary>
+    public static readonly TimeSpan NotificationDebounceWindow = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Count of <c>order_messages</c> rows authored by the maker that the
+    /// customer has not yet marked as read. Denormalized for O(1) reads
+    /// on the customer dashboard list (T-0080) per locked decision A.3.
+    /// Reset to zero by <see cref="ResetUnreadFor"/> on a customer
+    /// MarkAsRead; incremented by <see cref="IncrementUnreadFor"/> on a
+    /// maker-authored post. T-0079 §C.8.
+    /// </summary>
+    public int CustomerUnreadMessageCount { get; private set; }
+
+    /// <summary>
+    /// Symmetric counter — maker-side unread count of customer-authored
+    /// messages. Used by the maker dashboard list (T-0081).
+    /// </summary>
+    public int MakerUnreadMessageCount { get; private set; }
+
+    /// <summary>
+    /// When the most recent <see cref="OutboxEventTypes.OrderMessagePostedCustomerEmail"/>
+    /// outbox row was enqueued for this order (the customer's recipient
+    /// pointer — set on a maker-authored post). Drives the 5-minute
+    /// notification-debounce predicate <see cref="ShouldEmitNotificationFor"/>.
+    /// Cleared back to null when the customer reads the thread so the
+    /// next maker post fires immediately. T-0079 §C.8.
+    /// </summary>
+    public DateTimeOffset? CustomerPendingNotificationEmailAt { get; private set; }
+
+    /// <summary>
+    /// Symmetric pointer — maker's recipient debounce pointer; set on a
+    /// customer-authored post; cleared on a maker MarkAsRead.
+    /// </summary>
+    public DateTimeOffset? MakerPendingNotificationEmailAt { get; private set; }
 
     // === Customer notes ===
 
@@ -712,8 +763,19 @@ public sealed class Order : Auditable
     /// The entity exposes the edge; who may take it from which audience
     /// is enforced by the command layer (T-0083 auto-cancel,
     /// T-0107 admin manual change).
+    ///
+    /// <para>
+    /// <paramref name="source"/> stamps <see cref="CancellationSource"/>
+    /// so dispute trails + admin reporting can answer "how did this order
+    /// close?" without joining the outbox / audit logs. Defaults to
+    /// <see cref="OrderCancellationSource.Customer"/> for backwards
+    /// compatibility with callers that predate T-0083; explicit callers
+    /// (the T-0083 AutoExpiry sweep, T-0107 admin) pass their own source.
+    /// </para>
     /// </summary>
-    public BusinessResult Cancel(IClock clock)
+    public BusinessResult Cancel(
+        IClock clock,
+        OrderCancellationSource source = OrderCancellationSource.Customer)
     {
         ArgumentNullException.ThrowIfNull(clock);
         if (State is not (OrderState.PendingPayment or OrderState.Paid or OrderState.Accepted))
@@ -721,7 +783,106 @@ public sealed class Order : Auditable
 
         State = OrderState.Cancelled;
         CancelledAt = clock.UtcNow;
+        CancellationSource = source;
         return BusinessResult.Success();
+    }
+
+    // === T-0079: messages thread domain methods ===
+
+    /// <summary>
+    /// Bump the recipient's unread counter on a new posted message. The
+    /// recipient is the OPPOSITE party from <paramref name="authorRole"/>
+    /// (the sender does not increment their own counter). Clamped at
+    /// <see cref="int.MaxValue"/> defensively — a runaway producer cannot
+    /// overflow into negative territory.
+    /// </summary>
+    public void IncrementUnreadFor(OrderMessageAuthorRole authorRole)
+    {
+        if (authorRole == OrderMessageAuthorRole.Customer)
+        {
+            // Customer posted → bump maker's unread counter.
+            if (MakerUnreadMessageCount < int.MaxValue)
+                MakerUnreadMessageCount++;
+        }
+        else if (authorRole == OrderMessageAuthorRole.Maker)
+        {
+            // Maker posted → bump customer's unread counter.
+            if (CustomerUnreadMessageCount < int.MaxValue)
+                CustomerUnreadMessageCount++;
+        }
+    }
+
+    /// <summary>
+    /// Zero the reader's unread counter on a MarkAsRead sweep. Idempotent
+    /// — repeated calls keep the counter at zero, never negative.
+    /// </summary>
+    public void ResetUnreadFor(OrderMessageAuthorRole readerRole)
+    {
+        if (readerRole == OrderMessageAuthorRole.Customer)
+        {
+            CustomerUnreadMessageCount = 0;
+        }
+        else if (readerRole == OrderMessageAuthorRole.Maker)
+        {
+            MakerUnreadMessageCount = 0;
+        }
+    }
+
+    /// <summary>
+    /// 5-minute notification-debounce predicate. Returns true when the
+    /// RECIPIENT's pending-pointer (the OPPOSITE party from
+    /// <paramref name="authorRole"/>) is null OR strictly older than
+    /// <c>now − <see cref="NotificationDebounceWindow"/></c>; false
+    /// otherwise (within-window suppresses the second outbox emit).
+    /// </summary>
+    public bool ShouldEmitNotificationFor(OrderMessageAuthorRole authorRole, DateTimeOffset now)
+    {
+        var pointer = authorRole == OrderMessageAuthorRole.Customer
+            ? MakerPendingNotificationEmailAt
+            : CustomerPendingNotificationEmailAt;
+
+        if (pointer is null) return true;
+        // Strictly older than the window — at exactly window-boundary the
+        // pointer still suppresses (debounce holds at the boundary).
+        return pointer.Value < now - NotificationDebounceWindow;
+    }
+
+    /// <summary>
+    /// Set the recipient's pending-notification pointer to <paramref name="now"/>
+    /// after the outbox row is enqueued. The next post within
+    /// <see cref="NotificationDebounceWindow"/> reads this pointer and
+    /// suppresses its own enqueue (5-min digest).
+    /// </summary>
+    public void MarkNotificationEmittedFor(OrderMessageAuthorRole authorRole, DateTimeOffset now)
+    {
+        if (authorRole == OrderMessageAuthorRole.Customer)
+        {
+            // Customer posted → recipient is maker.
+            MakerPendingNotificationEmailAt = now;
+        }
+        else if (authorRole == OrderMessageAuthorRole.Maker)
+        {
+            // Maker posted → recipient is customer.
+            CustomerPendingNotificationEmailAt = now;
+        }
+    }
+
+    /// <summary>
+    /// Clear the reader's pending-notification pointer back to null on a
+    /// MarkAsRead sweep. The next message posted to that reader will
+    /// fire its own outbox event immediately, not be silenced by a
+    /// stale debounce window. Called from the MarkAsRead handlers.
+    /// </summary>
+    public void ClearPendingNotificationFor(OrderMessageAuthorRole readerRole)
+    {
+        if (readerRole == OrderMessageAuthorRole.Customer)
+        {
+            CustomerPendingNotificationEmailAt = null;
+        }
+        else if (readerRole == OrderMessageAuthorRole.Maker)
+        {
+            MakerPendingNotificationEmailAt = null;
+        }
     }
 
     /// <summary>

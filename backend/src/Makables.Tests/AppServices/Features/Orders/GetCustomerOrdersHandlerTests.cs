@@ -38,7 +38,8 @@ public class GetCustomerOrdersHandlerTests
             Currency: "CZK",
             CreatedAt: new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero),
             MakerName: "Avast s.r.o.",
-            ProductTitle: "Hrnek");
+            ProductTitle: "Hrnek",
+            UnreadMessageCount: 0);  // T-0079: real value (was forward-compat absent at T-0080 ship time)
 
     // === Handler — happy path + forwarding ===
 
@@ -176,7 +177,8 @@ public class GetCustomerOrdersHandlerTests
             Currency: "CZK",
             CreatedAt: new DateTimeOffset(2026, 6, 1, 10, 0, 0, TimeSpan.Zero),
             MakerName: "Avast s.r.o.",
-            ProductTitle: null);
+            ProductTitle: null,
+            UnreadMessageCount: 0);
         var paged = new PagedData<CustomerOrderListItemDto>(
             new[] { item }, Page: 1, PageSize: 20, TotalCount: 1);
         _orderQueries.GetCustomerOrdersPagedAsync(

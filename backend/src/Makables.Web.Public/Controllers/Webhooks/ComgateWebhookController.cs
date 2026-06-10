@@ -181,6 +181,23 @@ public sealed class ComgateWebhookController(
                 {
                     if (dispatchResult.Error!.Code == BusinessErrorMessage.OrderInvalidTransition)
                     {
+                        // T-0083 fold (SecOps Gate 3 check 7): a PAID
+                        // webhook refused against a Cancelled/Refunded
+                        // order means Comgate HAS captured the customer's
+                        // money while the order stays closed — a refund
+                        // liability with no automated flow until T-0105.
+                        // Surface it at Warning so ops alerting sees it;
+                        // keep the 200 (idempotency contract — a 4xx
+                        // would only retry-storm the same refusal).
+                        if (order.State is OrderState.Cancelled or OrderState.Refunded)
+                        {
+                            logger.LogWarning(
+                                "Comgate payment captured for cancelled order {OrderId} (State={OrderState}, CancellationSource={CancellationSource}) — manual refund required until T-0105 ships.",
+                                order.Id, order.State, order.CancellationSource);
+                            return Ok();
+                        }
+                        // Benign race: another webhook delivery already
+                        // moved the order to Paid (or later). Info-level.
                         logger.LogInformation(
                             "Comgate webhook: MarkOrderPaid lost the race for order {OrderId} (already transitioned). Idempotent 200.",
                             order.Id);

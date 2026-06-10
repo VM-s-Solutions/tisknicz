@@ -1415,6 +1415,93 @@ namespace Makables.Infra.Database.Migrations
                     b.ToTable("numbering_sequence", (string)null);
                 });
 
+            modelBuilder.Entity("Makables.Core.Domain.OrderMessages.OrderMessage", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("id");
+
+                    b.Property<short>("AuthorRole")
+                        .HasColumnType("smallint")
+                        .HasColumnName("author_role");
+
+                    b.Property<string>("AuthorUserId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country_code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<string>("DeactivatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("deactivated_by");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("order_id");
+
+                    b.Property<DateTimeOffset?>("ReadByCounterpartyAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_by_counterparty_at");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_order_messages_author_user");
+
+                    b.HasIndex("OrderId", "AuthorRole")
+                        .HasDatabaseName("ix_order_messages_order_author_unread")
+                        .HasFilter("read_by_counterparty_at IS NULL AND is_active");
+
+                    b.HasIndex("OrderId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_order_messages_order_created");
+
+                    b.ToTable("order_messages", (string)null);
+                });
+
             modelBuilder.Entity("Makables.Core.Domain.Orders.Order", b =>
                 {
                     b.Property<string>("Id")
@@ -1429,6 +1516,10 @@ namespace Makables.Infra.Database.Migrations
                     b.Property<DateTimeOffset?>("AutoDeliverAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("auto_deliver_at");
+
+                    b.Property<short?>("CancellationSource")
+                        .HasColumnType("smallint")
+                        .HasColumnName("cancellation_source");
 
                     b.Property<DateTimeOffset?>("CancelledAt")
                         .HasColumnType("timestamp with time zone")
@@ -1483,6 +1574,16 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("customer_notes");
 
+                    b.Property<DateTimeOffset?>("CustomerPendingNotificationEmailAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("customer_pending_notification_email_at");
+
+                    b.Property<int>("CustomerUnreadMessageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("customer_unread_message_count");
+
                     b.Property<string>("CustomerUserId")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -1523,6 +1624,16 @@ namespace Makables.Infra.Database.Migrations
                     b.Property<long>("MakerPayoutAmountMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("maker_payout_amount_minor");
+
+                    b.Property<DateTimeOffset?>("MakerPendingNotificationEmailAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("maker_pending_notification_email_at");
+
+                    b.Property<int>("MakerUnreadMessageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("maker_unread_message_count");
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
@@ -1946,6 +2057,21 @@ namespace Makables.Infra.Database.Migrations
                         .WithMany()
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Makables.Core.Domain.OrderMessages.OrderMessage", b =>
+                {
+                    b.HasOne("Makables.Core.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Makables.Core.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.Orders.OrderAttachment", b =>

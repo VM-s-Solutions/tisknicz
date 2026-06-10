@@ -3,6 +3,7 @@ using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Invoices;
+using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Storage;
 using Microsoft.Extensions.Logging;
@@ -81,8 +82,119 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderDeliveredCustomerEmail
                 => SendOrderDeliveredCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderMessagePostedCustomerEmail
+                => SendOrderMessagePostedCustomerEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderMessagePostedMakerEmail
+                => SendOrderMessagePostedMakerEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderCancelledCustomerEmail
+                => SendOrderCancelledCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0079: OrderMessagePostedCustomer email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderMessagePostedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderMessagePostedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderMessagePostedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderMessagePostedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["sender_name"] = payload.SenderName,
+                ["unread_count"] = payload.UnreadMessageCount,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0079: OrderMessagePostedMaker email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderMessagePostedMakerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderMessagePostedMakerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderMessagePostedMakerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderMessagePostedMaker,
+            toAddress: payload.MakerEmail,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["sender_name"] = payload.SenderName,
+                ["unread_count"] = payload.UnreadMessageCount,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0083: OrderCancelled (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderCancelledCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderCancelledCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderCancelledCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // T-0083 ships AutoExpiry-source copy only. Customer + Admin variants
+        // pick distinct templates via the same routing branch in T-0105 / T-0107.
+        var templateType = payload.Reason switch
+        {
+            OrderCancellationSource.AutoExpiry => EmailTemplateType.OrderCancelledAutoExpiryCustomer,
+            _ => EmailTemplateType.OrderCancelledAutoExpiryCustomer, // fallback to AutoExpiry copy at MVP
+        };
+
+        return DispatchOrderEmailAsync(
+            templateType: templateType,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["reason"] = payload.Reason.ToString(),
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0076: Order delivered (customer) email branch. ===
