@@ -532,6 +532,44 @@ export const messages = {
   'checkout.uploadProgress': 'Nahrávání příloh: {done}/{total}',
   'checkout.emailNotConfirmedHint':
     'Nový potvrzovací odkaz si můžete poslat ze svého profilu.',
+
+  // Pre-payment order page at /objednavka/[id] (T-0084b,
+  // US-customer-0010 AC-2/AC-3). Vykání throughout.
+  'order.page.title': 'Objednávka {orderNumber}',
+  'order.page.metadata.title': 'Objednávka — Makables',
+  'order.page.loadError': 'Objednávku se nepodařilo načíst',
+  'order.page.loadErrorBody': 'Zkuste prosím obnovit stránku za chvíli.',
+  'order.page.loadErrorRetry': 'Zkusit znovu',
+  'order.page.notFound.title': 'Objednávka nenalezena',
+  'order.page.notFound.body':
+    'Tato objednávka neexistuje nebo k ní nemáte přístup.',
+
+  'order.page.payCta': 'Zaplatit',
+  'order.page.paying': 'Přesměrování na platební bránu…',
+  'order.page.expiresNotice':
+    'Nezaplacené objednávky rušíme po 24 hodinách. Zaplaťte prosím do {deadline}.',
+
+  'order.page.breakdown.product': 'Výrobek',
+  'order.page.breakdown.shipping': 'Doprava',
+  'order.page.breakdown.vat': 'DPH {rate} %',
+  'order.page.breakdown.total': 'Celkem',
+  'order.page.breakdown.contact': 'Kontaktní údaje',
+  'order.page.breakdown.customOrderFallback': 'Vlastní zakázka',
+  'order.page.shippingMethod.zasilkovna': 'Zásilkovna — výdejní místo',
+  'order.page.shippingMethod.personalPickup': 'Osobní odběr',
+
+  'order.page.attachments.heading': 'Přílohy',
+  'order.page.attachments.addMore': 'Přidat soubory',
+  'order.page.attachments.retry': 'Zkusit znovu',
+  'order.page.attachments.uploading': 'Nahrává se…',
+  'order.page.attachments.done': 'Nahráno',
+  'order.page.attachments.failed': 'Nahrání se nezdařilo',
+  'order.page.attachments.failedHandoffAlert':
+    'Souborů, které se nepodařilo nahrát: {count}. Přidejte je prosím znovu níže.',
+
+  'order.page.banner.detailComing':
+    'Kompletní detail objednávky pro vás připravujeme. O každé změně vás budeme informovat e-mailem.',
+  'order.page.banner.backToCatalog': 'Zpět do katalogu',
 } as const;
 
 export type MessageKey = keyof typeof messages;
