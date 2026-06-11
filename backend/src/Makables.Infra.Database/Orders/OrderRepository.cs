@@ -94,6 +94,27 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
                 cancellationToken);
     }
 
+    public Task<Order?> GetByIdForCustomerReadOnlyAsync(
+        string orderId,
+        string customerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId) || string.IsNullOrWhiteSpace(customerUserId))
+            return Task.FromResult<Order?>(null);
+
+        // AsNoTracking: read-only callers (T-0088 customer-host invoice
+        // download) only verify customer ownership/existence; they never
+        // call methods on the returned aggregate. Skipping change-tracking
+        // + the snapshot allocation per ADR 0025 §Performance expectations
+        // item 2. Mirrors GetByIdForMakerReadOnlyAsync with the predicate
+        // swapped to the customer scope.
+        return db.Set<Order>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                o => o.Id == orderId && o.CustomerUserId == customerUserId,
+                cancellationToken);
+    }
+
     public Task<Order?> GetByIdUnscopedAsync(string orderId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(orderId))

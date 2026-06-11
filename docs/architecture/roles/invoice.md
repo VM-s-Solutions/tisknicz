@@ -87,9 +87,16 @@ Be the legal record of a payment between two parties (platform↔customer for an
 - SendGrid adapter: `SendGridEmailProvider.SendAsync` calls `sgMessage.AddAttachment` with base64-encoded bytes when `EmailMessage.Attachment` is non-null. 30 MB cap surfaces as `Error.Permanent(InvoicePdfAttachmentTooLarge)` — sniffed via HTTP 413 or 4xx body containing "too large" / "exceeds" / similar (locked decision 4 — outbox stalls for ops, retry can't resolve a fixed cap).
 - 3 new error codes + Czech i18n: `InvoiceNotYetRendered` (Transient), `InvoicePdfAttachmentDownloadFailed` (Permanent), `InvoicePdfAttachmentTooLarge` (Permanent). All three are admin / log surface only — customer never sees them directly.
 
+**T-0088 shipped (read-side download surface — customer + maker hosts):**
+
+- Endpoints: `GET /api/v1/orders/{orderId}/invoice` on the Customer host AND the Maker host (host-relative; audience = host per ADR 0013). The routes are the literal strings T-0082's detail projections emit as `InvoicePdfUrl` — changing the emitted URL shape is forbidden (T-0088 §A.1).
+- Shape: controller-direct streaming actions on the existing `OrdersController` of each host per ADR 0014 §"Handler-free read paths" (T-0075/T-0064 precedent — no MediatR feature). Lookup chain: session → ownership-scoped read-only order load (`GetByIdForCustomerReadOnlyAsync` NEW / `GetByIdForMakerReadOnlyAsync`, ADR 0025) → `IInvoiceRepository.GetByOrderIdAsync` (Unscoped — safe ONLY after the ownership pre-check) → `IBlobStorageClient.DownloadAsync(BlobContainer.Invoices, Invoice.PdfBlobPath)` verbatim.
+- Headers: `Content-Disposition: attachment; filename="faktura-{InvoiceNumber}.pdf"`, `Content-Type: application/pdf`, `Cache-Control: private, no-store` + ETag/304 conditional GET (T-0064 PII policy — invoices carry recipient name/address/tax ids; NOT the T-0075 label `public, immutable` family). No range processing.
+- 404 semantics: cross-tenant / unknown order → `order.notFound` (IDOR-oracle-free, same shape as nonexistent); owned order with no Invoice row, null `PdfBlobPath`, or blob-purged race → `invoice.notYetRendered` (transient-shaped; FE retry per the existing i18n copy). No re-render fallback inside the web request — rendering stays owned by the queue pipeline.
+
 **Out of scope at T-0069 (deferred):**
 
-- Customer-facing PDF download endpoint (T-0086 per T-0068b locked decision 9 — strict OOS).
+- Customer-facing PDF download endpoint (T-0086 per T-0068b locked decision 9 — strict OOS). *Backend endpoints shipped by T-0088 (see above); the FE CTA lands in T-0086b/T-0087b.*
 - Fee invoices (`InvoiceType.Fee` rendering + PayoutBatch FK) — T-0101 / T-0102.
 - ReverseCharge / StrictFiscalReporting renderers — post-MVP.
 - Noto Sans subset .ttf embedding — follow-up.

@@ -106,6 +106,24 @@ public interface IOrderRepository
     Task<Order?> GetByIdForMakerReadOnlyAsync(string orderId, string makerId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Read-only customer-scoped variant of <see cref="GetByIdForCustomerAsync"/>.
+    /// Same IDOR shield + return shape (null for unknown ids AND
+    /// cross-customer ids), but applies <c>.AsNoTracking()</c> so EF Core
+    /// skips change-tracking and the snapshot allocation. Use this when
+    /// the caller does NOT call methods on the returned <see cref="Order"/>
+    /// — saves change-tracking overhead per ADR 0025 §Performance
+    /// expectations item 2. Mirrors <see cref="GetByIdForMakerReadOnlyAsync"/>.
+    ///
+    /// <para>
+    /// Read-only callers (T-0088 customer-host invoice download) only
+    /// verify customer ownership/existence before an unscoped child
+    /// lookup; mutating callers (T-0076 mark delivered, T-0083 cancel)
+    /// keep using the tracked <see cref="GetByIdForCustomerAsync"/>.
+    /// </para>
+    /// </summary>
+    Task<Order?> GetByIdForCustomerReadOnlyAsync(string orderId, string customerUserId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Load a single order without ownership scoping. <b>Admin host
     /// only</b> per ADR 0013. Used by admin lookups (T-0107 manual
     /// state change, T-0105 refund) and GDPR reconciliation (T-0110).
