@@ -571,6 +571,51 @@ export const messages = {
     'Kompletní detail objednávky pro vás připravujeme. O každé změně vás budeme informovat e-mailem.',
   'order.page.banner.backToCatalog': 'Zpět do katalogu',
 
+  // Customer dashboard order list at /dashboard/zakaznik/objednavky
+  // (T-0086a, US-customer-0016). Vykání throughout; {count} keys follow
+  // the plural-neutral "Label: N" convention from the catalog block.
+  'customer.orders.title': 'Moje objednávky',
+  'customer.orders.subtitle': 'Přehled vašich objednávek — stav, zprávy od výrobce a detail každé zakázky.',
+  'customer.orders.metadata.title': 'Moje objednávky — Makables',
+  'customer.orders.count': 'Objednávek: {count}',
+  'customer.orders.customOrder': 'Vlastní zakázka',
+
+  'customer.orders.filter.state': 'Stav',
+  'customer.orders.filter.state_any': 'Všechny stavy',
+  'customer.orders.filter.dateFrom': 'Od data',
+  'customer.orders.filter.dateTo': 'Do data',
+  'customer.orders.filter.sort': 'Řazení',
+  'customer.orders.filter.reset': 'Vymazat filtry',
+
+  'customer.orders.sort.CreatedAtDesc': 'Nejnovější',
+  'customer.orders.sort.CreatedAtAsc': 'Nejstarší',
+  'customer.orders.sort.TotalAmountDesc': 'Nejdražší',
+  'customer.orders.sort.TotalAmountAsc': 'Nejlevnější',
+  'customer.orders.sort.StateAsc': 'Podle stavu',
+
+  'customer.orders.table.number': 'Číslo',
+  'customer.orders.table.state': 'Stav',
+  'customer.orders.table.maker': 'Výrobce',
+  'customer.orders.table.product': 'Výrobek',
+  'customer.orders.table.total': 'Celkem',
+  'customer.orders.table.created': 'Vytvořeno',
+  'customer.orders.table.unread': 'Zprávy',
+  'customer.orders.unreadAria': 'Nepřečtené zprávy: {count}',
+
+  'customer.orders.empty.title': 'Zatím nemáte žádné objednávky',
+  'customer.orders.empty.description': 'Vyberte si výrobce v katalogu a zadejte svou první zakázku.',
+  'customer.orders.empty.cta': 'Prohlédnout katalog',
+  'customer.orders.noMatch.title': 'Žádné objednávky neodpovídají filtru',
+  'customer.orders.noMatch.description': 'Zkuste rozšířit kritéria nebo filtry vymazat.',
+  'customer.orders.noMatch.clear': 'Vymazat filtry',
+
+  'customer.orders.error.title': 'Objednávky se nepodařilo načíst',
+  'customer.orders.error.retry': 'Zkusit znovu',
+
+  'customer.orders.pagination.previous': 'Předchozí',
+  'customer.orders.pagination.next': 'Další',
+  'customer.orders.pagination.page_of': 'Stránka {page} z {total}',
+
   // Payment confirmation page at /objednavka/[id]/potvrzeni (T-0085).
   // Vykání throughout. Success is granted ONLY by the backend-read Paid
   // state — never by the Comgate redirect params (CLAUDE.md payments rule).

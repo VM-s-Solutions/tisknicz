@@ -1,0 +1,235 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { Alert } from '@/components/ui/alert';
+import { Icon } from '@/components/ui/icon';
+import {
+  type CustomerOrdersInput,
+  type CustomerOrdersPage,
+  getCustomerOrders,
+  OrderSort,
+  OrderState,
+} from '@/lib/api-client-helpers/orders-client';
+import { t } from '@/lib/i18n';
+import { OrdersFilters } from './filters-client';
+import { OrderRows } from './order-row';
+import { Pagination } from './pagination';
+
+/**
+ * Customer dashboard order list (T-0086a, US-customer-0016). Server
+ * Component: filters/sort/page live in URL searchParams (Q5 lock — no
+ * client store), the SSR list fetch forwards the customer audience
+ * cookie (patterns.md B.14 / ADR 0024), and pagination is `<Link>`-based
+ * per B.8. Invalid `state`/`sort` values are display-side canonicalised
+ * to the default (ignored, not errored) — the backend Validator stays
+ * authoritative for everything that reaches it (page clamps, inverted
+ * date ranges).
+ */
+
+export function generateMetadata(): Metadata {
+  return {
+    title: t('customer.orders.metadata.title'),
+  };
+}
+
+// Always render fresh — the list reflects payments/messages that just
+// happened, so SSG / ISR would stale out immediately.
+export const dynamic = 'force-dynamic';
+
+const ROUTE_PATH = '/dashboard/zakaznik/objednavky';
+
+const ORDER_STATE_VALUES = new Set<string>(Object.values(OrderState));
+const ORDER_SORT_VALUES = new Set<string>(Object.values(OrderSort));
+/** Display-side shape gate for `<input type="date">` round-trips — backend binder is the authority. */
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+interface PageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function readString(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
+function parsePositiveInt(raw: string, fallback: number): number {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+export default async function CustomerOrdersPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+
+  const page = parsePositiveInt(readString(sp.page), 1);
+  const rawState = readString(sp.state);
+  const rawSort = readString(sp.sort);
+  const rawDateFrom = readString(sp.dateFrom);
+  const rawDateTo = readString(sp.dateTo);
+
+  // Canonicalise: unknown enum values / malformed dates degrade to the
+  // default instead of a 400 page (T-0086a technical note).
+  const state = ORDER_STATE_VALUES.has(rawState) ? (rawState as OrderState) : undefined;
+  const sort =
+    ORDER_SORT_VALUES.has(rawSort) && rawSort !== OrderSort.CreatedAtDesc
+      ? (rawSort as OrderSort)
+      : undefined;
+  const dateFrom = ISO_DATE_PATTERN.test(rawDateFrom) ? rawDateFrom : undefined;
+  const dateTo = ISO_DATE_PATTERN.test(rawDateTo) ? rawDateTo : undefined;
+
+  const input: CustomerOrdersInput = { page, state, dateFrom, dateTo, sort };
+  const result = await getCustomerOrders(input);
+
+  if (!result.success && result.error.type === 'Unauthorized') {
+    // The login page serves at /login — the (auth) route group adds no
+    // URL segment (T-0084b precedent). AC-11: no partial dashboard render.
+    redirect(`/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
+  }
+
+  // Preserved params for pagination links (everything except `page`) —
+  // only non-default values are emitted (patterns.md B.8).
+  const baseParams: Record<string, string> = {};
+  if (state) baseParams.state = state;
+  if (dateFrom) baseParams.dateFrom = dateFrom;
+  if (dateTo) baseParams.dateTo = dateTo;
+  if (sort) baseParams.sort = sort;
+
+  const hasActiveFilters =
+    state !== undefined || dateFrom !== undefined || dateTo !== undefined;
+
+  return (
+    <section className="bg-surface-primary py-12 lg:py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            {t('customer.orders.title')}
+          </h1>
+          <p className="mt-3 max-w-2xl text-base text-zinc-400">
+            {t('customer.orders.subtitle')}
+          </p>
+        </header>
+
+        <OrdersFilters
+          initialState={state ?? ''}
+          initialDateFrom={dateFrom ?? ''}
+          initialDateTo={dateTo ?? ''}
+          initialSort={sort ?? ''}
+        />
+
+        <div className="mt-8">
+          {result.success ? (
+            <OrdersResults
+              data={result.value}
+              baseParams={baseParams}
+              hasActiveFilters={hasActiveFilters}
+            />
+          ) : (
+            <OrdersError />
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface OrdersResultsProps {
+  readonly data: CustomerOrdersPage;
+  readonly baseParams: Readonly<Record<string, string>>;
+  readonly hasActiveFilters: boolean;
+}
+
+function OrdersResults({ data, baseParams, hasActiveFilters }: OrdersResultsProps) {
+  if (data.totalCount === 0) {
+    return hasActiveFilters ? <OrdersNoMatch /> : <OrdersEmpty />;
+  }
+
+  // PagedData<T>'s `totalPages` / `hasNextPage` / `hasPreviousPage` are
+  // optional on the wire (T-0049 precedent) — narrow fallbacks here.
+  const totalPages = data.totalPages ?? 1;
+  const hasNext = data.hasNextPage ?? false;
+  const hasPrevious = data.hasPreviousPage ?? false;
+
+  return (
+    <>
+      <p className="mb-6 text-sm text-zinc-500">
+        {t('customer.orders.count', { count: data.totalCount })}
+      </p>
+      <OrderRows items={data.items} />
+      <Pagination
+        page={data.page}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrevious={hasPrevious}
+        baseParams={baseParams}
+      />
+    </>
+  );
+}
+
+function OrdersEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+        <Icon name="shoppingBag" size={28} />
+      </div>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-100">
+          {t('customer.orders.empty.title')}
+        </h2>
+        <p className="mt-2 max-w-md text-sm text-zinc-400">
+          {t('customer.orders.empty.description')}
+        </p>
+      </div>
+      <Link
+        href="/katalog"
+        className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+      >
+        {t('customer.orders.empty.cta')}
+        <Icon name="arrowRight" size={16} />
+      </Link>
+    </div>
+  );
+}
+
+function OrdersNoMatch() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+        <Icon name="search" size={28} />
+      </div>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-100">
+          {t('customer.orders.noMatch.title')}
+        </h2>
+        <p className="mt-2 max-w-md text-sm text-zinc-400">
+          {t('customer.orders.noMatch.description')}
+        </p>
+      </div>
+      <Link
+        href={ROUTE_PATH}
+        className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-400/10"
+      >
+        {t('customer.orders.noMatch.clear')}
+      </Link>
+    </div>
+  );
+}
+
+function OrdersError() {
+  return (
+    <Alert variant="error">
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="font-semibold">{t('customer.orders.error.title')}</p>
+          <p className="mt-1 text-sm opacity-90">{t('error.transient')}</p>
+        </div>
+        <Link
+          href={ROUTE_PATH}
+          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+        >
+          {t('customer.orders.error.retry')}
+        </Link>
+      </div>
+    </Alert>
+  );
+}

@@ -19,8 +19,10 @@ import {
   type ICreateOrderRequest,
   type ICreateOrderResponse,
   type ICustomerOrderDetailDto,
+  type ICustomerOrderListItemDto,
   type IOrderAttachmentSummaryDto,
   type IUploadOrderAttachmentResponse,
+  OrderSort,
   OrderState,
   ShippingMethod,
 } from '../api-client/customer-api.v1';
@@ -50,7 +52,51 @@ const UPLOAD_TIMEOUT_MS = 120_000;
  * Re-exported directly so write requests use the same runtime values
  * and reads narrow on the union.
  */
-export { OrderState, ShippingMethod };
+export { OrderSort, OrderState, ShippingMethod };
+
+/**
+ * Mirror of <c>GetCustomerOrders.DefaultPageSize</c> (T-0080). The
+ * dashboard list never emits <c>pageSize</c> — 20 is the only window
+ * size at MVP (T-0086a §Scope); the constant exists for the loading
+ * skeleton + display math only.
+ */
+export const CUSTOMER_ORDERS_DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * Mirror of <c>CustomerOrderListItemDto</c> (T-0080 + T-0089's
+ * <c>unreadMessageCount</c> projection). <c>createdAt</c> is overridden
+ * to wire-shape <c>string</c> (ISO 8601) — same rationale as
+ * <see cref="CustomerOrderDetail"/>.
+ */
+export type CustomerOrderListItem = Readonly<Omit<ICustomerOrderListItemDto, 'createdAt'>> & {
+  readonly createdAt: string;
+};
+
+/**
+ * Wire shape of <c>PagedData&lt;CustomerOrderListItemDto&gt;</c>.
+ * <c>totalPages</c> / <c>hasNextPage</c> / <c>hasPreviousPage</c> are
+ * optional on the generated interface (T-0049 precedent) — callers
+ * provide narrow fallbacks.
+ */
+export interface CustomerOrdersPage {
+  readonly items: readonly CustomerOrderListItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalCount: number;
+  readonly totalPages?: number;
+  readonly hasNextPage?: boolean;
+  readonly hasPreviousPage?: boolean;
+}
+
+/** Filter/sort/page inputs for {@link getCustomerOrders} — 1:1 with the T-0080 GET contract. */
+export interface CustomerOrdersInput {
+  readonly page?: number;
+  readonly state?: OrderState;
+  /** ISO `yyyy-MM-dd` from `<input type="date">` — backend binds DateTimeOffset. */
+  readonly dateFrom?: string;
+  readonly dateTo?: string;
+  readonly sort?: OrderSort;
+}
 
 /** Mirror of <c>CreateOrderRequest</c> in <c>OrdersController</c> (T-0063). */
 export type CreateOrderInput = Readonly<ICreateOrderRequest>;
@@ -113,7 +159,46 @@ interface GetCustomerOrderDetailsEnvelope {
   readonly detail: CustomerOrderDetail;
 }
 
+/**
+ * Generated envelope around the list page
+ * (<c>GetCustomerOrdersResponse { orders }</c>). Unwrapped at the helper
+ * boundary so page code never touches the envelope (T-0086a).
+ */
+interface GetCustomerOrdersEnvelope {
+  readonly orders: CustomerOrdersPage;
+}
+
 // ---- Endpoints ----
+
+/**
+ * Customer dashboard order list (T-0080, consumed by T-0086a). Params
+ * are emitted only when they diverge from the backend defaults so
+ * canonical URLs and request lines stay clean (patterns.md B.8):
+ * `page` only when &gt; 1, `sort` only when not `CreatedAtDesc`,
+ * `state`/`dateFrom`/`dateTo` only when set. `pageSize` is never sent —
+ * the backend default of 20 is the only dashboard window size at MVP.
+ * The backend Validator stays authoritative (page clamps, inverted
+ * date range → `ApiError.type === 'Validation'`).
+ */
+export async function getCustomerOrders(
+  input: CustomerOrdersInput,
+): Promise<Result<CustomerOrdersPage, ApiError>> {
+  const params = new URLSearchParams();
+  if (input.page !== undefined && input.page > 1) params.set('page', String(input.page));
+  if (input.state !== undefined) params.set('state', input.state);
+  if (input.dateFrom !== undefined) params.set('dateFrom', input.dateFrom);
+  if (input.dateTo !== undefined) params.set('dateTo', input.dateTo);
+  if (input.sort !== undefined && input.sort !== OrderSort.CreatedAtDesc) {
+    params.set('sort', input.sort);
+  }
+  const query = params.toString();
+  const result = await apiFetch<GetCustomerOrdersEnvelope>(
+    'customer',
+    query ? `${Base}?${query}` : Base,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.orders) : result;
+}
 
 /**
  * Create an order in <c>PendingPayment</c> (T-0063). Quantity is fixed

@@ -55,3 +55,39 @@ const PAID_OR_LATER_STATES: ReadonlySet<OrderState> = new Set([
 export function isPaidOrLater(state: OrderState): boolean {
   return PAID_OR_LATER_STATES.has(state);
 }
+
+/**
+ * Mirror of the `Badge` UI primitive's variant union — kept local so
+ * this display map stays importable without pulling a component module
+ * into helper code.
+ */
+export type OrderStateBadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'brand';
+
+/**
+ * Per-state badge tone (T-0086a §C) — display-only lookup, NOT a state
+ * machine. Shared by the customer order list, the tracking detail and
+ * later the maker dashboards (T-0087a/b).
+ */
+export function orderStateBadgeVariant(state: OrderState): OrderStateBadgeVariant {
+  switch (state) {
+    case OrderState.PendingPayment:
+      return 'warning';
+    case OrderState.Paid:
+    case OrderState.Accepted:
+      return 'brand';
+    case OrderState.Shipped:
+      return 'default';
+    case OrderState.Delivered:
+    case OrderState.Completed:
+      return 'success';
+    case OrderState.Cancelled:
+    case OrderState.Disputed:
+      return 'error';
+    case OrderState.Refunded:
+      return 'warning';
+    default: {
+      const exhaustive: never = state;
+      return exhaustive;
+    }
+  }
+}
