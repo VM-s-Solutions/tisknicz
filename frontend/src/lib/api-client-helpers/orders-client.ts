@@ -20,7 +20,11 @@ import {
   type ICreateOrderResponse,
   type ICustomerOrderDetailDto,
   type ICustomerOrderListItemDto,
+  type IMarkCustomerOrderMessagesAsReadResponse,
+  type IMarkOrderDeliveredApiResponse,
   type IOrderAttachmentSummaryDto,
+  type IOrderMessageDto,
+  type IPostCustomerOrderMessageResponse,
   type IUploadOrderAttachmentResponse,
   OrderSort,
   OrderState,
@@ -168,6 +172,55 @@ interface GetCustomerOrdersEnvelope {
   readonly orders: CustomerOrdersPage;
 }
 
+// ---- Order messages + deliver + downloads (T-0086b) ----
+
+/**
+ * Mirror of <c>OrderMessageDto</c> (T-0079). <c>createdAt</c> is
+ * overridden to wire-shape <c>string</c> (ISO 8601) — same rationale as
+ * <see cref="CustomerOrderDetail"/>.
+ */
+export type OrderMessageItem = Readonly<Omit<IOrderMessageDto, 'createdAt'>> & {
+  readonly createdAt: string;
+};
+
+/** Wire shape of <c>PagedData&lt;OrderMessageDto&gt;</c> (newest-first, 50/page per T-0079). */
+export interface OrderMessagesPageData {
+  readonly items: readonly OrderMessageItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalCount: number;
+  readonly totalPages?: number;
+  readonly hasNextPage?: boolean;
+  readonly hasPreviousPage?: boolean;
+}
+
+/** Mirror of <c>PostCustomerOrderMessageResponse</c> — wire-shape <c>createdAt</c>. */
+export type PostOrderMessageResult = Readonly<
+  Omit<IPostCustomerOrderMessageResponse, 'createdAt'>
+> & {
+  readonly createdAt: string;
+};
+
+/** Mirror of <c>MarkCustomerOrderMessagesAsReadResponse { markedCount }</c> (T-0079, idempotent). */
+export type MarkMessagesReadResult = Readonly<IMarkCustomerOrderMessagesAsReadResponse>;
+
+/** Mirror of <c>MarkOrderDeliveredApiResponse { orderId, state }</c> (T-0076). */
+export type MarkOrderDeliveredResult = Readonly<IMarkOrderDeliveredApiResponse>;
+
+/** Generated envelope around the messages page (<c>GetCustomerOrderMessagesResponse { messages }</c>). */
+interface GetOrderMessagesEnvelope {
+  readonly messages: OrderMessagesPageData;
+}
+
+/**
+ * Streaming-download budget (mirrors <see cref="UPLOAD_TIMEOUT_MS"/>):
+ * attachments are capped at 10 MiB (T-0064) and invoice PDFs are far
+ * smaller, but the same worst-tolerable mobile-downlink math applies,
+ * so binary downloads share the 120 s ceiling instead of the 8 s JSON
+ * default.
+ */
+const DOWNLOAD_TIMEOUT_MS = 120_000;
+
 // ---- Endpoints ----
 
 /**
@@ -259,4 +312,94 @@ export async function getCustomerOrderDetail(
     { method: 'GET' },
   );
   return result.success ? ok(result.value.detail) : result;
+}
+
+/**
+ * Customer confirm-delivery transition <c>Shipped → Delivered</c>
+ * (T-0076, US-customer-0013). Silent-Success idempotent on the backend:
+ * the common race (carrier/auto path delivered first) returns 200, so
+ * <c>order.invalidTransition</c> (409) only surfaces for genuinely
+ * ineligible states.
+ */
+export async function markOrderDelivered(
+  orderId: string,
+): Promise<Result<MarkOrderDeliveredResult, ApiError>> {
+  return apiFetch<MarkOrderDeliveredResult>(
+    'customer',
+    `${Base}/${encodeURIComponent(orderId)}/deliver`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * Paged order-message thread, newest first (T-0079, 50/page backend
+ * default — <c>pageSize</c> is never emitted). The
+ * <c>GetCustomerOrderMessagesResponse</c> envelope is unwrapped here so
+ * callers receive the page directly.
+ */
+export async function getOrderMessages(
+  orderId: string,
+  page: number,
+): Promise<Result<OrderMessagesPageData, ApiError>> {
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  const query = params.toString();
+  const path = `${Base}/${encodeURIComponent(orderId)}/messages`;
+  const result = await apiFetch<GetOrderMessagesEnvelope>(
+    'customer',
+    query ? `${path}?${query}` : path,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.messages) : result;
+}
+
+/**
+ * Post one message to the order thread (T-0079). Failure codes from
+ * <c>BusinessErrorMessage</c>: <c>order.message.bodyEmpty</c>,
+ * <c>order.message.bodyTooLong</c> (2000-char cap — the UI mirror in
+ * <c>lib/utils/validation.ts</c> never replaces the backend rule) and
+ * <c>order.message.notAllowedInState</c> (PendingPayment guard).
+ */
+export async function postOrderMessage(
+  orderId: string,
+  body: string,
+): Promise<Result<PostOrderMessageResult, ApiError>> {
+  return apiFetch<PostOrderMessageResult>(
+    'customer',
+    `${Base}/${encodeURIComponent(orderId)}/messages`,
+    { method: 'POST', json: { body } },
+  );
+}
+
+/**
+ * Zero the customer's unread counter for this order's thread (T-0079;
+ * feeds the T-0086a list badge). Idempotent — a repeat call returns
+ * <c>markedCount: 0</c>, so the thread can re-fire it after polls
+ * without bookkeeping.
+ */
+export async function markOrderMessagesRead(
+  orderId: string,
+): Promise<Result<MarkMessagesReadResult, ApiError>> {
+  return apiFetch<MarkMessagesReadResult>(
+    'customer',
+    `${Base}/${encodeURIComponent(orderId)}/messages/mark-read`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * Authenticated binary download for attachment / invoice paths
+ * (T-0086b). The backend emits RELATIVE customer-host paths
+ * (<c>/api/v1/orders/{id}/attachments/{attachmentId}</c>,
+ * <c>/api/v1/orders/{id}/invoice</c> — T-0082/T-0088; direct blob URLs
+ * are never exposed), so the path is passed to <c>apiFetch</c> verbatim
+ * and the audience cookie rides along. Callers turn the Blob into a
+ * user-visible download via an object URL + programmatic anchor.
+ */
+export async function downloadOrderFile(path: string): Promise<Result<Blob, ApiError>> {
+  return apiFetch<Blob>('customer', path, {
+    method: 'GET',
+    parse: 'blob',
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+  });
 }

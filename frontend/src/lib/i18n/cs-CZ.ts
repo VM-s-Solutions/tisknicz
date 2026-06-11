@@ -448,6 +448,13 @@ export const messages = {
   'order.message.notAllowedInState':
     'Zprávy lze odesílat až po zaplacení objednávky.',
 
+  // Order lifecycle error codes (parity with BusinessErrorMessage),
+  // consumed by the tracking detail (T-0086b — verified missing at the
+  // §C parity check, added here). PM/UX to refine on PR review.
+  'order.notFound': 'Tato objednávka neexistuje nebo k ní nemáte přístup.',
+  'order.invalidTransition':
+    'Tuto akci nelze v aktuálním stavu objednávky provést.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064
@@ -615,6 +622,48 @@ export const messages = {
   'customer.orders.pagination.previous': 'Předchozí',
   'customer.orders.pagination.next': 'Další',
   'customer.orders.pagination.page_of': 'Stránka {page} z {total}',
+
+  // Customer order tracking detail at /objednavka/[id], Paid+ states
+  // (T-0086b, US-customer-0012/0013/0014/0017). Vykání throughout.
+  'customer.orderDetail.makerLine': 'Výrobce: {name}',
+  'customer.orderDetail.productLine': 'Výrobek: {title}',
+
+  'customer.orderDetail.timeline.heading': 'Průběh objednávky',
+  'customer.orderDetail.timeline.created': 'Vytvořeno',
+  'customer.orderDetail.timeline.paid': 'Zaplaceno',
+  'customer.orderDetail.timeline.accepted': 'Přijato',
+  'customer.orderDetail.timeline.shipped': 'Odesláno',
+  'customer.orderDetail.timeline.delivered': 'Doručeno',
+  'customer.orderDetail.timeline.cancelled': 'Zrušeno',
+
+  'customer.orderDetail.shipping.heading': 'Doprava',
+  'customer.orderDetail.shipping.trackingLink': 'Sledovat zásilku',
+
+  'customer.orderDetail.attachments.heading': 'Přílohy',
+  'customer.orderDetail.attachments.download': 'Stáhnout',
+
+  'customer.orderDetail.invoice.heading': 'Faktura',
+  'customer.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  // Caption key reserved by T-0076 (supersedes the US draft wording
+  // "Potvrdit doručení" — final copy belongs to l10n).
+  'customer.orders.markDeliveredButton': 'Označit jako doručeno',
+  'customer.orderDetail.markDelivered.inFlight': 'Potvrzuji…',
+
+  // Shared order-message thread (T-0086b creates, T-0087b reuses on the
+  // maker detail). Audience-neutral phrasing; {count} keys follow the
+  // plural-neutral "Label: N" convention.
+  'orderMessages.heading': 'Zprávy',
+  'orderMessages.empty': 'Zatím žádné zprávy.',
+  'orderMessages.postLabel': 'Nová zpráva',
+  'orderMessages.postPlaceholder': 'Napište zprávu…',
+  'orderMessages.counter': 'Znaků: {count}/{max}',
+  'orderMessages.send': 'Odeslat',
+  'orderMessages.sending': 'Odesílám…',
+  'orderMessages.loadOlder': 'Načíst starší zprávy',
+  'orderMessages.loadingOlder': 'Načítám…',
+  'orderMessages.pendingPaymentNote':
+    'Zprávy bude možné odesílat po zaplacení objednávky.',
 
   // Payment confirmation page at /objednavka/[id]/potvrzeni (T-0085).
   // Vykání throughout. Success is granted ONLY by the backend-read Paid

@@ -48,3 +48,5 @@ export const ORDER_ATTACHMENT_ALLOWED_TYPES = new Set([
   'image/png',
   'image/webp',
 ]);
+/** Mirror of T-0079 OrderMessage body cap (2000 chars — backend authoritative, UX pre-check only). */
+export const ORDER_MESSAGE_MAX_LENGTH = 2000;
