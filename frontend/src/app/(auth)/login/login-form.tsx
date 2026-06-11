@@ -21,7 +21,12 @@ import { t } from '@/lib/i18n';
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/';
+  // Open-redirect guard (checkout-flow Gate 3 F1): accept only
+  // path-only targets — a single leading slash, not protocol-relative
+  // `//host` (nor `/\host`, which WHATWG URL parsing normalises to
+  // `//host`). Anything else falls back to the homepage.
+  const rawRedirect = searchParams.get('redirect') ?? '/';
+  const redirectTo = /^\/(?![/\\])/.test(rawRedirect) ? rawRedirect : '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

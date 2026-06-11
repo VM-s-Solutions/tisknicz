@@ -22,3 +22,29 @@ export function validateBankAccount(account: string): boolean {
 export function validatePhone(phone: string): boolean {
   return /^(\+420)?\s?\d{3}\s?\d{3}\s?\d{3}$/.test(phone.trim());
 }
+
+// ---- Checkout mirrors (T-0084a) ----
+// UX pre-checks ONLY — the backend stays authoritative; server-side
+// rejections render via ApiError.fields (patterns.md B.17).
+
+/** Mirror of T-0063 CreateOrder.Validator CzechPhoneRegex (backend authoritative — UX pre-check only). */
+export const CZECH_PHONE_PATTERN = /^(\+420\s?)?[6-9]\d{2}\s?\d{3}\s?\d{3}$/;
+/** Mirror of T-0063 CreateOrder.Validator CustomerName MinimumLength(2). */
+export const ORDER_CONTACT_NAME_MIN = 2;
+/** Mirror of T-0063 CreateOrder.Validator CustomerName MaximumLength(100). */
+export const ORDER_CONTACT_NAME_MAX = 100;
+/** Mirror of T-0063 CreateOrder.Validator CustomerEmail MaximumLength(254). */
+export const ORDER_CONTACT_EMAIL_MAX = 254;
+/** Mirror of T-0063 CreateOrder.Validator CustomerNotes MaximumLength(2000). */
+export const ORDER_NOTES_MAX = 2000;
+/** Mirror of T-0064 Order.MaxAttachmentCount (10 attachments per order). */
+export const ORDER_ATTACHMENT_MAX_FILES = 10;
+/** Mirror of T-0064 OrderAttachmentValidator max size (10 MiB per file). */
+export const ORDER_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+/** Mirror of T-0064 OrderAttachmentValidator allowed content types. */
+export const ORDER_ATTACHMENT_ALLOWED_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
