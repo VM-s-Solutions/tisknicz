@@ -688,6 +688,65 @@ export const messages = {
   'checkout.confirm.failed.heldNote':
     'Objednávku pro vás držíme 24 hodin — platbu můžete dokončit z detailu objednávky.',
   'checkout.confirm.failed.retryCta': 'Dokončit platbu',
+
+  // Maker dashboard order list at /dashboard/maker/objednavky (T-0087a,
+  // US-maker-0005). Tykání throughout per CLAUDE.md — PENDING the tone
+  // question in docs/questions/open.md; a flip to vykání is a catalog-
+  // only change. {count} keys follow the plural-neutral "Label: N"
+  // convention from the catalog block above.
+  'dashboard.maker.orders.title': 'Objednávky',
+  'dashboard.maker.orders.subtitle':
+    'Přehled tvých objednávek — nové čekající na přijetí, zakázky ve výrobě i kompletní historie.',
+  'dashboard.maker.orders.metadata.title': 'Objednávky — Makables',
+  'dashboard.maker.orders.metadata.description':
+    'Správa objednávek tvé dílny na Makables.',
+  'dashboard.maker.orders.count': 'Objednávek: {count}',
+  'dashboard.maker.orders.customOrder': 'Vlastní zakázka',
+
+  'dashboard.maker.orders.tab.nove': 'Nové',
+  'dashboard.maker.orders.tab.vyroba': 'Ve výrobě',
+  'dashboard.maker.orders.tab.vse': 'Vše',
+
+  'dashboard.maker.orders.filter.dateFrom': 'Od data',
+  'dashboard.maker.orders.filter.dateTo': 'Do data',
+  'dashboard.maker.orders.filter.sort': 'Řazení',
+  'dashboard.maker.orders.filter.reset': 'Vymazat filtry',
+
+  'dashboard.maker.orders.sort.CreatedAtDesc': 'Nejnovější',
+  'dashboard.maker.orders.sort.CreatedAtAsc': 'Nejstarší',
+  'dashboard.maker.orders.sort.TotalAmountDesc': 'Nejdražší',
+  'dashboard.maker.orders.sort.TotalAmountAsc': 'Nejlevnější',
+  'dashboard.maker.orders.sort.StateAsc': 'Podle stavu',
+
+  'dashboard.maker.orders.table.number': 'Číslo',
+  'dashboard.maker.orders.table.state': 'Stav',
+  'dashboard.maker.orders.table.customer': 'Zákazník',
+  'dashboard.maker.orders.table.product': 'Výrobek',
+  'dashboard.maker.orders.table.payout': 'Tvoje odměna',
+  'dashboard.maker.orders.table.created': 'Vytvořeno',
+  'dashboard.maker.orders.table.unread': 'Zprávy',
+  'dashboard.maker.orders.unreadAria': 'Nepřečtené zprávy: {count}',
+
+  // Per-tab empty states (AC-8): Nové is informational/positive — no
+  // new work waiting is a GOOD state, not an error; Vše is onboarding-
+  // flavoured for makers without a single order yet.
+  'dashboard.maker.orders.empty.nove.title': 'Žádné nové objednávky nečekají',
+  'dashboard.maker.orders.empty.nove.description':
+    'Vše je vyřízené. Jakmile zákazník zaplatí novou objednávku, objeví se tady.',
+  'dashboard.maker.orders.empty.vyroba.title': 'Nic není ve výrobě',
+  'dashboard.maker.orders.empty.vyroba.description':
+    'Tady uvidíš objednávky, které jsi přijal a na kterých právě pracuješ.',
+  'dashboard.maker.orders.empty.vse.title': 'Zatím nemáš žádné objednávky',
+  'dashboard.maker.orders.empty.vse.description':
+    'Objednávky se tu objeví, jakmile si zákazníci koupí tvé výrobky.',
+
+  'dashboard.maker.orders.error.title': 'Objednávky se nepodařilo načíst',
+  'dashboard.maker.orders.error.body': 'Zkus prosím obnovit stránku za chvíli.',
+  'dashboard.maker.orders.error.retry': 'Zkusit znovu',
+
+  'dashboard.maker.orders.pagination.previous': 'Předchozí',
+  'dashboard.maker.orders.pagination.next': 'Další',
+  'dashboard.maker.orders.pagination.page_of': 'Stránka {page} z {total}',
 } as const;
 
 export type MessageKey = keyof typeof messages;
