@@ -82,14 +82,7 @@ Capture a customer's intent to purchase from a specific maker and track the stat
 
 ## Dispute surface (T-0106)
 
-`Disputed` is a **parenthesis state** (patterns §A.22), not a terminal one:
-
-- **Disputable allow-list = `Paid | Accepted | Shipped | Delivered`** (§C.1 — Paid/Accepted are the "maker silent / never ships" escalation lanes; `Completed` is OUT: payout settled, nothing to freeze; `PendingPayment`/`Cancelled`/`Refunded` have nothing in escrow).
-- `OpenDispute(clock)` stamps `PreDisputeState = State` before flipping; `ResolveDispute(clock, restoreTo)` restores and clears the pointer; `DisputedAt` is KEPT as a historical marker. Invariant: `PreDisputeState` non-null ⇔ `State == Disputed`.
-- **`Dispute` child entity** (Q2): category (`DisputeCategory`, carrier-reserved values gated at the party Validators), description (opener's own words, ≤2000), source (`Customer | Maker | Carrier | Admin`, always server-stamped), resolution outcome + customer-visible notes. At most one OPEN dispute per order (`ux_disputes_order_open UNIQUE (order_id) WHERE resolved_at IS NULL`); re-open is Silent-Success returning the existing id; re-resolve is a loud 409 (`order.dispute.notOpen`).
-- **Resolution outcomes** (`ResolveDispute.Command`, admin host): `Resumed` → restore only; `Refunded` → nested `RefundOrder.Command` for the full remaining amount; `Cancelled` → `Cancel(clock, Admin)`, only legal from a Paid/Accepted restore.
-- **Sweep exclusion by definition:** the auto-deliver + carrier sweeps select `State == Shipped`, so a disputed order drops out without predicate changes (pinned by integration test). The T-0079 message thread stays open in `Disputed` — it IS the evidence channel.
-- The state flip + dispute row + `order.disputed.adminEmail` outbox row commit atomically; the admin recipient resolves at send time from `EmailOptions.AdminNotificationAddress` (`ADMIN_NOTIFICATION_EMAIL`).
+`Disputed` is a **parenthesis state** (patterns §A.22), not a terminal one. `OpenDispute(clock)` — allow-list `Paid | Accepted | Shipped | Delivered` — stamps `PreDisputeState = State` before flipping; `ResolveDispute(clock, restoreTo)` restores and clears the pointer; `DisputedAt` is KEPT as a historical marker. Invariant: `PreDisputeState` non-null ⇔ `State == Disputed`. The full surface — the `Dispute` child entity, `IDisputeRepository`, resolution outcomes + sanctioned-command dispatch, the re-open/re-resolve idempotency asymmetry, sweep exclusion — lives in **`dispute.md`**.
 
 ## Refund surface (T-0105)
 
@@ -102,17 +95,7 @@ Full + partial refunds per user-locked Q1; pure predicate + mutator split:
 
 ## Manual state change (T-0107)
 
-`ManualOrderTransitionPolicy.Evaluate(from, to, hasPaymentProviderRef)` — pure Domain class next to `Order` — is the strict allow-list (user-locked Q4) behind the admin escape hatch `ChangeOrderStateManually.Command` (mandatory ≥10-char reason → audit notes; no outbox/emails). Deterministic precedence: same-state NoOp → from-Refunded `notAllowed` → from-Disputed `useResolveDispute` → to-Refunded `useRefundOrder` → to-Disputed `useOpenDispute` → Delivered→Completed `useMarkPayoutBatchCompleted` → Paid|Accepted→Cancelled `useRefundOrder` → allow-list pair → `notAllowed`.
-
-| From | Permitted manual targets | Routing |
-|---|---|---|
-| PendingPayment | Paid (only with `PaymentProviderRef` — lost-webhook recovery); Cancelled (manual expiry) | `MarkAsPaid(clock, existing ref)`; `Cancel(clock, Admin)` |
-| Paid | Accepted | `Accept(clock)` |
-| Accepted | Paid (undo mis-click; ref required) | `RevertAcceptance(clock)` — clears `AcceptedAt` |
-| Shipped | Delivered (carrier-blind delivery) | `MarkAsDelivered(clock, AdminManual)` |
-| Delivered / Completed / Cancelled / Refunded / Disputed | — | blocked; the error code names the sanctioned command |
-
-`RevertAcceptance(IClock)` is the one new entity edge (Accepted → Paid, clears `AcceptedAt` so a re-accept stamps fresh); `OrderDeliverySource.AdminManual = 3` appends for the manual delivery stamp.
+`ManualOrderTransitionPolicy.Evaluate(from, to, hasPaymentProviderRef)` — pure Domain class next to `Order` — is the strict allow-list (user-locked Q4) behind the admin escape hatch `ChangeOrderStateManually.Command`. The full allow-list table, never-rules, precedence order, and blocked-code naming convention live in **`manual-order-transition-policy.md`**. On the entity side: `RevertAcceptance(IClock)` is the one new edge (Accepted → Paid, clears `AcceptedAt` so a re-accept stamps fresh); `OrderDeliverySource.AdminManual = 3` appends for the manual delivery stamp.
 
 ## Implementation pointer
 
@@ -122,4 +105,4 @@ Full + partial refunds per user-locked Q1; pure predicate + mutator split:
 
 - ADRs: 0002, 0003, 0004, 0009, 0016, 0017, 0020
 - Stories: most customer + maker stories
-- Roles: `customer`, `maker`, `product`, `order-pricing`, `payment-provider`, `shipping-carrier`, `order-numbering`, `order-message`
+- Roles: `customer`, `maker`, `product`, `order-pricing`, `payment-provider`, `shipping-carrier`, `order-numbering`, `order-message`, `dispute`, `manual-order-transition-policy`

@@ -168,6 +168,7 @@
   - Accept the sprawl as inherent to enrichment-at-enqueue — the deps are real, the pattern is consistent, and the budget is a heuristic.
   - Move enrichment to dispatch-time (`EmailSendService` side) so handlers only emit `{orderId, messageId}` — minimal payloads per the original T-0079 §C.7 shape, at the cost of dispatch-time DB reads and losing the snapshot-at-enqueue semantics.
   - Harvest-duty candidate for `docs/review/recurring-findings.md` once a direction is approved.
+- **Data point (2026-06-12, refund-dispute bundle):** `ResolveDispute.Handler` takes 10 constructor deps (`ResolveDispute.cs:89-99` — orders, disputes, mediator, users, outbox, clock, session, languageResolver, publicAppUrls, logger) vs the ADR 0015 budget of ~5. This is the **4th occurrence** of the enrichment-collaborator pattern (T-0067/T-0071/T-0076 → T-0079/T-0083 → T-0105/T-0106). Architect seam design is now warranted.
 - **Status:** open
 - **Answer (filled by user):**
 
@@ -224,3 +225,29 @@
   - Recommend (a) with explicit doc reconciliation — the invoice is a commercial document between the parties; the DOM-level lock guards casual scraping, not contractual documents.
 - **Status:** answered
 - **Answer (filled by user):** (a) accepted 2026-06-12 — invoice is a commercial document between contracting parties; Czech invoicing customs include contact details. DOM-level GDPR lock (T-0081/T-0082) guards casual scraping, not contractual documents. US-maker-0010 reconciled; locks annotated.
+
+## Q-0017 — DEFECT: email subject placeholders never substitute (4 prior seed migrations)
+- **From:** dotnet-backend (refund-dispute-bundle implementation)
+- **Ticket / context:** refund-dispute bundle (T-0105 + T-0106 + T-0107); defect dates back to the T-0067-era seeds
+- **Asked:** 2026-06-12
+- **Blocking:** no — subjects render the literal `{order_number}`; cosmetic but customer-visible on every affected order email
+- **Question:** The seed migrations build their SQL with `$@"` interpolated strings, so the source's `{{order_number}}` collapses to single-brace `{order_number}` in the stored `email_template_translations.subject`; `SubstitutePlainTextPlaceholders` only matches `{{key}}`, so subject substitution silently no-ops. Affected: **16 subject rows** (8 templates × cs/en; initially reported as 14 — QA grep verification 2026-06-12 counts 16) across `20260606155359_SeedOrderEmailTemplates` (4), `20260608120000_ShippingPipelineBundle` (4), `20260609075803_DeliveryCloseBundle` (2), `20260609174208_OrderCleanupBundle` (6). The new T-0105/T-0106 seeds escape correctly (quadruple-brace in source → `{{key}}` stored) and are unaffected. How should the broken rows be fixed?
+- **Options the agent has considered:**
+  - Fix-up migration `UPDATE`ing the affected subject rows from `{key}` to `{{key}}` (S, recommended — applied migrations are immutable; a data-fix migration is the sanctioned path).
+  - Regenerate all email templates in a new consolidated seed.
+  - Leave until the template-editor admin UI ships and fix the copy by hand there.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0018 — Comgate refId idempotency handle for refunds
+- **From:** reviewer + optimizer (refund-dispute-bundle Gate 8 M-1 disposition)
+- **Ticket / context:** refund-dispute bundle (T-0105 `RefundOrder`); forward note for T-0118 admin UI
+- **Asked:** 2026-06-12
+- **Blocking:** no — the single-attempt fold removes the auto-retry exposure; admin re-issue remains a manual double-submit risk until T-0118's confirm UI
+- **Question:** When the T-0118 admin UI ships, should `RefundOrder` pass a deterministic `refId` to the Comgate `/v1.0/refund` call (e.g. `orderId` + cumulative-refunded snapshot) so gateway-side idempotency holds even across manual re-issues of the same refund?
+- **Options the agent has considered:**
+  - Deterministic refId now (needs verification that the Comgate refund API accepts/echoes a caller-supplied refId).
+  - Confirm-UI only at T-0118 (process guard; no gateway-side guarantee).
+  - Both — belt and braces for a money-moving path.
+- **Status:** open
+- **Answer (filled by user):**

@@ -17,6 +17,7 @@ See [ADR 0015 — Responsibility-Driven Design](../../adr/0015-responsibility-dr
 | Category | [category.md](./category.md) | Reference data for product categorization |
 | Review | [review.md](./review.md) | Customer rating + comment for a delivered order |
 | OrderMessage | [order-message.md](./order-message.md) | One message in the customer ↔ maker order thread |
+| Dispute | [dispute.md](./dispute.md) | Why an order detoured to `Disputed` and how admin resolved it |
 | CountryConfiguration | [country-configuration.md](./country-configuration.md) | Control plane for per-country variation |
 | AdminAuditLogEntry | [admin-audit-log-entry.md](./admin-audit-log-entry.md) | Append-only record of an admin write |
 
@@ -37,6 +38,7 @@ See [ADR 0015 — Responsibility-Driven Design](../../adr/0015-responsibility-dr
 | Outbox | [outbox.md](./outbox.md) | System-of-record for off-request-path work |
 | Clock | [clock.md](./clock.md) | Testable "now" provider |
 | IdGenerator | [id-generator.md](./id-generator.md) | Hand out fresh entity ids (ULID) |
+| ManualOrderTransitionPolicy | [manual-order-transition-policy.md](./manual-order-transition-policy.md) | Strict allow-list for the admin manual state-change escape hatch |
 
 ## Application services
 
@@ -60,7 +62,7 @@ See [ADR 0015 — Responsibility-Driven Design](../../adr/0015-responsibility-dr
 
 Repository interfaces are listed as supporting roles but do not get full role files (their responsibility is "persist aggregate X" by definition). The aggregate's role file documents the methods callers need.
 
-- `IOrderRepository`, `IMakerRepository`, `IProductRepository`, `IInvoiceRepository`, `IPayoutBatchRepository`, `IUserRepository`, `ICategoryRepository`, `IReviewRepository`, `IOrderMessageRepository`, `ICountryConfigurationRepository`, `IAdminAuditLogRepository`, `IAddressRepository`, `IRefreshTokenRepository`, `IOutboxRepository`, `INumberingSequenceRepository`.
+- `IOrderRepository`, `IMakerRepository`, `IProductRepository`, `IInvoiceRepository`, `IPayoutBatchRepository`, `IUserRepository`, `ICategoryRepository`, `IReviewRepository`, `IOrderMessageRepository`, `IDisputeRepository`, `ICountryConfigurationRepository`, `IAdminAuditLogRepository`, `IAddressRepository`, `IRefreshTokenRepository`, `IOutboxRepository`, `INumberingSequenceRepository`.
 
 ## How to add a role
 

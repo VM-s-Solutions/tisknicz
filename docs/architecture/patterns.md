@@ -1080,7 +1080,7 @@ public OrderState? PreDisputeState { get; private set; } // state to restore on 
 2. Invariant: restore column non-null ⇔ `State` is the detour state. Enforce in the entity, assert in tests.
 3. While detoured, the normal-transition allow-list rejects lifecycle commands; the blocked-transition error names the sanctioned command (T-0107 discipline, §A.4 error codes).
 4. Resolve restores `State = PreDisputeState` by default. Outcome-driven side effects (e.g. a refund) are dispatched as **sanctioned commands** from outcome handlers — the resolve handler orchestrates, it never inlines the side-effect logic. A sanctioned command may then move the entity to a terminal state (e.g. full refund → `Refunded`) through its own allow-listed transition.
-5. Detour open/resolve are Silent-Success idempotent: re-opening an already-detoured entity (or re-resolving a resolved one) returns success with no side effects (T-0067/T-0076 precedent).
+5. Idempotency is **asymmetric by design** (T-0106 §C.4): detour **open** is Silent-Success — re-opening an already-detoured entity returns success with the existing detour record's id and no side effects (T-0067/T-0076 precedent). Detour **resolve** is loud — re-resolving a non-detoured (or already-resolved) entity returns a `409` Conflict (first use: `order.dispute.notOpen`). Re-open is idempotent-safe; a silently "succeeding" re-resolve would mask an operator race and risks double money-movement through the outcome's sanctioned command.
 
 First use: `Order.State = Disputed` + `Order.PreDisputeState` (refund-dispute bundle, Q2 lock 2026-06-12). See [extension-points.md §13](./extension-points.md#13-dispute-resolution) for the Dispute entity and its outcome-handler seam.
 
