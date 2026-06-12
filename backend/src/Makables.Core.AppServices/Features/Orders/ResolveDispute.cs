@@ -138,8 +138,19 @@ public static class ResolveDispute
             }
 
             // Step 5: Restore the parenthesis state. PreDisputeState is
-            // entity-guaranteed non-null while Disputed (§A.22 rule 2).
-            var restore = order.ResolveDispute(clock, order.PreDisputeState!.Value);
+            // entity-guaranteed non-null while Disputed (§A.22 rule 2),
+            // but the column is data-representable NULL — mirror the
+            // step-4 invariant guard instead of risking a 500 (review F-1).
+            if (order.PreDisputeState is null)
+            {
+                logger.LogCritical(
+                    "ResolveDispute: order {OrderId} is Disputed but PreDisputeState is NULL. " +
+                    "Invariant violation — refusing to resolve.",
+                    order.Id);
+                return BusinessResult.Failure<ResolveDisputeResponse>(
+                    Error.Conflict("preDisputeState", BusinessErrorMessage.OrderDisputeNotOpen));
+            }
+            var restore = order.ResolveDispute(clock, order.PreDisputeState.Value);
             if (!restore.IsSuccess)
             {
                 return BusinessResult.Failure<ResolveDisputeResponse>(restore.Error!);

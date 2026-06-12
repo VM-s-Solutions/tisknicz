@@ -434,6 +434,53 @@ public class ComgatePaymentProviderTests
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    [Fact]
+    public async Task Refund_with_retrying_pipeline_is_SINGLE_ATTEMPT_on_transient_failure()
+    {
+        // Gate 8 M-1: the refund POST is a non-idempotent money-moving
+        // operation with NO Comgate idempotency handle — a timed-out
+        // refund that actually succeeded at the gateway must never be
+        // auto-re-POSTed. Even with the production retry pipeline wired,
+        // RefundAsync makes exactly ONE outbound call and surfaces the
+        // Transient error to the admin.
+        var registry = new Polly.Registry.ResiliencePipelineRegistry<string>();
+        registry.TryAddBuilder<HttpResponseMessage>(
+            ComgatePaymentProvider.HttpClientName,
+            (builder, _) => builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
+            {
+                MaxRetryAttempts = 3,
+                Delay = TimeSpan.FromMilliseconds(1),
+                BackoffType = DelayBackoffType.Constant,
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .Handle<TaskCanceledException>()
+                    .HandleResult(r => (int)r.StatusCode is 408 or 429 or >= 500 and <= 599),
+            }));
+
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(ComgatePaymentProvider.HttpClientName)
+            .Returns(_ => new HttpClient(_handler));
+        var opts = Options.Create(new ComgateOptions
+        {
+            MerchantId = TestMerchant, Secret = TestSecret, BaseUrl = TestBaseUrl,
+        });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddProvider(_loggerProvider));
+        var logger = loggerFactory.CreateLogger<ComgatePaymentProvider>();
+        var retryClock = Substitute.For<IClock>();
+        retryClock.UtcNow.Returns(Now);
+        var sut = new ComgatePaymentProvider(factory, opts, _configs, registry, retryClock, logger);
+
+        _handler.Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+
+        var result = await sut.RefundAsync(TestTransId, 40000, "CZK", CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.PaymentProviderUnavailable);
+        result.Error.Type.Should().Be(ErrorType.Transient);
+        _handler.CallCount.Should().Be(1,
+            "a money-moving POST without an idempotency handle must never auto-retry");
+    }
+
     // ---- Stub HTTP handler + in-memory logger ----
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

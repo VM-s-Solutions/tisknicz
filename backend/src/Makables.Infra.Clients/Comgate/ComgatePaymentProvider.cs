@@ -48,6 +48,12 @@ namespace Makables.Infra.Clients.Comgate;
 /// <see cref="TaskCanceledException"/>, and 408 / 429 / 5xx. After
 /// exhaustion the caller sees <see cref="BusinessErrorMessage.PaymentProviderUnavailable"/>
 /// (<see cref="ErrorType.Transient"/>).
+/// <b>Exception:</b> <see cref="RefundAsync"/> is SINGLE-ATTEMPT
+/// (<see cref="ResiliencePipeline{T}.Empty"/>) — a non-idempotent
+/// money-moving POST with no Comgate idempotency handle must never be
+/// auto-re-POSTed on a timeout that may have succeeded at the gateway
+/// (Gate 8 M-1). A Transient failure surfaces to the admin, who checks
+/// the Comgate portal before re-issuing.
 /// </para>
 /// </summary>
 public sealed class ComgatePaymentProvider(
@@ -129,7 +135,7 @@ public sealed class ComgatePaymentProvider(
         var url = $"{opts.BaseUrl.TrimEnd('/')}/v1.0/create";
 
         var callResult = await CallComgateAsync(
-            url, formFields, opts, operationLabel: "create", cancellationToken);
+            url, formFields, opts, operationLabel: "create", RetryPipeline, cancellationToken);
         if (!callResult.IsSuccess)
         {
             return BusinessResult.Failure<PaymentSession>(callResult.Error!);
@@ -322,6 +328,18 @@ public sealed class ComgatePaymentProvider(
     /// stamped from the injected <see cref="IClock"/> (we have no
     /// provider-authoritative settle timestamp). T-0105 §C.
     /// </para>
+    ///
+    /// <para>
+    /// <b>SINGLE-ATTEMPT — no auto-retry (Gate 8 M-1).</b> The refund
+    /// POST deliberately bypasses the shared retry pipeline: the request
+    /// carries no idempotency handle (form fields are merchant / transId /
+    /// amount / curr / [test] / secret), so a timed-out PARTIAL refund
+    /// that actually succeeded at the gateway would be re-issued and
+    /// accepted again (cumulative still ≤ capture). Transient failures
+    /// surface to the admin, who reconciles against the Comgate portal
+    /// (the Critical/Information logs carry transId + amount + currency)
+    /// before re-firing.
+    /// </para>
     /// </summary>
     public async Task<BusinessResult<RefundReceipt>> RefundAsync(
         string providerRef, long amountMinor, string currency, CancellationToken cancellationToken)
@@ -356,7 +374,8 @@ public sealed class ComgatePaymentProvider(
         var url = $"{opts.BaseUrl.TrimEnd('/')}/v1.0/refund";
 
         var callResult = await CallComgateAsync(
-            url, formFields, opts, operationLabel: "refund", cancellationToken);
+            url, formFields, opts, operationLabel: "refund",
+            ResiliencePipeline<HttpResponseMessage>.Empty, cancellationToken);
         if (!callResult.IsSuccess)
         {
             return BusinessResult.Failure<RefundReceipt>(callResult.Error!);
@@ -379,18 +398,22 @@ public sealed class ComgatePaymentProvider(
     // ---- helpers ----
 
     /// <summary>
-    /// Run a form-urlencoded POST through the resilience pipeline and parse
-    /// the response body (also form-urlencoded). Returns the parsed fields
-    /// on HTTP-2xx, or a classified <see cref="Error"/> on any failure
-    /// (network, timeout, 5xx, parse failure). The body is read with the
-    /// cancellation token linked to the overall request — same pattern as
-    /// the ARES adapter.
+    /// Run a form-urlencoded POST through the supplied resilience
+    /// <paramref name="pipeline"/> and parse the response body (also
+    /// form-urlencoded). Idempotent operations pass <see cref="RetryPipeline"/>;
+    /// non-idempotent money-moving operations (refund) pass
+    /// <see cref="ResiliencePipeline{T}.Empty"/> for a single attempt
+    /// (Gate 8 M-1). Returns the parsed fields on HTTP-2xx, or a
+    /// classified <see cref="Error"/> on any failure (network, timeout,
+    /// 5xx, parse failure). The body is read with the cancellation token
+    /// linked to the overall request — same pattern as the ARES adapter.
     /// </summary>
     private async Task<BusinessResult<IDictionary<string, StringValues>>> CallComgateAsync(
         string url,
         IEnumerable<KeyValuePair<string, string>> formFields,
         ComgateOptions opts,
         string operationLabel,
+        ResiliencePipeline<HttpResponseMessage> pipeline,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(opts.MerchantId) || string.IsNullOrWhiteSpace(opts.Secret))
@@ -406,7 +429,7 @@ public sealed class ComgatePaymentProvider(
         HttpResponseMessage response;
         try
         {
-            response = await RetryPipeline.ExecuteAsync(
+            response = await pipeline.ExecuteAsync(
                 async ct =>
                 {
                     // Fresh request per attempt — Polly retries by re-running
@@ -425,13 +448,13 @@ public sealed class ComgatePaymentProvider(
         }
         catch (HttpRequestException ex)
         {
-            logger.LogWarning(ex, "Comgate.{Operation}: HTTP error after retries.", operationLabel);
+            logger.LogWarning(ex, "Comgate.{Operation}: HTTP error (pipeline exhausted).", operationLabel);
             return BusinessResult.Failure<IDictionary<string, StringValues>>(
                 Error.Transient(BusinessErrorMessage.PaymentProviderUnavailable));
         }
         catch (TaskCanceledException ex)
         {
-            logger.LogWarning(ex, "Comgate.{Operation}: timeout after retries.", operationLabel);
+            logger.LogWarning(ex, "Comgate.{Operation}: timeout (pipeline exhausted).", operationLabel);
             return BusinessResult.Failure<IDictionary<string, StringValues>>(
                 Error.Transient(BusinessErrorMessage.PaymentProviderUnavailable));
         }
@@ -497,7 +520,7 @@ public sealed class ComgatePaymentProvider(
                 var status = (int)response.StatusCode;
                 var isTransient = status is 408 or 429 or >= 500 and <= 599;
                 logger.LogWarning(
-                    "Comgate.{Operation}: HTTP {Status} after retries.",
+                    "Comgate.{Operation}: HTTP {Status} (pipeline exhausted).",
                     operationLabel, status);
                 return BusinessResult.Failure<IDictionary<string, StringValues>>(isTransient
                     ? Error.Transient(BusinessErrorMessage.PaymentProviderUnavailable)

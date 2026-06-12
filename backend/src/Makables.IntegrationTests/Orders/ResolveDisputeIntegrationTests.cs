@@ -9,6 +9,7 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Money;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
+using Makables.Core.Domain.Payments;
 using Makables.Core.Domain.Products;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Database;
@@ -31,6 +32,11 @@ namespace Makables.IntegrationTests.Orders;
 /// host). Pins the Resumed outcome: state restored, restore pointer
 /// cleared, dispute row resolved, customer-email outbox row, and the
 /// <c>admin_audit_log</c> entry from <c>AdminAuditPipelineBehavior</c>.
+/// AC-9 Refunded leg (review B-1): the nested <c>RefundOrder</c>
+/// pipeline runs in-scope against the shared DbContext — the happy leg
+/// pins the dual commit (both audit rows, both outbox emails, single
+/// provider call for the full remaining amount); the inner-failure leg
+/// pins that NOTHING commits and the dispute stays open.
 /// </summary>
 [Collection(PostgresCollection.Name)]
 public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
@@ -49,8 +55,11 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
     private const string ProductId = "prod-1";
     private const string OrderId = "ord-1";
     private const string DisputeId = "dsp-1";
+    private const string TransId = "tx-1";
+    private const long Total = 57900;
 
     private readonly PostgresHarness _harness;
+    private readonly FakeComgatePaymentProvider _provider = new();
     private WebApplicationFactory<Makables.Web.Admin.Program> _factory = default!;
 
     public ResolveDisputeIntegrationTests(PostgresHarness harness)
@@ -102,6 +111,20 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
                     }
                     services.AddDbContext<MakablesDbContext>(o =>
                         o.UseNpgsql(_harness.ConnectionString));
+
+                    // Replace the keyed "comgate" IPaymentProvider with the
+                    // fake (RefundOrderIntegrationTests precedent) — the
+                    // Refunded outcome dispatches the nested RefundOrder
+                    // pipeline, which calls the provider.
+                    var keyed = services.Where(d =>
+                        d.ServiceType == typeof(IPaymentProvider) &&
+                        d.IsKeyedService &&
+                        (d.ServiceKey as string) == "comgate").ToList();
+                    foreach (var d in keyed)
+                    {
+                        services.Remove(d);
+                    }
+                    services.AddKeyedSingleton<IPaymentProvider>("comgate", _provider);
                 });
             });
     }
@@ -112,7 +135,14 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    private async Task SeedDisputedShippedOrderAsync()
+    /// <summary>
+    /// Seed a Disputed order with one open dispute row. When
+    /// <paramref name="shipped"/> the parenthesis state is Shipped
+    /// (Paid → Accepted → Shipped → Disputed); otherwise the order was
+    /// Paid when the dispute opened — the restore target the Refunded
+    /// outcome needs (review B-1).
+    /// </summary>
+    private async Task SeedDisputedOrderAsync(bool shipped)
     {
         await using var db = _harness.CreateDbContext();
         const string seedActor = "test-seed";
@@ -182,15 +212,18 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
             contactName: "Anna", contactEmail: "anna@example.cz", contactPhone: "+420 723 456 789",
             productPriceAmountMinor: 50000, shippingPriceAmountMinor: 7900,
             platformFeeAmountMinor: 7500, makerPayoutAmountMinor: 50400,
-            totalAmountMinor: 57900, currency: Currency, vatRateBp: 2100,
+            totalAmountMinor: Total, currency: Currency, vatRateBp: 2100,
             shippingMethod: ShippingMethod.ZasilkovnaPickupPoint,
             zasilkovnaPickupPointId: "pp-42",
             countryCode: CountryCode);
         var clock = Substitute.For<IClock>();
         clock.UtcNow.Returns(new DateTimeOffset(2026, 6, 5, 10, 0, 0, TimeSpan.Zero));
-        order.MarkAsPaid(clock, "tx-1");
-        order.Accept(clock);
-        order.Ship(clock, "PKT-1", 7);
+        order.MarkAsPaid(clock, TransId);
+        if (shipped)
+        {
+            order.Accept(clock);
+            order.Ship(clock, "PKT-1", 7);
+        }
         order.OpenDispute(clock);
         order.MarkCreated(seedActor, seedAt);
         db.Set<Order>().Add(order);
@@ -230,7 +263,7 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Admin_resolve_resumed_e2e_restores_state_resolves_row_and_audits()
     {
-        await SeedDisputedShippedOrderAsync();
+        await SeedDisputedOrderAsync(shipped: true);
         using var client = CreateAdminClient();
 
         var response = await client.PostAsJsonAsync(
@@ -269,9 +302,108 @@ public sealed class ResolveDisputeIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Admin_resolve_refunded_e2e_refunds_full_remaining_and_writes_both_audit_rows()
+    {
+        // AC-9 / review B-1 happy leg: the nested RefundOrder pipeline
+        // runs in the SAME scope — its inner UoW commit flushes the
+        // shared DbContext (resolution + refund + inner audit atomically);
+        // the outer commit lands the outer audit row.
+        await SeedDisputedOrderAsync(shipped: false); // Disputed, was Paid
+        _provider.EnqueueRefund(BusinessResult.Success(
+            new RefundReceipt(TransId, Total, Currency, DateTimeOffset.UtcNow)));
+        using var client = CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/dispute/resolve",
+            new { outcome = "Refunded", resolutionNotes = "Vracíme plnou částku." });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        _provider.RefundCallCount.Should().Be(1, "exactly one provider call for the full remaining amount");
+        _provider.RefundCalls.Single().Should().Be((TransId, Total, Currency));
+
+        await using var db = _harness.CreateDbContext();
+        var order = await db.Set<Order>().AsNoTracking().FirstAsync(o => o.Id == OrderId);
+        order.State.Should().Be(OrderState.Refunded, "AC-9: the order ends Refunded end-to-end");
+        order.RefundedAmountMinor.Should().Be(Total, "the dispute lane refunds the FULL remaining amount");
+        order.PreDisputeState.Should().BeNull("the restore pointer is cleared");
+
+        var dispute = await db.Set<Dispute>().AsNoTracking().SingleAsync(d => d.Id == DisputeId);
+        dispute.ResolvedAt.Should().NotBeNull();
+        dispute.ResolutionOutcome.Should().Be(DisputeResolutionOutcome.Refunded);
+        dispute.ResolutionNotes.Should().Be("Vracíme plnou částku.");
+
+        var outboxEventTypes = await db.Set<OutboxEvent>().AsNoTracking()
+            .Where(e => e.AggregateId == OrderId)
+            .Select(e => e.EventType)
+            .ToListAsync();
+        outboxEventTypes.Should().BeEquivalentTo(new[]
+        {
+            OutboxEventTypes.OrderDisputeResolvedCustomerEmail,
+            OutboxEventTypes.OrderRefundedCustomerEmail,
+        }, "both customer emails are enqueued — dispute-resolved (outer) + order-refunded (inner)");
+
+        var auditActionCodes = await db.Set<AdminAuditLogEntry>().AsNoTracking()
+            .Where(e => e.TargetId == OrderId)
+            .Select(e => e.ActionCode)
+            .ToListAsync();
+        auditActionCodes.Should().BeEquivalentTo(new[]
+        {
+            "order.dispute.resolve",
+            "order.refund",
+        }, "the nested RefundOrder pipeline writes its own audit row alongside the outer one");
+    }
+
+    [Fact]
+    public async Task Admin_resolve_refunded_with_provider_failure_leaves_dispute_open_and_commits_nothing()
+    {
+        // AC-9 / review B-1 inner-failure leg (Risk §4): the provider
+        // refuses → RefundOrder fails BEFORE any mutation → both UoW
+        // commits are skipped → the staged resolution rolls back with
+        // the transaction. The dispute stays OPEN; the order stays
+        // Disputed; zero outbox rows; zero audit rows.
+        await SeedDisputedOrderAsync(shipped: false);
+        _provider.EnqueueRefund(BusinessResult.Failure<RefundReceipt>(
+            Error.Permanent(BusinessErrorMessage.PaymentProviderRejected)));
+        using var client = CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/dispute/resolve",
+            new { outcome = "Refunded", resolutionNotes = "Pokus o refundaci." });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity,
+            "the Permanent provider error propagates verbatim through the nested pipeline");
+        using (var errorDoc = System.Text.Json.JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync()))
+        {
+            errorDoc.RootElement.GetProperty("code").GetString()
+                .Should().Be(BusinessErrorMessage.PaymentProviderRejected);
+        }
+        _provider.RefundCallCount.Should().Be(1, "provider-first: the refund attempt did reach the gateway");
+
+        await using var db = _harness.CreateDbContext();
+        var order = await db.Set<Order>().AsNoTracking().FirstAsync(o => o.Id == OrderId);
+        order.State.Should().Be(OrderState.Disputed, "the whole resolution rolled back");
+        order.PreDisputeState.Should().Be(OrderState.Paid, "the restore pointer is untouched");
+        order.RefundedAmountMinor.Should().Be(0, "no refund was recorded");
+
+        var dispute = await db.Set<Dispute>().AsNoTracking().SingleAsync(d => d.Id == DisputeId);
+        dispute.ResolvedAt.Should().BeNull("the dispute STAYS open — the admin retries or picks another outcome");
+        dispute.ResolutionOutcome.Should().BeNull();
+
+        var outboxCount = await db.Set<OutboxEvent>().AsNoTracking()
+            .CountAsync(e => e.AggregateId == OrderId);
+        outboxCount.Should().Be(0, "no email rides a failed resolution");
+
+        var auditCount = await db.Set<AdminAuditLogEntry>().AsNoTracking()
+            .CountAsync(e => e.TargetId == OrderId);
+        auditCount.Should().Be(0, "failed commands write no audit row (ADR 0014)");
+    }
+
+    [Fact]
     public async Task Resolve_on_non_disputed_order_returns_loud_409_notOpen()
     {
-        await SeedDisputedShippedOrderAsync();
+        await SeedDisputedOrderAsync(shipped: true);
         using var client = CreateAdminClient();
 
         var first = await client.PostAsJsonAsync(

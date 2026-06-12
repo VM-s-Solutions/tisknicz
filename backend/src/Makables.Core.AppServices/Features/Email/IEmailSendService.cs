@@ -146,7 +146,10 @@ public sealed class EmailSendService(
                 ["dispute_id"] = payload.DisputeId,
                 ["category"] = payload.Category.ToString(),
                 ["source"] = payload.Source.ToString(),
-                ["description"] = payload.Description,
+                // USER-SUPPLIED (customer/maker free text) — neutralized so
+                // hostile "{{key}}" sequences can never re-expand inside the
+                // substitution engine (Gate 3 F1).
+                ["description"] = NeutralizePlaceholderSyntax(payload.Description),
                 ["language_code"] = payload.LanguageCode,
             },
             attachment: null,
@@ -189,8 +192,10 @@ public sealed class EmailSendService(
                 ["contact_name"] = payload.ContactName,
                 ["outcome"] = payload.Outcome.ToString(),
                 ["outcome_label"] = outcomeLabel,
-                // Customer-VISIBLE per §C.7 — rendered verbatim.
-                ["resolution_notes"] = payload.ResolutionNotes,
+                // Customer-VISIBLE per §C.7. Admin-authored free text —
+                // neutralized like Description so "{{key}}" sequences can
+                // never re-expand inside the substitution engine (Gate 3 F1).
+                ["resolution_notes"] = NeutralizePlaceholderSyntax(payload.ResolutionNotes),
                 ["language_code"] = payload.LanguageCode,
             },
             attachment: null,
@@ -826,8 +831,16 @@ public sealed class EmailSendService(
 
     // SECURITY: plain-text only. Do NOT reuse for HTML bodies — there is no
     // escaping, so any value-containing-{{key}} would produce an XSS-shaped
-    // surprise. The current callers feed only URL / timestamp / language tag
-    // values; revisit if that changes.
+    // surprise. RULE: substitution VALUES must be trusted (URLs, timestamps,
+    // language tags, our own ids/amounts). The sequential Replace loop means
+    // a value containing "{{key}}" re-expands inside hostile text — so any
+    // USER-SUPPLIED value (dispute description, resolution notes, future
+    // free-text fields) MUST be passed through NeutralizePlaceholderSyntax
+    // by the calling email branch BEFORE it enters the substitution map
+    // (Gate 3 F1). The same map rides EmailMessage.Data to SendGrid dynamic
+    // templates: template authors must use double-stache ({{description}},
+    // never triple-stache) for user-supplied keys and render them under a
+    // "text from the customer/maker" label.
     private static string SubstitutePlainTextPlaceholders(
         string body, IReadOnlyDictionary<string, object> data)
     {
@@ -836,4 +849,16 @@ public sealed class EmailSendService(
             result = result.Replace($"{{{{{key}}}}}", value?.ToString() ?? string.Empty);
         return result;
     }
+
+    /// <summary>
+    /// SECURITY (Gate 3 F1): break placeholder syntax in user-supplied
+    /// values before they enter the substitution map. "{{" becomes
+    /// "{ {" so a hostile description containing e.g.
+    /// <c>{{language_code}}</c> renders as inert text instead of being
+    /// re-expanded by <see cref="SubstitutePlainTextPlaceholders"/> (or
+    /// by a SendGrid template). Visual fidelity is near-identical; the
+    /// content is plain-text triage/notification copy.
+    /// </summary>
+    private static string NeutralizePlaceholderSyntax(string value)
+        => value.Replace("{{", "{ {");
 }
