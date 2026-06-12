@@ -18,7 +18,15 @@
  */
 
 import {
+  type IAcceptOrderResponse,
+  type IHandOverOrderResponse,
+  type IMakerOrderDetailDto,
   type IMakerOrderListItemDto,
+  type IMarkMakerOrderMessagesAsReadResponse,
+  type IOrderAttachmentSummaryDto,
+  type IOrderMessageDto,
+  type IPostMakerOrderMessageResponse,
+  type IShipOrderResponse,
   OrderSort,
   OrderState,
   ShippingMethod,
@@ -130,4 +138,250 @@ export async function getMakerOrders(
     { method: 'GET' },
   );
   return result.success ? ok(result.value.orders) : result;
+}
+
+// ---- Order detail + state-machine actions (T-0087b) ----
+
+/** Mirror of <c>OrderAttachmentSummaryDto</c> (T-0082) — `downloadUrl` is a relative maker-host path. */
+export type OrderAttachmentSummary = Readonly<IOrderAttachmentSummaryDto>;
+
+/**
+ * Mirror of <c>MakerOrderDetailDto</c> (T-0082). Every timestamp is
+ * overridden to wire-shape <c>string</c> (ISO 8601) — display helpers
+ * wrap <c>new Date(...)</c> themselves (see <c>lib/utils/dates.ts</c>).
+ * The DTO deliberately has NO customer email field (T-0082 AC-4
+ * compile-time GDPR lock) and no platform-fee figure (T-0081/T-0082
+ * payout-only lock).
+ */
+export type MakerOrderDetail = Readonly<
+  Omit<
+    IMakerOrderDetailDto,
+    | 'paidAt'
+    | 'acceptedAt'
+    | 'shippedAt'
+    | 'deliveredAt'
+    | 'cancelledAt'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'attachments'
+  >
+> & {
+  readonly paidAt: string | undefined;
+  readonly acceptedAt: string | undefined;
+  readonly shippedAt: string | undefined;
+  readonly deliveredAt: string | undefined;
+  readonly cancelledAt: string | undefined;
+  readonly createdAt: string;
+  readonly updatedAt: string | undefined;
+  readonly attachments: readonly OrderAttachmentSummary[];
+};
+
+/** Generated envelope around the detail DTO (<c>GetMakerOrderDetailsResponse { detail }</c>). */
+interface GetMakerOrderDetailsEnvelope {
+  readonly detail: MakerOrderDetail;
+}
+
+/** Mirror of <c>AcceptOrderResponse { orderId }</c> (T-0071). */
+export type AcceptOrderResult = Readonly<IAcceptOrderResponse>;
+
+/** Mirror of <c>ShipOrderResponse { orderId, carrierRef, trackingUrl }</c> (T-0072). */
+export type ShipOrderResult = Readonly<IShipOrderResponse>;
+
+/** Mirror of <c>HandOverOrderResponse { orderId }</c> (T-0073). */
+export type HandOverOrderResult = Readonly<IHandOverOrderResponse>;
+
+/**
+ * Maker-scoped order detail (T-0082). The backend returns 404 for
+ * foreign orders and unknown ids alike (single `order.notFound` shape —
+ * no IDOR oracle); both surface as <c>ApiError.type === 'NotFound'</c>.
+ * The envelope is unwrapped here so callers receive the inner DTO.
+ */
+export async function getMakerOrderDetail(
+  orderId: string,
+): Promise<Result<MakerOrderDetail, ApiError>> {
+  const result = await apiFetch<GetMakerOrderDetailsEnvelope>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}`,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.detail) : result;
+}
+
+/**
+ * Maker accept transition <c>Paid → Accepted</c> (T-0071,
+ * US-maker-0006). The backend re-validates the transition — stale calls
+ * return 409 <c>order.invalidTransition</c>.
+ */
+export async function acceptOrder(
+  orderId: string,
+): Promise<Result<AcceptOrderResult, ApiError>> {
+  return apiFetch<AcceptOrderResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/accept`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * Maker ship transition <c>Accepted → Shipped</c> for Zásilkovna orders
+ * (T-0072, US-maker-0007). Creates a REAL carrier shipment + label —
+ * irreversible from the UI, hence the confirm dialog at the call site
+ * (T-0087b §C). Failure codes: <c>order.invalidTransition</c> (409),
+ * <c>shipping.methodNotEligible</c> (400, personal-pickup order),
+ * <c>shipping.carrierUnavailable</c> (503).
+ */
+export async function shipOrder(orderId: string): Promise<Result<ShipOrderResult, ApiError>> {
+  return apiFetch<ShipOrderResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/ship`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * Maker handover transition <c>Accepted → Shipped</c> for personal-
+ * pickup orders (T-0073, US-maker-0008) — starts the auto-deliver
+ * timer; no carrier side effect, so no confirm dialog (T-0087b §C).
+ * Failure codes mirror {@link shipOrder} minus the carrier 503.
+ */
+export async function handOverOrder(
+  orderId: string,
+): Promise<Result<HandOverOrderResult, ApiError>> {
+  return apiFetch<HandOverOrderResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/handover`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * Streaming-download budget (orders-client.ts precedent, checkout-flow
+ * review B-1 math): label/attachment/invoice PDFs are small but the
+ * worst-tolerable mobile-downlink case needs far more than the 8 s JSON
+ * default, so binary downloads share the 120 s ceiling.
+ */
+const DOWNLOAD_TIMEOUT_MS = 120_000;
+
+/**
+ * Shipping-label PDF download (T-0075, US-maker-0009). Deliberately
+ * does NOT use the generated <c>MakerApi.label()</c>: NSwag types the
+ * file response as <c>Promise&lt;void&gt;</c> and discards the PDF body
+ * (T-0087b §C / Option F lock). Fetching as a blob through
+ * <see cref="apiFetch"/> keeps the audience cookie, the timeout budget
+ * and RFC7807 error parsing; callers turn the Blob into a named
+ * download via an object URL + programmatic anchor. 503 surfaces as
+ * <c>shipping.carrierUnavailable</c>.
+ */
+export async function downloadShippingLabel(orderId: string): Promise<Result<Blob, ApiError>> {
+  return apiFetch<Blob>(
+    'maker',
+    `/api/v1/maker/files/orders/${encodeURIComponent(orderId)}/label`,
+    { method: 'GET', parse: 'blob', timeoutMs: DOWNLOAD_TIMEOUT_MS },
+  );
+}
+
+/**
+ * Authenticated binary download for attachment / invoice paths
+ * (T-0064/T-0088 maker-scoped endpoints). The backend emits RELATIVE
+ * maker-host paths (<c>/api/v1/orders/{id}/attachments/{attachmentId}</c>,
+ * <c>/api/v1/orders/{id}/invoice</c>; direct blob URLs are never
+ * exposed), so the path is passed to <c>apiFetch</c> verbatim and the
+ * audience cookie rides along.
+ */
+export async function downloadMakerOrderFile(path: string): Promise<Result<Blob, ApiError>> {
+  return apiFetch<Blob>('maker', path, {
+    method: 'GET',
+    parse: 'blob',
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+  });
+}
+
+// ---- Order messages trio (T-0079, maker host — T-0087b thread wiring) ----
+
+/**
+ * Mirror of <c>OrderMessageDto</c> (T-0079). <c>createdAt</c> is
+ * overridden to wire-shape <c>string</c> (ISO 8601) — same rationale as
+ * <see cref="MakerOrderDetail"/>.
+ */
+export type OrderMessageItem = Readonly<Omit<IOrderMessageDto, 'createdAt'>> & {
+  readonly createdAt: string;
+};
+
+/** Wire shape of <c>PagedData&lt;OrderMessageDto&gt;</c> (newest-first, 50/page per T-0079). */
+export interface OrderMessagesPageData {
+  readonly items: readonly OrderMessageItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalCount: number;
+  readonly totalPages?: number;
+  readonly hasNextPage?: boolean;
+  readonly hasPreviousPage?: boolean;
+}
+
+/** Mirror of <c>PostMakerOrderMessageResponse</c> — wire-shape <c>createdAt</c>. */
+export type PostOrderMessageResult = Readonly<
+  Omit<IPostMakerOrderMessageResponse, 'createdAt'>
+> & {
+  readonly createdAt: string;
+};
+
+/** Mirror of <c>MarkMakerOrderMessagesAsReadResponse { markedCount }</c> (T-0079, idempotent). */
+export type MarkMessagesReadResult = Readonly<IMarkMakerOrderMessagesAsReadResponse>;
+
+/** Generated envelope around the messages page (<c>GetMakerOrderMessagesResponse { messages }</c>). */
+interface GetMakerOrderMessagesEnvelope {
+  readonly messages: OrderMessagesPageData;
+}
+
+/**
+ * Paged order-message thread, newest first (T-0079, 50/page backend
+ * default — <c>pageSize</c> is never emitted). Envelope unwrapped so
+ * the thread adapter receives the page directly.
+ */
+export async function getMakerOrderMessages(
+  orderId: string,
+  page: number,
+): Promise<Result<OrderMessagesPageData, ApiError>> {
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  const query = params.toString();
+  const path = `${Base}/${encodeURIComponent(orderId)}/messages`;
+  const result = await apiFetch<GetMakerOrderMessagesEnvelope>(
+    'maker',
+    query ? `${path}?${query}` : path,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.messages) : result;
+}
+
+/**
+ * Post one message to the order thread (T-0079). Failure codes from
+ * <c>BusinessErrorMessage</c>: <c>order.message.bodyEmpty</c>,
+ * <c>order.message.bodyTooLong</c>, <c>order.message.notAllowedInState</c>.
+ */
+export async function postMakerOrderMessage(
+  orderId: string,
+  body: string,
+): Promise<Result<PostOrderMessageResult, ApiError>> {
+  return apiFetch<PostOrderMessageResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/messages`,
+    { method: 'POST', json: { body } },
+  );
+}
+
+/**
+ * Zero the maker's unread counter for this order's thread (T-0079;
+ * clears the T-0087a list badge). Idempotent — a repeat call returns
+ * <c>markedCount: 0</c>, so the thread re-fires it after polls without
+ * bookkeeping.
+ */
+export async function markMakerOrderMessagesRead(
+  orderId: string,
+): Promise<Result<MarkMessagesReadResult, ApiError>> {
+  return apiFetch<MarkMessagesReadResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/messages/mark-read`,
+    { method: 'POST' },
+  );
 }

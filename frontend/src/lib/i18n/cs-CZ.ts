@@ -747,6 +747,71 @@ export const messages = {
   'dashboard.maker.orders.pagination.previous': 'Předchozí',
   'dashboard.maker.orders.pagination.next': 'Další',
   'dashboard.maker.orders.pagination.page_of': 'Stránka {page} z {total}',
+
+  // Maker order detail at /dashboard/maker/objednavky/[orderId]
+  // (T-0087b, US-maker-0006..0011). Tykání throughout per CLAUDE.md —
+  // PENDING the tone question in docs/questions/open.md (catalog-only
+  // flip). Error-code parity keys `order.notFound`,
+  // `order.invalidTransition`, `shipping.methodNotEligible` and
+  // `shipping.carrierUnavailable` already exist above; audience-neutral
+  // keys (`order.state.*`, `order.page.title`,
+  // `order.page.shippingMethod.*`, `orderMessages.*`) are reused.
+  'dashboard.maker.orderDetail.metadata.title': 'Objednávka — Makables',
+  'dashboard.maker.orderDetail.backToList': 'Zpět na objednávky',
+  'dashboard.maker.orderDetail.createdLine': 'Vytvořeno {date}',
+  'dashboard.maker.orderDetail.productLine': 'Výrobek: {title}',
+
+  'dashboard.maker.orderDetail.notFound.title': 'Objednávka nenalezena',
+  'dashboard.maker.orderDetail.notFound.body':
+    'Tato objednávka neexistuje nebo k ní nemáš přístup.',
+  'dashboard.maker.orderDetail.loadError.title': 'Objednávku se nepodařilo načíst',
+  'dashboard.maker.orderDetail.loadError.body': 'Zkus prosím obnovit stránku za chvíli.',
+  'dashboard.maker.orderDetail.loadError.retry': 'Zkusit znovu',
+
+  // Payout-prominent breakdown (T-0081/T-0082 lock: the maker's payout
+  // is the headline figure; no platform-fee row exists on the DTO).
+  'dashboard.maker.orderDetail.payout.heading': 'Tvoje odměna',
+  'dashboard.maker.orderDetail.payout.total': 'Zákazník zaplatil celkem',
+  'dashboard.maker.orderDetail.payout.product': 'Výrobek',
+  'dashboard.maker.orderDetail.payout.shipping': 'Doprava',
+  'dashboard.maker.orderDetail.payout.vat': 'DPH {rate} %',
+
+  'dashboard.maker.orderDetail.timeline.heading': 'Průběh objednávky',
+  'dashboard.maker.orderDetail.timeline.created': 'Vytvořeno',
+  'dashboard.maker.orderDetail.timeline.paid': 'Zaplaceno',
+  'dashboard.maker.orderDetail.timeline.accepted': 'Přijato',
+  'dashboard.maker.orderDetail.timeline.shipped': 'Odesláno',
+  'dashboard.maker.orderDetail.timeline.delivered': 'Doručeno',
+  'dashboard.maker.orderDetail.timeline.cancelled': 'Zrušeno',
+
+  'dashboard.maker.orderDetail.shipping.heading': 'Doprava',
+  'dashboard.maker.orderDetail.shipping.pickupPoint': 'Výdejní místo Zásilkovny: {id}',
+  'dashboard.maker.orderDetail.shipping.trackingLink': 'Sledovat zásilku',
+
+  'dashboard.maker.orderDetail.contact.heading': 'Kontakt na zákazníka',
+
+  'dashboard.maker.orderDetail.attachments.heading': 'Přílohy od zákazníka',
+  'dashboard.maker.orderDetail.attachments.download': 'Stáhnout',
+
+  'dashboard.maker.orderDetail.invoice.heading': 'Faktura',
+  'dashboard.maker.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  'dashboard.maker.orderDetail.action.accept': 'Přijmout objednávku',
+  'dashboard.maker.orderDetail.action.accepting': 'Přijímám…',
+  'dashboard.maker.orderDetail.action.ship': 'Odeslat',
+  'dashboard.maker.orderDetail.action.shipping': 'Odesílám…',
+  'dashboard.maker.orderDetail.action.handover': 'Předat osobně',
+  'dashboard.maker.orderDetail.action.handingOver': 'Předávám…',
+  'dashboard.maker.orderDetail.action.downloadLabel': 'Stáhnout štítek',
+  'dashboard.maker.orderDetail.action.downloadingLabel': 'Stahuji štítek…',
+
+  // Ship-only confirm dialog (T-0087b §C: the carrier shipment + label
+  // are real-world, irreversible side effects — T-0072).
+  'dashboard.maker.orderDetail.shipConfirm.title': 'Odeslat zásilku přes Zásilkovnu?',
+  'dashboard.maker.orderDetail.shipConfirm.body':
+    'Potvrzením vytvoříme skutečnou zásilku u dopravce a vygenerujeme štítek. Tento krok je nevratný — pokračuj, jen pokud je balíček připravený k odeslání.',
+  'dashboard.maker.orderDetail.shipConfirm.confirm': 'Ano, odeslat',
+  'dashboard.maker.orderDetail.shipConfirm.cancel': 'Zrušit',
 } as const;
 
 export type MessageKey = keyof typeof messages;
