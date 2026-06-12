@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Orders.Sorting;
@@ -34,6 +35,7 @@ namespace Makables.Web.Maker.Controllers;
 [Authorize]
 public sealed class OrdersController(
     IOrderRepository orders,
+    IInvoiceRepository invoices,
     IMakerRepository makers,
     IBlobStorageClient blobs,
     IUserSessionProvider session,
@@ -193,6 +195,100 @@ public sealed class OrdersController(
         }
 
         return File(download.Content, download.ContentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Streaming download of the order's invoice PDF (T-0088 /
+    /// US-maker-0010). Same body as the customer-host equivalent except
+    /// the ownership scope is the T-0075 maker-resolution prefix
+    /// (session → maker row → <see cref="IOrderRepository.GetByIdForMakerReadOnlyAsync"/>).
+    /// The route is the literal string T-0082's maker detail projection
+    /// emits as <c>InvoicePdfUrl</c> — changing it is forbidden per
+    /// T-0088 §A.1. Controller-direct per ADR 0014 §"Handler-free read
+    /// paths".
+    ///
+    /// <para>
+    /// Cache policy mirrors <see cref="DownloadAttachment"/> —
+    /// <c>private, no-store</c> + ETag/304: invoices carry recipient PII,
+    /// NOT the label's <c>public, immutable</c> family.
+    /// </para>
+    /// </summary>
+    [HttpGet("{orderId}/invoice")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadInvoice(string orderId, CancellationToken ct)
+    {
+        var userId = session.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(Error.Unauthorized());
+        }
+
+        // Resolve the maker for this user; a user without a maker row is
+        // a customer who somehow got a maker-audience token — 404 in this
+        // context (no maker → no orders), and the order lookup is never
+        // performed (T-0088 AC-6).
+        var maker = await makers.GetByUserIdAsync(userId, ct);
+        if (maker is null)
+        {
+            return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // Ownership-scoped read-only order load. IDOR-shielded — null for
+        // unknown ids AND cross-maker ids; same 404 shape (no existence
+        // oracle). Read-only variant per ADR 0025.
+        var order = await orders.GetByIdForMakerReadOnlyAsync(orderId, maker.Id, ct);
+        if (order is null)
+        {
+            return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // GetByOrderIdReadOnlyAsync is documented Unscoped — safe ONLY
+        // after the ownership-scoped order load above (T-0088 risk note).
+        // Read-only variant per ADR 0025 (Gate 8 B2): this action never
+        // mutates the Invoice. No Invoice row yet OR null PdfBlobPath
+        // both mean the T-0068b render pipeline hasn't finished:
+        // invoice.notYetRendered.
+        var invoice = await invoices.GetByOrderIdReadOnlyAsync(orderId, ct);
+        if (invoice is null || string.IsNullOrEmpty(invoice.PdfBlobPath))
+        {
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        // PdfBlobPath is container-relative, used verbatim against the
+        // Invoices container. No path construction here.
+        var result = await blobs.DownloadAsync(BlobContainer.Invoices, invoice.PdfBlobPath, ct);
+        if (!result.IsSuccess)
+        {
+            // Blob-purged-but-row-remains race — retryable 404 per the
+            // invoice.notYetRendered i18n copy. T-0088 Option F rationale.
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        var download = result.Value!;
+
+        // Recipient-PII document; intermediaries must not cache.
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers.ContentDisposition =
+            $"attachment; filename=\"faktura-{EscapeFilenameForHeader(invoice.InvoiceNumber)}.pdf\"";
+
+        if (!string.IsNullOrEmpty(download.ETag))
+        {
+            Response.Headers.ETag = download.ETag;
+
+            var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+            if (!string.IsNullOrEmpty(ifNoneMatch) && ETagMatches(ifNoneMatch, download.ETag))
+            {
+                await download.Content.DisposeAsync();
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+        }
+
+        // Range processing off per T-0075 rationale (small platform
+        // artifact; range support is attack surface for zero benefit).
+        return File(download.Content, "application/pdf", enableRangeProcessing: false);
     }
 
     private static string EscapeFilenameForHeader(string sanitized) =>

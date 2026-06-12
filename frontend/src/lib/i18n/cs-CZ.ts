@@ -448,6 +448,13 @@ export const messages = {
   'order.message.notAllowedInState':
     'Zprávy lze odesílat až po zaplacení objednávky.',
 
+  // Order lifecycle error codes (parity with BusinessErrorMessage),
+  // consumed by the tracking detail (T-0086b — verified missing at the
+  // §C parity check, added here). PM/UX to refine on PR review.
+  'order.notFound': 'Tato objednávka neexistuje nebo k ní nemáte přístup.',
+  'order.invalidTransition':
+    'Tuto akci nelze v aktuálním stavu objednávky provést.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064
@@ -571,6 +578,93 @@ export const messages = {
     'Kompletní detail objednávky pro vás připravujeme. O každé změně vás budeme informovat e-mailem.',
   'order.page.banner.backToCatalog': 'Zpět do katalogu',
 
+  // Customer dashboard order list at /dashboard/zakaznik/objednavky
+  // (T-0086a, US-customer-0016). Vykání throughout; {count} keys follow
+  // the plural-neutral "Label: N" convention from the catalog block.
+  'customer.orders.title': 'Moje objednávky',
+  'customer.orders.subtitle': 'Přehled vašich objednávek — stav, zprávy od výrobce a detail každé zakázky.',
+  'customer.orders.metadata.title': 'Moje objednávky — Makables',
+  'customer.orders.count': 'Objednávek: {count}',
+  'customer.orders.customOrder': 'Vlastní zakázka',
+
+  'customer.orders.filter.state': 'Stav',
+  'customer.orders.filter.state_any': 'Všechny stavy',
+  'customer.orders.filter.dateFrom': 'Od data',
+  'customer.orders.filter.dateTo': 'Do data',
+  'customer.orders.filter.sort': 'Řazení',
+  'customer.orders.filter.reset': 'Vymazat filtry',
+
+  'customer.orders.sort.CreatedAtDesc': 'Nejnovější',
+  'customer.orders.sort.CreatedAtAsc': 'Nejstarší',
+  'customer.orders.sort.TotalAmountDesc': 'Nejdražší',
+  'customer.orders.sort.TotalAmountAsc': 'Nejlevnější',
+  'customer.orders.sort.StateAsc': 'Podle stavu',
+
+  'customer.orders.table.number': 'Číslo',
+  'customer.orders.table.state': 'Stav',
+  'customer.orders.table.maker': 'Výrobce',
+  'customer.orders.table.product': 'Výrobek',
+  'customer.orders.table.total': 'Celkem',
+  'customer.orders.table.created': 'Vytvořeno',
+  'customer.orders.table.unread': 'Zprávy',
+  'customer.orders.unreadAria': 'Nepřečtené zprávy: {count}',
+
+  'customer.orders.empty.title': 'Zatím nemáte žádné objednávky',
+  'customer.orders.empty.description': 'Vyberte si výrobce v katalogu a zadejte svou první zakázku.',
+  'customer.orders.empty.cta': 'Prohlédnout katalog',
+  'customer.orders.noMatch.title': 'Žádné objednávky neodpovídají filtru',
+  'customer.orders.noMatch.description': 'Zkuste rozšířit kritéria nebo filtry vymazat.',
+  'customer.orders.noMatch.clear': 'Vymazat filtry',
+
+  'customer.orders.error.title': 'Objednávky se nepodařilo načíst',
+  'customer.orders.error.retry': 'Zkusit znovu',
+
+  'customer.orders.pagination.previous': 'Předchozí',
+  'customer.orders.pagination.next': 'Další',
+  'customer.orders.pagination.page_of': 'Stránka {page} z {total}',
+
+  // Customer order tracking detail at /objednavka/[id], Paid+ states
+  // (T-0086b, US-customer-0012/0013/0014/0017). Vykání throughout.
+  'customer.orderDetail.makerLine': 'Výrobce: {name}',
+  'customer.orderDetail.productLine': 'Výrobek: {title}',
+
+  'customer.orderDetail.timeline.heading': 'Průběh objednávky',
+  'customer.orderDetail.timeline.created': 'Vytvořeno',
+  'customer.orderDetail.timeline.paid': 'Zaplaceno',
+  'customer.orderDetail.timeline.accepted': 'Přijato',
+  'customer.orderDetail.timeline.shipped': 'Odesláno',
+  'customer.orderDetail.timeline.delivered': 'Doručeno',
+  'customer.orderDetail.timeline.cancelled': 'Zrušeno',
+
+  'customer.orderDetail.shipping.heading': 'Doprava',
+  'customer.orderDetail.shipping.trackingLink': 'Sledovat zásilku',
+
+  'customer.orderDetail.attachments.heading': 'Přílohy',
+  'customer.orderDetail.attachments.download': 'Stáhnout',
+
+  'customer.orderDetail.invoice.heading': 'Faktura',
+  'customer.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  // Caption key reserved by T-0076 (supersedes the US draft wording
+  // "Potvrdit doručení" — final copy belongs to l10n).
+  'customer.orders.markDeliveredButton': 'Označit jako doručeno',
+  'customer.orderDetail.markDelivered.inFlight': 'Potvrzuji…',
+
+  // Shared order-message thread (T-0086b creates, T-0087b reuses on the
+  // maker detail). Audience-neutral phrasing; {count} keys follow the
+  // plural-neutral "Label: N" convention.
+  'orderMessages.heading': 'Zprávy',
+  'orderMessages.empty': 'Zatím žádné zprávy.',
+  'orderMessages.postLabel': 'Nová zpráva',
+  'orderMessages.postPlaceholder': 'Napište zprávu…',
+  'orderMessages.counter': 'Znaků: {count}/{max}',
+  'orderMessages.send': 'Odeslat',
+  'orderMessages.sending': 'Odesílám…',
+  'orderMessages.loadOlder': 'Načíst starší zprávy',
+  'orderMessages.loadingOlder': 'Načítám…',
+  'orderMessages.pendingPaymentNote':
+    'Zprávy bude možné odesílat po zaplacení objednávky.',
+
   // Payment confirmation page at /objednavka/[id]/potvrzeni (T-0085).
   // Vykání throughout. Success is granted ONLY by the backend-read Paid
   // state — never by the Comgate redirect params (CLAUDE.md payments rule).
@@ -594,6 +688,130 @@ export const messages = {
   'checkout.confirm.failed.heldNote':
     'Objednávku pro vás držíme 24 hodin — platbu můžete dokončit z detailu objednávky.',
   'checkout.confirm.failed.retryCta': 'Dokončit platbu',
+
+  // Maker dashboard order list at /dashboard/maker/objednavky (T-0087a,
+  // US-maker-0005). Tykání throughout per CLAUDE.md — PENDING the tone
+  // question in docs/questions/open.md; a flip to vykání is a catalog-
+  // only change. {count} keys follow the plural-neutral "Label: N"
+  // convention from the catalog block above.
+  'dashboard.maker.orders.title': 'Objednávky',
+  'dashboard.maker.orders.subtitle':
+    'Přehled tvých objednávek — nové čekající na přijetí, zakázky ve výrobě i kompletní historie.',
+  'dashboard.maker.orders.metadata.title': 'Objednávky — Makables',
+  'dashboard.maker.orders.metadata.description':
+    'Správa objednávek tvé dílny na Makables.',
+  'dashboard.maker.orders.count': 'Objednávek: {count}',
+  'dashboard.maker.orders.customOrder': 'Vlastní zakázka',
+
+  'dashboard.maker.orders.tab.nove': 'Nové',
+  'dashboard.maker.orders.tab.vyroba': 'Ve výrobě',
+  'dashboard.maker.orders.tab.vse': 'Vše',
+
+  'dashboard.maker.orders.filter.dateFrom': 'Od data',
+  'dashboard.maker.orders.filter.dateTo': 'Do data',
+  'dashboard.maker.orders.filter.sort': 'Řazení',
+  'dashboard.maker.orders.filter.reset': 'Vymazat filtry',
+
+  'dashboard.maker.orders.sort.CreatedAtDesc': 'Nejnovější',
+  'dashboard.maker.orders.sort.CreatedAtAsc': 'Nejstarší',
+  'dashboard.maker.orders.sort.TotalAmountDesc': 'Nejdražší',
+  'dashboard.maker.orders.sort.TotalAmountAsc': 'Nejlevnější',
+  'dashboard.maker.orders.sort.StateAsc': 'Podle stavu',
+
+  'dashboard.maker.orders.table.number': 'Číslo',
+  'dashboard.maker.orders.table.state': 'Stav',
+  'dashboard.maker.orders.table.customer': 'Zákazník',
+  'dashboard.maker.orders.table.product': 'Výrobek',
+  'dashboard.maker.orders.table.payout': 'Tvoje odměna',
+  'dashboard.maker.orders.table.created': 'Vytvořeno',
+  'dashboard.maker.orders.table.unread': 'Zprávy',
+  'dashboard.maker.orders.unreadAria': 'Nepřečtené zprávy: {count}',
+
+  // Per-tab empty states (AC-8): Nové is informational/positive — no
+  // new work waiting is a GOOD state, not an error; Vše is onboarding-
+  // flavoured for makers without a single order yet.
+  'dashboard.maker.orders.empty.nove.title': 'Žádné nové objednávky nečekají',
+  'dashboard.maker.orders.empty.nove.description':
+    'Vše je vyřízené. Jakmile zákazník zaplatí novou objednávku, objeví se tady.',
+  'dashboard.maker.orders.empty.vyroba.title': 'Nic není ve výrobě',
+  'dashboard.maker.orders.empty.vyroba.description':
+    'Tady uvidíš objednávky, které jsi přijal a na kterých právě pracuješ.',
+  'dashboard.maker.orders.empty.vse.title': 'Zatím nemáš žádné objednávky',
+  'dashboard.maker.orders.empty.vse.description':
+    'Objednávky se tu objeví, jakmile si zákazníci koupí tvé výrobky.',
+
+  'dashboard.maker.orders.error.title': 'Objednávky se nepodařilo načíst',
+  'dashboard.maker.orders.error.body': 'Zkus prosím obnovit stránku za chvíli.',
+  'dashboard.maker.orders.error.retry': 'Zkusit znovu',
+
+  'dashboard.maker.orders.pagination.previous': 'Předchozí',
+  'dashboard.maker.orders.pagination.next': 'Další',
+  'dashboard.maker.orders.pagination.page_of': 'Stránka {page} z {total}',
+
+  // Maker order detail at /dashboard/maker/objednavky/[orderId]
+  // (T-0087b, US-maker-0006..0011). Tykání throughout per CLAUDE.md —
+  // PENDING the tone question in docs/questions/open.md (catalog-only
+  // flip). Error-code parity keys `order.notFound`,
+  // `order.invalidTransition`, `shipping.methodNotEligible` and
+  // `shipping.carrierUnavailable` already exist above; audience-neutral
+  // keys (`order.state.*`, `order.page.title`,
+  // `order.page.shippingMethod.*`, `orderMessages.*`) are reused.
+  'dashboard.maker.orderDetail.metadata.title': 'Objednávka — Makables',
+  'dashboard.maker.orderDetail.backToList': 'Zpět na objednávky',
+  'dashboard.maker.orderDetail.createdLine': 'Vytvořeno {date}',
+  'dashboard.maker.orderDetail.productLine': 'Výrobek: {title}',
+
+  'dashboard.maker.orderDetail.notFound.title': 'Objednávka nenalezena',
+  'dashboard.maker.orderDetail.notFound.body':
+    'Tato objednávka neexistuje nebo k ní nemáš přístup.',
+  'dashboard.maker.orderDetail.loadError.title': 'Objednávku se nepodařilo načíst',
+  'dashboard.maker.orderDetail.loadError.body': 'Zkus prosím obnovit stránku za chvíli.',
+  'dashboard.maker.orderDetail.loadError.retry': 'Zkusit znovu',
+
+  // Payout-prominent breakdown (T-0081/T-0082 lock: the maker's payout
+  // is the headline figure; no platform-fee row exists on the DTO).
+  'dashboard.maker.orderDetail.payout.heading': 'Tvoje odměna',
+  'dashboard.maker.orderDetail.payout.total': 'Zákazník zaplatil celkem',
+  'dashboard.maker.orderDetail.payout.product': 'Výrobek',
+  'dashboard.maker.orderDetail.payout.shipping': 'Doprava',
+  'dashboard.maker.orderDetail.payout.vat': 'DPH {rate} %',
+
+  'dashboard.maker.orderDetail.timeline.heading': 'Průběh objednávky',
+  'dashboard.maker.orderDetail.timeline.created': 'Vytvořeno',
+  'dashboard.maker.orderDetail.timeline.paid': 'Zaplaceno',
+  'dashboard.maker.orderDetail.timeline.accepted': 'Přijato',
+  'dashboard.maker.orderDetail.timeline.shipped': 'Odesláno',
+  'dashboard.maker.orderDetail.timeline.delivered': 'Doručeno',
+  'dashboard.maker.orderDetail.timeline.cancelled': 'Zrušeno',
+
+  'dashboard.maker.orderDetail.shipping.heading': 'Doprava',
+  'dashboard.maker.orderDetail.shipping.pickupPoint': 'Výdejní místo Zásilkovny: {id}',
+  'dashboard.maker.orderDetail.shipping.trackingLink': 'Sledovat zásilku',
+
+  'dashboard.maker.orderDetail.contact.heading': 'Kontakt na zákazníka',
+
+  'dashboard.maker.orderDetail.attachments.heading': 'Přílohy od zákazníka',
+  'dashboard.maker.orderDetail.attachments.download': 'Stáhnout',
+
+  'dashboard.maker.orderDetail.invoice.heading': 'Faktura',
+  'dashboard.maker.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  'dashboard.maker.orderDetail.action.accept': 'Přijmout objednávku',
+  'dashboard.maker.orderDetail.action.accepting': 'Přijímám…',
+  'dashboard.maker.orderDetail.action.ship': 'Odeslat',
+  'dashboard.maker.orderDetail.action.shipping': 'Odesílám…',
+  'dashboard.maker.orderDetail.action.handover': 'Předat osobně',
+  'dashboard.maker.orderDetail.action.handingOver': 'Předávám…',
+  'dashboard.maker.orderDetail.action.downloadLabel': 'Stáhnout štítek',
+  'dashboard.maker.orderDetail.action.downloadingLabel': 'Stahuji štítek…',
+
+  // Ship-only confirm dialog (T-0087b §C: the carrier shipment + label
+  // are real-world, irreversible side effects — T-0072).
+  'dashboard.maker.orderDetail.shipConfirm.title': 'Odeslat zásilku přes Zásilkovnu?',
+  'dashboard.maker.orderDetail.shipConfirm.body':
+    'Potvrzením vytvoříme skutečnou zásilku u dopravce a vygenerujeme štítek. Tento krok je nevratný — pokračuj, jen pokud je balíček připravený k odeslání.',
+  'dashboard.maker.orderDetail.shipConfirm.confirm': 'Ano, odeslat',
+  'dashboard.maker.orderDetail.shipConfirm.cancel': 'Zrušit',
 } as const;
 
 export type MessageKey = keyof typeof messages;

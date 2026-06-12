@@ -34,6 +34,14 @@
          with a synthetic AuthorizationFilterContext, so the reference
          keeps Web.Public's filter class reachable from the unit project. -->
     <ProjectReference Include="..\Makables.Web.Public\Makables.Web.Public.csproj" />
+    <!-- T-0088: the invoice-download actions are controller-direct (ADR
+         0014 handler-free read paths), so their unit tests construct the
+         OrdersController on each host directly with NSubstitute mocks +
+         a DefaultHttpContext — same shape as the Web.Public filter tests
+         above. The references keep both controllers reachable without
+         booting either host. -->
+    <ProjectReference Include="..\Makables.Web.Customer\Makables.Web.Customer.csproj" />
+    <ProjectReference Include="..\Makables.Web.Maker\Makables.Web.Maker.csproj" />
     <!-- T-0069: GenerateInvoiceFunction lives on Makables.Functions. The
          unit tests construct it directly with NSubstitute mocks of
          IOutboxConsumerRepository + ISender — same shape as the existing

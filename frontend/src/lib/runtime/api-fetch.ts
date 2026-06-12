@@ -47,6 +47,16 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
    * a caller-supplied `signal` can still abort earlier.
    */
   readonly timeoutMs?: number;
+  /**
+   * Success-body parsing mode. The default (`'auto'`) keeps the
+   * long-standing JSON/text detection; `'blob'` returns the raw body as
+   * a `Blob` for authenticated binary downloads (T-0086b attachments +
+   * invoice PDFs — the streaming endpoints need the audience cookie, so
+   * a plain `<a href>` can't be used and `response.text()` would corrupt
+   * the bytes). Error responses still flow through
+   * {@link parseErrorResponse} unchanged.
+   */
+  readonly parse?: 'auto' | 'blob';
 }
 
 /** Default request timeout — unchanged behaviour for every JSON call site (T-0015 reviewer M1). */
@@ -158,6 +168,10 @@ export async function apiFetch<TValue>(
   if (response.ok) {
     if (response.status === 204) {
       return ok(undefined as TValue);
+    }
+    if (options.parse === 'blob') {
+      const blob = (await response.blob()) as unknown as TValue;
+      return ok(blob);
     }
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType.includes('application/json')) {

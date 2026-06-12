@@ -9,25 +9,38 @@
 import { OrderState } from '../api-client-helpers/orders-client';
 import type { MessageKey } from '../i18n';
 
-export function orderStateLabelKey(state: OrderState): MessageKey {
+/**
+ * Wire-value union for OrderState (T-0087a). The customer- and maker-
+ * host NSwag clients each generate their own *nominal* enum with
+ * identical string values, so the maker enum is not assignable to the
+ * customer enum (or vice versa). The template-literal union accepts
+ * members of both — the display maps below stay shared instead of being
+ * forked per audience.
+ */
+export type OrderStateValue = `${OrderState}`;
+
+export function orderStateLabelKey(state: OrderStateValue): MessageKey {
+  // String-literal cases (not enum members): TS only narrows the
+  // OrderStateValue union — and thus proves exhaustiveness below — when
+  // the case labels are literal types. Runtime values are identical.
   switch (state) {
-    case OrderState.PendingPayment:
+    case 'PendingPayment':
       return 'order.state.pending_payment';
-    case OrderState.Paid:
+    case 'Paid':
       return 'order.state.paid';
-    case OrderState.Accepted:
+    case 'Accepted':
       return 'order.state.accepted';
-    case OrderState.Shipped:
+    case 'Shipped':
       return 'order.state.shipped';
-    case OrderState.Delivered:
+    case 'Delivered':
       return 'order.state.delivered';
-    case OrderState.Completed:
+    case 'Completed':
       return 'order.state.completed';
-    case OrderState.Cancelled:
+    case 'Cancelled':
       return 'order.state.cancelled';
-    case OrderState.Refunded:
+    case 'Refunded':
       return 'order.state.refunded';
-    case OrderState.Disputed:
+    case 'Disputed':
       return 'order.state.disputed';
     default: {
       // Compile-time exhaustiveness check — adding a 10th state to the
@@ -54,4 +67,41 @@ const PAID_OR_LATER_STATES: ReadonlySet<OrderState> = new Set([
 
 export function isPaidOrLater(state: OrderState): boolean {
   return PAID_OR_LATER_STATES.has(state);
+}
+
+/**
+ * Mirror of the `Badge` UI primitive's variant union — kept local so
+ * this display map stays importable without pulling a component module
+ * into helper code.
+ */
+export type OrderStateBadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'brand';
+
+/**
+ * Per-state badge tone (T-0086a §C) — display-only lookup, NOT a state
+ * machine. Shared by the customer order list, the tracking detail and
+ * later the maker dashboards (T-0087a/b).
+ */
+export function orderStateBadgeVariant(state: OrderStateValue): OrderStateBadgeVariant {
+  // String-literal cases for union narrowing — see orderStateLabelKey.
+  switch (state) {
+    case 'PendingPayment':
+      return 'warning';
+    case 'Paid':
+    case 'Accepted':
+      return 'brand';
+    case 'Shipped':
+      return 'default';
+    case 'Delivered':
+    case 'Completed':
+      return 'success';
+    case 'Cancelled':
+    case 'Disputed':
+      return 'error';
+    case 'Refunded':
+      return 'warning';
+    default: {
+      const exhaustive: never = state;
+      return exhaustive;
+    }
+  }
 }

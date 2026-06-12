@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Orders.Sorting;
 using Makables.Core.Domain.Orders.Validators;
@@ -43,6 +44,7 @@ namespace Makables.Web.Customer.Controllers;
 [Authorize]
 public sealed class OrdersController(
     IOrderRepository orders,
+    IInvoiceRepository invoices,
     IBlobStorageClient blobs,
     IUserSessionProvider session,
     IIdGenerator ids) : MakablesApiController
@@ -432,6 +434,97 @@ public sealed class OrdersController(
         }
 
         return File(download.Content, download.ContentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Streaming download of the order's invoice PDF (T-0088 /
+    /// US-customer-0012). The route is the literal string T-0082's detail
+    /// projection emits as <c>InvoicePdfUrl</c> — changing it is forbidden
+    /// per T-0088 §A.1. Controller-direct per ADR 0014 §"Handler-free read
+    /// paths" (T-0075 precedent): a passthrough read with no validation
+    /// rule, no business rule, and no transaction.
+    ///
+    /// <para>
+    /// Same cache policy as <see cref="DownloadAttachment"/> — invoices
+    /// carry recipient PII (name, address, tax ids), so
+    /// <c>private, no-store</c> + ETag/304 conditional GET; a logged-out
+    /// request must miss every cache and 401. NOT the T-0075 label's
+    /// <c>public, immutable</c> family.
+    /// </para>
+    /// </summary>
+    [HttpGet("{orderId}/invoice")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadInvoice(string orderId, CancellationToken ct)
+    {
+        var userId = session.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(Error.Unauthorized());
+        }
+
+        // Ownership-scoped read-only order load. IDOR-shielded — null for
+        // unknown ids AND cross-customer ids; both surface as the same
+        // 404 order.notFound shape (no existence oracle). Read-only
+        // variant per ADR 0025: this action never mutates the Order.
+        var order = await orders.GetByIdForCustomerReadOnlyAsync(orderId, userId, ct);
+        if (order is null)
+        {
+            return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // GetByOrderIdReadOnlyAsync is documented Unscoped — safe ONLY
+        // after the ownership-scoped order load above (T-0088 risk note).
+        // Read-only variant per ADR 0025 (Gate 8 B2): this action never
+        // mutates the Invoice. No Invoice row yet OR a row whose
+        // PdfBlobPath is still null both mean the T-0068b render pipeline
+        // hasn't finished: invoice.notYetRendered.
+        var invoice = await invoices.GetByOrderIdReadOnlyAsync(orderId, ct);
+        if (invoice is null || string.IsNullOrEmpty(invoice.PdfBlobPath))
+        {
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        // PdfBlobPath is container-relative and used verbatim against the
+        // Invoices container (precedent: IEmailSendService attachment
+        // download). No path construction here.
+        var result = await blobs.DownloadAsync(BlobContainer.Invoices, invoice.PdfBlobPath, ct);
+        if (!result.IsSuccess)
+        {
+            // Blob-purged-but-row-remains race — honest transient-shaped
+            // 404; the i18n copy for invoice.notYetRendered already
+            // describes a retryable state. T-0088 Option F rationale.
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        var download = result.Value!;
+
+        // Recipient-PII document; intermediaries must not cache. Invoice
+        // numbers are platform-generated (FV-CZ-NNNNNNNN) but run through
+        // the header escape defensively anyway.
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers.ContentDisposition =
+            $"attachment; filename=\"faktura-{EscapeFilenameForHeader(invoice.InvoiceNumber)}.pdf\"";
+
+        if (!string.IsNullOrEmpty(download.ETag))
+        {
+            Response.Headers.ETag = download.ETag;
+
+            var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+            if (!string.IsNullOrEmpty(ifNoneMatch) && ETagMatches(ifNoneMatch, download.ETag))
+            {
+                await download.Content.DisposeAsync();
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+        }
+
+        // Range processing off per T-0075 rationale: invoices are
+        // ≤ ~100 KB platform artifacts; range support adds attack surface
+        // for zero benefit.
+        return File(download.Content, "application/pdf", enableRangeProcessing: false);
     }
 
     /// <summary>

@@ -18,6 +18,12 @@ import { formatDateTime } from '@/lib/utils/dates';
  * display scaling (`vatRateBp / 100`) and the 24h auto-cancel deadline,
  * a display-only mirror of the documented T-0083 rule (the backend job
  * stays authoritative).
+ *
+ * T-0086b split: <see cref="OrderPriceCards"/> (price + contact cards
+ * only) is reused by the post-payment tracking branch, which composes
+ * its own header so the timeline can sit between header and breakdown;
+ * <see cref="OrderBreakdown"/> keeps the original header + cards shape
+ * for the PendingPayment surface unchanged.
  */
 
 const AUTO_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -26,14 +32,6 @@ const AUTO_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
 const BASIS_POINTS_PER_PERCENT = 100;
 
 export function OrderBreakdown({ detail }: { readonly detail: CustomerOrderDetail }) {
-  const vatRate = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(
-    detail.vatRateBp / BASIS_POINTS_PER_PERCENT,
-  );
-  const shippingMethodLabel =
-    detail.shippingMethod === ShippingMethod.PersonalPickup
-      ? t('order.page.shippingMethod.personalPickup')
-      : t('order.page.shippingMethod.zasilkovna');
-
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center gap-3">
@@ -55,6 +53,23 @@ export function OrderBreakdown({ detail }: { readonly detail: CustomerOrderDetai
         </Alert>
       ) : null}
 
+      <OrderPriceCards detail={detail} />
+    </div>
+  );
+}
+
+/** Price-breakdown + contact cards only — shared by the PendingPayment and tracking surfaces. */
+export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDetail }) {
+  const vatRate = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 }).format(
+    detail.vatRateBp / BASIS_POINTS_PER_PERCENT,
+  );
+  const shippingMethodLabel =
+    detail.shippingMethod === ShippingMethod.PersonalPickup
+      ? t('order.page.shippingMethod.personalPickup')
+      : t('order.page.shippingMethod.zasilkovna');
+
+  return (
+    <div className="flex flex-col gap-6">
       <Card padding="md" className="flex flex-col gap-3">
         <dl className="flex flex-col gap-3 text-sm">
           <div className="flex items-start justify-between gap-4">

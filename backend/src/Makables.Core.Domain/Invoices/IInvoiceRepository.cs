@@ -127,6 +127,29 @@ public interface IInvoiceRepository
     /// </summary>
     Task<Invoice?> GetByOrderIdAsync(string orderId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Read-only variant of <see cref="GetByOrderIdAsync"/>. Same
+    /// <b>Unscoped</b> lookup + return shape (null for orders with no
+    /// invoice yet, or with a soft-deleted one — the global filter
+    /// applies), but applies <c>.AsNoTracking()</c> so EF Core skips
+    /// change-tracking and the snapshot allocation. Use this when the
+    /// caller does NOT call methods on the returned <see cref="Invoice"/>
+    /// — saves change-tracking overhead per ADR 0025 §Performance
+    /// expectations item 2. Mirrors
+    /// <see cref="Orders.IOrderRepository.GetByIdForCustomerReadOnlyAsync"/>.
+    ///
+    /// <para>
+    /// Read-only callers (T-0088 invoice download on both hosts) only
+    /// inspect <see cref="Invoice.PdfBlobPath"/> +
+    /// <see cref="Invoice.InvoiceNumber"/> AFTER an ownership-scoped
+    /// order load; mutating callers (T-0068b
+    /// <c>IInvoiceService.IssueAsync</c> idempotency re-check, whose
+    /// surrounding flow may call <see cref="Invoice.AttachPdfBlobPath"/>)
+    /// keep using the tracked <see cref="GetByOrderIdAsync"/>.
+    /// </para>
+    /// </summary>
+    Task<Invoice?> GetByOrderIdReadOnlyAsync(string orderId, CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="invoice"/> as a pending insert.</summary>
     Task AddAsync(Invoice invoice, CancellationToken cancellationToken);
 }

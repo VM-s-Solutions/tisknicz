@@ -9,6 +9,7 @@ using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Money;
+using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Orders.Queries;
 using Makables.Core.Domain.Products;
@@ -309,6 +310,55 @@ public sealed class GetCustomerOrdersIntegrationTests : IAsyncLifetime
         var body = await response.Content.ReadFromJsonAsync<GetCustomerOrders.GetCustomerOrdersResponse>(JsonOpts);
         body!.Orders.TotalCount.Should().Be(0);
         body.Orders.Items.Should().BeEmpty();
+    }
+
+    // T-0089: customer-side mirror of GetMakerOrdersIntegrationTests.
+    // GET_orders_UnreadMessageCount_returns_denormalized_value — the
+    // customer list projection reads the denormalized
+    // orders.customer_unread_message_count column (T-0079/T-0080). A
+    // bumped counter flows through to the wire DTO; orders without
+    // messages surface 0 (NOT null — the customer contract is
+    // non-nullable int).
+    [Fact]
+    public async Task GET_orders_UnreadMessageCount_returns_denormalized_value()
+    {
+        var seedActor = "test-seed";
+        var seedAt = new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
+
+        await using (var db = _harness.CreateDbContext())
+        {
+            await SeedCommonAsync(db, seedActor, seedAt);
+
+            db.Set<Order>().Add(BuildOrder("o-a-1", CustomerAUserId, 30000,
+                new DateTimeOffset(2026, 5, 1, 9, 0, 0, TimeSpan.Zero), seedActor));
+            db.Set<Order>().Add(BuildOrder("o-a-2", CustomerAUserId, 50000,
+                new DateTimeOffset(2026, 5, 5, 9, 0, 0, TimeSpan.Zero), seedActor));
+            await db.SaveChangesAsync();
+        }
+
+        // Bump customer A's unread counter on o-a-1 (two maker-authored
+        // posts) directly at the DB level; o-a-2 stays untouched.
+        await using (var db = _harness.CreateDbContext())
+        {
+            var order = await db.Set<Order>().FirstAsync(o => o.Id == "o-a-1");
+            order.IncrementUnreadFor(OrderMessageAuthorRole.Maker);
+            order.IncrementUnreadFor(OrderMessageAuthorRole.Maker);
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IssueCustomerToken(CustomerAUserId, "a@example.cz"));
+
+        var response = await client.GetAsync("/api/v1/orders?page=1&pageSize=20");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<GetCustomerOrders.GetCustomerOrdersResponse>(JsonOpts);
+        body!.Orders.Items.Should().HaveCount(2);
+        body.Orders.Items.Single(i => i.OrderId == "o-a-1")
+            .UnreadMessageCount.Should().Be(2, "the denormalized counter flows through the projection");
+        body.Orders.Items.Single(i => i.OrderId == "o-a-2")
+            .UnreadMessageCount.Should().Be(0, "no-message orders surface 0, not null");
     }
 
     [Fact]

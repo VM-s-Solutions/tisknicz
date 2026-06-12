@@ -9,7 +9,10 @@ namespace Makables.Infra.Database.Invoices;
 /// reads on every <c>GetByIdFor*</c> so T-0068b's
 /// <c>IInvoiceService.IssueAsync</c> + the future
 /// <c>AttachPdfBlobPath</c> call site (set-once mutation) can mutate the
-/// returned aggregate inside the surrounding command's UoW.
+/// returned aggregate inside the surrounding command's UoW. Read-only
+/// callers (T-0088 invoice download) use the paired
+/// <c>*ReadOnlyAsync</c> variants which add <c>.AsNoTracking()</c> per
+/// ADR 0025 §Performance expectations item 2 (OrderRepository pattern).
 ///
 /// <para>
 /// Soft-delete filtering is automatic via
@@ -121,6 +124,23 @@ public sealed class InvoiceRepository(MakablesDbContext db) : IInvoiceRepository
         // forever in the gap-free sense; that is fine because the
         // numbering scope is platform-wide per locked decision 1).
         return db.Set<Invoice>()
+            .FirstOrDefaultAsync(i => i.OrderId == orderId, cancellationToken);
+    }
+
+    public Task<Invoice?> GetByOrderIdReadOnlyAsync(string orderId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+            return Task.FromResult<Invoice?>(null);
+
+        // AsNoTracking: read-only callers (T-0088 invoice download on
+        // both hosts) only inspect PdfBlobPath + InvoiceNumber after the
+        // ownership-scoped order load; they never call methods on the
+        // returned aggregate. Skipping change-tracking + the snapshot
+        // allocation per ADR 0025 §Performance expectations item 2.
+        // Mirrors OrderRepository.GetByIdForCustomerReadOnlyAsync. The
+        // T-0068b idempotency caller keeps the tracked GetByOrderIdAsync.
+        return db.Set<Invoice>()
+            .AsNoTracking()
             .FirstOrDefaultAsync(i => i.OrderId == orderId, cancellationToken);
     }
 
