@@ -1066,6 +1066,26 @@ Future drift goes here, not as ad-hoc post-process in `generate-api.mjs` — the
 
 ---
 
+### A.22 State-machine detour with restore (Disputed + PreDisputeState)
+
+When an exceptional condition must suspend an entity's normal lifecycle without losing its place, the entity enters a **detour state** and records the state it left in a dedicated restore column:
+
+```csharp
+public OrderState State { get; private set; }            // = Disputed while detoured
+public OrderState? PreDisputeState { get; private set; } // state to restore on resolve
+```
+
+**Rules:**
+1. The restore column is written only by the detour-open command and cleared only by the resolve command. Nothing else touches it.
+2. Invariant: restore column non-null ⇔ `State` is the detour state. Enforce in the entity, assert in tests.
+3. While detoured, the normal-transition allow-list rejects lifecycle commands; the blocked-transition error names the sanctioned command (T-0107 discipline, §A.4 error codes).
+4. Resolve restores `State = PreDisputeState` by default. Outcome-driven side effects (e.g. a refund) are dispatched as **sanctioned commands** from outcome handlers — the resolve handler orchestrates, it never inlines the side-effect logic. A sanctioned command may then move the entity to a terminal state (e.g. full refund → `Refunded`) through its own allow-listed transition.
+5. Detour open/resolve are Silent-Success idempotent: re-opening an already-detoured entity (or re-resolving a resolved one) returns success with no side effects (T-0067/T-0076 precedent).
+
+First use: `Order.State = Disputed` + `Order.PreDisputeState` (refund-dispute bundle, Q2 lock 2026-06-12). See [extension-points.md §13](./extension-points.md#13-dispute-resolution) for the Dispute entity and its outcome-handler seam.
+
+---
+
 ## B — Frontend patterns (Next.js)
 
 ### B.1 The frontend is a pure presentation layer

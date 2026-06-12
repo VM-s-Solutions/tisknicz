@@ -222,5 +222,5 @@
   - (b) Render a maker-variant invoice copy with email redacted (new QuestPDF variant; invoice integrity concern — the maker's copy differs from the customer's legal document).
   - (c) Drop the maker invoice button until ruled (revenue-path UX loss).
   - Recommend (a) with explicit doc reconciliation — the invoice is a commercial document between the parties; the DOM-level lock guards casual scraping, not contractual documents.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** (a) accepted 2026-06-12 — invoice is a commercial document between contracting parties; Czech invoicing customs include contact details. DOM-level GDPR lock (T-0081/T-0082) guards casual scraping, not contractual documents. US-maker-0010 reconciled; locks annotated.

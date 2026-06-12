@@ -209,6 +209,8 @@ As a maker, I want to see the full details of an order including any STL/PDF fil
 - **AC-1** Given the maker owns the order, when they visit `/dashboard/maker/objednavka/<id>`, then they see customer name + email + phone, shipping method + pickup point or address, all attachments (with download links), notes, the full timeline, and the action buttons appropriate to the current state.
 - **AC-2** Given attachments include STL/3MF/OBJ, when the maker downloads them, then they stream through the backend (no direct blob URL).
 
+> **Annotation (2026-06-12, Q-0016 ruled — option a):** the "email" in AC-1's grant is satisfied at the **commercial-document level, not the DOM**. Maker dashboard DOM surfaces exclude customer email (T-0081/T-0082 compile-time GDPR lock; contact is mediated by the order message thread, US-maker-0011), while the invoice PDF (T-0088 download) legitimately embeds customer email as sanctioned commercial-document content between contracting parties. AC-1 is reconciled with both locks under this reading.
+
 ### Related
 - ADRs: 0011
 - Roles: `order`, `blob-storage`, `order-message`
