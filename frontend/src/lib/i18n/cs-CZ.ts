@@ -455,6 +455,44 @@ export const messages = {
   'order.invalidTransition':
     'Tuto akci nelze v aktuálním stavu objednávky provést.',
 
+  // T-0105 admin refund error codes (parity with BusinessErrorMessage).
+  // Admin-surface only (T-0118 refund UI). PM/UX to refine on PR review.
+  'payment.refund.invalidState':
+    'Objednávku v tomto stavu nelze refundovat.',
+  'payment.refund.amountExceedsRemaining':
+    'Částka překračuje zbývající refundovatelnou částku objednávky.',
+  'payment.refund.postPayoutAckRequired':
+    'Objednávka už byla vyplacena výrobci — refundaci je nutné výslovně potvrdit.',
+  'payment.refund.noProviderRef':
+    'Objednávka nemá záznam o platbě — není co refundovat.',
+
+  // T-0106 dispute error codes (parity with BusinessErrorMessage).
+  // PM/UX to refine on PR review.
+  'order.dispute.categoryNotAllowed':
+    'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
+  'order.dispute.notOpen':
+    'K této objednávce není otevřená žádná reklamace.',
+  // Admin / ops surface only — the outbox row parks until the
+  // ADMIN_NOTIFICATION_EMAIL config lands.
+  'email.adminRecipientNotConfigured':
+    'E-mail pro administrátorská upozornění není nastaven. Tým byl informován.',
+
+  // T-0107 manual state-change error codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 UI) — the Czech
+  // copy names the sanctioned action per US-admin-0010 AC-2.
+  'order.manualTransition.notAllowed':
+    'Tento ruční přechod stavu není povolen.',
+  'order.manualTransition.useRefundOrder':
+    'Tento přechod není povolen — použijte refundaci objednávky.',
+  'order.manualTransition.useOpenDispute':
+    'Tento přechod není povolen — použijte otevření reklamace.',
+  'order.manualTransition.useResolveDispute':
+    'Objednávka je v reklamaci — použijte vyřízení reklamace.',
+  'order.manualTransition.useMarkPayoutBatchCompleted':
+    'Tento přechod není povolen — dokončení proběhne vyplacením výrobce.',
+  'order.manualTransition.paidRequiresProviderRef':
+    'Objednávku nelze označit jako zaplacenou — chybí záznam platby od platební brány.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

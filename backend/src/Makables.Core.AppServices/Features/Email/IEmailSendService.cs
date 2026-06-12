@@ -45,6 +45,7 @@ public sealed class EmailSendService(
     IInvoiceRepository invoices,
     IBlobStorageClient blobStorage,
     IOptions<PublicAppUrlsOptions> urls,
+    IOptions<EmailOptions> emailOptions,
     ILogger<EmailSendService> logger) : IEmailSendService
 {
     public Task<BusinessResult<EmailSentReceipt>> SendAsync(
@@ -91,8 +92,153 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderCancelledCustomerEmail
                 => SendOrderCancelledCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderRefundedCustomerEmail
+                => SendOrderRefundedCustomerEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderDisputedAdminEmail
+                => SendOrderDisputedAdminEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderDisputeResolvedCustomerEmail
+                => SendOrderDisputeResolvedCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0106: OrderDisputed (admin) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderDisputedAdminEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderDisputedAdminEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderDisputedAdminEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // §C.9: the recipient resolves at SEND time — deliberately not
+        // baked into the payload so a missing config never blocks the
+        // dispute open itself; the outbox row parks Configuration-class
+        // and is retried after the fix (ADR 0020).
+        var adminAddress = emailOptions.Value.AdminNotificationAddress;
+        if (string.IsNullOrWhiteSpace(adminAddress))
+        {
+            logger.LogCritical(
+                "OrderDisputedAdminEmail for order {OrderId}: EmailOptions.AdminNotificationAddress " +
+                "(ADMIN_NOTIFICATION_EMAIL) is not configured — parking the outbox row.",
+                payload.OrderId);
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(
+                Error.Configuration(BusinessErrorMessage.EmailAdminRecipientNotConfigured)));
+        }
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderDisputedAdmin,
+            toAddress: adminAddress,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["dispute_id"] = payload.DisputeId,
+                ["category"] = payload.Category.ToString(),
+                ["source"] = payload.Source.ToString(),
+                // USER-SUPPLIED (customer/maker free text) — neutralized so
+                // hostile "{{key}}" sequences can never re-expand inside the
+                // substitution engine (Gate 3 F1).
+                ["description"] = NeutralizePlaceholderSyntax(payload.Description),
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0106: OrderDisputeResolved (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderDisputeResolvedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderDisputeResolvedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderDisputeResolvedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // Czech outcome labels for the plain-text body (no conditional
+        // syntax in the substitution engine; pre-rendered like the
+        // refund_kind variant in the T-0105 branch).
+        var outcomeLabel = payload.Outcome switch
+        {
+            Makables.Core.Domain.Orders.DisputeResolutionOutcome.Refunded => "vrácení peněz",
+            Makables.Core.Domain.Orders.DisputeResolutionOutcome.Cancelled => "zrušení objednávky",
+            _ => "pokračování objednávky",
+        };
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderDisputeResolvedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["outcome"] = payload.Outcome.ToString(),
+                ["outcome_label"] = outcomeLabel,
+                // Customer-VISIBLE per §C.7. Admin-authored free text —
+                // neutralized like Description so "{{key}}" sequences can
+                // never re-expand inside the substitution engine (Gate 3 F1).
+                ["resolution_notes"] = NeutralizePlaceholderSyntax(payload.ResolutionNotes),
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0105: OrderRefunded (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderRefundedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderRefundedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderRefundedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderRefundedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["refunded_amount_minor"] = payload.RefundedAmountMinor,
+                ["refunded_amount"] = FormatAmount(payload.RefundedAmountMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                // Template renders full-vs-partial copy from this flag.
+                // Pre-rendered as a string because the plain-text
+                // substitution path has no conditional syntax.
+                ["is_full_refund"] = payload.IsFullRefund ? "true" : "false",
+                ["refund_kind"] = payload.IsFullRefund ? "plná" : "částečná",
+                ["language_code"] = payload.LanguageCode,
+            },
+            // No PDF attachment — credit-note invoices are v1.1 (Q1).
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0079: OrderMessagePostedCustomer email branch. ===
@@ -685,8 +831,16 @@ public sealed class EmailSendService(
 
     // SECURITY: plain-text only. Do NOT reuse for HTML bodies — there is no
     // escaping, so any value-containing-{{key}} would produce an XSS-shaped
-    // surprise. The current callers feed only URL / timestamp / language tag
-    // values; revisit if that changes.
+    // surprise. RULE: substitution VALUES must be trusted (URLs, timestamps,
+    // language tags, our own ids/amounts). The sequential Replace loop means
+    // a value containing "{{key}}" re-expands inside hostile text — so any
+    // USER-SUPPLIED value (dispute description, resolution notes, future
+    // free-text fields) MUST be passed through NeutralizePlaceholderSyntax
+    // by the calling email branch BEFORE it enters the substitution map
+    // (Gate 3 F1). The same map rides EmailMessage.Data to SendGrid dynamic
+    // templates: template authors must use double-stache ({{description}},
+    // never triple-stache) for user-supplied keys and render them under a
+    // "text from the customer/maker" label.
     private static string SubstitutePlainTextPlaceholders(
         string body, IReadOnlyDictionary<string, object> data)
     {
@@ -695,4 +849,16 @@ public sealed class EmailSendService(
             result = result.Replace($"{{{{{key}}}}}", value?.ToString() ?? string.Empty);
         return result;
     }
+
+    /// <summary>
+    /// SECURITY (Gate 3 F1): break placeholder syntax in user-supplied
+    /// values before they enter the substitution map. "{{" becomes
+    /// "{ {" so a hostile description containing e.g.
+    /// <c>{{language_code}}</c> renders as inert text instead of being
+    /// re-expanded by <see cref="SubstitutePlainTextPlaceholders"/> (or
+    /// by a SendGrid template). Visual fidelity is near-identical; the
+    /// content is plain-text triage/notification copy.
+    /// </summary>
+    private static string NeutralizePlaceholderSyntax(string value)
+        => value.Replace("{{", "{ {");
 }

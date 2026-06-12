@@ -71,7 +71,10 @@ public class ComgatePaymentProviderWebhookTests
         using var loggerFactory = LoggerFactory.Create(b => b.AddProvider(_loggerProvider));
         var logger = loggerFactory.CreateLogger<ComgatePaymentProvider>();
 
-        _sut = new ComgatePaymentProvider(factory, opts, _configs, registry, logger);
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(DateTimeOffset.Parse("2026-06-12T10:00:00Z"));
+
+        _sut = new ComgatePaymentProvider(factory, opts, _configs, registry, clock, logger);
     }
 
     private static HttpRequest BuildFormRequest(IDictionary<string, string> fields)

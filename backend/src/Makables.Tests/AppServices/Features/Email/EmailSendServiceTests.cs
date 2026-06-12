@@ -42,9 +42,14 @@ public class EmailSendServiceTests
             EmailConfirmationPath = "/auth/confirm?token={token}",
             PasswordResetPath = "/auth/reset?token={token}",
         });
+        // T-0106: admin dispute-digest recipient resolves at send time.
+        var emailOptions = Options.Create(new EmailOptions
+        {
+            AdminNotificationAddress = "ops@makables.test",
+        });
         _sut = new EmailSendService(_templates, _translations, _provider,
             _invoices, _blobStorage,
-            urls, NullLogger<EmailSendService>.Instance);
+            urls, emailOptions, NullLogger<EmailSendService>.Instance);
     }
 
     private static EmailTemplate CreateTemplate(EmailTemplateType type) =>
@@ -748,6 +753,53 @@ public class EmailSendServiceTests
         await _invoices.DidNotReceive().GetByOrderIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _blobStorage.DidNotReceive().DownloadAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    // === T-0106 fold (Gate 3 F1) — user-supplied text cannot inject placeholders. ===
+
+    [Fact]
+    public async Task OrderDisputedAdminEmail_description_with_placeholder_syntax_renders_literally_not_expanded()
+    {
+        // Gate 3 F1: attacker-controlled Description flows through the
+        // substitution engine. A description containing "{{order_number}}"
+        // must NOT re-expand into the real order number — the "{{" is
+        // neutralized to "{ {" at the email-branch boundary.
+        var tpl = CreateTemplate(EmailTemplateType.OrderDisputedAdmin);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ,
+            "Reklamace #{{order_number}}",
+            "Objednávka: {{order_number}}\nPopis: {{description}}");
+        _templates.GetByTypeAsync(EmailTemplateType.OrderDisputedAdmin, Arg.Any<CancellationToken>())
+            .Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>())
+            .Returns(tr);
+        EmailMessage? sent = null;
+        _provider.SendAsync(Arg.Do<EmailMessage>(m => sent = m), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("sg-disputed", DateTimeOffset.UtcNow)));
+
+        var payload = JsonSerializer.Serialize(new OrderDisputedAdminEmailPayload(
+            OrderId: TestOrderId,
+            OrderNumber: TestOrderNumber,
+            DisputeId: "dsp-1",
+            Category: DisputeCategory.NotDelivered,
+            Description: "Pošlete {{order_number}} a {{language_code}} sem.",
+            Source: DisputeSource.Customer,
+            LanguageCode: LanguageCode.CsCZ,
+            ActionUrl: "https://admin.makables.test/objednavky/ord-1"));
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.OrderDisputedAdminEmail, payload, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        sent.Should().NotBeNull();
+        // The legitimate template placeholder still expands.
+        sent!.PlainTextBody.Should().Contain($"Objednávka: {TestOrderNumber}");
+        // The hostile placeholders render as inert, neutralized text...
+        sent.PlainTextBody.Should().Contain("Pošlete { {order_number}} a { {language_code}} sem.");
+        // ...and are NEVER expanded inside the attacker-controlled block.
+        sent.PlainTextBody.Should().NotContain($"Pošlete {TestOrderNumber}");
+        sent.PlainTextBody.Should().NotContain($"a {LanguageCode.CsCZ} sem");
+        // The SendGrid dynamic-template data carries the neutralized value too.
+        ((string)sent.Data["description"]).Should().NotContain("{{");
     }
 
     [Fact]

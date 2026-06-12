@@ -8,7 +8,6 @@ using Makables.Core.Domain.Money;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Products;
-using Makables.Core.Domain.Shipping;
 using Makables.Infra.Database;
 using Makables.IntegrationTests.Common;
 using MediatR;
@@ -24,11 +23,12 @@ using MakerEntity = Makables.Core.Domain.Makers.Maker;
 namespace Makables.IntegrationTests.Orders;
 
 /// <summary>
-/// End-to-end pin for T-0078 DisputeShipment STUB. Real Postgres;
-/// dispatch the Command via MediatR; assert the Order is NOT mutated
-/// (stays Shipped per the T-0078 STUB contract) and exactly one
-/// OrderDisputedCarrierSourced outbox row landed with the expected
-/// payload shape.
+/// End-to-end pin for the T-0106 REWIRED DisputeShipment (was the
+/// T-0078 stub — the old "no Order state mutation" pin is now FALSE by
+/// design). Real Postgres; dispatch the Command via MediatR; assert the
+/// Shipped → Disputed transition (with PreDisputeState), the
+/// Source=Carrier dispute row, exactly one order.disputed.adminEmail
+/// outbox row, and Silent-Success on a re-fire.
 /// </summary>
 [Collection(PostgresCollection.Name)]
 public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
@@ -183,7 +183,7 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DisputeShipment_e2e_emits_outbox_event_without_Order_state_mutation()
+    public async Task DisputeShipment_e2e_transitions_to_Disputed_with_carrier_dispute_row_and_admin_email()
     {
         await SeedShippedOrderAsync();
         using var scope = _factory.Services.CreateScope();
@@ -195,22 +195,51 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
 
         result.IsSuccess.Should().BeTrue();
 
-        await using var db = _harness.CreateDbContext();
-        // Order state is unchanged (T-0078 STUB).
-        var row = await db.Set<Order>().AsNoTracking()
-            .FirstOrDefaultAsync(o => o.Id == OrderId);
-        row!.State.Should().Be(OrderState.Shipped);
+        await using (var db = _harness.CreateDbContext())
+        {
+            // T-0106: the REAL parenthesis-state transition (stub gone).
+            var row = await db.Set<Order>().AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == OrderId);
+            row!.State.Should().Be(OrderState.Disputed);
+            row.PreDisputeState.Should().Be(OrderState.Shipped);
+            row.DisputedAt.Should().NotBeNull();
 
-        // Exactly one outbox row of the dispute event type.
-        var outbox = await db.Set<OutboxEvent>().AsNoTracking()
-            .Where(e => e.AggregateId == OrderId
-                     && e.EventType == OutboxEventTypes.OrderDisputedCarrierSourced)
-            .ToListAsync();
-        outbox.Should().HaveCount(1);
-        var payload = JsonSerializer.Deserialize<OrderDisputedCarrierSourcedPayload>(
-            outbox[0].PayloadJson);
-        payload!.OrderId.Should().Be(OrderId);
-        payload.Reason.Should().Be(DisputeReason.CarrierFailed);
-        payload.CarrierState.Should().Be(ShipmentState.Failed);
+            // Carrier-sourced dispute row with the §C.5 category mapping.
+            var dispute = await db.Set<Dispute>().AsNoTracking()
+                .SingleAsync(d => d.OrderId == OrderId);
+            dispute.Source.Should().Be(DisputeSource.Carrier);
+            dispute.Category.Should().Be(DisputeCategory.CarrierFailed);
+            dispute.Description.Should().Contain("PKT-99",
+                "the canned description carries the carrier ref");
+            dispute.ResolvedAt.Should().BeNull();
+
+            // Exactly one admin-email row; the retired carrierSourced
+            // event type no longer exists anywhere.
+            var outbox = await db.Set<OutboxEvent>().AsNoTracking()
+                .Where(e => e.AggregateId == OrderId)
+                .ToListAsync();
+            outbox.Should().HaveCount(1);
+            outbox[0].EventType.Should().Be(OutboxEventTypes.OrderDisputedAdminEmail);
+            var payload = JsonSerializer.Deserialize<OrderDisputedAdminEmailPayload>(
+                outbox[0].PayloadJson);
+            payload!.OrderId.Should().Be(OrderId);
+            payload.Source.Should().Be(DisputeSource.Carrier);
+            payload.Category.Should().Be(DisputeCategory.CarrierFailed);
+        }
+
+        // Re-fire on the now-Disputed order: Silent-Success, no new rows,
+        // no second emission (the stub's repeat-emission contract is gone).
+        var refire = await mediator.Send(
+            new DisputeShipment.Command(OrderId, DisputeReason.CarrierFailed),
+            default);
+        refire.IsSuccess.Should().BeTrue();
+
+        await using (var db = _harness.CreateDbContext())
+        {
+            (await db.Set<Dispute>().AsNoTracking().CountAsync(d => d.OrderId == OrderId))
+                .Should().Be(1);
+            (await db.Set<OutboxEvent>().AsNoTracking().CountAsync(e => e.AggregateId == OrderId))
+                .Should().Be(1);
+        }
     }
 }

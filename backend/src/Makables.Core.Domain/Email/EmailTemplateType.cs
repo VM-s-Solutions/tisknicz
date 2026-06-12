@@ -88,4 +88,31 @@ public enum EmailTemplateType
     /// in T-0105 / T-0107.
     /// </summary>
     OrderCancelledAutoExpiryCustomer = 11,
+
+    /// <summary>
+    /// "Vrácení peněz k objednávce {orderNumber}" customer notification
+    /// after an admin refund (full or partial — the payload's
+    /// <c>IsFullRefund</c> flag picks the copy variant). Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderRefundedCustomerEmail"/>.
+    /// T-0105.
+    /// </summary>
+    OrderRefundedCustomer = 12,
+
+    /// <summary>
+    /// "Nová reklamace k objednávce {orderNumber}" admin digest fired on
+    /// every dispute open (customer / maker / carrier / admin source).
+    /// Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderDisputedAdminEmail"/>.
+    /// Recipient = <c>EmailOptions.AdminNotificationAddress</c>, resolved
+    /// at send time. T-0106.
+    /// </summary>
+    OrderDisputedAdmin = 13,
+
+    /// <summary>
+    /// "Vaše reklamace byla vyřízena" customer notification with outcome
+    /// + the admin's customer-visible notes. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderDisputeResolvedCustomerEmail"/>.
+    /// T-0106.
+    /// </summary>
+    OrderDisputeResolvedCustomer = 14,
 }

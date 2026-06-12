@@ -158,6 +158,9 @@ public static class MakablesInfrastructureExtensions
         // === Orders (T-0060) ===
         services.AddScoped<IOrderRepository, OrderRepository>();
 
+        // === Disputes (T-0106) ===
+        services.AddScoped<IDisputeRepository, DisputeRepository>();
+
         // === Order read-side queries (T-0080 / T-0081 / T-0082) ===
         // Separate from IOrderRepository per ADR 0023 — projection-only
         // reads (AsNoTracking + IgnoreAutoIncludes) split from the
@@ -218,6 +221,22 @@ public static class MakablesInfrastructureExtensions
                "and every path template must start with '/' and contain the literal '{token}' placeholder.")
             .ValidateOnStart();
         services.AddScoped<IEmailSendService, EmailSendService>();
+
+        // T-0106: admin dispute-notification recipient. Bound from the
+        // Email section, with the raw ADMIN_NOTIFICATION_EMAIL env var as
+        // the documented deployment override. NOT ValidateOnStart — a
+        // missing address parks the outbox row Configuration-class at
+        // send time instead of stopping the host (§C.9).
+        services.AddOptions<EmailOptions>()
+            .Configure<IConfiguration>((opts, config) =>
+            {
+                config.GetSection(EmailOptions.SectionName).Bind(opts);
+                var envOverride = config[EmailOptions.AdminNotificationAddressEnvKey];
+                if (!string.IsNullOrWhiteSpace(envOverride))
+                {
+                    opts.AdminNotificationAddress = envOverride;
+                }
+            });
 
         // === Pricing (T-0061) ===
         // Scoped because the underlying repositories (IProductRepository +

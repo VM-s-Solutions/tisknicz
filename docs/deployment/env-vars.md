@@ -53,6 +53,12 @@ Secrets come from Key Vault references (`@Microsoft.KeyVault(SecretUri=...)`), n
 | `SendGrid:DefaultFromAddress` | no |
 | `PublicAppUrls:WebBaseUrl` | no |
 
+## Operator-set: notification recipients (soft — NOT `ValidateOnStart`)
+
+| Key | Notes |
+|---|---|
+| `ADMIN_NOTIFICATION_EMAIL` | Recipient of `order.disputed.adminEmail` (T-0106). Raw env-var override of `Email:AdminNotificationAddress` (`EmailOptions`); set per environment. Consumed at email **send** time, not at boot — a missing value does not stop the host; the outbox row parks `Configuration`-class (visible in admin outbox tooling, retried after the setting is fixed). |
+
 ## Maintenance rule
 
 Any PR that adds a `%key%` binding expression, a `ValidateOnStart` options class, or a new

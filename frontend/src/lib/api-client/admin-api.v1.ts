@@ -12,6 +12,26 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    refund(orderId: string, body: RefundOrderRequest): Promise<RefundOrderResponse>;
+
+    /**
+     * @return OK
+     */
+    dispute(orderId: string, body: OpenAdminDisputeRequest): Promise<OpenDisputeResponse>;
+
+    /**
+     * @return OK
+     */
+    resolve(orderId: string, body: ResolveDisputeRequest): Promise<ResolveDisputeResponse>;
+
+    /**
+     * @return OK
+     */
+    state(orderId: string, body: ChangeOrderStateRequest): Promise<ChangeOrderStateManuallyResponse>;
+
+    /**
+     * @return OK
+     */
     meGET(): Promise<void>;
 
     /**
@@ -100,6 +120,322 @@ export class AdminApi implements IAdminApi {
     constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
         this.http = http ? http : window as any;
         this.baseUrl = baseUrl ?? "http://localhost:5003/";
+    }
+
+    /**
+     * @return OK
+     */
+    refund(orderId: string, body: RefundOrderRequest): Promise<RefundOrderResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/refund";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRefund(_response);
+        });
+    }
+
+    protected processRefund(response: Response): Promise<RefundOrderResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = RefundOrderResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status === 422) {
+            return response.text().then((_responseText) => {
+            let result422: any = null;
+            let resultData422 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result422 = ErrorDto.fromJS(resultData422);
+            return throwException("Unprocessable Entity", status, _responseText, _headers, result422);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<RefundOrderResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    dispute(orderId: string, body: OpenAdminDisputeRequest): Promise<OpenDisputeResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/dispute";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDispute(_response);
+        });
+    }
+
+    protected processDispute(response: Response): Promise<OpenDisputeResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = OpenDisputeResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<OpenDisputeResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    resolve(orderId: string, body: ResolveDisputeRequest): Promise<ResolveDisputeResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/dispute/resolve";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processResolve(_response);
+        });
+    }
+
+    protected processResolve(response: Response): Promise<ResolveDisputeResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ResolveDisputeResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status === 422) {
+            return response.text().then((_responseText) => {
+            let result422: any = null;
+            let resultData422 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result422 = ErrorDto.fromJS(resultData422);
+            return throwException("Unprocessable Entity", status, _responseText, _headers, result422);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ResolveDisputeResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    state(orderId: string, body: ChangeOrderStateRequest): Promise<ChangeOrderStateManuallyResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/state";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processState(_response);
+        });
+    }
+
+    protected processState(response: Response): Promise<ChangeOrderStateManuallyResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ChangeOrderStateManuallyResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ChangeOrderStateManuallyResponse>(null as any);
     }
 
     /**
@@ -686,6 +1022,106 @@ export class AdminApi implements IAdminApi {
     }
 }
 
+export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
+    state!: OrderState;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateManuallyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.state = _data["state"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateManuallyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateManuallyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["state"] = this.state;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateManuallyResponse {
+    state: OrderState;
+
+    [key: string]: any;
+}
+
+export class ChangeOrderStateRequest implements IChangeOrderStateRequest {
+    targetState!: OrderState;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.targetState = _data["targetState"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["targetState"] = this.targetState;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateRequest {
+    targetState: OrderState;
+    reason: string;
+
+    [key: string]: any;
+}
+
 export class ChangePasswordRequest implements IChangePasswordRequest {
     currentPassword!: string;
     newPassword!: string;
@@ -886,6 +1322,93 @@ export interface IConsumeMagicLinkRequest {
     [key: string]: any;
 }
 
+export enum DisputeCategory {
+    NotDelivered = "NotDelivered",
+    DamagedItem = "DamagedItem",
+    NotAsDescribed = "NotAsDescribed",
+    CarrierReturned = "CarrierReturned",
+    CarrierFailed = "CarrierFailed",
+    Other = "Other",
+}
+
+export enum DisputeResolutionOutcome {
+    Refunded = "Refunded",
+    Resumed = "Resumed",
+    Cancelled = "Cancelled",
+}
+
+export class ErrorDto implements IErrorDto {
+    field!: string;
+    code!: string;
+    type?: ErrorType;
+    details?: any;
+
+    [key: string]: any;
+
+    constructor(data?: IErrorDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.field = _data["field"];
+            this.code = _data["code"];
+            this.type = _data["type"];
+            this.details = _data["details"];
+        }
+    }
+
+    static fromJS(data: any): ErrorDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ErrorDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["field"] = this.field;
+        data["code"] = this.code;
+        data["type"] = this.type;
+        data["details"] = this.details;
+        return data;
+    }
+}
+
+export interface IErrorDto {
+    field: string;
+    code: string;
+    type?: ErrorType;
+    details?: any;
+
+    [key: string]: any;
+}
+
+export enum ErrorType {
+    Validation = "Validation",
+    Unauthorized = "Unauthorized",
+    Forbidden = "Forbidden",
+    NotFound = "NotFound",
+    Conflict = "Conflict",
+    Transient = "Transient",
+    Permanent = "Permanent",
+    Configuration = "Configuration",
+    Unknown = "Unknown",
+}
+
 export class LoginRequest implements ILoginRequest {
     email!: string;
     password!: string;
@@ -934,6 +1457,242 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class OpenAdminDisputeRequest implements IOpenAdminDisputeRequest {
+    category!: DisputeCategory;
+    description!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IOpenAdminDisputeRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.category = _data["category"];
+            this.description = _data["description"];
+        }
+    }
+
+    static fromJS(data: any): OpenAdminDisputeRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new OpenAdminDisputeRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["category"] = this.category;
+        data["description"] = this.description;
+        return data;
+    }
+}
+
+export interface IOpenAdminDisputeRequest {
+    category: DisputeCategory;
+    description: string;
+
+    [key: string]: any;
+}
+
+export class OpenDisputeResponse implements IOpenDisputeResponse {
+    orderId!: string;
+    disputeId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IOpenDisputeResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.disputeId = _data["disputeId"];
+        }
+    }
+
+    static fromJS(data: any): OpenDisputeResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new OpenDisputeResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["disputeId"] = this.disputeId;
+        return data;
+    }
+}
+
+export interface IOpenDisputeResponse {
+    orderId: string;
+    disputeId: string;
+
+    [key: string]: any;
+}
+
+export enum OrderState {
+    PendingPayment = "PendingPayment",
+    Paid = "Paid",
+    Accepted = "Accepted",
+    Shipped = "Shipped",
+    Delivered = "Delivered",
+    Completed = "Completed",
+    Cancelled = "Cancelled",
+    Refunded = "Refunded",
+    Disputed = "Disputed",
+}
+
+export class RefundOrderRequest implements IRefundOrderRequest {
+    amountMinor!: number;
+    reason!: string;
+    acknowledgePostPayout!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IRefundOrderRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.amountMinor = _data["amountMinor"];
+            this.reason = _data["reason"];
+            this.acknowledgePostPayout = _data["acknowledgePostPayout"];
+        }
+    }
+
+    static fromJS(data: any): RefundOrderRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new RefundOrderRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["amountMinor"] = this.amountMinor;
+        data["reason"] = this.reason;
+        data["acknowledgePostPayout"] = this.acknowledgePostPayout;
+        return data;
+    }
+}
+
+export interface IRefundOrderRequest {
+    amountMinor: number;
+    reason: string;
+    acknowledgePostPayout: boolean;
+
+    [key: string]: any;
+}
+
+export class RefundOrderResponse implements IRefundOrderResponse {
+    orderId!: string;
+    state!: OrderState;
+    refundedAmountMinor!: number;
+    remainingRefundableMinor!: number;
+    isFullRefund!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IRefundOrderResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.state = _data["state"];
+            this.refundedAmountMinor = _data["refundedAmountMinor"];
+            this.remainingRefundableMinor = _data["remainingRefundableMinor"];
+            this.isFullRefund = _data["isFullRefund"];
+        }
+    }
+
+    static fromJS(data: any): RefundOrderResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new RefundOrderResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["state"] = this.state;
+        data["refundedAmountMinor"] = this.refundedAmountMinor;
+        data["remainingRefundableMinor"] = this.remainingRefundableMinor;
+        data["isFullRefund"] = this.isFullRefund;
+        return data;
+    }
+}
+
+export interface IRefundOrderResponse {
+    orderId: string;
+    state: OrderState;
+    refundedAmountMinor: number;
+    remainingRefundableMinor: number;
+    isFullRefund: boolean;
 
     [key: string]: any;
 }
@@ -1090,6 +1849,114 @@ export class RequestPasswordResetRequest implements IRequestPasswordResetRequest
 
 export interface IRequestPasswordResetRequest {
     email: string;
+
+    [key: string]: any;
+}
+
+export class ResolveDisputeRequest implements IResolveDisputeRequest {
+    outcome!: DisputeResolutionOutcome;
+    resolutionNotes!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IResolveDisputeRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.outcome = _data["outcome"];
+            this.resolutionNotes = _data["resolutionNotes"];
+        }
+    }
+
+    static fromJS(data: any): ResolveDisputeRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ResolveDisputeRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["outcome"] = this.outcome;
+        data["resolutionNotes"] = this.resolutionNotes;
+        return data;
+    }
+}
+
+export interface IResolveDisputeRequest {
+    outcome: DisputeResolutionOutcome;
+    resolutionNotes: string;
+
+    [key: string]: any;
+}
+
+export class ResolveDisputeResponse implements IResolveDisputeResponse {
+    orderId!: string;
+    state!: OrderState;
+    outcome!: DisputeResolutionOutcome;
+
+    [key: string]: any;
+
+    constructor(data?: IResolveDisputeResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.state = _data["state"];
+            this.outcome = _data["outcome"];
+        }
+    }
+
+    static fromJS(data: any): ResolveDisputeResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new ResolveDisputeResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["state"] = this.state;
+        data["outcome"] = this.outcome;
+        return data;
+    }
+}
+
+export interface IResolveDisputeResponse {
+    orderId: string;
+    state: OrderState;
+    outcome: DisputeResolutionOutcome;
 
     [key: string]: any;
 }

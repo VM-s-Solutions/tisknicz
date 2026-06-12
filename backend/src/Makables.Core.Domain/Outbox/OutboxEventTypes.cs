@@ -84,15 +84,24 @@ public static class OutboxEventTypes
     public const string OrderDeliveredCustomerEmail = "order.delivered.customerEmail";
 
     /// <summary>
-    /// "Order disputed (carrier-sourced)" event, fired by T-0078
-    /// <c>DisputeShipment.Handler</c> as a STUB when Packeta reports
-    /// Returned / Failed. NOT email-routed at MVP — the OutboxDispatcher
-    /// logs it via the "unrouted" branch until T-0106 wires the consumer
-    /// (real Disputed state transition + customer + admin email).
-    /// Intentionally absent from <see cref="IsEmailSend"/>,
-    /// <see cref="IsInvoiceGenerate"/>, <see cref="IsGenerateLabel"/>.
+    /// "A dispute was opened on order #..." admin notification, fired by
+    /// every open-dispute path (customer / maker / carrier-sourced via
+    /// the rewired <c>DisputeShipment</c> / admin). Recipient resolves at
+    /// SEND time from <c>EmailOptions.AdminNotificationAddress</c> —
+    /// deliberately NOT baked into the payload so a missing config parks
+    /// the outbox row instead of blocking the dispute open (T-0106 §C.9).
+    /// Replaces the retired T-0078 <c>order.disputed.carrierSourced</c>
+    /// stub event (never routed).
     /// </summary>
-    public const string OrderDisputedCarrierSourced = "order.disputed.carrierSourced";
+    public const string OrderDisputedAdminEmail = "order.disputed.adminEmail";
+
+    /// <summary>
+    /// "Your dispute was resolved" customer notification with the outcome
+    /// + the admin's customer-visible resolution notes, fired by
+    /// <c>ResolveDispute.Handler</c>. T-0106 (US-admin-0011 AC-2; the
+    /// maker counterpart is deliberately out of scope at MVP).
+    /// </summary>
+    public const string OrderDisputeResolvedCustomerEmail = "order.disputeResolved.customerEmail";
 
     /// <summary>
     /// "Customer has a new message on order #..." digest email, enqueued
@@ -121,6 +130,15 @@ public static class OutboxEventTypes
     public const string OrderCancelledCustomerEmail = "order.cancelled.customerEmail";
 
     /// <summary>
+    /// "Your order has been refunded" customer notification, fired by
+    /// <see cref="Features.Orders.RefundOrder"/> after a successful
+    /// Comgate refund — full AND partial (the payload's
+    /// <c>IsFullRefund</c> flag picks the copy variant). T-0105
+    /// (US-admin-0008 AC-1).
+    /// </summary>
+    public const string OrderRefundedCustomerEmail = "order.refunded.customerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -144,7 +162,10 @@ public static class OutboxEventTypes
                   or OrderDeliveredCustomerEmail
                   or OrderMessagePostedCustomerEmail
                   or OrderMessagePostedMakerEmail
-                  or OrderCancelledCustomerEmail;
+                  or OrderCancelledCustomerEmail
+                  or OrderRefundedCustomerEmail
+                  or OrderDisputedAdminEmail
+                  or OrderDisputeResolvedCustomerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

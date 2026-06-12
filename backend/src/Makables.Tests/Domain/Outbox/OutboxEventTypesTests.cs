@@ -139,24 +139,17 @@ public class OutboxEventTypesTests
         OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDeliveredCustomerEmail).Should().BeFalse();
     }
 
-    // ---- T-0078: OrderDisputedCarrierSourced is NOT email-routed at MVP (test-first) ----
+    // ---- T-0106: the retired carrierSourced stub event must be GONE ----
 
     [Fact]
-    public void IsEmailSend_returns_false_for_OrderDisputedCarrierSourced()
+    public void Retired_carrierSourced_event_is_not_routed_anywhere()
     {
-        // T-0078: the dispute event is NOT email-routed at MVP. T-0106 will
-        // wire the consumer + email branch; until then the dispatcher's
-        // "unrouted" branch logs it visibly. Pin the contract so an
-        // accidental IsEmailSend extension is caught.
-        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
-        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
-        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDisputedCarrierSourced).Should().BeFalse();
-    }
-
-    [Fact]
-    public void OrderDisputedCarrierSourced_constant_equals_canonical_string()
-    {
-        OutboxEventTypes.OrderDisputedCarrierSourced.Should().Be("order.disputed.carrierSourced");
+        // T-0106 deleted OutboxEventTypes.OrderDisputedCarrierSourced (the
+        // T-0078 stub event was never routed). Pin the literal so a
+        // re-introduction under the old name is caught.
+        OutboxEventTypes.IsEmailSend("order.disputed.carrierSourced").Should().BeFalse();
+        OutboxEventTypes.IsInvoiceGenerate("order.disputed.carrierSourced").Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel("order.disputed.carrierSourced").Should().BeFalse();
     }
 
     // ---- T-0079: OrderMessagePosted{Customer,Maker}Email routing (test-first) ----
@@ -229,5 +222,55 @@ public class OutboxEventTypesTests
         OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeTrue();
         OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeFalse();
         OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderCancelledCustomerEmail).Should().BeFalse();
+    }
+
+    // ---- T-0105: OrderRefundedCustomerEmail routing (test-first) ----
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderRefundedCustomerEmail()
+    {
+        // T-0105: the refund customer notification rides the send-email
+        // queue. Pin constant + classifier in one assert.
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderRefundedCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.refunded.customerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void OrderRefundedCustomerEmail_constant_equals_canonical_string()
+    {
+        OutboxEventTypes.OrderRefundedCustomerEmail.Should().Be("order.refunded.customerEmail");
+    }
+
+    [Fact]
+    public void OrderRefundedCustomerEmail_routes_to_email_queue_only()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderRefundedCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderRefundedCustomerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderRefundedCustomerEmail).Should().BeFalse();
+    }
+
+    // ---- T-0106: dispute notification routing (test-first) ----
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderDisputedAdminEmail()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDisputedAdminEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.disputed.adminEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsEmailSend_returns_true_for_OrderDisputeResolvedCustomerEmail()
+    {
+        OutboxEventTypes.IsEmailSend(OutboxEventTypes.OrderDisputeResolvedCustomerEmail).Should().BeTrue();
+        OutboxEventTypes.IsEmailSend("order.disputeResolved.customerEmail").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Dispute_email_events_route_to_email_queue_only()
+    {
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderDisputedAdminEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDisputedAdminEmail).Should().BeFalse();
+        OutboxEventTypes.IsInvoiceGenerate(OutboxEventTypes.OrderDisputeResolvedCustomerEmail).Should().BeFalse();
+        OutboxEventTypes.IsGenerateLabel(OutboxEventTypes.OrderDisputeResolvedCustomerEmail).Should().BeFalse();
     }
 }

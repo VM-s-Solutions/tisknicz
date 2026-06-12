@@ -130,6 +130,27 @@ public sealed class OrdersController(
     public async Task<IActionResult> HandOver(string orderId, CancellationToken ct) =>
         HandleResult(await mediator.Send(new HandOverOrder.Command(orderId), ct));
 
+    /// <summary>Request body for <see cref="OpenDisputeAction"/>. The order id rides the route.</summary>
+    public sealed record OpenMakerDisputeRequest(DisputeCategory Category, string Description);
+
+    /// <summary>
+    /// Maker opens a dispute on an order assigned to them (T-0106 /
+    /// US-admin-0011 — mirror of the customer endpoint with the maker
+    /// ownership scope). Carrier-reserved categories are rejected (400);
+    /// re-opening an already-disputed order returns the existing
+    /// dispute's id (200, Silent Success).
+    /// </summary>
+    [HttpPost("{orderId}/dispute")]
+    [ProducesResponseType(typeof(OpenMakerDispute.OpenMakerDisputeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> OpenDisputeAction(
+        string orderId, [FromBody] OpenMakerDisputeRequest request, CancellationToken ct) =>
+        HandleResult(await mediator.Send(
+            new OpenMakerDispute.Command(orderId, request.Category, request.Description), ct));
+
     /// <summary>
     /// Streaming download of a customer-uploaded order attachment. Same
     /// body as the customer-host equivalent except the ownership scope

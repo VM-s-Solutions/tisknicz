@@ -655,62 +655,13 @@ public class OrderTests
     }
 
     // === Refund ===
+    // T-0105 reshaped the refund surface (cumulative partial refunds);
+    // the allow-list + accumulation pins moved to OrderRefundTests.cs.
 
-    [Theory]
-    [InlineData(OrderState.Paid)]
-    [InlineData(OrderState.Accepted)]
-    [InlineData(OrderState.Shipped)]
-    [InlineData(OrderState.Delivered)]
-    [InlineData(OrderState.Completed)]
-    public void Refund_allowed_from_paid_through_completed(OrderState from)
-    {
-        var o = OrderInState(from);
-
-        var result = o.Refund(FixedClock());
-
-        result.IsSuccess.Should().BeTrue();
-        o.State.Should().Be(OrderState.Refunded);
-        o.RefundedAt.Should().Be(Now);
-    }
-
-    [Fact]
-    public void Refund_refused_from_pending_payment()
-    {
-        var o = ValidDefaults();
-        var result = o.Refund(FixedClock());
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
-        o.State.Should().Be(OrderState.PendingPayment);
-    }
-
-    // === OpenDispute ===
-
-    [Theory]
-    [InlineData(OrderState.Shipped)]
-    [InlineData(OrderState.Delivered)]
-    [InlineData(OrderState.Completed)]
-    public void OpenDispute_allowed_from_shipped_through_completed(OrderState from)
-    {
-        var o = OrderInState(from);
-
-        var result = o.OpenDispute(FixedClock());
-
-        result.IsSuccess.Should().BeTrue();
-        o.State.Should().Be(OrderState.Disputed);
-        o.DisputedAt.Should().Be(Now);
-    }
-
-    [Theory]
-    [InlineData(OrderState.PendingPayment)]
-    [InlineData(OrderState.Paid)]
-    [InlineData(OrderState.Accepted)]
-    public void OpenDispute_refused_before_shipped(OrderState from)
-    {
-        var o = OrderInState(from);
-        var result = o.OpenDispute(FixedClock());
-        result.IsSuccess.Should().BeFalse();
-        result.Error!.Code.Should().Be(BusinessErrorMessage.OrderInvalidTransition);
-    }
+    // === OpenDispute / ResolveDispute ===
+    // T-0106 changed the disputable-states allow-list (Paid/Accepted in,
+    // Completed out) and added the PreDisputeState parenthesis semantics;
+    // the pins moved to OrderDisputeTests.cs (rewritten red-first).
 
     // === Null-guard arguments ===
 
@@ -725,8 +676,9 @@ public class OrderTests
         ((Action)(() => o.MarkAsDelivered(null!, OrderDeliverySource.Customer))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Complete(null!))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.Cancel(null!))).Should().Throw<ArgumentNullException>();
-        ((Action)(() => o.Refund(null!))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => o.Refund(null!, 100, false))).Should().Throw<ArgumentNullException>();
         ((Action)(() => o.OpenDispute(null!))).Should().Throw<ArgumentNullException>();
+        ((Action)(() => o.ResolveDispute(null!, OrderState.Shipped))).Should().Throw<ArgumentNullException>();
     }
 
     [Fact]

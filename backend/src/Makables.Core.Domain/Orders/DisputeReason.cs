@@ -1,16 +1,19 @@
 namespace Makables.Core.Domain.Orders;
 
 /// <summary>
-/// Why an order was flagged for dispute. T-0078 ships the two
-/// carrier-sourced reasons it emits (the Packeta Returned + Failed
-/// terminal states); T-0106 will append the customer-initiated +
-/// maker-initiated reasons when the real dispute domain lands.
+/// Carrier-WIRE enum: why the T-0078 status sync flagged a shipment for
+/// dispute (the Packeta Returned + Failed terminal states). Deliberately
+/// NOT extended with party-initiated reasons — T-0106 §C.5 keeps this as
+/// the stable two-value wire shape between
+/// <c>SyncShipmentStatusesFunction</c> and <c>DisputeShipment.Command</c>;
+/// the DOMAIN axis is <see cref="DisputeCategory"/>, which the rewired
+/// handler maps onto (<see cref="CarrierReturned"/> →
+/// <see cref="DisputeCategory.CarrierReturned"/>, <see cref="CarrierFailed"/>
+/// → <see cref="DisputeCategory.CarrierFailed"/>).
 ///
 /// <para>
-/// The JSON payload format encodes this as an integer so appending new
-/// values (e.g. <c>CustomerInitiated = 2</c>) does not break existing
-/// deserialization. Values are stable on the wire. T-0078 locked
-/// decision A.1.
+/// The JSON payload format encodes this as an integer; values are stable
+/// on the wire. T-0078 locked decision A.1.
 /// </para>
 /// </summary>
 public enum DisputeReason

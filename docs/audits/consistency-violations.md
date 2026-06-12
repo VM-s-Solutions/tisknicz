@@ -58,6 +58,8 @@
 - backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/AddOrderAttachment.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CancelExpiredOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/ChangeOrderStateManually.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/ChangeOrderStateManually.cs:99:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Orders/CreateOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/CreatePaymentSession.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/DisputeShipment.cs:1:T1  feature file must declare a public static class wrapper
@@ -68,6 +70,11 @@
 - backend/src/Makables.Core.AppServices/Features/Orders/HandOverOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderDelivered.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderPaid.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenCustomerDispute.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenDispute.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenMakerDispute.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/RefundOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/ResolveDispute.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"

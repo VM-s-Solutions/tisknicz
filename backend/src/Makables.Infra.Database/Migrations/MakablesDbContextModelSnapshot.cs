@@ -1502,6 +1502,94 @@ namespace Makables.Infra.Database.Migrations
                     b.ToTable("order_messages", (string)null);
                 });
 
+            modelBuilder.Entity("Makables.Core.Domain.Orders.Dispute", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("id");
+
+                    b.Property<short>("Category")
+                        .HasColumnType("smallint")
+                        .HasColumnName("category");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country_code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<string>("DeactivatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("deactivated_by");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("resolution_notes");
+
+                    b.Property<short?>("ResolutionOutcome")
+                        .HasColumnType("smallint")
+                        .HasColumnName("resolution_outcome");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<short>("Source")
+                        .HasColumnType("smallint")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_disputes_order_open")
+                        .HasFilter("resolved_at IS NULL");
+
+                    b.ToTable("disputes", (string)null);
+                });
+
             modelBuilder.Entity("Makables.Core.Domain.Orders.Order", b =>
                 {
                     b.Property<string>("Id")
@@ -1664,6 +1752,10 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("platform_fee_amount_minor");
 
+                    b.Property<short?>("PreDisputeState")
+                        .HasColumnType("smallint")
+                        .HasColumnName("pre_dispute_state");
+
                     b.Property<string>("ProductId")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
@@ -1672,6 +1764,12 @@ namespace Makables.Infra.Database.Migrations
                     b.Property<long>("ProductPriceAmountMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("product_price_amount_minor");
+
+                    b.Property<long>("RefundedAmountMinor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("refunded_amount_minor");
 
                     b.Property<DateTimeOffset?>("RefundedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2067,6 +2165,15 @@ namespace Makables.Infra.Database.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Makables.Core.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Makables.Core.Domain.Orders.Dispute", b =>
+                {
                     b.HasOne("Makables.Core.Domain.Orders.Order", null)
                         .WithMany()
                         .HasForeignKey("OrderId")

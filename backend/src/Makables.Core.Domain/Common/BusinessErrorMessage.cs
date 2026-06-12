@@ -112,6 +112,60 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderMessageNotAllowedInState = "order.message.notAllowedInState";
 
+    // === Manual state change (T-0107, user-locked Q4 strict allow-list) ===
+    /// <summary>
+    /// The requested manual transition is outside the allow-list and has
+    /// no sanctioned command (e.g. resurrecting a Cancelled order, any
+    /// move out of Refunded, skipping lifecycle steps). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionNotAllowed = "order.manualTransition.notAllowed";
+    /// <summary>
+    /// Blocked: → Refunded (money must move at the provider first) and
+    /// Paid/Accepted → Cancelled (captured money would be stranded).
+    /// Sanctioned command: <c>RefundOrder</c> (T-0105). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseRefundOrder = "order.manualTransition.useRefundOrder";
+    /// <summary>
+    /// Blocked: → Disputed (a Disputed order needs its Dispute row).
+    /// Sanctioned command: <c>OpenDispute</c> (T-0106). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseOpenDispute = "order.manualTransition.useOpenDispute";
+    /// <summary>
+    /// Blocked: any manual move out of Disputed (the restore + outcome
+    /// edges belong to the resolution flow). Sanctioned command:
+    /// <c>ResolveDispute</c> (T-0106). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseResolveDispute = "order.manualTransition.useResolveDispute";
+    /// <summary>
+    /// Blocked: Delivered → Completed (Completed means "maker payout
+    /// settled"; a manual flip would fake a payout). Sanctioned command:
+    /// <c>MarkPayoutBatchCompleted</c> (T-0103). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseMarkPayoutBatchCompleted = "order.manualTransition.useMarkPayoutBatchCompleted";
+    /// <summary>
+    /// Blocked: → Paid on an order with no <c>PaymentProviderRef</c> —
+    /// there is no payment to point at; marking Paid would fabricate
+    /// revenue with no provider trail and permanently break the T-0105
+    /// refund path for that order. T-0107.
+    /// </summary>
+    public const string OrderManualTransitionPaidRequiresProviderRef = "order.manualTransition.paidRequiresProviderRef";
+
+    // === Order disputes (T-0106) ===
+    /// <summary>
+    /// Customer/maker submitted a carrier-reserved dispute category
+    /// (CarrierReturned / CarrierFailed) — those are set only by the
+    /// T-0078 carrier sweep or by an admin transcribing a phone report.
+    /// T-0106 §C.6.
+    /// </summary>
+    public const string OrderDisputeCategoryNotAllowed = "order.dispute.categoryNotAllowed";
+    /// <summary>
+    /// Resolve attempted on an order with no OPEN dispute (state is not
+    /// Disputed, the dispute row is already resolved, or a double-resolve
+    /// race lost). Loud 409 — a Silent-Success second resolve with a
+    /// different outcome would mask an admin race. T-0106 §C.4.
+    /// </summary>
+    public const string OrderDisputeNotOpen = "order.dispute.notOpen";
+
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
     /// The maker's row exists but <c>Auditable.IsActive</c> is false (or
@@ -255,6 +309,35 @@ public static class BusinessErrorMessage
     /// (Mapbox / ARES precedent: 3 attempts). T-0065.
     /// </summary>
     public const string PaymentUnknownError = "payment.unknownError";
+
+    // === Payment refund (T-0105) ===
+    /// <summary>
+    /// Refund attempted on an order whose state is outside the refundable
+    /// window (Paid / Accepted / Shipped / Delivered / Completed).
+    /// PendingPayment has no captured money; Cancelled / Refunded are
+    /// terminal; Disputed routes through T-0106's ResolveDispute (restore
+    /// PreDisputeState, then refund — user decision Q2). T-0105.
+    /// </summary>
+    public const string PaymentRefundInvalidState = "payment.refund.invalidState";
+    /// <summary>
+    /// Admin-entered amount exceeds <c>Order.RemainingRefundableMinor</c>
+    /// (total − cumulative refunded). The provider is never called on
+    /// this failure — the pre-flight predicate blocks first. T-0105 Q1.
+    /// </summary>
+    public const string PaymentRefundAmountExceedsRemaining = "payment.refund.amountExceedsRemaining";
+    /// <summary>
+    /// Refund on a Completed order (maker payout already settled)
+    /// requires the explicit <c>AcknowledgePostPayout</c> flag — the
+    /// platform fronts the refund; maker-share recovery is manual at MVP
+    /// (negative-balance ledger lands with T-0102). T-0105 Q5.
+    /// </summary>
+    public const string PaymentRefundPostPayoutAckRequired = "payment.refund.postPayoutAckRequired";
+    /// <summary>
+    /// The order has no <c>PaymentProviderRef</c> — there is no captured
+    /// payment to point the Comgate /v1.0/refund call at. Surfaced
+    /// before the provider is touched. T-0105.
+    /// </summary>
+    public const string PaymentRefundNoProviderRef = "payment.refund.noProviderRef";
 
     // === Payment webhook (T-0066) ===
     /// <summary>
@@ -432,6 +515,16 @@ public static class BusinessErrorMessage
     public const string EmailPayloadMalformed = "email.payloadMalformed";
     public const string EmailPayloadMissingFields = "email.payloadMissingFields";
     public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
+    /// <summary>
+    /// <c>EmailOptions.AdminNotificationAddress</c> (env
+    /// <c>ADMIN_NOTIFICATION_EMAIL</c>) is not configured at send time of
+    /// an <c>order.disputed.adminEmail</c> event. Classified
+    /// <see cref="ErrorType.Configuration"/> per ADR 0020 — the outbox row
+    /// parks visibly for ops and is retried after the config fix; the
+    /// dispute open itself is never blocked by a missing notification
+    /// recipient. T-0106 §C.9.
+    /// </summary>
+    public const string EmailAdminRecipientNotConfigured = "email.adminRecipientNotConfigured";
     /// <summary>
     /// The outbox event type is one of the order-email variants but the
     /// payload JSON could not be decoded into the matching record (e.g.

@@ -99,6 +99,18 @@ Method: `SendAsync(string templateCode, string to, object data, CancellationToke
 - Custom telemetry: request id, user id, country code on every log line
 - See Batch 5 NFR ADR
 
+## 13. Dispute resolution
+- Entity: `Makables.Core.Domain.Orders.Dispute` — `Auditable` child of `Order` (Q2 lock, refund-dispute bundle, 2026-06-12)
+- Shape: `Id`, `OrderId` (FK), `Category` (enum), `Description`, `Source` (enum), `ResolutionNotes` (nullable), `ResolvedAt` (nullable), `ResolutionOutcome` (enum, nullable)
+- Order side: opening sets `Order.State = Disputed` and records `Order.PreDisputeState`; resolve restores it — see [patterns.md §A.22](./patterns.md#a22-state-machine-detour-with-restore-disputed--predisputestate)
+
+**Extension surfaces (the enums):**
+- `DisputeCategory` — the dispute taxonomy. New categories (e.g. damage-in-transit, quality, non-delivery subtypes) are enum additions + i18n keys; no flow changes.
+- `DisputeSource` — `Customer | Maker | Carrier | Admin`. Customer + maker host endpoints exist from v1 (UI later); `Carrier` is fed by the T-0078 carrier-webhook stub wiring. New automated sources (fraud signals, payment-provider chargebacks) are new enum members + new ingress points, same entity.
+- `ResolutionOutcome` — each outcome maps to an **outcome handler**, the unit of growth for resolution behavior. Provider-specific refund flows (e.g. a future provider's chargeback API) attach as a new outcome handler delegating to the payment-provider adapter (§A.15) — never as inline logic in ResolveDispute.
+
+**Sanctioned-command dispatch rule:** `ResolveDispute` orchestrates only — it selects the outcome handler for `ResolutionOutcome`, and the handler dispatches the **sanctioned command** for any side effect (e.g. outcome `Refund` dispatches `RefundOrder` / T-0105 via `IMediator`). ResolveDispute never mutates payment state, never writes `refunded_amount_minor`, never transitions to `Refunded` itself. This keeps the T-0107 manual-transition allow-list authoritative: there is exactly one command per privileged transition, and dispute resolution reuses it instead of growing a parallel path.
+
 ## Rule for reviewers
 
 If a PR adds code that **branches on country, currency, or provider** outside of `Infra.*` adapter classes, it is violating an extension point. Request changes.
