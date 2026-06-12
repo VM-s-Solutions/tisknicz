@@ -210,3 +210,17 @@
   - Reduce the root baseline first (Q-0014 helps materially), then set the absolute line.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0016 — Maker invoice PDF embeds customer email (GDPR-lock conflict)
+- **From:** secops (order-dashboards-bundle Gate 3, F-1)
+- **Ticket / context:** order-dashboards-bundle (T-0088 maker invoice download vs. T-0081/T-0082 GDPR lock)
+- **Asked:** 2026-06-12
+- **Blocking:** no — authenticated ownership-scoped counterparty, not an exploit; reconcile before launch
+- **Question:** The maker host's invoice download (T-0088) streams the Customer-type invoice whose QuestPDF template (`QuestPdfInvoiceRenderer.cs:178,321`) embeds `RecipientEmail` — every paid order hands the maker the customer email through a sanctioned button, contradicting the T-0081/T-0082 compile-time GDPR lock the dashboards enforce at DOM level. Docs conflict internally: US-maker-0010 AC-1 still grants makers "name + email + phone".
+- **Options the agent has considered:**
+  - (a) Accept email-in-invoice as sanctioned commercial-document content (Czech invoicing customs include contact; reconcile US-maker-0010 + annotate the T-0081/T-0082 lock as DOM-scope-only).
+  - (b) Render a maker-variant invoice copy with email redacted (new QuestPDF variant; invoice integrity concern — the maker's copy differs from the customer's legal document).
+  - (c) Drop the maker invoice button until ruled (revenue-path UX loss).
+  - Recommend (a) with explicit doc reconciliation — the invoice is a commercial document between the parties; the DOM-level lock guards casual scraping, not contractual documents.
+- **Status:** open
+- **Answer (filled by user):**
