@@ -236,8 +236,8 @@
   - Fix-up migration `UPDATE`ing the affected subject rows from `{key}` to `{{key}}` (S, recommended — applied migrations are immutable; a data-fix migration is the sanctioned path).
   - Regenerate all email templates in a new consolidated seed.
   - Leave until the template-editor admin UI ships and fix the copy by hand there.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Option 1 — data-fix migration shipping as the leading commit of the payout-core bundle PR (2026-06-12).
 
 ## Q-0018 — Comgate refId idempotency handle for refunds
 - **From:** reviewer + optimizer (refund-dispute-bundle Gate 8 M-1 disposition)
