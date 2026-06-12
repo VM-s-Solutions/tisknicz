@@ -11,6 +11,8 @@ import {
   OrderState,
 } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
+import type { ApiError } from '@/lib/runtime/result';
 import { OrdersFilters } from './filters-client';
 import { OrderRows } from './order-row';
 import { Pagination } from './pagination';
@@ -124,7 +126,7 @@ export default async function CustomerOrdersPage({ searchParams }: PageProps) {
               hasActiveFilters={hasActiveFilters}
             />
           ) : (
-            <OrdersError />
+            <OrdersError error={result.error} />
           )}
         </div>
       </div>
@@ -215,13 +217,15 @@ function OrdersNoMatch() {
   );
 }
 
-function OrdersError() {
+function OrdersError({ error }: { readonly error: ApiError }) {
+  // AC-5 (review NEW-3): Czech copy mapped from the error code — a 400
+  // (e.g. inverted date range) must not read as a server outage.
   return (
     <Alert variant="error">
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-semibold">{t('customer.orders.error.title')}</p>
-          <p className="mt-1 text-sm opacity-90">{t('error.transient')}</p>
+          <p className="mt-1 text-sm opacity-90">{resolveErrorMessage(error)}</p>
         </div>
         <Link
           href={ROUTE_PATH}

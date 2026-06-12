@@ -88,6 +88,15 @@ export function OrderMessageThread({
 
   const refreshInFlightRef = useRef(false);
 
+  // Every message id ever shown (NEW-2 fold): fresh-sets are derived
+  // from this ref OUTSIDE the setMessages updaters so the updaters stay
+  // pure (React may defer or double-invoke them — deciding mark-read
+  // inside one would silently skip the re-fire) and the dedupe decision
+  // is deterministic at dispatch time. Invariant: every add-path filters
+  // against the ref and records its additions here BEFORE dispatching,
+  // so `messages` is always a subset of this set.
+  const knownIdsRef = useRef<Set<string>>(new Set(initialPage.items.map((m) => m.id)));
+
   // The sanctioned poll effect (Q6 lock — mirror of the T-0085 poller
   // discipline: single interval, visibility-pause, unmount cleanup).
   // Initial data came from the server as a prop; this timer only pulls
@@ -106,14 +115,16 @@ export function OrderMessageThread({
         // Transient poll errors are swallowed — the next tick retries.
         return;
       }
-      let counterpartyNews = false;
-      setMessages((prev) => {
-        const known = new Set(prev.map((m) => m.id));
-        const fresh = result.value.items.filter((m) => !known.has(m.id));
-        if (fresh.length === 0) return prev;
-        counterpartyNews = fresh.some((m) => !m.isMine);
-        return [...fresh, ...prev];
-      });
+      // Diff against knownIdsRef OUTSIDE the updater (purity — see the
+      // ref's comment) so counterpartyNews is decided deterministically
+      // before dispatch.
+      const known = knownIdsRef.current;
+      const fresh = result.value.items.filter((m) => !known.has(m.id));
+      const counterpartyNews = fresh.some((m) => !m.isMine);
+      if (fresh.length > 0) {
+        for (const m of fresh) known.add(m.id);
+        setMessages((prev) => [...fresh, ...prev]);
+      }
       // Serialize refetch-then-mark-read (T-0086b risk note) so the
       // counter reset always covers everything just rendered.
       if (markEvenWithoutNews || counterpartyNews) {
@@ -171,13 +182,15 @@ export function OrderMessageThread({
       return;
     }
     const incoming = result.value;
-    setMessages((prev) => {
-      // Pagination windows shift as new messages arrive; dedupe by id
-      // and append only genuinely older rows at the tail.
-      const known = new Set(prev.map((m) => m.id));
-      const older = incoming.items.filter((m) => !known.has(m.id));
-      return older.length > 0 ? [...prev, ...older] : prev;
-    });
+    // Pagination windows shift as new messages arrive; dedupe by id
+    // against knownIdsRef (outside the updater — purity) and append only
+    // genuinely older rows at the tail.
+    const known = knownIdsRef.current;
+    const older = incoming.items.filter((m) => !known.has(m.id));
+    if (older.length > 0) {
+      for (const m of older) known.add(m.id);
+      setMessages((prev) => [...prev, ...older]);
+    }
     setOldestLoadedPage(incoming.page);
     setHasOlder(incoming.hasNextPage);
   }
@@ -199,11 +212,12 @@ export function OrderMessageThread({
     setDraft('');
     const refreshed = await fetchMessages(1);
     if (refreshed.success) {
-      setMessages((prev) => {
-        const known = new Set(prev.map((m) => m.id));
-        const fresh = refreshed.value.items.filter((m) => !known.has(m.id));
-        return fresh.length > 0 ? [...fresh, ...prev] : prev;
-      });
+      const known = knownIdsRef.current;
+      const fresh = refreshed.value.items.filter((m) => !known.has(m.id));
+      if (fresh.length > 0) {
+        for (const m of fresh) known.add(m.id);
+        setMessages((prev) => [...fresh, ...prev]);
+      }
     }
     setSending(false);
   }

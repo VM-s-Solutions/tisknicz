@@ -333,6 +333,34 @@ public sealed class OrderInvoiceDownloadTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GET_invoice_returns_304_when_If_None_Match_matches_ETag()
+    {
+        // T-0088 AC-7 — mirrors the attachment 304 pin in
+        // OrderAttachmentDownloadTests (customer host suffices; the maker
+        // action's conditional-GET arm is byte-identical).
+        await SeedAsync();
+        using var client = _customerFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IssueCustomerToken(CustomerUserId));
+
+        // First, fetch to learn the ETag (the fake blob store assigns one).
+        var first = await client.GetAsync($"/api/v1/orders/{OrderId}/invoice");
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        var etag = first.Headers.ETag!.Tag;
+        etag.Should().NotBeNullOrEmpty();
+
+        // Second request, presenting the ETag. Expect 304 + no body.
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"/api/v1/orders/{OrderId}/invoice");
+        request.Headers.TryAddWithoutValidation("If-None-Match", etag);
+        var second = await client.SendAsync(request);
+
+        second.StatusCode.Should().Be(HttpStatusCode.NotModified);
+        var body = await second.Content.ReadAsByteArrayAsync();
+        body.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GET_invoice_404_paths_are_oracle_free()
     {
         await SeedAsync();

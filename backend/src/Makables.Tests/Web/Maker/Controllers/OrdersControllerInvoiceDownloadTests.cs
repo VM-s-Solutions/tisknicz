@@ -105,7 +105,7 @@ public class OrdersControllerInvoiceDownloadTests
         // AC-6: the order lookup is never performed without a maker row.
         await _orders.Received(0).GetByIdForMakerReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _invoices.Received(0).GetByOrderIdAsync(
+        await _invoices.Received(0).GetByOrderIdReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -126,7 +126,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Which.Code.Should().Be(BusinessErrorMessage.OrderNotFound);
         // AC-3 IDOR-shield wiring: the unscoped invoice lookup and the
         // blob client must NEVER run before ownership is established.
-        await _invoices.Received(0).GetByOrderIdAsync(
+        await _invoices.Received(0).GetByOrderIdReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _blobs.Received(0).DownloadAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -140,7 +140,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Returns(BuildMaker());
         _orders.GetByIdForMakerReadOnlyAsync(OrderId, MakerId, Arg.Any<CancellationToken>())
             .Returns(BuildAssignedOrder());
-        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>())
+        _invoices.GetByOrderIdReadOnlyAsync(OrderId, Arg.Any<CancellationToken>())
             .Returns(BuildInvoiceWithBlobPath());
         // Blob-purged-but-row-remains race: the row points at a path the
         // store no longer holds.
@@ -166,7 +166,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Returns(BuildMaker());
         _orders.GetByIdForMakerReadOnlyAsync(OrderId, MakerId, Arg.Any<CancellationToken>())
             .Returns(BuildAssignedOrder());
-        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>())
+        _invoices.GetByOrderIdReadOnlyAsync(OrderId, Arg.Any<CancellationToken>())
             .Returns(BuildInvoiceWithBlobPath());
         _blobs.DownloadAsync(BlobContainer.Invoices, PdfBlobPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(new BlobDownload(

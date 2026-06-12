@@ -245,11 +245,13 @@ public sealed class OrdersController(
             return NotFound(Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
         }
 
-        // GetByOrderIdAsync is documented Unscoped — safe ONLY after the
-        // ownership-scoped order load above (T-0088 risk note). No Invoice
-        // row yet OR null PdfBlobPath both mean the T-0068b render
-        // pipeline hasn't finished: invoice.notYetRendered.
-        var invoice = await invoices.GetByOrderIdAsync(orderId, ct);
+        // GetByOrderIdReadOnlyAsync is documented Unscoped — safe ONLY
+        // after the ownership-scoped order load above (T-0088 risk note).
+        // Read-only variant per ADR 0025 (Gate 8 B2): this action never
+        // mutates the Invoice. No Invoice row yet OR null PdfBlobPath
+        // both mean the T-0068b render pipeline hasn't finished:
+        // invoice.notYetRendered.
+        var invoice = await invoices.GetByOrderIdReadOnlyAsync(orderId, ct);
         if (invoice is null || string.IsNullOrEmpty(invoice.PdfBlobPath))
         {
             return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));

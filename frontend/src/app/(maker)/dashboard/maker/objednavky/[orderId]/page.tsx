@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
@@ -45,13 +46,23 @@ export const dynamic = 'force-dynamic';
 /** Display scaling only — VAT rates travel as basis points (CLAUDE.md money rules). */
 const BASIS_POINTS_PER_PERCENT = 100;
 
+/**
+ * Per-request memo (Gate 8 fold): `generateMetadata` and the page body
+ * both need the detail, and `apiFetch` composes a fresh
+ * `AbortSignal.timeout` per call which defeats Next's fetch
+ * memoization — without `cache()` every detail view issues two
+ * identical backend GETs. Scope is one server request; a
+ * `router.refresh()` is a new request and re-fetches (Q5 lock intact).
+ */
+const getOrderDetail = cache(getMakerOrderDetail);
+
 interface PageProps {
   readonly params: Promise<{ orderId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { orderId } = await params;
-  const result = await getMakerOrderDetail(orderId);
+  const result = await getOrderDetail(orderId);
   if (!result.success) {
     // §B.9: branch the title ONLY on NotFound — transient errors keep
     // the brand title so a backend blip never signals "gone".
@@ -76,7 +87,7 @@ function hasValue(value: string | undefined): value is string {
 export default async function MakerOrderDetailPage({ params }: PageProps) {
   const { orderId } = await params;
 
-  const result = await getMakerOrderDetail(orderId);
+  const result = await getOrderDetail(orderId);
   if (!result.success) {
     // Foreign order = 404 from the backend (one `order.notFound` shape
     // for "missing" and "not yours" — T-0082 §B, no IDOR oracle).

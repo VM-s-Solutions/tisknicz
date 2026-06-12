@@ -22,6 +22,13 @@ import { t } from '@/lib/i18n';
 interface OrdersFiltersProps {
   /** URL tab value to preserve — empty string for the default Nové tab (never emitted). */
   readonly tabParam: string;
+  /**
+   * URL pageSize to preserve — empty string for the default (never
+   * emitted). The window size is not a filter, so filter pushes and
+   * reset both keep it, matching the page's tab/pagination links
+   * (review NEW-4).
+   */
+  readonly pageSizeParam: string;
   readonly initialDateFrom: string;
   readonly initialDateTo: string;
   /** Empty string = default `CreatedAtDesc` (never emitted to the URL). */
@@ -44,6 +51,7 @@ const SORT_OPTIONS = [
 
 export function OrdersFilters({
   tabParam,
+  pageSizeParam,
   initialDateFrom,
   initialDateTo,
   initialSort,
@@ -59,6 +67,7 @@ export function OrdersFilters({
     const params = new URLSearchParams();
     // Only non-default params are emitted — canonical URLs per B.8.
     if (tabParam) params.set('tab', tabParam);
+    if (pageSizeParam) params.set('pageSize', pageSizeParam);
     if (next.dateFrom) params.set('dateFrom', next.dateFrom);
     if (next.dateTo) params.set('dateTo', next.dateTo);
     if (next.sort && next.sort !== OrderSort.CreatedAtDesc) params.set('sort', next.sort);
@@ -87,6 +96,7 @@ export function OrdersFilters({
     setSort(OrderSort.CreatedAtDesc);
     const params = new URLSearchParams();
     if (tabParam) params.set('tab', tabParam);
+    if (pageSizeParam) params.set('pageSize', pageSizeParam);
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };

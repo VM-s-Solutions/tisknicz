@@ -14,6 +14,8 @@ import {
 } from '@/lib/api-client-helpers/maker-orders';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
+import type { ApiError } from '@/lib/runtime/result';
 import { OrdersFilters } from './filters-client';
 import { OrderRows } from './order-row';
 import {
@@ -158,6 +160,7 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
         <div className="mt-6">
           <OrdersFilters
             tabParam={tab === DEFAULT_ORDER_LIST_TAB ? '' : tab}
+            pageSizeParam={pageSize !== MAKER_ORDERS_DEFAULT_PAGE_SIZE ? String(pageSize) : ''}
             initialDateFrom={dateFrom ?? ''}
             initialDateTo={dateTo ?? ''}
             initialSort={sort ?? ''}
@@ -168,7 +171,7 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
           {result.success ? (
             <OrdersResults data={result.value} tab={tab} baseParams={paginationParams} />
           ) : (
-            <OrdersError />
+            <OrdersError error={result.error} />
           )}
         </div>
       </div>
@@ -254,13 +257,15 @@ function OrdersEmpty({ tab }: { readonly tab: OrderListTab }) {
   );
 }
 
-function OrdersError() {
+function OrdersError({ error }: { readonly error: ApiError }) {
+  // AC-10 polish (review NEW-3): Czech copy mapped from the error code —
+  // a 400 (e.g. inverted date range) must not read as a server outage.
   return (
     <Alert variant="error">
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-semibold">{t('dashboard.maker.orders.error.title')}</p>
-          <p className="mt-1 text-sm opacity-90">{t('dashboard.maker.orders.error.body')}</p>
+          <p className="mt-1 text-sm opacity-90">{resolveErrorMessage(error)}</p>
         </div>
         <Link
           href={ROUTE_PATH}

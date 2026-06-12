@@ -93,7 +93,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Which.Code.Should().Be("auth.required");
         await _orders.Received(0).GetByIdForCustomerReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _invoices.Received(0).GetByOrderIdAsync(
+        await _invoices.Received(0).GetByOrderIdReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -112,7 +112,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Which.Code.Should().Be(BusinessErrorMessage.OrderNotFound);
         // AC-3 IDOR-shield wiring: the unscoped invoice lookup and the
         // blob client must NEVER run before ownership is established.
-        await _invoices.Received(0).GetByOrderIdAsync(
+        await _invoices.Received(0).GetByOrderIdReadOnlyAsync(
             Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _blobs.Received(0).DownloadAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -126,7 +126,7 @@ public class OrdersControllerInvoiceDownloadTests
             .Returns(BuildOwnedOrder());
 
         // Variant 1: no Invoice row at all.
-        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>())
+        _invoices.GetByOrderIdReadOnlyAsync(OrderId, Arg.Any<CancellationToken>())
             .Returns((Invoice?)null);
         var result = await BuildController().DownloadInvoice(OrderId, CancellationToken.None);
         result.Should().BeOfType<NotFoundObjectResult>()
@@ -135,7 +135,7 @@ public class OrdersControllerInvoiceDownloadTests
 
         // Variant 2: Invoice row exists but PdfBlobPath is still null
         // (T-0068b render pipeline mid-flight).
-        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>())
+        _invoices.GetByOrderIdReadOnlyAsync(OrderId, Arg.Any<CancellationToken>())
             .Returns(BuildInvoice(withBlobPath: false));
         result = await BuildController().DownloadInvoice(OrderId, CancellationToken.None);
         result.Should().BeOfType<NotFoundObjectResult>()
@@ -152,7 +152,7 @@ public class OrdersControllerInvoiceDownloadTests
         _session.GetUserId().Returns(CustomerUserId);
         _orders.GetByIdForCustomerReadOnlyAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
             .Returns(BuildOwnedOrder());
-        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>())
+        _invoices.GetByOrderIdReadOnlyAsync(OrderId, Arg.Any<CancellationToken>())
             .Returns(BuildInvoice(withBlobPath: true));
         _blobs.DownloadAsync(BlobContainer.Invoices, PdfBlobPath, Arg.Any<CancellationToken>())
             .Returns(BusinessResult.Success(new BlobDownload(

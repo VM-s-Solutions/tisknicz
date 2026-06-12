@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
@@ -41,6 +42,16 @@ import { OrderTimeline } from './timeline';
 // reflect it.
 export const dynamic = 'force-dynamic';
 
+/**
+ * Per-request memo (Gate 8 fold): `generateMetadata` and the page body
+ * both need the detail, and `apiFetch` composes a fresh
+ * `AbortSignal.timeout` per call which defeats Next's fetch
+ * memoization — without `cache()` every detail view issues two
+ * identical backend GETs. Scope is one server request; a
+ * `router.refresh()` is a new request and re-fetches (Q5 lock intact).
+ */
+const getOrderDetail = cache(getCustomerOrderDetail);
+
 interface PageProps {
   readonly params: Promise<{ id: string }>;
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -48,7 +59,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const result = await getCustomerOrderDetail(id);
+  const result = await getOrderDetail(id);
   if (!result.success) {
     // §B.9: branch the title ONLY on NotFound — transient errors keep
     // the brand title so a backend blip never signals "gone".
@@ -70,7 +81,7 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = await searchParams;
 
-  const result = await getCustomerOrderDetail(id);
+  const result = await getOrderDetail(id);
   if (!result.success) {
     // Foreign order = 404 from the backend (IDOR-resistant,
     // US-customer-0012 AC-3) — same render as unknown id.
