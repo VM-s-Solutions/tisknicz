@@ -35,4 +35,13 @@ public enum OrderDeliverySource : short
     /// carrier's authoritative <c>DeliveredAt</c> timestamp when present.
     /// </summary>
     Carrier = 2,
+
+    /// <summary>
+    /// Admin manually marked the order delivered via T-0107
+    /// <c>ChangeOrderStateManually</c> (carrier-blind delivery — the
+    /// customer confirmed receipt out-of-band but neither the customer
+    /// endpoint nor the carrier sync fired). The audit log carries the
+    /// admin's mandatory reason.
+    /// </summary>
+    AdminManual = 3,
 }

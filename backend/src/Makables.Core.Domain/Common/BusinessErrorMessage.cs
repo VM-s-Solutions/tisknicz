@@ -112,6 +112,44 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderMessageNotAllowedInState = "order.message.notAllowedInState";
 
+    // === Manual state change (T-0107, user-locked Q4 strict allow-list) ===
+    /// <summary>
+    /// The requested manual transition is outside the allow-list and has
+    /// no sanctioned command (e.g. resurrecting a Cancelled order, any
+    /// move out of Refunded, skipping lifecycle steps). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionNotAllowed = "order.manualTransition.notAllowed";
+    /// <summary>
+    /// Blocked: → Refunded (money must move at the provider first) and
+    /// Paid/Accepted → Cancelled (captured money would be stranded).
+    /// Sanctioned command: <c>RefundOrder</c> (T-0105). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseRefundOrder = "order.manualTransition.useRefundOrder";
+    /// <summary>
+    /// Blocked: → Disputed (a Disputed order needs its Dispute row).
+    /// Sanctioned command: <c>OpenDispute</c> (T-0106). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseOpenDispute = "order.manualTransition.useOpenDispute";
+    /// <summary>
+    /// Blocked: any manual move out of Disputed (the restore + outcome
+    /// edges belong to the resolution flow). Sanctioned command:
+    /// <c>ResolveDispute</c> (T-0106). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseResolveDispute = "order.manualTransition.useResolveDispute";
+    /// <summary>
+    /// Blocked: Delivered → Completed (Completed means "maker payout
+    /// settled"; a manual flip would fake a payout). Sanctioned command:
+    /// <c>MarkPayoutBatchCompleted</c> (T-0103). T-0107.
+    /// </summary>
+    public const string OrderManualTransitionUseMarkPayoutBatchCompleted = "order.manualTransition.useMarkPayoutBatchCompleted";
+    /// <summary>
+    /// Blocked: → Paid on an order with no <c>PaymentProviderRef</c> —
+    /// there is no payment to point at; marking Paid would fabricate
+    /// revenue with no provider trail and permanently break the T-0105
+    /// refund path for that order. T-0107.
+    /// </summary>
+    public const string OrderManualTransitionPaidRequiresProviderRef = "order.manualTransition.paidRequiresProviderRef";
+
     // === Order disputes (T-0106) ===
     /// <summary>
     /// Customer/maker submitted a carrier-reserved dispute category

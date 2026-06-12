@@ -100,9 +100,23 @@ Full + partial refunds per user-locked Q1; pure predicate + mutator split:
 - `Refund(clock, amountMinor, acknowledgePostPayout)` — calls the predicate, accumulates; flips to `Refunded` + stamps `RefundedAt` only when cumulative == total. A partial refund changes NO state — the order stays live.
 - **Sanctioned-command interlock:** `RefundOrder.Command` (admin host) is the ONLY path into `Refunded` — it calls Comgate `/v1.0/refund` BEFORE mutating (locked A.5). T-0107's manual state change blocks `→ Refunded` with `order.manualTransition.useRefundOrder`; T-0106's `ResolveDispute(Refunded)` restores `PreDisputeState` first, then dispatches `RefundOrder` for the full remaining amount — `Disputed` is never refunded directly.
 
+## Manual state change (T-0107)
+
+`ManualOrderTransitionPolicy.Evaluate(from, to, hasPaymentProviderRef)` — pure Domain class next to `Order` — is the strict allow-list (user-locked Q4) behind the admin escape hatch `ChangeOrderStateManually.Command` (mandatory ≥10-char reason → audit notes; no outbox/emails). Deterministic precedence: same-state NoOp → from-Refunded `notAllowed` → from-Disputed `useResolveDispute` → to-Refunded `useRefundOrder` → to-Disputed `useOpenDispute` → Delivered→Completed `useMarkPayoutBatchCompleted` → Paid|Accepted→Cancelled `useRefundOrder` → allow-list pair → `notAllowed`.
+
+| From | Permitted manual targets | Routing |
+|---|---|---|
+| PendingPayment | Paid (only with `PaymentProviderRef` — lost-webhook recovery); Cancelled (manual expiry) | `MarkAsPaid(clock, existing ref)`; `Cancel(clock, Admin)` |
+| Paid | Accepted | `Accept(clock)` |
+| Accepted | Paid (undo mis-click; ref required) | `RevertAcceptance(clock)` — clears `AcceptedAt` |
+| Shipped | Delivered (carrier-blind delivery) | `MarkAsDelivered(clock, AdminManual)` |
+| Delivered / Completed / Cancelled / Refunded / Disputed | — | blocked; the error code names the sanctioned command |
+
+`RevertAcceptance(IClock)` is the one new entity edge (Accepted → Paid, clears `AcceptedAt` so a re-accept stamps fresh); `OrderDeliverySource.AdminManual = 3` appends for the manual delivery stamp.
+
 ## Implementation pointer
 
-`backend/src/Makables.Core.Domain/Orders/Order.cs`. State machine logic encapsulated in Order methods (`MarkAsPaid`, `Accept`, `Ship`, `MarkDelivered`, `Cancel(clock, source)`, etc.) that return `BusinessResult` on invalid transitions. `OrderCancellationSource` lives alongside in `backend/src/Makables.Core.Domain/Orders/OrderCancellationSource.cs`. The T-0079/T-0083 columns ship in migration `20260609174208_OrderCleanupBundle.cs`.
+`backend/src/Makables.Core.Domain/Orders/Order.cs`. State machine logic encapsulated in Order methods (`MarkAsPaid`, `Accept`, `RevertAcceptance`, `Ship`, `MarkDelivered`, `Cancel(clock, source)`, `Refund(clock, amount, ack)`, `OpenDispute`, `ResolveDispute(clock, restoreTo)`) that return `BusinessResult` on invalid transitions. `OrderCancellationSource`, the dispute enums + `Dispute` entity, and `ManualOrderTransitionPolicy` live alongside in `backend/src/Makables.Core.Domain/Orders/`. The T-0079/T-0083 columns ship in migration `20260609174208_OrderCleanupBundle.cs`; the T-0105 refund column in `20260612115151_AddOrderRefundedAmountAndRefundEmailTemplate.cs`; the T-0106 disputes table + `pre_dispute_state` in `20260612121152_AddDisputeTableAndPreDisputeState.cs`.
 
 ## Related
 

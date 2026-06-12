@@ -91,4 +91,27 @@ public sealed class OrdersController : MakablesApiController
         string orderId, [FromBody] ResolveDisputeRequest request, CancellationToken ct) =>
         HandleResult(await Mediator.Send(
             new ResolveDispute.Command(orderId, request.Outcome, request.ResolutionNotes), ct));
+
+    /// <summary>Request body for <see cref="ChangeState"/>. The order id rides the route.</summary>
+    public sealed record ChangeOrderStateRequest(OrderState TargetState, string Reason);
+
+    /// <summary>
+    /// Manual state change — the admin escape hatch for stuck orders
+    /// (T-0107 / US-admin-0010). Strict allow-list: only transitions with
+    /// a defensible manual-recovery story are permitted; every blocked
+    /// transition with a sanctioned command names it in the 409 error
+    /// code (refund → RefundOrder, dispute → Open/ResolveDispute,
+    /// completion → MarkPayoutBatchCompleted). Mandatory ≥10-char reason,
+    /// recorded in the audit log.
+    /// </summary>
+    [HttpPost("{orderId}/state")]
+    [ProducesResponseType(typeof(ChangeOrderStateManually.ChangeOrderStateManuallyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ChangeState(
+        string orderId, [FromBody] ChangeOrderStateRequest request, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(
+            new ChangeOrderStateManually.Command(orderId, request.TargetState, request.Reason), ct));
 }

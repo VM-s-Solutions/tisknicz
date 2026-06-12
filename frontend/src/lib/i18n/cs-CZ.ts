@@ -477,6 +477,22 @@ export const messages = {
   'email.adminRecipientNotConfigured':
     'E-mail pro administrátorská upozornění není nastaven. Tým byl informován.',
 
+  // T-0107 manual state-change error codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 UI) — the Czech
+  // copy names the sanctioned action per US-admin-0010 AC-2.
+  'order.manualTransition.notAllowed':
+    'Tento ruční přechod stavu není povolen.',
+  'order.manualTransition.useRefundOrder':
+    'Tento přechod není povolen — použijte refundaci objednávky.',
+  'order.manualTransition.useOpenDispute':
+    'Tento přechod není povolen — použijte otevření reklamace.',
+  'order.manualTransition.useResolveDispute':
+    'Objednávka je v reklamaci — použijte vyřízení reklamace.',
+  'order.manualTransition.useMarkPayoutBatchCompleted':
+    'Tento přechod není povolen — dokončení proběhne vyplacením výrobce.',
+  'order.manualTransition.paidRequiresProviderRef':
+    'Objednávku nelze označit jako zaplacenou — chybí záznam platby od platební brány.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

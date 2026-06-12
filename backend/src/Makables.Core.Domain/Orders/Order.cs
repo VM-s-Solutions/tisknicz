@@ -613,6 +613,26 @@ public sealed class Order : Auditable
     public const int MaxShippingCarrierTrackingUrlLength = 500;
 
     /// <summary>
+    /// <see cref="OrderState.Accepted"/> → <see cref="OrderState.Paid"/>
+    /// — undo a maker mis-click on Accept (T-0107). Clears
+    /// <see cref="AcceptedAt"/> so a later re-accept stamps a FRESH
+    /// timestamp (the non-obvious cleanup a generic state setter would
+    /// miss — T-0107 §C). <see cref="PaidAt"/> and the provider refs are
+    /// untouched. Admin-only authorisation lives in T-0107
+    /// <c>ChangeOrderStateManually.Command</c>.
+    /// </summary>
+    public BusinessResult RevertAcceptance(IClock clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (State != OrderState.Accepted)
+            return InvalidTransition();
+
+        State = OrderState.Paid;
+        AcceptedAt = null;
+        return BusinessResult.Success();
+    }
+
+    /// <summary>
     /// <see cref="OrderState.Accepted"/> → <see cref="OrderState.Shipped"/>.
     /// Sets <see cref="ShippedAt"/>, <see cref="AutoDeliverAt"/> =
     /// <see cref="ShippedAt"/> + <paramref name="autoDeliverWindowDays"/>,

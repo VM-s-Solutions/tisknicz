@@ -119,7 +119,8 @@ public class OrderAddAttachmentTests
     {
         var o = ValidDefaults();
         o.MarkAsPaid(FixedClock(), "tx-1");
-        o.Refund(FixedClock());
+        // T-0105: full refund (cumulative == total) flips to Refunded.
+        o.Refund(FixedClock(), 32900, acknowledgePostPayout: false);
         o.AllowsAttachmentUpload().Should().BeFalse();
     }
 
@@ -184,7 +185,8 @@ public class OrderAddAttachmentTests
     {
         var o = ValidDefaults();
         o.MarkAsPaid(FixedClock(), "tx-1");
-        o.Refund(FixedClock());
+        // T-0105: full refund (cumulative == total) flips to Refunded.
+        o.Refund(FixedClock(), 32900, acknowledgePostPayout: false);
 
         var result = o.AddAttachment(NewAttachment());
 
