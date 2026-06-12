@@ -45,6 +45,7 @@ public sealed class EmailSendService(
     IInvoiceRepository invoices,
     IBlobStorageClient blobStorage,
     IOptions<PublicAppUrlsOptions> urls,
+    IOptions<EmailOptions> emailOptions,
     ILogger<EmailSendService> logger) : IEmailSendService
 {
     public Task<BusinessResult<EmailSentReceipt>> SendAsync(
@@ -94,8 +95,106 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderRefundedCustomerEmail
                 => SendOrderRefundedCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderDisputedAdminEmail
+                => SendOrderDisputedAdminEmailAsync(payloadJson, cancellationToken),
+
+            OutboxEventTypes.OrderDisputeResolvedCustomerEmail
+                => SendOrderDisputeResolvedCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0106: OrderDisputed (admin) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderDisputedAdminEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderDisputedAdminEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderDisputedAdminEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // §C.9: the recipient resolves at SEND time — deliberately not
+        // baked into the payload so a missing config never blocks the
+        // dispute open itself; the outbox row parks Configuration-class
+        // and is retried after the fix (ADR 0020).
+        var adminAddress = emailOptions.Value.AdminNotificationAddress;
+        if (string.IsNullOrWhiteSpace(adminAddress))
+        {
+            logger.LogCritical(
+                "OrderDisputedAdminEmail for order {OrderId}: EmailOptions.AdminNotificationAddress " +
+                "(ADMIN_NOTIFICATION_EMAIL) is not configured — parking the outbox row.",
+                payload.OrderId);
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(
+                Error.Configuration(BusinessErrorMessage.EmailAdminRecipientNotConfigured)));
+        }
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderDisputedAdmin,
+            toAddress: adminAddress,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["dispute_id"] = payload.DisputeId,
+                ["category"] = payload.Category.ToString(),
+                ["source"] = payload.Source.ToString(),
+                ["description"] = payload.Description,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0106: OrderDisputeResolved (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderDisputeResolvedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderDisputeResolvedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderDisputeResolvedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // Czech outcome labels for the plain-text body (no conditional
+        // syntax in the substitution engine; pre-rendered like the
+        // refund_kind variant in the T-0105 branch).
+        var outcomeLabel = payload.Outcome switch
+        {
+            Makables.Core.Domain.Orders.DisputeResolutionOutcome.Refunded => "vrácení peněz",
+            Makables.Core.Domain.Orders.DisputeResolutionOutcome.Cancelled => "zrušení objednávky",
+            _ => "pokračování objednávky",
+        };
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderDisputeResolvedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["outcome"] = payload.Outcome.ToString(),
+                ["outcome_label"] = outcomeLabel,
+                // Customer-VISIBLE per §C.7 — rendered verbatim.
+                ["resolution_notes"] = payload.ResolutionNotes,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0105: OrderRefunded (customer) email branch. ===

@@ -369,6 +369,30 @@ public sealed class OrdersController(
             : HandleResult(BusinessResult.Failure<MarkOrderDeliveredApiResponse>(result.Error!));
     }
 
+    /// <summary>Request body for <see cref="OpenDisputeAction"/>. The order id rides the route.</summary>
+    public sealed record OpenCustomerDisputeRequest(DisputeCategory Category, string Description);
+
+    /// <summary>
+    /// Customer opens a dispute on their own order (T-0106 /
+    /// US-admin-0011). Flips the order into the Disputed parenthesis
+    /// state, records the dispute with the customer's own words, and
+    /// notifies the admin mailbox. Carrier-reserved categories are
+    /// rejected (400); re-opening an already-disputed order returns the
+    /// existing dispute's id (200, Silent Success). Evidence continues in
+    /// the order-message thread, which stays open in Disputed.
+    /// </summary>
+    [HttpPost("{orderId}/dispute")]
+    [ProducesResponseType(typeof(OpenCustomerDispute.OpenCustomerDisputeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> OpenDisputeAction(
+        string orderId, [FromBody] OpenCustomerDisputeRequest request, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(
+            new OpenCustomerDispute.Command(orderId, request.Category, request.Description), ct));
+
     /// <summary>
     /// Streaming download of a customer-uploaded order attachment.
     /// Different cache policy from <c>ProductImageController</c>:

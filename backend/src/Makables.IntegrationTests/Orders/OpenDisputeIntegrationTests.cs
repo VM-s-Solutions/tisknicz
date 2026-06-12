@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using FluentAssertions;
-using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
@@ -8,14 +9,15 @@ using Makables.Core.Domain.Money;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Products;
+using Makables.Infra.Common.Auth;
 using Makables.Infra.Database;
 using Makables.IntegrationTests.Common;
-using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using AddressEntity = Makables.Core.Domain.Addresses.Address;
 using MakerEntity = Makables.Core.Domain.Makers.Maker;
@@ -23,18 +25,21 @@ using MakerEntity = Makables.Core.Domain.Makers.Maker;
 namespace Makables.IntegrationTests.Orders;
 
 /// <summary>
-/// End-to-end pin for the T-0106 REWIRED DisputeShipment (was the
-/// T-0078 stub — the old "no Order state mutation" pin is now FALSE by
-/// design). Real Postgres; dispatch the Command via MediatR; assert the
-/// Shipped → Disputed transition (with PreDisputeState), the
-/// Source=Carrier dispute row, exactly one order.disputed.adminEmail
-/// outbox row, and Silent-Success on a re-fire.
+/// End-to-end coverage for the T-0106 customer dispute-open endpoint
+/// (<c>POST /api/v1/orders/{orderId}/dispute</c> on the Customer host)
+/// plus the two predicate-exclusion pins: a Disputed order drops out of
+/// the auto-deliver sweep BY DEFINITION (AC-11 — no predicate change
+/// shipped), and the T-0079 message thread stays open in Disputed
+/// (AC-12 — the evidence channel).
 /// </summary>
 [Collection(PostgresCollection.Name)]
-public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
+public sealed class OpenDisputeIntegrationTests : IAsyncLifetime
 {
+    private const string TestKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    private const string TestIssuer = "https://makables.test";
     private const string CountryCode = "CZ";
     private const string Currency = "CZK";
+
     private const string CustomerUserId = "user-customer-1";
     private const string MakerUserId = "user-maker-1";
     private const string MakerId = "maker-1";
@@ -43,10 +48,13 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
     private const string ProductId = "prod-1";
     private const string OrderId = "ord-1";
 
+    private static readonly DateTimeOffset Now =
+        new(2026, 6, 12, 10, 0, 0, TimeSpan.Zero);
+
     private readonly PostgresHarness _harness;
     private WebApplicationFactory<Makables.Web.Customer.Program> _factory = default!;
 
-    public DisputeShipmentIntegrationTests(PostgresHarness harness)
+    public OpenDisputeIntegrationTests(PostgresHarness harness)
     {
         _harness = harness;
     }
@@ -63,8 +71,8 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:Postgres"] = _harness.ConnectionString,
-                        ["Jwt:Issuer"] = "https://makables.test",
-                        ["Jwt:SigningKeyBase64"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                        ["Jwt:Issuer"] = TestIssuer,
+                        ["Jwt:SigningKeyBase64"] = TestKeyBase64,
                         ["SendGrid:ApiKey"] = "SG.integration-test-stub",
                         ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
@@ -105,7 +113,7 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    private async Task SeedShippedOrderAsync()
+    private async Task SeedOrderAsync(bool delivered, DateTimeOffset? autoDeliverPastShipDate = null)
     {
         await using var db = _harness.CreateDbContext();
         const string seedActor = "test-seed";
@@ -164,7 +172,7 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
         var order = Order.Create(
             id: OrderId, orderNumber: "M-CZ-20260042",
             customerUserId: CustomerUserId, makerId: MakerId, productId: ProductId,
-            contactName: "Anna", contactEmail: "a@b.cz", contactPhone: "+420 723 456 789",
+            contactName: "Anna", contactEmail: "anna@example.cz", contactPhone: "+420 723 456 789",
             productPriceAmountMinor: 50000, shippingPriceAmountMinor: 7900,
             platformFeeAmountMinor: 7500, makerPayoutAmountMinor: 50400,
             totalAmountMinor: 57900, currency: Currency, vatRateBp: 2100,
@@ -172,74 +180,139 @@ public sealed class DisputeShipmentIntegrationTests : IAsyncLifetime
             zasilkovnaPickupPointId: "pp-42",
             countryCode: CountryCode);
         var clock = Substitute.For<IClock>();
-        clock.UtcNow.Returns(new DateTimeOffset(2026, 6, 5, 10, 0, 0, TimeSpan.Zero));
+        // When the test wants AutoDeliverAt in the past, ship far enough
+        // back that ShippedAt + 7d < Now.
+        clock.UtcNow.Returns(autoDeliverPastShipDate ?? Now.AddDays(-2));
         order.MarkAsPaid(clock, "tx-1");
         order.Accept(clock);
-        order.Ship(clock, "PKT-99", 7);
+        order.Ship(clock, "PKT-1", 7);
+        if (delivered)
+        {
+            order.MarkAsDelivered(clock, OrderDeliverySource.Carrier);
+        }
         order.MarkCreated(seedActor, seedAt);
         db.Set<Order>().Add(order);
 
         await db.SaveChangesAsync();
     }
 
-    [Fact]
-    public async Task DisputeShipment_e2e_transitions_to_Disputed_with_carrier_dispute_row_and_admin_email()
+    private HttpClient CreateCustomerClient()
     {
-        await SeedShippedOrderAsync();
-        using var scope = _factory.Services.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        var result = await mediator.Send(
-            new DisputeShipment.Command(OrderId, DisputeReason.CarrierFailed),
-            default);
-
-        result.IsSuccess.Should().BeTrue();
-
-        await using (var db = _harness.CreateDbContext())
+        var issuer = new JwtIssuer(Options.Create(new JwtOptions
         {
-            // T-0106: the REAL parenthesis-state transition (stub gone).
-            var row = await db.Set<Order>().AsNoTracking()
-                .FirstOrDefaultAsync(o => o.Id == OrderId);
-            row!.State.Should().Be(OrderState.Disputed);
-            row.PreDisputeState.Should().Be(OrderState.Shipped);
-            row.DisputedAt.Should().NotBeNull();
+            Issuer = TestIssuer,
+            SigningKeyBase64 = TestKeyBase64,
+            AccessTokenLifetime = TimeSpan.FromMinutes(15),
+        }));
+        var user = User.Create(
+            id: CustomerUserId, email: "anna@example.cz", role: UserRole.Customer,
+            fullName: "Anna", countryCodePrimary: CountryCode,
+            passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+        user.ConfirmEmail(new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero));
+        var token = issuer.Issue(user, MakablesAudiences.Customer, DateTimeOffset.UtcNow).Token;
 
-            // Carrier-sourced dispute row with the §C.5 category mapping.
-            var dispute = await db.Set<Dispute>().AsNoTracking()
-                .SingleAsync(d => d.OrderId == OrderId);
-            dispute.Source.Should().Be(DisputeSource.Carrier);
-            dispute.Category.Should().Be(DisputeCategory.CarrierFailed);
-            dispute.Description.Should().Contain("PKT-99",
-                "the canned description carries the carrier ref");
-            dispute.ResolvedAt.Should().BeNull();
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
 
-            // Exactly one admin-email row; the retired carrierSourced
-            // event type no longer exists anywhere.
-            var outbox = await db.Set<OutboxEvent>().AsNoTracking()
-                .Where(e => e.AggregateId == OrderId)
-                .ToListAsync();
-            outbox.Should().HaveCount(1);
-            outbox[0].EventType.Should().Be(OutboxEventTypes.OrderDisputedAdminEmail);
-            var payload = JsonSerializer.Deserialize<OrderDisputedAdminEmailPayload>(
-                outbox[0].PayloadJson);
-            payload!.OrderId.Should().Be(OrderId);
-            payload.Source.Should().Be(DisputeSource.Carrier);
-            payload.Category.Should().Be(DisputeCategory.CarrierFailed);
+    [Fact]
+    public async Task Customer_POST_dispute_e2e_flips_state_writes_dispute_row_and_outbox()
+    {
+        await SeedOrderAsync(delivered: true);
+        using var client = CreateCustomerClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/dispute",
+            new { category = "DamagedItem", description = "Váza dorazila rozbitá." });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+        var order = await db.Set<Order>().AsNoTracking().FirstAsync(o => o.Id == OrderId);
+        order.State.Should().Be(OrderState.Disputed);
+        order.PreDisputeState.Should().Be(OrderState.Delivered);
+        order.DisputedAt.Should().NotBeNull();
+
+        var dispute = await db.Set<Dispute>().AsNoTracking().SingleAsync(d => d.OrderId == OrderId);
+        dispute.Source.Should().Be(DisputeSource.Customer);
+        dispute.Category.Should().Be(DisputeCategory.DamagedItem);
+        dispute.Description.Should().Be("Váza dorazila rozbitá.");
+        dispute.ResolvedAt.Should().BeNull("a fresh dispute is OPEN");
+
+        var outboxRows = await db.Set<OutboxEvent>().AsNoTracking()
+            .Where(e => e.AggregateId == OrderId)
+            .ToListAsync();
+        outboxRows.Should().HaveCount(1);
+        outboxRows[0].EventType.Should().Be(OutboxEventTypes.OrderDisputedAdminEmail);
+    }
+
+    [Fact]
+    public async Task Disputed_order_not_claimed_by_auto_deliver_or_carrier_sweeps()
+    {
+        // Shipped order whose AutoDeliverAt is already in the past — the
+        // sweep WOULD claim it. Opening a dispute flips State so it drops
+        // out of BOTH State == Shipped predicates by definition (AC-11 —
+        // pinned by test, not by dead predicate code).
+        await SeedOrderAsync(delivered: false, autoDeliverPastShipDate: Now.AddDays(-30));
+        using var client = CreateCustomerClient();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            var preDispute = new List<string>();
+            await foreach (var id in repo.GetAutoDeliverableUnscopedReadOnlyAsync(Now, default))
+            {
+                preDispute.Add(id);
+            }
+            preDispute.Should().Contain(OrderId, "sanity: the sweep claims the order BEFORE the dispute");
         }
 
-        // Re-fire on the now-Disputed order: Silent-Success, no new rows,
-        // no second emission (the stub's repeat-emission contract is gone).
-        var refire = await mediator.Send(
-            new DisputeShipment.Command(OrderId, DisputeReason.CarrierFailed),
-            default);
-        refire.IsSuccess.Should().BeTrue();
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/dispute",
+            new { category = "NotDelivered", description = "Balík se ztratil." });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        await using (var db = _harness.CreateDbContext())
+        using (var scope = _factory.Services.CreateScope())
         {
-            (await db.Set<Dispute>().AsNoTracking().CountAsync(d => d.OrderId == OrderId))
-                .Should().Be(1);
-            (await db.Set<OutboxEvent>().AsNoTracking().CountAsync(e => e.AggregateId == OrderId))
-                .Should().Be(1);
+            var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+
+            var autoDeliverable = new List<string>();
+            await foreach (var id in repo.GetAutoDeliverableUnscopedReadOnlyAsync(Now, default))
+            {
+                autoDeliverable.Add(id);
+            }
+            autoDeliverable.Should().NotContain(OrderId,
+                "State == Shipped naturally excludes Disputed");
+
+            var carrierSyncable = new List<string>();
+            await foreach (var o in repo.GetCarrierSyncableUnscopedReadOnlyAsync(default))
+            {
+                carrierSyncable.Add(o.Id);
+            }
+            carrierSyncable.Should().NotContain(OrderId,
+                "the carrier sweep likewise stops yielding the disputed shipment");
         }
+    }
+
+    [Fact]
+    public async Task Message_post_on_disputed_order_succeeds_as_the_evidence_channel()
+    {
+        // AC-12: PendingPayment remains the ONLY state that blocks posting
+        // (T-0079 ruling) — the thread is the dispute evidence channel.
+        await SeedOrderAsync(delivered: true);
+        using var client = CreateCustomerClient();
+
+        var dispute = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/dispute",
+            new { category = "NotAsDescribed", description = "Jiná barva než na fotce." });
+        dispute.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var message = await client.PostAsJsonAsync(
+            $"/api/v1/orders/{OrderId}/messages",
+            new { body = "Posílám fotky rozdílu barev jako důkaz." });
+
+        message.StatusCode.Should().Be(HttpStatusCode.OK,
+            "the message thread stays open in Disputed (evidence channel)");
     }
 }

@@ -466,6 +466,17 @@ export const messages = {
   'payment.refund.noProviderRef':
     'Objednávka nemá záznam o platbě — není co refundovat.',
 
+  // T-0106 dispute error codes (parity with BusinessErrorMessage).
+  // PM/UX to refine on PR review.
+  'order.dispute.categoryNotAllowed':
+    'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
+  'order.dispute.notOpen':
+    'K této objednávce není otevřená žádná reklamace.',
+  // Admin / ops surface only — the outbox row parks until the
+  // ADMIN_NOTIFICATION_EMAIL config lands.
+  'email.adminRecipientNotConfigured':
+    'E-mail pro administrátorská upozornění není nastaven. Tým byl informován.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

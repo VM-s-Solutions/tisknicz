@@ -1,47 +1,45 @@
-using System.Text.Json;
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
-using Makables.Core.Domain.Shipping;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Makables.Core.AppServices.Features.Orders;
 
 /// <summary>
-/// <b>T-0078 STUB.</b> Flags an order for dispute based on a
-/// carrier-sourced terminal state (Packeta Returned / Failed).
-/// Emits a single <see cref="OutboxEventTypes.OrderDisputedCarrierSourced"/>
-/// outbox event + logs Warning. <b>NO Order state mutation at MVP.</b>
+/// Carrier-sourced dispute open (T-0078 detection → T-0106 real flow).
+/// Dispatched by <c>SyncShipmentStatusesFunction</c> when Packeta reports
+/// a <c>Returned</c> / <c>Failed</c> terminal state. The T-0078 stub
+/// behaviour (log + unrouted outbox event, NO state mutation) is REWIRED
+/// here to the real dispute domain: Shipped → Disputed (stamping
+/// <c>PreDisputeState</c>), a <see cref="Dispute"/> row with
+/// <see cref="DisputeSource.Carrier"/> and the §C.5 category mapping,
+/// and the admin-notification outbox event.
 ///
 /// <para>
-/// T-0078 owns DETECTING the dispute-worthy carrier statuses; T-0106
-/// will wire what HAPPENS next — the real <c>OrderState.Disputed</c>
-/// transition + customer "your shipment is disputed" email + admin
-/// "dispute opened" email. The stub gives ops day-one visibility into
-/// dispute volume + character via the outbox row + the Warning log;
-/// T-0106's dispute domain design isn't locked yet so we deliberately
-/// leave Order.State untouched until then.
+/// The <see cref="Command"/> / <see cref="DisputeShipmentResponse"/>
+/// shapes are KEPT verbatim (§C.5) so the Function call sites and its
+/// unit tests stay untouched — <see cref="DisputeReason"/> remains the
+/// two-value carrier WIRE enum; <see cref="DisputeCategory"/> is the
+/// domain axis.
 /// </para>
 ///
 /// <para>
-/// <b>Atomicity.</b> The single outbox row commits under the UoW
-/// pipeline per ADR 0014. The handler NEVER calls
-/// <c>SaveChangesAsync</c>. Repeat invocations against the same
-/// (OrderId, Reason) emit a second outbox row — intentional MVP
-/// behaviour so visible duplicates signal that the dispute keeps
-/// re-firing across sweeps; T-0106 will resolve this via the
-/// state-graph transition (a Disputed order short-circuits in the
-/// T-0078 Function's Shipped predicate).
+/// <b>Idempotency:</b> a re-fire against the now-Disputed order is
+/// Silent-Success with no new rows and no second outbox emission — this
+/// kills the stub's intentional repeat-emission across sweeps (the
+/// state flip also drops the order out of the carrier sweep's
+/// <c>State == Shipped</c> predicate by definition, AC-11).
 /// </para>
 /// </summary>
 public static class DisputeShipment
 {
     /// <summary>
-    /// Flag an order for dispute by id + reason.
+    /// Flag an order for dispute by id + carrier-wire reason.
     /// </summary>
     public sealed record Command(string OrderId, DisputeReason Reason)
         : ICommand<DisputeShipmentResponse>;
@@ -68,7 +66,12 @@ public static class DisputeShipment
 
     public sealed class Handler(
         IOrderRepository orders,
+        IDisputeRepository disputes,
         IOutbox outbox,
+        IClock clock,
+        IIdGenerator ids,
+        ILanguageResolver languageResolver,
+        IOptions<PublicAppUrlsOptions> publicAppUrls,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<DisputeShipmentResponse>>
     {
         public async Task<BusinessResult<DisputeShipmentResponse>> Handle(
@@ -83,41 +86,55 @@ public static class DisputeShipment
                     Error.NotFound("orderId", BusinessErrorMessage.OrderNotFound));
             }
 
-            // Step 2: Warning log with structured context — ops triage
-            // surface during the T-0078-to-T-0106 window.
+            // Step 2: Silent-Success on a re-fire against the now-Disputed
+            // order (§C.4) — no new rows, no second outbox emission.
+            if (order.State == OrderState.Disputed)
+            {
+                logger.LogInformation(
+                    "DisputeShipment: order {OrderId} already Disputed; idempotent skip (reason: {Reason}).",
+                    order.Id, command.Reason);
+                return BusinessResult.Success(new DisputeShipmentResponse(order.Id, command.Reason));
+            }
+
+            // Step 3: Parenthesis-state flip — stamps PreDisputeState
+            // (Shipped on the carrier path).
+            var transition = order.OpenDispute(clock);
+            if (!transition.IsSuccess)
+            {
+                return BusinessResult.Failure<DisputeShipmentResponse>(transition.Error!);
+            }
+
+            // Step 4: Ops triage surface — kept from the T-0078 stub.
             logger.LogWarning(
-                "DisputeShipment STUB: order {OrderId} flagged for dispute " +
-                "(reason: {Reason}, source: carrier-sourced, carrierRef: {CarrierRef}). " +
-                "T-0106 will wire the real Disputed state transition + customer + admin email.",
+                "DisputeShipment: order {OrderId} disputed from carrier-sourced terminal state " +
+                "(reason: {Reason}, carrierRef: {CarrierRef}).",
                 order.Id, command.Reason, order.ShippingCarrierRef);
 
-            // Step 3: Map the dispute reason to the carrier state that
-            // produced it. Audit-friendly so T-0106 admin processing can
-            // distinguish Returned vs Failed even after DisputeReason
-            // semantics evolve.
-            var carrierState = command.Reason switch
+            // Step 5: Dispute row — §C.5 wire-enum → domain-enum mapping;
+            // canned description carries the carrier ref as the evidence
+            // pointer (admin follows up in Packeta's console).
+            var category = command.Reason switch
             {
-                DisputeReason.CarrierReturned => ShipmentState.Returned,
-                DisputeReason.CarrierFailed => ShipmentState.Failed,
-                _ => ShipmentState.Failed,  // defensive default — future Reasons land in T-0106
+                DisputeReason.CarrierReturned => DisputeCategory.CarrierReturned,
+                DisputeReason.CarrierFailed => DisputeCategory.CarrierFailed,
+                _ => DisputeCategory.CarrierFailed, // defensive default for future wire values
             };
+            var dispute = Dispute.Open(
+                id: ids.Next(),
+                orderId: order.Id,
+                category: category,
+                description:
+                    $"Carrier-reported terminal shipment state: {command.Reason}. " +
+                    $"Carrier ref: {order.ShippingCarrierRef ?? "(none)"}.",
+                source: DisputeSource.Carrier,
+                countryCode: order.CountryCode);
+            await disputes.AddAsync(dispute, cancellationToken);
 
-            // Step 4: Enqueue the dispute outbox event. NOT email-routed
-            // at MVP (intentionally absent from IsEmailSend) — the
-            // OutboxDispatcher's "unrouted" branch logs it visibly until
-            // T-0106 wires the consumer Function.
-            var payload = new OrderDisputedCarrierSourcedPayload(
-                OrderId: order.Id,
-                Reason: command.Reason,
-                CarrierState: carrierState);
-            outbox.Enqueue(
-                aggregateId: order.Id,
-                eventType: OutboxEventTypes.OrderDisputedCarrierSourced,
-                payloadJson: JsonSerializer.Serialize(payload));
+            // Step 6: Admin notification — shared payload builder so the
+            // shape cannot drift between sources.
+            await OpenCustomerDispute.Handler.EnqueueAdminEmailAsync(
+                outbox, languageResolver, publicAppUrls.Value, order, dispute, cancellationToken);
 
-            // Step 5: NO Order state mutation at MVP. Order stays in
-            // Shipped. T-0106 will own the Disputed transition once the
-            // state-graph design is locked.
             return BusinessResult.Success(new DisputeShipmentResponse(order.Id, command.Reason));
         }
     }

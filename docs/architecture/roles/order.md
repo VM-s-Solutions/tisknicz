@@ -80,6 +80,17 @@ Capture a customer's intent to purchase from a specific maker and track the stat
 - `CancellationSource` is stamped exactly once, at `Cancel` time, atomically with `CancelledAt`. Nullable only for orders cancelled before T-0083.
 - The unread counters never go negative — `ResetUnreadFor` is an unconditional zero, `IncrementUnreadFor` only ever adds.
 
+## Dispute surface (T-0106)
+
+`Disputed` is a **parenthesis state** (patterns §A.22), not a terminal one:
+
+- **Disputable allow-list = `Paid | Accepted | Shipped | Delivered`** (§C.1 — Paid/Accepted are the "maker silent / never ships" escalation lanes; `Completed` is OUT: payout settled, nothing to freeze; `PendingPayment`/`Cancelled`/`Refunded` have nothing in escrow).
+- `OpenDispute(clock)` stamps `PreDisputeState = State` before flipping; `ResolveDispute(clock, restoreTo)` restores and clears the pointer; `DisputedAt` is KEPT as a historical marker. Invariant: `PreDisputeState` non-null ⇔ `State == Disputed`.
+- **`Dispute` child entity** (Q2): category (`DisputeCategory`, carrier-reserved values gated at the party Validators), description (opener's own words, ≤2000), source (`Customer | Maker | Carrier | Admin`, always server-stamped), resolution outcome + customer-visible notes. At most one OPEN dispute per order (`ux_disputes_order_open UNIQUE (order_id) WHERE resolved_at IS NULL`); re-open is Silent-Success returning the existing id; re-resolve is a loud 409 (`order.dispute.notOpen`).
+- **Resolution outcomes** (`ResolveDispute.Command`, admin host): `Resumed` → restore only; `Refunded` → nested `RefundOrder.Command` for the full remaining amount; `Cancelled` → `Cancel(clock, Admin)`, only legal from a Paid/Accepted restore.
+- **Sweep exclusion by definition:** the auto-deliver + carrier sweeps select `State == Shipped`, so a disputed order drops out without predicate changes (pinned by integration test). The T-0079 message thread stays open in `Disputed` — it IS the evidence channel.
+- The state flip + dispute row + `order.disputed.adminEmail` outbox row commit atomically; the admin recipient resolves at send time from `EmailOptions.AdminNotificationAddress` (`ADMIN_NOTIFICATION_EMAIL`).
+
 ## Refund surface (T-0105)
 
 Full + partial refunds per user-locked Q1; pure predicate + mutator split:

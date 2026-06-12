@@ -995,21 +995,76 @@ public sealed class Order : Auditable
         return BusinessResult.Success();
     }
 
+    // === T-0106: dispute parenthesis-state (patterns §A.22) ===
+
     /// <summary>
-    /// <see cref="OrderState.Shipped"/> /
-    /// <see cref="OrderState.Delivered"/> /
-    /// <see cref="OrderState.Completed"/> → <see cref="OrderState.Disputed"/>.
-    /// Customer-or-maker authorisation lives in T-0106
-    /// <c>OpenDispute.Command</c>.
+    /// The state the order was in when the dispute opened — restored by
+    /// <see cref="ResolveDispute"/> and cleared back to null. Invariant:
+    /// non-null ⇔ <see cref="State"/> == <see cref="OrderState.Disputed"/>
+    /// (§A.22 rule 2). Written ONLY by <see cref="OpenDispute"/>; cleared
+    /// ONLY by <see cref="ResolveDispute"/>.
+    /// </summary>
+    public OrderState? PreDisputeState { get; private set; }
+
+    /// <summary>
+    /// <see cref="OrderState.Paid"/> / <see cref="OrderState.Accepted"/> /
+    /// <see cref="OrderState.Shipped"/> / <see cref="OrderState.Delivered"/>
+    /// → <see cref="OrderState.Disputed"/>, stamping
+    /// <see cref="PreDisputeState"/> with the origin so resolve can
+    /// restore it.
+    ///
+    /// <para>
+    /// <b>Allow-list per T-0106 §C.1</b> (changed from the T-0060 shape):
+    /// Paid + Accepted are IN (the "maker silent after payment" /
+    /// "accepted but never ships" escalation lanes); Completed is OUT —
+    /// the maker payout already settled, there is nothing left to freeze;
+    /// post-completion complaints route through the message thread +
+    /// direct admin action (T-0105 refund with the Q5 acknowledgement, or
+    /// T-0107). Re-dispute of a Disputed order is refused here; the
+    /// command layer maps it to Silent-Success returning the existing
+    /// open dispute (§C.4). Who-may-open lives in the T-0106 command
+    /// layer (customer / maker / carrier / admin variants).
+    /// </para>
     /// </summary>
     public BusinessResult OpenDispute(IClock clock)
     {
         ArgumentNullException.ThrowIfNull(clock);
-        if (State is not (OrderState.Shipped or OrderState.Delivered or OrderState.Completed))
+        if (State is not (OrderState.Paid
+            or OrderState.Accepted
+            or OrderState.Shipped
+            or OrderState.Delivered))
+        {
             return InvalidTransition();
+        }
 
+        PreDisputeState = State;
         State = OrderState.Disputed;
         DisputedAt = clock.UtcNow;
+        return BusinessResult.Success();
+    }
+
+    /// <summary>
+    /// <see cref="OrderState.Disputed"/> → <paramref name="restoreTo"/>
+    /// (the caller passes <see cref="PreDisputeState"/>), clearing the
+    /// restore pointer. <see cref="DisputedAt"/> is KEPT — a historical
+    /// marker like <see cref="PaidAt"/> / <see cref="ShippedAt"/>.
+    ///
+    /// <para>
+    /// The outcome edges (refund / cancel / nothing) then apply FROM the
+    /// restored state via their own sanctioned commands —
+    /// <see cref="Refund"/>'s and <see cref="Cancel"/>'s allow-lists stay
+    /// untouched (T-0106 §C.2/§C.3). Admin-only authorisation lives in
+    /// T-0106 <c>ResolveDispute.Command</c>.
+    /// </para>
+    /// </summary>
+    public BusinessResult ResolveDispute(IClock clock, OrderState restoreTo)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (State != OrderState.Disputed)
+            return InvalidTransition();
+
+        State = restoreTo;
+        PreDisputeState = null;
         return BusinessResult.Success();
     }
 

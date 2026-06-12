@@ -146,6 +146,15 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasColumnName("cancellation_source")
             .HasConversion<short?>();
 
+        // T-0106: the dispute parenthesis-state restore pointer (patterns
+        // §A.22). SMALLINT NULL — non-null ⇔ state == Disputed. Stored as
+        // the enum's int value (not the string the `state` column uses):
+        // it is a transient pointer read back only by ResolveDispute,
+        // never queried by name in admin SQL.
+        builder.Property(o => o.PreDisputeState)
+            .HasColumnName("pre_dispute_state")
+            .HasConversion<short?>();
+
         // T-0079: denormalized unread-message counters per locked decision
         // A.3. Default 0 so backfill is trivial. Drive O(1) reads on the
         // T-0080 / T-0081 list endpoints without a per-row subquery.

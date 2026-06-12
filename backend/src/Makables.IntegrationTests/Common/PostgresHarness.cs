@@ -126,8 +126,11 @@ public sealed class PostgresHarness : IAsyncLifetime
         // CASCADE never clears it. TRUNCATE is legal here: the
         // trg_admin_audit_log_reject_* triggers fire on UPDATE/DELETE
         // statements only (row-level), not TRUNCATE.
+        // T-0106: extended to truncate disputes (the CASCADE off orders
+        // would catch it via the FK, but explicit is cheaper to reason
+        // about — T-0079 precedent).
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, invoices, order_messages, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, invoices, order_messages, disputes, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

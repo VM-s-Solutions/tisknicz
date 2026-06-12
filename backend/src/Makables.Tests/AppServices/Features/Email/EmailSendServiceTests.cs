@@ -42,9 +42,14 @@ public class EmailSendServiceTests
             EmailConfirmationPath = "/auth/confirm?token={token}",
             PasswordResetPath = "/auth/reset?token={token}",
         });
+        // T-0106: admin dispute-digest recipient resolves at send time.
+        var emailOptions = Options.Create(new EmailOptions
+        {
+            AdminNotificationAddress = "ops@makables.test",
+        });
         _sut = new EmailSendService(_templates, _translations, _provider,
             _invoices, _blobStorage,
-            urls, NullLogger<EmailSendService>.Instance);
+            urls, emailOptions, NullLogger<EmailSendService>.Instance);
     }
 
     private static EmailTemplate CreateTemplate(EmailTemplateType type) =>

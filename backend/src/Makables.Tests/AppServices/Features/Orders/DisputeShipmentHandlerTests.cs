@@ -5,22 +5,19 @@ using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
-using Makables.Core.Domain.Shipping;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 
 namespace Makables.Tests.AppServices.Features.Orders;
 
 /// <summary>
-/// Pins T-0078 <see cref="DisputeShipment.Handler"/> stub contract:
-/// - Warning log with structured context (OrderId + Reason + CarrierRef),
-/// - exactly 1 OrderDisputedCarrierSourced outbox row enqueued with
-///   the expected payload shape (Reason + raw ShipmentState for audit),
-/// - <b>NO Order state mutation</b> (Order stays in Shipped — T-0106
-///   will wire the real Disputed transition),
-/// - Repeat invocations emit a second outbox row (intentional MVP
-///   behaviour; T-0106 dedupes via the state-graph transition),
-/// - Missing order returns Permanent OrderNotFound without enqueue.
+/// T-0106 REWRITE of the T-0078 stub pins: <see cref="DisputeShipment.Handler"/>
+/// now drives the REAL dispute flow — Shipped → Disputed (stamping
+/// PreDisputeState), a Dispute row (Source: Carrier, §C.5 wire→domain
+/// category mapping), and ONE <c>order.disputed.adminEmail</c> outbox
+/// emission. A re-fire against the now-Disputed order is Silent-Success
+/// with no new rows (the stub's intentional repeat-emission is gone).
 /// </summary>
 public class DisputeShipmentHandlerTests
 {
@@ -29,15 +26,25 @@ public class DisputeShipmentHandlerTests
     private const string MakerId = "maker-1";
     private const string CarrierRef = "PKT-9";
 
-    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-06-09T10:00:00Z");
+    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-06-12T10:00:00Z");
 
     private readonly IOrderRepository _orders = Substitute.For<IOrderRepository>();
+    private readonly IDisputeRepository _disputes = Substitute.For<IDisputeRepository>();
     private readonly IOutbox _outbox = Substitute.For<IOutbox>();
+    private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IIdGenerator _ids = Substitute.For<IIdGenerator>();
+    private readonly ILanguageResolver _languageResolver = Substitute.For<ILanguageResolver>();
     private readonly DisputeShipment.Handler _sut;
 
     public DisputeShipmentHandlerTests()
     {
-        _sut = new DisputeShipment.Handler(_orders, _outbox,
+        _clock.UtcNow.Returns(Now);
+        _ids.Next().Returns("dsp-1");
+        _languageResolver.ResolveAsync(null, "CZ", Arg.Any<CancellationToken>())
+            .Returns("cs-CZ");
+        var urls = Options.Create(new PublicAppUrlsOptions { WebBaseUrl = "https://makables.test" });
+        _sut = new DisputeShipment.Handler(
+            _orders, _disputes, _outbox, _clock, _ids, _languageResolver, urls,
             NullLogger<DisputeShipment.Handler>.Instance);
     }
 
@@ -61,14 +68,16 @@ public class DisputeShipmentHandlerTests
     }
 
     [Fact]
-    public async Task Happy_path_CarrierReturned_enqueues_outbox_event_with_audit_payload()
+    public async Task CarrierReturned_disputes_the_order_with_carrier_source_and_admin_email()
     {
         var order = BuildShippedOrder();
         _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        Dispute? addedDispute = null;
+        await _disputes.AddAsync(Arg.Do<Dispute>(d => addedDispute = d), Arg.Any<CancellationToken>());
         string? capturedJson = null;
         _outbox.Enqueue(
             Arg.Any<string>(),
-            OutboxEventTypes.OrderDisputedCarrierSourced,
+            OutboxEventTypes.OrderDisputedAdminEmail,
             Arg.Do<string>(j => capturedJson = j));
 
         var result = await _sut.Handle(
@@ -79,58 +88,60 @@ public class DisputeShipmentHandlerTests
         result.Value!.OrderId.Should().Be(OrderId);
         result.Value.Reason.Should().Be(DisputeReason.CarrierReturned);
 
-        // NO Order state mutation at MVP per T-0078 A.1.
-        order.State.Should().Be(OrderState.Shipped);
+        // T-0106: the REAL state transition (stub behaviour gone).
+        order.State.Should().Be(OrderState.Disputed);
+        order.PreDisputeState.Should().Be(OrderState.Shipped);
+        order.DisputedAt.Should().Be(Now);
+
+        addedDispute.Should().NotBeNull();
+        addedDispute!.Source.Should().Be(DisputeSource.Carrier);
+        addedDispute.Category.Should().Be(DisputeCategory.CarrierReturned,
+            "§C.5 maps the carrier wire enum onto the domain category");
+        addedDispute.Description.Should().Contain(CarrierRef,
+            "the canned carrier text carries the carrier ref as the evidence pointer");
 
         capturedJson.Should().NotBeNull();
-        var payload = JsonSerializer.Deserialize<OrderDisputedCarrierSourcedPayload>(capturedJson!);
+        var payload = JsonSerializer.Deserialize<OrderDisputedAdminEmailPayload>(capturedJson!);
         payload!.OrderId.Should().Be(OrderId);
-        payload.Reason.Should().Be(DisputeReason.CarrierReturned);
-        payload.CarrierState.Should().Be(ShipmentState.Returned,
-            "audit payload preserves the raw Packeta state for T-0106 admin processing");
-
+        payload.DisputeId.Should().Be("dsp-1");
+        payload.Source.Should().Be(DisputeSource.Carrier);
+        payload.ActionUrl.Should().Be($"https://makables.test/dashboard/admin/orders/{OrderId}");
         _outbox.Received(1).Enqueue(
-            OrderId, OutboxEventTypes.OrderDisputedCarrierSourced, Arg.Any<string>());
+            OrderId, OutboxEventTypes.OrderDisputedAdminEmail, Arg.Any<string>());
     }
 
     [Fact]
-    public async Task Happy_path_CarrierFailed_maps_carrier_state_to_Failed()
+    public async Task CarrierFailed_maps_to_the_CarrierFailed_category()
     {
         var order = BuildShippedOrder();
         _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
-        string? capturedJson = null;
-        _outbox.Enqueue(
-            Arg.Any<string>(),
-            OutboxEventTypes.OrderDisputedCarrierSourced,
-            Arg.Do<string>(j => capturedJson = j));
+        Dispute? addedDispute = null;
+        await _disputes.AddAsync(Arg.Do<Dispute>(d => addedDispute = d), Arg.Any<CancellationToken>());
 
         await _sut.Handle(
             new DisputeShipment.Command(OrderId, DisputeReason.CarrierFailed),
             CancellationToken.None);
 
-        var payload = JsonSerializer.Deserialize<OrderDisputedCarrierSourcedPayload>(capturedJson!);
-        payload!.Reason.Should().Be(DisputeReason.CarrierFailed);
-        payload.CarrierState.Should().Be(ShipmentState.Failed);
+        addedDispute!.Category.Should().Be(DisputeCategory.CarrierFailed);
     }
 
     [Fact]
-    public async Task Idempotency_on_re_dispatch_emits_second_outbox_row()
+    public async Task Re_fire_on_disputed_order_is_silent_success_without_new_rows_or_emission()
     {
-        // T-0078 MVP: visible duplicate outbox rows signal that the
-        // dispute keeps re-firing across sweeps (T-0106 will resolve via
-        // the state-graph transition).
+        // T-0106 kills the stub's intentional repeat-emission: the state
+        // flip already drops the order out of the carrier sweep, and a
+        // race re-fire must be a no-op.
         var order = BuildShippedOrder();
+        order.OpenDispute(_clock);
         _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
 
-        await _sut.Handle(
-            new DisputeShipment.Command(OrderId, DisputeReason.CarrierReturned),
-            CancellationToken.None);
-        await _sut.Handle(
+        var result = await _sut.Handle(
             new DisputeShipment.Command(OrderId, DisputeReason.CarrierReturned),
             CancellationToken.None);
 
-        _outbox.Received(2).Enqueue(
-            OrderId, OutboxEventTypes.OrderDisputedCarrierSourced, Arg.Any<string>());
+        result.IsSuccess.Should().BeTrue();
+        await _disputes.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
+        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]

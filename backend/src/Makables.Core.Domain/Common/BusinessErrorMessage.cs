@@ -112,6 +112,22 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderMessageNotAllowedInState = "order.message.notAllowedInState";
 
+    // === Order disputes (T-0106) ===
+    /// <summary>
+    /// Customer/maker submitted a carrier-reserved dispute category
+    /// (CarrierReturned / CarrierFailed) — those are set only by the
+    /// T-0078 carrier sweep or by an admin transcribing a phone report.
+    /// T-0106 §C.6.
+    /// </summary>
+    public const string OrderDisputeCategoryNotAllowed = "order.dispute.categoryNotAllowed";
+    /// <summary>
+    /// Resolve attempted on an order with no OPEN dispute (state is not
+    /// Disputed, the dispute row is already resolved, or a double-resolve
+    /// race lost). Loud 409 — a Silent-Success second resolve with a
+    /// different outcome would mask an admin race. T-0106 §C.4.
+    /// </summary>
+    public const string OrderDisputeNotOpen = "order.dispute.notOpen";
+
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
     /// The maker's row exists but <c>Auditable.IsActive</c> is false (or
@@ -461,6 +477,16 @@ public static class BusinessErrorMessage
     public const string EmailPayloadMalformed = "email.payloadMalformed";
     public const string EmailPayloadMissingFields = "email.payloadMissingFields";
     public const string EmailEventTypeUnknown = "email.eventTypeUnknown";
+    /// <summary>
+    /// <c>EmailOptions.AdminNotificationAddress</c> (env
+    /// <c>ADMIN_NOTIFICATION_EMAIL</c>) is not configured at send time of
+    /// an <c>order.disputed.adminEmail</c> event. Classified
+    /// <see cref="ErrorType.Configuration"/> per ADR 0020 — the outbox row
+    /// parks visibly for ops and is retried after the config fix; the
+    /// dispute open itself is never blocked by a missing notification
+    /// recipient. T-0106 §C.9.
+    /// </summary>
+    public const string EmailAdminRecipientNotConfigured = "email.adminRecipientNotConfigured";
     /// <summary>
     /// The outbox event type is one of the order-email variants but the
     /// payload JSON could not be decoded into the matching record (e.g.
