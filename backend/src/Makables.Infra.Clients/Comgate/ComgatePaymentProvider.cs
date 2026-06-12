@@ -24,9 +24,12 @@ namespace Makables.Infra.Clients.Comgate;
 ///   <item><description><see cref="VerifyPaymentAsync"/> — GET
 ///     <c>{BaseUrl}/v1.0/status</c>; maps Comgate <c>status</c> into
 ///     <see cref="PaymentState"/>.</description></item>
-///   <item><description><see cref="ParseAndVerifyWebhookAsync"/> +
-///     <see cref="RefundAsync"/> — throw <see cref="NotSupportedException"/>
-///     with the T-0066 / T-0105 ticket reference per user decision Q2.</description></item>
+///   <item><description><see cref="ParseAndVerifyWebhookAsync"/> — parses
+///     the form body, then re-fetches the authoritative status from the
+///     gateway (the body alone is never trusted). T-0066.</description></item>
+///   <item><description><see cref="RefundAsync"/> — form-urlencoded POST
+///     to <c>{BaseUrl}/v1.0/refund</c>; full or partial amount in minor
+///     units, capped by Comgate at the captured total. T-0105.</description></item>
 /// </list>
 ///
 /// <para>
@@ -52,6 +55,7 @@ public sealed class ComgatePaymentProvider(
     IOptions<ComgateOptions> options,
     ICountryConfigurationRepository countryConfigurations,
     ResiliencePipelineRegistry<string> pipelineRegistry,
+    IClock clock,
     ILogger<ComgatePaymentProvider> logger) : IPaymentProvider
 {
     /// <summary>Named HttpClient registered by <c>AddMakablesClients</c>.</summary>
@@ -304,11 +308,73 @@ public sealed class ComgatePaymentProvider(
         return null;
     }
 
-    public Task<BusinessResult<RefundReceipt>> RefundAsync(
-        string providerRef, long amountMinor, string currency, CancellationToken cancellationToken) =>
-        throw new NotSupportedException(
-            "RefundAsync is implemented in T-0105. " +
-            "If you are reading this, the admin refund command in T-0105 has not yet shipped.");
+    /// <summary>
+    /// T-0105. Refund a previously-captured payment via Comgate
+    /// <c>/v1.0/refund</c> — full or partial; Comgate caps cumulative
+    /// refunds at the captured amount, so an admin retry cannot
+    /// over-refund at the gateway.
+    ///
+    /// <para>
+    /// Comgate's refund response carries <c>code</c>/<c>message</c> only
+    /// (no distinct refund id), so the receipt's
+    /// <see cref="RefundReceipt.RefundProviderRef"/> echoes the original
+    /// <c>transId</c> and <see cref="RefundReceipt.RefundedAt"/> is
+    /// stamped from the injected <see cref="IClock"/> (we have no
+    /// provider-authoritative settle timestamp). T-0105 §C.
+    /// </para>
+    /// </summary>
+    public async Task<BusinessResult<RefundReceipt>> RefundAsync(
+        string providerRef, long amountMinor, string currency, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(providerRef))
+            throw new ArgumentException("ProviderRef is required.", nameof(providerRef));
+        if (amountMinor <= 0)
+            throw new ArgumentException("AmountMinor must be positive.", nameof(amountMinor));
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new ArgumentException("Currency is required.", nameof(currency));
+
+        var opts = options.Value;
+        var trimmedRef = providerRef.Trim();
+
+        var formFields = new List<KeyValuePair<string, string>>
+        {
+            new("merchant", opts.MerchantId),
+            new("transId", trimmedRef),
+            new("amount", amountMinor.ToString(CultureInfo.InvariantCulture)),
+            new("curr", currency),
+        };
+        // Comgate's refund endpoint requires the `test` flag on sandbox
+        // transactions; omit entirely on production (mirrors the docs'
+        // request shape rather than sending "false").
+        if (opts.TestMode)
+        {
+            formFields.Add(new("test", "true"));
+        }
+        // Secret stays at the end; never logged, never in the URL.
+        formFields.Add(new("secret", opts.Secret));
+
+        var url = $"{opts.BaseUrl.TrimEnd('/')}/v1.0/refund";
+
+        var callResult = await CallComgateAsync(
+            url, formFields, opts, operationLabel: "refund", cancellationToken);
+        if (!callResult.IsSuccess)
+        {
+            return BusinessResult.Failure<RefundReceipt>(callResult.Error!);
+        }
+
+        var fields = callResult.Value!;
+        var code = GetField(fields, "code");
+        if (code != ComgateCodeOk)
+        {
+            return MapComgateBusinessError<RefundReceipt>(code, fields, "refund");
+        }
+
+        logger.LogInformation(
+            "Comgate.Refund: refunded {AmountMinor} {Currency} on transId={TransId}.",
+            amountMinor, currency, trimmedRef);
+        return BusinessResult.Success(
+            new RefundReceipt(trimmedRef, amountMinor, currency, clock.UtcNow));
+    }
 
     // ---- helpers ----
 

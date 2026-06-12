@@ -91,8 +91,50 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderCancelledCustomerEmail
                 => SendOrderCancelledCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.OrderRefundedCustomerEmail
+                => SendOrderRefundedCustomerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0105: OrderRefunded (customer) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendOrderRefundedCustomerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<OrderRefundedCustomerEmailPayload>(
+            payloadJson, OutboxEventTypes.OrderRefundedCustomerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.OrderRefundedCustomer,
+            toAddress: payload.Email,
+            toName: payload.ContactName,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["order_id"] = payload.OrderId,
+                ["order_number"] = payload.OrderNumber,
+                ["contact_name"] = payload.ContactName,
+                ["refunded_amount_minor"] = payload.RefundedAmountMinor,
+                ["refunded_amount"] = FormatAmount(payload.RefundedAmountMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                // Template renders full-vs-partial copy from this flag.
+                // Pre-rendered as a string because the plain-text
+                // substitution path has no conditional syntax.
+                ["is_full_refund"] = payload.IsFullRefund ? "true" : "false",
+                ["refund_kind"] = payload.IsFullRefund ? "plná" : "částečná",
+                ["language_code"] = payload.LanguageCode,
+            },
+            // No PDF attachment — credit-note invoices are v1.1 (Q1).
+            attachment: null,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0079: OrderMessagePostedCustomer email branch. ===

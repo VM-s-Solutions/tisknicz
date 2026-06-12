@@ -121,6 +121,15 @@ public static class OutboxEventTypes
     public const string OrderCancelledCustomerEmail = "order.cancelled.customerEmail";
 
     /// <summary>
+    /// "Your order has been refunded" customer notification, fired by
+    /// <see cref="Features.Orders.RefundOrder"/> after a successful
+    /// Comgate refund — full AND partial (the payload's
+    /// <c>IsFullRefund</c> flag picks the copy variant). T-0105
+    /// (US-admin-0008 AC-1).
+    /// </summary>
+    public const string OrderRefundedCustomerEmail = "order.refunded.customerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -144,7 +153,8 @@ public static class OutboxEventTypes
                   or OrderDeliveredCustomerEmail
                   or OrderMessagePostedCustomerEmail
                   or OrderMessagePostedMakerEmail
-                  or OrderCancelledCustomerEmail;
+                  or OrderCancelledCustomerEmail
+                  or OrderRefundedCustomerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

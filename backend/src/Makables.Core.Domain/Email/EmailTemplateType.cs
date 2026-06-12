@@ -88,4 +88,13 @@ public enum EmailTemplateType
     /// in T-0105 / T-0107.
     /// </summary>
     OrderCancelledAutoExpiryCustomer = 11,
+
+    /// <summary>
+    /// "Vrácení peněz k objednávce {orderNumber}" customer notification
+    /// after an admin refund (full or partial — the payload's
+    /// <c>IsFullRefund</c> flag picks the copy variant). Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.OrderRefundedCustomerEmail"/>.
+    /// T-0105.
+    /// </summary>
+    OrderRefundedCustomer = 12,
 }

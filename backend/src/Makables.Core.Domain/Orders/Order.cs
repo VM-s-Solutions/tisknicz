@@ -885,28 +885,113 @@ public sealed class Order : Auditable
         }
     }
 
+    // === T-0105: refund surface (cumulative partial refunds, user-locked Q1) ===
+
     /// <summary>
-    /// <see cref="OrderState.Paid"/> /
-    /// <see cref="OrderState.Accepted"/> /
-    /// <see cref="OrderState.Shipped"/> /
-    /// <see cref="OrderState.Delivered"/> /
-    /// <see cref="OrderState.Completed"/> → <see cref="OrderState.Refunded"/>.
-    /// Admin-only authorisation lives in T-0105 <c>RefundOrder.Command</c>.
+    /// Cumulative refunded amount in minor units. Partial refunds
+    /// accumulate here with NO state change (a partially-refunded order
+    /// is still a live order — the maker still ships/delivers); the
+    /// order transitions to <see cref="OrderState.Refunded"/> only when
+    /// the cumulative total reaches <see cref="TotalAmountMinor"/>.
+    /// Default 0. Always in <see cref="Currency"/> — refunds never cross
+    /// currencies. T-0105 user decision Q1.
     /// </summary>
-    public BusinessResult Refund(IClock clock)
+    public long RefundedAmountMinor { get; private set; }
+
+    /// <summary>
+    /// What is still refundable: <see cref="TotalAmountMinor"/> −
+    /// <see cref="RefundedAmountMinor"/>. The admin-entered amount is
+    /// capped at this value (<see cref="ValidateRefund"/>); Comgate
+    /// enforces the same cap at the gateway, so a double-submit race
+    /// cannot over-refund. Computed — not a column.
+    /// </summary>
+    public long RemainingRefundableMinor => TotalAmountMinor - RefundedAmountMinor;
+
+    /// <summary>
+    /// Pure refund predicate — validates WITHOUT mutating. The T-0105
+    /// handler pre-flights through this BEFORE the Comgate refund call
+    /// (locked decision A.5: money moves first, so any refusal must
+    /// surface before the provider is touched); <see cref="Refund"/>
+    /// calls the same predicate so the two can never drift.
+    ///
+    /// <list type="bullet">
+    ///   <item><description><paramref name="amountMinor"/> ≤ 0 →
+    ///     <see cref="ArgumentException"/> (programmer error; the command
+    ///     Validator owns user input).</description></item>
+    ///   <item><description>State ∉ {Paid, Accepted, Shipped, Delivered,
+    ///     Completed} → <see cref="BusinessErrorMessage.PaymentRefundInvalidState"/>.
+    ///     Disputed is NOT refundable directly — T-0106 restores
+    ///     <see cref="PreDisputeState"/> first, then refunds (Q2).</description></item>
+    ///   <item><description>amount &gt; <see cref="RemainingRefundableMinor"/> →
+    ///     <see cref="BusinessErrorMessage.PaymentRefundAmountExceedsRemaining"/>.</description></item>
+    ///   <item><description><see cref="OrderState.Completed"/> without
+    ///     <paramref name="acknowledgePostPayout"/> →
+    ///     <see cref="BusinessErrorMessage.PaymentRefundPostPayoutAckRequired"/>
+    ///     — the maker payout already settled; the admin must explicitly
+    ///     acknowledge the platform fronts the refund (Q5).</description></item>
+    /// </list>
+    /// </summary>
+    public BusinessResult ValidateRefund(long amountMinor, bool acknowledgePostPayout)
     {
-        ArgumentNullException.ThrowIfNull(clock);
+        if (amountMinor <= 0)
+            throw new ArgumentException("AmountMinor must be positive.", nameof(amountMinor));
+
         if (State is not (OrderState.Paid
             or OrderState.Accepted
             or OrderState.Shipped
             or OrderState.Delivered
             or OrderState.Completed))
         {
-            return InvalidTransition();
+            return BusinessResult.Failure(
+                Error.Conflict("state", BusinessErrorMessage.PaymentRefundInvalidState));
         }
 
-        State = OrderState.Refunded;
-        RefundedAt = clock.UtcNow;
+        if (amountMinor > RemainingRefundableMinor)
+        {
+            return BusinessResult.Failure(
+                Error.Conflict("amountMinor", BusinessErrorMessage.PaymentRefundAmountExceedsRemaining));
+        }
+
+        if (State == OrderState.Completed && !acknowledgePostPayout)
+        {
+            return BusinessResult.Failure(
+                Error.Conflict("acknowledgePostPayout", BusinessErrorMessage.PaymentRefundPostPayoutAckRequired));
+        }
+
+        return BusinessResult.Success();
+    }
+
+    /// <summary>
+    /// Record a refund of <paramref name="amountMinor"/> minor units.
+    /// Validates via <see cref="ValidateRefund"/>, then accumulates
+    /// <see cref="RefundedAmountMinor"/>; when the cumulative total
+    /// reaches <see cref="TotalAmountMinor"/> the order transitions to
+    /// <see cref="OrderState.Refunded"/> and <see cref="RefundedAt"/> is
+    /// stamped — otherwise state and timestamp are untouched (Q1).
+    ///
+    /// <para>
+    /// Admin-only authorisation lives in T-0105 <c>RefundOrder.Command</c>
+    /// — the ONLY sanctioned path into <see cref="OrderState.Refunded"/>
+    /// (T-0107's manual-change allow-list blocks the target and names
+    /// the command). The caller has ALREADY moved the money at the
+    /// provider when this runs (locked decision A.5); a failure here is
+    /// a record-keeping refusal that the handler logs Critical.
+    /// </para>
+    /// </summary>
+    public BusinessResult Refund(IClock clock, long amountMinor, bool acknowledgePostPayout)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+
+        var validation = ValidateRefund(amountMinor, acknowledgePostPayout);
+        if (!validation.IsSuccess)
+            return validation;
+
+        RefundedAmountMinor += amountMinor;
+        if (RefundedAmountMinor == TotalAmountMinor)
+        {
+            State = OrderState.Refunded;
+            RefundedAt = clock.UtcNow;
+        }
         return BusinessResult.Success();
     }
 

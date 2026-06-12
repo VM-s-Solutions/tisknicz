@@ -80,6 +80,14 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.RefundedAt).HasColumnName("refunded_at");
         builder.Property(o => o.DisputedAt).HasColumnName("disputed_at");
 
+        // T-0105: cumulative refunded amount (minor units; ADR 0003 money
+        // convention — the row's `currency` column qualifies it). DEFAULT 0
+        // backfills every pre-existing order on migration.
+        builder.Property(o => o.RefundedAmountMinor)
+            .HasColumnName("refunded_amount_minor")
+            .HasDefaultValue(0L)
+            .IsRequired();
+
         // === Provider refs + auto-deliver ===
         builder.Property(o => o.PaymentProviderRef)
             .HasColumnName("payment_provider_ref").HasMaxLength(200);

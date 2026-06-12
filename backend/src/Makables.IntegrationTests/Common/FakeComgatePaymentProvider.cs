@@ -98,8 +98,30 @@ public sealed class FakeComgatePaymentProvider : IPaymentProvider
             "Call EnqueueWebhook before triggering the SUT.");
     }
 
+    /// <summary>
+    /// T-0105: scripted responses for the refund adapter call. Calls are
+    /// recorded so tests can pin the provider-first order of operations
+    /// (and that a blocked pre-flight never reaches the provider).
+    /// </summary>
+    public ConcurrentQueue<BusinessResult<RefundReceipt>> RefundResponses { get; } = new();
+
+    public ConcurrentBag<(string ProviderRef, long AmountMinor, string Currency)> RefundCalls { get; } = new();
+
+    public int RefundCallCount => RefundCalls.Count;
+
+    public void EnqueueRefund(BusinessResult<RefundReceipt> response)
+        => RefundResponses.Enqueue(response);
+
     public Task<BusinessResult<RefundReceipt>> RefundAsync(
-        string providerRef, long amountMinor, string currency, CancellationToken cancellationToken) =>
-        throw new NotSupportedException(
-            "FakeComgatePaymentProvider: refund arrives in T-0105.");
+        string providerRef, long amountMinor, string currency, CancellationToken cancellationToken)
+    {
+        RefundCalls.Add((providerRef, amountMinor, currency));
+        if (RefundResponses.TryDequeue(out var scripted))
+        {
+            return Task.FromResult(scripted);
+        }
+        throw new InvalidOperationException(
+            "FakeComgatePaymentProvider: no Refund response was queued. " +
+            "Call EnqueueRefund before triggering the SUT.");
+    }
 }

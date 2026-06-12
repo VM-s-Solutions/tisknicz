@@ -256,6 +256,35 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string PaymentUnknownError = "payment.unknownError";
 
+    // === Payment refund (T-0105) ===
+    /// <summary>
+    /// Refund attempted on an order whose state is outside the refundable
+    /// window (Paid / Accepted / Shipped / Delivered / Completed).
+    /// PendingPayment has no captured money; Cancelled / Refunded are
+    /// terminal; Disputed routes through T-0106's ResolveDispute (restore
+    /// PreDisputeState, then refund — user decision Q2). T-0105.
+    /// </summary>
+    public const string PaymentRefundInvalidState = "payment.refund.invalidState";
+    /// <summary>
+    /// Admin-entered amount exceeds <c>Order.RemainingRefundableMinor</c>
+    /// (total − cumulative refunded). The provider is never called on
+    /// this failure — the pre-flight predicate blocks first. T-0105 Q1.
+    /// </summary>
+    public const string PaymentRefundAmountExceedsRemaining = "payment.refund.amountExceedsRemaining";
+    /// <summary>
+    /// Refund on a Completed order (maker payout already settled)
+    /// requires the explicit <c>AcknowledgePostPayout</c> flag — the
+    /// platform fronts the refund; maker-share recovery is manual at MVP
+    /// (negative-balance ledger lands with T-0102). T-0105 Q5.
+    /// </summary>
+    public const string PaymentRefundPostPayoutAckRequired = "payment.refund.postPayoutAckRequired";
+    /// <summary>
+    /// The order has no <c>PaymentProviderRef</c> — there is no captured
+    /// payment to point the Comgate /v1.0/refund call at. Surfaced
+    /// before the provider is touched. T-0105.
+    /// </summary>
+    public const string PaymentRefundNoProviderRef = "payment.refund.noProviderRef";
+
     // === Payment webhook (T-0066) ===
     /// <summary>
     /// The inbound provider webhook body is missing required fields

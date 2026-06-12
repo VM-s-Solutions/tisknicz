@@ -16,11 +16,10 @@ namespace Makables.Tests.Infra.Clients.Comgate;
 
 /// <summary>
 /// Pins the Comgate adapter contract per ADR 0016 / T-0065. Covers:
-/// happy paths on create + verify, secret-discipline (never in URL,
-/// never in log scope), error mapping (5xx → Transient, code=1100/1102
-/// → Configuration + Critical, code != 0 known business error →
-/// Permanent), Polly retry behaviour, and the
-/// <see cref="NotSupportedException"/> stub for the T-0105 method.
+/// happy paths on create + verify + refund (T-0105), secret-discipline
+/// (never in URL, never in log scope), error mapping (5xx → Transient,
+/// code=1100/1102 → Configuration + Critical, code != 0 known business
+/// error → Permanent), and Polly retry behaviour.
 /// Webhook parsing coverage lives in
 /// <see cref="ComgatePaymentProviderWebhookTests"/> (T-0066).
 /// </summary>
@@ -31,6 +30,8 @@ public class ComgatePaymentProviderTests
     private const string TestBaseUrl = "https://payments.comgate.test";
     private const string TestTransId = "AB1C-D34E";
     private const string TestRedirect = "https://payments.comgate.test/pay/AB1C-D34E";
+
+    private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-06-12T10:00:00Z");
 
     private readonly StubHttpMessageHandler _handler = new();
     private readonly InMemoryLoggerProvider _loggerProvider = new();
@@ -64,7 +65,10 @@ public class ComgatePaymentProviderTests
         using var loggerFactory = LoggerFactory.Create(b => b.AddProvider(_loggerProvider));
         var logger = loggerFactory.CreateLogger<ComgatePaymentProvider>();
 
-        _sut = new ComgatePaymentProvider(factory, opts, _configs, registry, logger);
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(Now);
+
+        _sut = new ComgatePaymentProvider(factory, opts, _configs, registry, clock, logger);
     }
 
     private static CountryConfiguration BuildCzConfig() => CountryConfiguration.Create(
@@ -280,7 +284,9 @@ public class ComgatePaymentProviderTests
 
         using var loggerFactory = LoggerFactory.Create(b => b.AddProvider(_loggerProvider));
         var logger = loggerFactory.CreateLogger<ComgatePaymentProvider>();
-        var sut = new ComgatePaymentProvider(factory, opts, configs, registry, logger);
+        var retryClock = Substitute.For<IClock>();
+        retryClock.UtcNow.Returns(Now);
+        var sut = new ComgatePaymentProvider(factory, opts, configs, registry, retryClock, logger);
 
         // First call fails 503, second succeeds.
         var responses = new Queue<HttpResponseMessage>(new[]
@@ -340,19 +346,92 @@ public class ComgatePaymentProviderTests
         result.Value!.State.Should().Be(expected);
     }
 
-    // ---- NotSupportedException stub (T-0105 only — T-0066 implemented) ----
+    // ---- RefundAsync (T-0105) ----
 
     [Fact]
-    public void RefundAsync_throws_NotSupportedException_with_T_0105_reference()
+    public async Task Refund_happy_path_returns_receipt_with_clock_timestamp_and_original_transId()
     {
-        Action act = () =>
-        {
-            _ = _sut.RefundAsync(
-                providerRef: TestTransId, amountMinor: 1000, currency: "CZK", CancellationToken.None);
-        };
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK, "code=0&message=OK");
 
-        act.Should().Throw<NotSupportedException>()
-            .WithMessage("*T-0105*");
+        var result = await _sut.RefundAsync(TestTransId, 1000, "CZK", CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        // Comgate's refund response has no distinct refund id — the
+        // receipt echoes the original transId (T-0105 §C).
+        result.Value!.RefundProviderRef.Should().Be(TestTransId);
+        result.Value.AmountMinor.Should().Be(1000);
+        result.Value.Currency.Should().Be("CZK");
+        result.Value.RefundedAt.Should().Be(Now, "entity-grade time discipline via IClock");
+    }
+
+    [Fact]
+    public async Task Refund_posts_required_body_fields_and_keeps_secret_out_of_URL()
+    {
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK, "code=0&message=OK");
+
+        await _sut.RefundAsync(TestTransId, 1000, "CZK", CancellationToken.None);
+
+        var body = _handler.LastRequestBody;
+        body.Should().Contain("merchant=12345");
+        body.Should().Contain($"transId={TestTransId}");
+        body.Should().Contain("amount=1000");
+        body.Should().Contain("curr=CZK");
+        body.Should().Contain($"secret={TestSecret}");
+
+        var url = _handler.LastRequestUri!.ToString();
+        url.Should().EndWith("/v1.0/refund");
+        url.Should().NotContain("secret", "the secret MUST NOT appear in the URL");
+        _loggerProvider.AllLogText.Should().NotContain(TestSecret,
+            "the secret must never appear in any log message or scope");
+    }
+
+    [Fact]
+    public async Task Refund_business_rejection_is_Permanent_PaymentProviderRejected()
+    {
+        // e.g. refund window expired / amount above capture.
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK,
+            "code=1400&message=Refund+rejected");
+
+        var result = await _sut.RefundAsync(TestTransId, 1000, "CZK", CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.PaymentProviderRejected);
+        result.Error.Type.Should().Be(ErrorType.Permanent);
+    }
+
+    [Fact]
+    public async Task Refund_bad_credentials_is_Configuration_with_Critical_log()
+    {
+        _handler.Response = FormUrlEncoded(HttpStatusCode.OK,
+            "code=1102&message=Invalid+secret");
+
+        var result = await _sut.RefundAsync(TestTransId, 1000, "CZK", CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.PaymentProviderMisconfigured);
+        result.Error.Type.Should().Be(ErrorType.Configuration);
+        _loggerProvider.Entries.Should().Contain(e => e.Level == LogLevel.Critical);
+    }
+
+    [Fact]
+    public async Task Refund_5xx_is_Transient_PaymentProviderUnavailable()
+    {
+        _handler.Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+
+        var result = await _sut.RefundAsync(TestTransId, 1000, "CZK", CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.PaymentProviderUnavailable);
+        result.Error.Type.Should().Be(ErrorType.Transient);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-50)]
+    public async Task Refund_throws_on_non_positive_amount(long amountMinor)
+    {
+        var act = () => _sut.RefundAsync(TestTransId, amountMinor, "CZK", CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     // ---- Stub HTTP handler + in-memory logger ----

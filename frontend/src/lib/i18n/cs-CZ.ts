@@ -455,6 +455,17 @@ export const messages = {
   'order.invalidTransition':
     'Tuto akci nelze v aktuálním stavu objednávky provést.',
 
+  // T-0105 admin refund error codes (parity with BusinessErrorMessage).
+  // Admin-surface only (T-0118 refund UI). PM/UX to refine on PR review.
+  'payment.refund.invalidState':
+    'Objednávku v tomto stavu nelze refundovat.',
+  'payment.refund.amountExceedsRemaining':
+    'Částka překračuje zbývající refundovatelnou částku objednávky.',
+  'payment.refund.postPayoutAckRequired':
+    'Objednávka už byla vyplacena výrobci — refundaci je nutné výslovně potvrdit.',
+  'payment.refund.noProviderRef':
+    'Objednávka nemá záznam o platbě — není co refundovat.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

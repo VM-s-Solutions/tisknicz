@@ -80,6 +80,15 @@ Capture a customer's intent to purchase from a specific maker and track the stat
 - `CancellationSource` is stamped exactly once, at `Cancel` time, atomically with `CancelledAt`. Nullable only for orders cancelled before T-0083.
 - The unread counters never go negative — `ResetUnreadFor` is an unconditional zero, `IncrementUnreadFor` only ever adds.
 
+## Refund surface (T-0105)
+
+Full + partial refunds per user-locked Q1; pure predicate + mutator split:
+
+- `RefundedAmountMinor` (cumulative, `BIGINT NOT NULL DEFAULT 0`) + computed `RemainingRefundableMinor = TotalAmountMinor − RefundedAmountMinor`.
+- `ValidateRefund(amountMinor, acknowledgePostPayout)` — pure, no mutation. Gates: state ∈ {Paid, Accepted, Shipped, Delivered, Completed} (`payment.refund.invalidState`); amount ≤ remaining (`payment.refund.amountExceedsRemaining`); `Completed` requires the explicit acknowledgement flag (`payment.refund.postPayoutAckRequired`, Q5 — maker payout already settled, platform fronts the refund until T-0102's negative-balance ledger).
+- `Refund(clock, amountMinor, acknowledgePostPayout)` — calls the predicate, accumulates; flips to `Refunded` + stamps `RefundedAt` only when cumulative == total. A partial refund changes NO state — the order stays live.
+- **Sanctioned-command interlock:** `RefundOrder.Command` (admin host) is the ONLY path into `Refunded` — it calls Comgate `/v1.0/refund` BEFORE mutating (locked A.5). T-0107's manual state change blocks `→ Refunded` with `order.manualTransition.useRefundOrder`; T-0106's `ResolveDispute(Refunded)` restores `PreDisputeState` first, then dispatches `RefundOrder` for the full remaining amount — `Disputed` is never refunded directly.
+
 ## Implementation pointer
 
 `backend/src/Makables.Core.Domain/Orders/Order.cs`. State machine logic encapsulated in Order methods (`MarkAsPaid`, `Accept`, `Ship`, `MarkDelivered`, `Cancel(clock, source)`, etc.) that return `BusinessResult` on invalid transitions. `OrderCancellationSource` lives alongside in `backend/src/Makables.Core.Domain/Orders/OrderCancellationSource.cs`. The T-0079/T-0083 columns ship in migration `20260609174208_OrderCleanupBundle.cs`.
