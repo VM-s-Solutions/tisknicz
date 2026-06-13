@@ -1172,6 +1172,8 @@ namespace Makables.Infra.Database.Migrations
                         .HasDatabaseName("ix_invoices_order_id")
                         .HasFilter("order_id IS NOT NULL AND is_active");
 
+                    b.HasIndex("PayoutBatchId");
+
                     b.HasIndex("Type")
                         .HasDatabaseName("ix_invoices_type");
 
@@ -1748,6 +1750,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("payment_redirect_url");
 
+                    b.Property<string>("PayoutBatchId")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("payout_batch_id");
+
                     b.Property<long>("PlatformFeeAmountMinor")
                         .HasColumnType("bigint")
                         .HasColumnName("platform_fee_amount_minor");
@@ -1838,6 +1845,10 @@ namespace Makables.Infra.Database.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_orders_payment_provider_ref")
                         .HasFilter("payment_provider_ref IS NOT NULL AND is_active");
+
+                    b.HasIndex("PayoutBatchId")
+                        .HasDatabaseName("ix_orders_payout_batch_id")
+                        .HasFilter("payout_batch_id IS NOT NULL");
 
                     b.HasIndex("State")
                         .HasDatabaseName("ix_orders_state")
@@ -2017,6 +2028,121 @@ namespace Makables.Infra.Database.Migrations
                     b.ToTable("outbox_event", (string)null);
                 });
 
+            modelBuilder.Entity("Makables.Core.Domain.Payouts.PayoutBatch", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BatchNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("batch_number");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("completed_by");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country_code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("CsvBlobPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("csv_blob_path");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<string>("DeactivatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("deactivated_by");
+
+                    b.Property<int>("ExcludedNoBankAccountMakerCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("excluded_no_bank_account_maker_count");
+
+                    b.Property<int>("ExcludedNoBankAccountOrderCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("excluded_no_bank_account_order_count");
+
+                    b.Property<int>("ExcludedPartiallyRefundedOrderCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("excluded_partially_refunded_order_count");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("MakerCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("maker_count");
+
+                    b.Property<int>("OrderCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_count");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<long>("TotalAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_amount_minor");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CountryCode")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payout_batches_open_per_country")
+                        .HasFilter("state = 'Processing' AND is_active");
+
+                    b.HasIndex("CountryCode", "BatchNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payout_batches_country_batch_number");
+
+                    b.ToTable("payout_batches", (string)null);
+                });
+
             modelBuilder.Entity("Makables.Core.Domain.Products.Product", b =>
                 {
                     b.Property<string>("Id")
@@ -2155,6 +2281,11 @@ namespace Makables.Infra.Database.Migrations
                         .WithMany()
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Makables.Core.Domain.Payouts.PayoutBatch", null)
+                        .WithMany()
+                        .HasForeignKey("PayoutBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.OrderMessages.OrderMessage", b =>
@@ -2179,6 +2310,14 @@ namespace Makables.Infra.Database.Migrations
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Makables.Core.Domain.Orders.Order", b =>
+                {
+                    b.HasOne("Makables.Core.Domain.Payouts.PayoutBatch", null)
+                        .WithMany()
+                        .HasForeignKey("PayoutBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.Orders.OrderAttachment", b =>

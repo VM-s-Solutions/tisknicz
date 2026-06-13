@@ -107,6 +107,10 @@ Invoice (`IInvoiceNumberGenerator`) and payout-batch (`IPayoutBatchNumberGenerat
 
 The payout-batch generator (`IPayoutBatchNumberGenerator`) is the last remaining caller-supplied-year surface. Migration to TZ-aware is tracked under T-0101 alongside the rest of the payout-batch landing work.
 
+### Payout-batch numbering split (T-0101 amendment, 2026-06-13)
+
+`IPayoutBatchNumberGenerator.For(string countryCode, DateOnly batchDate)` stays a **pure** function — it derives `VYP-{CC}-{YYYY}-W{ww}` directly from the supplied `DateOnly` (ISO week) with no DB roundtrip and no clock read. The TZ-aware local-date derivation is the **calling handler's** job, matching the T-0062/T-0068a precedent: `CreatePayoutBatch.Handler` (T-0102a) converts `clock.UtcNow` to the country-local `DateOnly` via `CountryConfiguration.TimeZoneId` before calling `For(...)`, so a Sunday 23:30 UTC run buckets into Monday's local ISO week. This keeps the generator trivially unit-testable (no infra) while the year/week-boundary correctness lives at the one call site that has the clock + the country config. Uniqueness is enforced by the `(country_code, batch_number)` unique index that T-0101's `payout_batches` migration creates — closing ADR 0009's original "tracked under T-0101" note. Observed micro-quirk (cosmetic, uniqueness holds): a Jan 1–3 batch falling in ISO week 52/53 of the prior year is labelled with the new calendar year; flagged to PM as a pre-year-boundary follow-up.
+
 ## Domain types
 
 ```csharp

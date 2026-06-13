@@ -415,6 +415,60 @@ public static class BusinessErrorMessage
     // === Payout batch ===
     public const string PayoutBatchEmpty = "payoutBatch.empty";
 
+    /// <summary>
+    /// <see cref="Payouts.PayoutBatch.AttachCsvBlobPath"/> was called with a
+    /// blob-path value that differs from the one already stored. Set-once:
+    /// an idempotent retry with the SAME value succeeds; a real overwrite
+    /// fails with this code. Mirrors
+    /// <see cref="InvoiceBlobPathAlreadySet"/> (T-0068a). Admin / log only —
+    /// the CSV formatter is deterministic so a real overwrite indicates a
+    /// programmer error, not a user-facing action. T-0101.
+    /// </summary>
+    public const string PayoutBatchCsvPathAlreadySet = "payoutBatch.csvPathAlreadySet";
+
+    /// <summary>
+    /// A payout batch for this ISO week was already created and completed —
+    /// pre-checked via <c>GetByNumberAsync</c> so a same-week re-run returns
+    /// a typed, translated Conflict instead of dying on the unique index as
+    /// a raw 500. Excluded orders (Q3/Q5) ride NEXT week's batch. T-0102a.
+    /// </summary>
+    public const string PayoutBatchWeekAlreadyProcessed = "payoutBatch.weekAlreadyProcessed";
+
+    /// <summary>
+    /// A concurrent <c>CreatePayoutBatch</c> lost the open-batch race: the
+    /// handler's <c>GetOpenBatchAsync</c> null-check passed, but a parallel
+    /// run committed an open <see cref="Payouts.PayoutBatchState.Processing"/>
+    /// batch first, so the loser's <c>SaveChangesAsync</c> violated the
+    /// partial-unique index <c>ux_payout_batches_open_per_country</c>. The
+    /// translator surfaces this as a typed Conflict instead of a raw 500;
+    /// the loser's entire UoW (batch + claims + fee invoices + outbox) rolls
+    /// back atomically — no split/double claim. The next admin retry (or the
+    /// T-0104 timer's next pass) hits the read-check and resumes the WINNER's
+    /// batch as Silent Success. T-0102a (payout-core-bundle review BLOCKER-1).
+    /// </summary>
+    public const string PayoutBatchAlreadyOpen = "payoutBatch.alreadyOpen";
+
+    /// <summary>
+    /// Eligible orders in the run do not share a single currency. Defensive
+    /// money math — summing mixed currencies into one
+    /// <c>TotalAmountMinor</c> would silently corrupt the wire amount.
+    /// Logged Critical. T-0102a §C.9.
+    /// </summary>
+    public const string PayoutBatchCurrencyMismatch = "payoutBatch.currencyMismatch";
+
+    /// <summary>
+    /// Admin CSV download requested for a batch id that does not exist.
+    /// T-0102b §C.14.
+    /// </summary>
+    public const string PayoutBatchNotFound = "payoutBatch.notFound";
+
+    /// <summary>
+    /// Admin CSV download requested for a batch whose <c>CsvBlobPath</c> is
+    /// still null (the artifact pipeline has not produced the CSV yet — a
+    /// re-run completes it). T-0102b §C.14.
+    /// </summary>
+    public const string PayoutBatchCsvNotReady = "payoutBatch.csvNotReady";
+
     // === Invoice (T-0068a) ===
     /// <summary>
     /// <see cref="Invoices.Invoice.AttachPdfBlobPath"/> was called with a

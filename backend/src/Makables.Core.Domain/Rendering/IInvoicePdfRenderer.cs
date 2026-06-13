@@ -52,4 +52,19 @@ public interface IInvoicePdfRenderer
         Invoice invoice,
         CountryConfiguration country,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Render a Fee invoice (<c>InvoiceType.Fee</c>) per T-0102b §C.9 — the
+    /// <c>ProvizniDokladDocument</c> template. The <see cref="Invoice"/> row
+    /// carries only the summed fee total, so the per-order
+    /// <paramref name="lineItems"/> ("Provize za zprostředkování — obj.
+    /// {orderNumber}") are passed separately. Determinism contract holds:
+    /// every value comes from the snapshotted invoice + the supplied line
+    /// items; no <c>DateTime.Now</c>.
+    /// </summary>
+    Task<byte[]> RenderFeeAsync(
+        Invoice invoice,
+        IReadOnlyList<FeeInvoiceLineItem> lineItems,
+        CountryConfiguration country,
+        CancellationToken cancellationToken);
 }

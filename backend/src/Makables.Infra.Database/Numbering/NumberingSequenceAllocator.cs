@@ -40,6 +40,23 @@ internal static class NumberingSequenceAllocator
         // transaction; we trust the convention here.
         var normalizedCountry = countryCode.ToUpperInvariant();
 
+        // A SINGLE command may allocate MULTIPLE numbers for the same
+        // (country, scope, year) before the UoW commits — the first caller
+        // since T-0102b's per-maker Fee invoices. The FOR UPDATE query below
+        // reads COMMITTED state only, so a second allocation in the same
+        // transaction would NOT see the first allocation's uncommitted row
+        // (newly created) or its uncommitted increment (existing row). Check
+        // the change-tracker Local set first so repeated in-transaction
+        // allocations chain off the same tracked instance instead of
+        // creating a duplicate Added row (which would surface as a PK clash
+        // or a detached-entry save error).
+        var tracked = db.Set<NumberingSequence>().Local
+            .FirstOrDefault(s => s.CountryCode == normalizedCountry && s.Scope == scope && s.Year == year);
+        if (tracked is not null)
+        {
+            return tracked.Increment(clock.UtcNow);
+        }
+
         var row = await db.Set<NumberingSequence>()
             .FromSqlInterpolated($@"
                 SELECT * FROM numbering_sequence

@@ -215,6 +215,18 @@ public sealed class InvoiceRepositoryTests
     private async Task SeedFeeInvoiceForAsync(string makerId, string invoiceId, string invoiceNumber, string payoutBatchId)
     {
         await using var db = _harness.CreateDbContext();
+
+        // T-0101 added the invoices.payout_batch_id FK (ON DELETE RESTRICT),
+        // so the referenced payout batch must exist first.
+        var batch = Makables.Core.Domain.Payouts.PayoutBatch.Create(
+            id: payoutBatchId, batchNumber: $"VYP-CZ-2026-{payoutBatchId}",
+            countryCode: "CZ", totalAmountMinor: 15_00, currency: "CZK",
+            orderCount: 1, makerCount: 1,
+            excludedPartiallyRefundedOrderCount: 0, excludedNoBankAccountOrderCount: 0,
+            excludedNoBankAccountMakerCount: 0);
+        batch.MarkCreated("test-seed", SeedAt);
+        db.Set<Makables.Core.Domain.Payouts.PayoutBatch>().Add(batch);
+
         var fee = Invoice.Issue(
             id: invoiceId,
             invoiceNumber: invoiceNumber,

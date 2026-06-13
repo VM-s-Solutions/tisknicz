@@ -99,6 +99,173 @@ public sealed class QuestPdfInvoiceRenderer : IInvoicePdfRenderer
 
         return Task.FromResult(document.GeneratePdf());
     }
+
+    public Task<byte[]> RenderFeeAsync(
+        Invoice invoice,
+        IReadOnlyList<FeeInvoiceLineItem> lineItems,
+        CountryConfiguration country,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+        ArgumentNullException.ThrowIfNull(lineItems);
+        ArgumentNullException.ThrowIfNull(country);
+
+        IDocument document = new ProvizniDokladDocument(invoice, lineItems, country);
+        return Task.FromResult(document.GeneratePdf());
+    }
+}
+
+/// <summary>
+/// <b>Faktura — provize za zprostředkování</b> (platform-fee invoice on a
+/// payout batch) per T-0102b §C.9. Mirrors the two T-0068a/b templates: a
+/// "Nejsem plátce DPH" footer under <see cref="InvoicingMode.None"/>, one
+/// line per claimed order ("Provize za zprostředkování — obj. {orderNumber}"),
+/// a balanced total. Determinism preserved — every value comes from the
+/// snapshotted <see cref="Invoice"/> + the supplied line items; no
+/// <c>DateTime.Now</c>.
+/// </summary>
+internal sealed class ProvizniDokladDocument(
+    Invoice invoice,
+    IReadOnlyList<FeeInvoiceLineItem> lineItems,
+    CountryConfiguration country)
+    : IDocument
+{
+    private readonly Invoice _invoice = invoice;
+    private readonly IReadOnlyList<FeeInvoiceLineItem> _lineItems = lineItems;
+    private readonly CountryConfiguration _country = country;
+
+    public DocumentMetadata GetMetadata()
+    {
+        var snapshotDate = _invoice.IssueDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var md = DocumentMetadata.Default;
+        md.Title = $"Faktura — provize {_invoice.InvoiceNumber}";
+        md.Author = _invoice.IssuerName;
+        md.Subject = _invoice.InvoiceNumber;
+        md.CreationDate = snapshotDate;
+        md.ModifiedDate = snapshotDate;
+        return md;
+    }
+
+    public void Compose(IDocumentContainer container)
+    {
+        container.Page(page =>
+        {
+            page.Size(PageSizes.A4);
+            page.Margin(36);
+            page.DefaultTextStyle(t => t.FontSize(10));
+
+            page.Header().Element(ComposeHeader);
+            page.Content().Element(ComposeContent);
+            page.Footer().Element(ComposeFooter);
+        });
+    }
+
+    private void ComposeHeader(IContainer container)
+    {
+        container.Row(row =>
+        {
+            row.RelativeItem().Column(col =>
+            {
+                col.Item().Text("FAKTURA — PROVIZE").Bold().FontSize(18);
+                col.Item().Text(_invoice.InvoiceNumber).Bold().FontSize(14);
+            });
+            row.RelativeItem().AlignRight().Column(col =>
+            {
+                col.Item().Text(_invoice.IssuerName).Bold();
+                col.Item().Text($"IČO: {_invoice.IssuerIco}");
+                if (!string.IsNullOrEmpty(_invoice.IssuerDic))
+                {
+                    col.Item().Text($"DIČ: {_invoice.IssuerDic}");
+                }
+            });
+        });
+    }
+
+    private void ComposeContent(IContainer container)
+    {
+        container.PaddingVertical(20).Column(col =>
+        {
+            col.Spacing(15);
+
+            // Recipient (the maker).
+            col.Item().Text("Odběratel (výrobce)").Bold();
+            col.Item().Text(_invoice.RecipientName);
+            col.Item().Text(_invoice.RecipientEmail);
+            if (!string.IsNullOrEmpty(_invoice.RecipientTaxId))
+            {
+                col.Item().Text($"IČO: {_invoice.RecipientTaxId}");
+            }
+            if (!string.IsNullOrEmpty(_invoice.RecipientVatId))
+            {
+                col.Item().Text($"DIČ: {_invoice.RecipientVatId}");
+            }
+
+            // Dates.
+            col.Item().Row(row =>
+            {
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Datum vystavení:").Bold();
+                    c.Item().Text(FormatDate(_invoice.IssueDate));
+                });
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("DUZP:").Bold();
+                    c.Item().Text(_invoice.TaxableSupplyDate is { } duzp ? FormatDate(duzp) : "—");
+                });
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Datum splatnosti:").Bold();
+                    c.Item().Text(FormatDate(_invoice.DueDate));
+                });
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Variabilní symbol:").Bold();
+                    c.Item().Text(InvoiceFormatting.VariableSymbol(_invoice.InvoiceNumber));
+                });
+            });
+
+            // Per-order fee line items.
+            col.Item().Table(table =>
+            {
+                table.ColumnsDefinition(c =>
+                {
+                    c.RelativeColumn(3);
+                    c.RelativeColumn(1);
+                });
+                table.Header(h =>
+                {
+                    h.Cell().Text("Položka").Bold();
+                    h.Cell().AlignRight().Text("Provize").Bold();
+                });
+                foreach (var item in _lineItems)
+                {
+                    table.Cell().Text($"Provize za zprostředkování — obj. {item.OrderNumber}");
+                    table.Cell().AlignRight()
+                        .Text(InvoiceFormatting.FormatAmount(item.FeeAmountMinor, _invoice.Currency));
+                }
+            });
+
+            // Total.
+            col.Item().AlignRight().Column(c =>
+            {
+                c.Item().Text("Celkem k úhradě").Bold().FontSize(12);
+                c.Item().Text(InvoiceFormatting.FormatAmount(_invoice.AmountWithVatMinor, _invoice.Currency))
+                    .Bold().FontSize(14);
+            });
+        });
+    }
+
+    private void ComposeFooter(IContainer container)
+    {
+        var note = _invoice.InvoicingMode == InvoicingMode.None
+            ? "Nejsem plátce DPH"
+            : "Děkujeme za spolupráci.";
+        container.AlignCenter().Text(note).Italic().FontSize(9);
+    }
+
+    private static string FormatDate(DateOnly date) =>
+        date.ToString("d. M. yyyy", CultureInfo.GetCultureInfo("cs-CZ"));
 }
 
 /// <summary>

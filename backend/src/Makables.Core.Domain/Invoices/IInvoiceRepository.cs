@@ -150,6 +150,23 @@ public interface IInvoiceRepository
     /// </summary>
     Task<Invoice?> GetByOrderIdReadOnlyAsync(string orderId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Load a single invoice by id, tracked. <b>Unscoped</b> — backs
+    /// T-0102b's <c>EmailSendService</c> fee-invoice lookup at send time
+    /// (the outbox payload carries the invoice id; the PDF is fetched from
+    /// the invoice's <c>PdfBlobPath</c> at send). Returns null for unknown
+    /// ids (or soft-deleted — the global filter applies).
+    /// </summary>
+    Task<Invoice?> GetByIdAsync(string id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load all invoices linked to a payout batch (the Fee invoices —
+    /// <c>PayoutBatchId == payoutBatchId</c>), tracked. <b>Unscoped</b> —
+    /// backs T-0102b's artifact re-entrancy: the artifact service reads the
+    /// already-issued Fee invoices to decide which makers still need one.
+    /// </summary>
+    Task<IReadOnlyList<Invoice>> GetByPayoutBatchIdAsync(string payoutBatchId, CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="invoice"/> as a pending insert.</summary>
     Task AddAsync(Invoice invoice, CancellationToken cancellationToken);
 }

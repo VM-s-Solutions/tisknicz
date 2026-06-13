@@ -26,6 +26,7 @@ Cross-references:
 | # | Finding | Files seen (count) | Tickets seen | Proposed rule | Status |
 |---|---|---|---|---|---|
 | 1 | *(example)* Test method names redundant with class name (e.g. `OrderTests.OrderTests_Create_Succeeds`) | 3 | T-0060, T-0061, T-0067 | "Test names describe behavior, not the method under test. Prefer `Create_WithValidInput_ReturnsOrderId` over `CreateOrder_Succeeds`." | pending |
+| 2 | Ticket/code ships a new `BusinessErrorMessage` constant without its parallel `cs-CZ` i18n key — caught only at Gate 9 contract/i18n parity, never at authoring time | 3 | order-cleanup bundle, order-dashboards bundle, payout-core bundle (`csvPathAlreadySet`) | "Every new `BusinessErrorMessage` constant MUST ship with a matching `cs-CZ` i18n key in the same PR. Enforce mechanically: a pre-commit or CI check asserting each `BusinessErrorMessage` code has a parallel `cs-CZ` key (Architect/secops to design). **Standing automated-gate candidate** — third strike fired at payout-core; this is no longer a checklist line, it wants a script." | pending |
 
 <!--
 Column legend:

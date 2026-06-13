@@ -101,8 +101,95 @@ public sealed class EmailSendService(
             OutboxEventTypes.OrderDisputeResolvedCustomerEmail
                 => SendOrderDisputeResolvedCustomerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.PayoutFeeInvoiceMakerEmail
+                => SendPayoutFeeInvoiceMakerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
+    }
+
+    // === T-0102b: Payout fee-invoice (maker) email branch. ===
+
+    private async Task<BusinessResult<EmailSentReceipt>> SendPayoutFeeInvoiceMakerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<PayoutFeeInvoiceMakerEmailPayload>(
+            payloadJson, OutboxEventTypes.PayoutFeeInvoiceMakerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!);
+        }
+        var payload = payloadResult.Value!;
+
+        // T-0069 pattern: look up the invoice at SEND time. A not-yet-rendered
+        // invoice (PdfBlobPath null) returns Transient(InvoiceNotYetRendered)
+        // for outbox re-delivery — never baked into the payload.
+        var invoice = await invoices.GetByIdAsync(payload.InvoiceId, cancellationToken);
+        if (invoice is null || string.IsNullOrWhiteSpace(invoice.PdfBlobPath))
+        {
+            logger.LogDebug(
+                "PayoutFeeInvoiceMakerEmail for invoice {InvoiceId}: not yet rendered " +
+                "(invoice null = {InvoiceNull}). Returning Transient for outbox re-delivery.",
+                payload.InvoiceId, invoice is null);
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Transient(BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        byte[] pdfBytes;
+        try
+        {
+            var download = await blobStorage.DownloadAsync(
+                BlobContainer.Invoices, invoice.PdfBlobPath!, cancellationToken);
+            if (!download.IsSuccess)
+            {
+                logger.LogCritical(
+                    "PayoutFeeInvoiceMakerEmail for invoice {InvoiceNumber}: blob download failed at {BlobPath}: {Code}.",
+                    invoice.InvoiceNumber, invoice.PdfBlobPath, download.Error!.Code);
+                return BusinessResult.Failure<EmailSentReceipt>(
+                    Error.Permanent(BusinessErrorMessage.InvoicePdfAttachmentDownloadFailed));
+            }
+            using var stream = download.Value!.Content;
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, cancellationToken);
+            pdfBytes = buffer.ToArray();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex,
+                "PayoutFeeInvoiceMakerEmail for invoice {InvoiceNumber}: blob download threw at {BlobPath}.",
+                invoice.InvoiceNumber, invoice.PdfBlobPath);
+            return BusinessResult.Failure<EmailSentReceipt>(
+                Error.Permanent(BusinessErrorMessage.InvoicePdfAttachmentDownloadFailed));
+        }
+
+        // Language-aware filename (T-0069 §C.6): en-US → fee-invoice-{n}.pdf,
+        // else faktura-provize-{n}.pdf.
+        var filename = payload.LanguageCode == "en-US"
+            ? $"fee-invoice-{payload.InvoiceNumber}.pdf"
+            : $"faktura-provize-{payload.InvoiceNumber}.pdf";
+        var attachment = new Attachment(filename, pdfBytes, "application/pdf");
+
+        return await DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.PayoutFeeInvoiceMaker,
+            toAddress: payload.MakerEmail,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["action_url"] = payload.ActionUrl,
+                ["batch_number"] = payload.BatchNumber,
+                ["invoice_number"] = payload.InvoiceNumber,
+                ["fee_amount_minor"] = payload.FeeAmountMinor,
+                ["fee_amount"] = FormatAmount(payload.FeeAmountMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: attachment,
+            cancellationToken: cancellationToken);
     }
 
     // === T-0106: OrderDisputed (admin) email branch. ===

@@ -1,6 +1,7 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.AppServices.Features.Outbox;
+using Makables.Core.AppServices.Features.Payouts;
 using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Addresses.Validators;
@@ -15,8 +16,10 @@ using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.SeedWork;
@@ -35,6 +38,7 @@ using Makables.Infra.Database.Invoices;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.OrderMessages;
 using Makables.Infra.Database.Orders;
+using Makables.Infra.Database.Payouts;
 using Makables.Infra.Database.Products;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
@@ -62,6 +66,14 @@ public static class MakablesInfrastructureExtensions
         // === Cross-cutting primitives ===
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, UlidIdGenerator>();
+
+        // === Observability (T-0102a: first instruments on MakablesMeters.Payouts) ===
+        // AddMetrics registers IMeterFactory (the singleton meter source);
+        // PayoutMetrics builds the Payouts-meter instruments once. Registered
+        // here so every Web host AND Makables.Functions (which dispatches
+        // CreatePayoutBatch from the timer) resolves IPayoutMetrics.
+        services.AddMetrics();
+        services.AddSingleton<IPayoutMetrics, Makables.Config.Observability.PayoutMetrics>();
 
         // === Auth crypto (T-0021) ===
         services.AddOptions<Argon2idOptions>()
@@ -175,6 +187,16 @@ public static class MakablesInfrastructureExtensions
 
         // === Invoices (T-0068a) ===
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+
+        // === Payout batches (T-0101) ===
+        services.AddScoped<IPayoutBatchRepository, PayoutBatchRepository>();
+
+        // === Payout artifacts (T-0102b) ===
+        // CSV formatter is stateless + pure → singleton, keyed-ready for
+        // future bank-native exporters. The artifact orchestration is scoped
+        // (depends on the request-scoped repositories + outbox).
+        services.AddSingleton<IPayoutCsvFormatter, GenericPayoutCsvFormatter>();
+        services.AddScoped<IPayoutArtifactService, PayoutArtifactService>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();

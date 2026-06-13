@@ -115,4 +115,12 @@ public enum EmailTemplateType
     /// T-0106.
     /// </summary>
     OrderDisputeResolvedCustomer = 14,
+
+    /// <summary>
+    /// "Faktura provize za výplatní dávku {batchNumber}" maker notification
+    /// with the Fee invoice PDF attached. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.PayoutFeeInvoiceMakerEmail"/>.
+    /// Tykání (maker audience). T-0102b.
+    /// </summary>
+    PayoutFeeInvoiceMaker = 15,
 }

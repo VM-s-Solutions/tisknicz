@@ -1148,6 +1148,47 @@ public sealed class Order : Auditable
         return BusinessResult.Success();
     }
 
+    // === T-0101: payout-batch claim link (set-once) ===
+
+    /// <summary>
+    /// FK to the weekly <c>PayoutBatch</c> that claimed this order's maker
+    /// payout, or null while unclaimed. Written once via
+    /// <see cref="AssignToPayoutBatch"/>; the order stays in
+    /// <see cref="OrderState.Delivered"/> after the claim (the
+    /// <c>Delivered → Completed</c> transition is T-0103's
+    /// <see cref="Complete"/>).
+    /// </summary>
+    public string? PayoutBatchId { get; private set; }
+
+    /// <summary>
+    /// Claim this order into a payout batch. <b>Set-once ONLY</b> — the
+    /// method owns the single invariant it can own completely (T-0101 lock
+    /// A.4 + Alternatives Option E): it deliberately does NOT assert
+    /// <c>State == Delivered</c>, because the eligibility predicate
+    /// (Delivered + unbatched + unrefunded + maker-has-bank-account) is the
+    /// T-0102a claim query's single source of truth — duplicating a subset
+    /// here would create two half-truths that drift.
+    ///
+    /// <para>
+    /// Throws <see cref="ArgumentException"/> on a blank id (programmer
+    /// error). Throws <see cref="InvalidOperationException"/> when
+    /// <see cref="PayoutBatchId"/> is already non-null — claiming twice
+    /// (same or different id) is a programmer error because the claim query
+    /// already filters <c>PayoutBatchId == null</c> before this runs.
+    /// </para>
+    /// </summary>
+    public void AssignToPayoutBatch(string payoutBatchId)
+    {
+        if (string.IsNullOrWhiteSpace(payoutBatchId))
+            throw new ArgumentException("PayoutBatchId is required.", nameof(payoutBatchId));
+
+        if (PayoutBatchId is not null)
+            throw new InvalidOperationException(
+                $"Order {Id} is already claimed by payout batch {PayoutBatchId}; the claim predicate must filter PayoutBatchId == null first.");
+
+        PayoutBatchId = payoutBatchId.Trim();
+    }
+
     private static BusinessResult InvalidTransition() =>
         BusinessResult.Failure(
             Error.Conflict("state", BusinessErrorMessage.OrderInvalidTransition));
