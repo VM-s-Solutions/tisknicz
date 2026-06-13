@@ -30,6 +30,7 @@ key fails function indexing at host startup. The defaults below are the canonica
 | `AutoDeliverOrders:Schedule` | `0 0 8 * * *` | Daily 08:00 UTC — `Shipped` → `Delivered` after 7 days. T-0077. |
 | `SyncShipmentStatuses:Schedule` | `0 0 0,6,12,18 * * *` | Every 6 h — Packeta status pull for in-flight shipments. T-0078. |
 | `CancelExpiredPendingPaymentOrders:Schedule` | `0 0 2 * * *` | Daily 02:00 UTC — cancel `PendingPayment` orders older than 24 h (`CancellationSource = AutoExpiry`). T-0083. |
+| `RunWeeklyPayoutBatch:Schedule` | `0 0 2 * * 1` | Monday 02:00 UTC — weekly maker payout batch (`CreatePayoutBatch`). Also reachable via `POST /api/payouts/run-batch` (function key). T-0104. |
 
 ## Operator-set: outbox queues + dispatcher
 
