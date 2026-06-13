@@ -1,4 +1,6 @@
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Payouts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Makables.Infra.Database.Orders;
@@ -227,6 +229,62 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
                      && o.ShippingMethod == ShippingMethod.ZasilkovnaPickupPoint
                      && o.ShippingCarrierRef != null)
             .AsAsyncEnumerable();
+    }
+
+    public async Task<IReadOnlyList<PayoutCandidate>> GetPayoutEligibleUnscopedAsync(
+        string countryCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(countryCode))
+            return [];
+
+        var normalized = countryCode.ToUpperInvariant();
+
+        // Coarse candidate filter. TRACKED (no AsNoTracking) — the T-0102a
+        // claim handler mutates each eligible order via AssignToPayoutBatch
+        // and relies on the UoW pipeline to commit. Soft-deleted orders are
+        // hidden by the global query filter (no IgnoreQueryFilters) — a
+        // deactivated order must never be claimed. IgnoreAutoIncludes opts
+        // out of the Attachments eager-load: the claim only touches scalar
+        // fields, so materialising the child collection would add cost the
+        // path never benefits from.
+        var orders = await db.Set<Order>()
+            .IgnoreAutoIncludes()
+            .Where(o => o.State == OrderState.Delivered
+                     && o.PayoutBatchId == null
+                     && o.CountryCode == normalized)
+            .ToListAsync(cancellationToken);
+
+        if (orders.Count == 0)
+            return [];
+
+        // Second query: the maker slice (id / company name / bank account)
+        // for the distinct makers behind these orders. Order has no Maker
+        // EF navigation (the FK is a scalar MakerId), so we join explicitly.
+        // AsNoTracking — these maker fields are read-only inputs to the
+        // PayoutEligibility verdict + the artifact CSV/invoice. Soft-deleted
+        // makers are hidden by the global filter, so an order whose maker
+        // was deactivated produces no maker slice → it is treated as a
+        // no-bank-account exclusion below (the maker cannot be paid).
+        var makerIds = orders.Select(o => o.MakerId).Distinct().ToList();
+        var makers = await db.Set<Maker>()
+            .AsNoTracking()
+            .Where(m => makerIds.Contains(m.Id))
+            .Select(m => new { m.Id, m.CompanyName, m.BankAccount })
+            .ToDictionaryAsync(m => m.Id, cancellationToken);
+
+        var candidates = new List<PayoutCandidate>(orders.Count);
+        foreach (var order in orders)
+        {
+            makers.TryGetValue(order.MakerId, out var maker);
+            candidates.Add(new PayoutCandidate(
+                Order: order,
+                MakerId: order.MakerId,
+                MakerCompanyName: maker?.CompanyName ?? string.Empty,
+                MakerBankAccount: maker?.BankAccount));
+        }
+
+        return candidates;
     }
 
     public Task AddAsync(Order order, CancellationToken cancellationToken)

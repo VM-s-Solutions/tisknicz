@@ -18,6 +18,7 @@ using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.SeedWork;
@@ -64,6 +65,14 @@ public static class MakablesInfrastructureExtensions
         // === Cross-cutting primitives ===
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IIdGenerator, UlidIdGenerator>();
+
+        // === Observability (T-0102a: first instruments on MakablesMeters.Payouts) ===
+        // AddMetrics registers IMeterFactory (the singleton meter source);
+        // PayoutMetrics builds the Payouts-meter instruments once. Registered
+        // here so every Web host AND Makables.Functions (which dispatches
+        // CreatePayoutBatch from the timer) resolves IPayoutMetrics.
+        services.AddMetrics();
+        services.AddSingleton<IPayoutMetrics, Makables.Config.Observability.PayoutMetrics>();
 
         // === Auth crypto (T-0021) ===
         services.AddOptions<Argon2idOptions>()

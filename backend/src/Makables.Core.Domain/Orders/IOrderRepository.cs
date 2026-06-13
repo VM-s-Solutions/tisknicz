@@ -238,6 +238,25 @@ public interface IOrderRepository
         DateTimeOffset asOf,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Load the coarse set of payout-batch candidates for
+    /// <paramref name="countryCode"/>: each <see cref="Payouts.PayoutCandidate"/>
+    /// pairs a TRACKED Delivered + unbatched order with its maker's id /
+    /// company name / bank account (Order has no <c>Maker</c> EF navigation,
+    /// so the repository joins makers explicitly). Filtered to
+    /// <c>State == Delivered AND PayoutBatchId == null AND CountryCode ==
+    /// countryCode</c>. These are CANDIDATES — the fine per-order verdict
+    /// (Q3 partial-refund + Q5 no-bank exclusions) is
+    /// <see cref="Payouts.PayoutEligibility.Classify"/>. The order is
+    /// tracked because the claim handler (T-0102a) mutates each eligible
+    /// row via <see cref="Order.AssignToPayoutBatch"/>. <b>Unscoped — admin
+    /// host only</b> per ADR 0013. No <c>IgnoreQueryFilters</c>:
+    /// soft-deleted orders (and makers) stay invisible to the claim.
+    /// </summary>
+    Task<IReadOnlyList<Payouts.PayoutCandidate>> GetPayoutEligibleUnscopedAsync(
+        string countryCode,
+        CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
 

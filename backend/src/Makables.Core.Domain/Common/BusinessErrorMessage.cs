@@ -426,6 +426,35 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string PayoutBatchCsvPathAlreadySet = "payoutBatch.csvPathAlreadySet";
 
+    /// <summary>
+    /// A payout batch for this ISO week was already created and completed —
+    /// pre-checked via <c>GetByNumberAsync</c> so a same-week re-run returns
+    /// a typed, translated Conflict instead of dying on the unique index as
+    /// a raw 500. Excluded orders (Q3/Q5) ride NEXT week's batch. T-0102a.
+    /// </summary>
+    public const string PayoutBatchWeekAlreadyProcessed = "payoutBatch.weekAlreadyProcessed";
+
+    /// <summary>
+    /// Eligible orders in the run do not share a single currency. Defensive
+    /// money math — summing mixed currencies into one
+    /// <c>TotalAmountMinor</c> would silently corrupt the wire amount.
+    /// Logged Critical. T-0102a §C.9.
+    /// </summary>
+    public const string PayoutBatchCurrencyMismatch = "payoutBatch.currencyMismatch";
+
+    /// <summary>
+    /// Admin CSV download requested for a batch id that does not exist.
+    /// T-0102b §C.14.
+    /// </summary>
+    public const string PayoutBatchNotFound = "payoutBatch.notFound";
+
+    /// <summary>
+    /// Admin CSV download requested for a batch whose <c>CsvBlobPath</c> is
+    /// still null (the artifact pipeline has not produced the CSV yet — a
+    /// re-run completes it). T-0102b §C.14.
+    /// </summary>
+    public const string PayoutBatchCsvNotReady = "payoutBatch.csvNotReady";
+
     // === Invoice (T-0068a) ===
     /// <summary>
     /// <see cref="Invoices.Invoice.AttachPdfBlobPath"/> was called with a
