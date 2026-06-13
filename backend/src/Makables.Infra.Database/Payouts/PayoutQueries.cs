@@ -44,11 +44,15 @@ public sealed class PayoutQueries(MakablesDbContext db) : IPayoutQueries
             return PagedData<MakerPayoutListItemDto>.Empty(page, pageSize);
 
         // JOIN the grouped slice to the batch header (for BatchNumber / State /
-        // Currency / CompletedAt) and LEFT JOIN this maker's Fee invoice id.
-        var query =
+        // Currency / CompletedAt), sort + page, materialize the anonymous
+        // projection. The Fee-invoice id is resolved in a second translatable
+        // pass (a correlated subquery inside the page projection does not
+        // translate against the grouped set).
+        var pageRows = await (
             from g in grouped
             join b in db.Set<PayoutBatch>().AsNoTracking() on g.BatchId equals b.Id
-            select new MakerPayoutListItemDto(
+            select new
+            {
                 b.Id,
                 b.BatchNumber,
                 b.State,
@@ -56,17 +60,34 @@ public sealed class PayoutQueries(MakablesDbContext db) : IPayoutQueries
                 g.OrderCount,
                 b.Currency,
                 b.CompletedAt,
-                db.Set<Invoice>().AsNoTracking()
-                    .Where(i => i.PayoutBatchId == b.Id && i.MakerId == makerId && i.Type == InvoiceType.Fee)
-                    .Select(i => i.Id)
-                    .FirstOrDefault());
-
-        var items = await query
+            })
             .OrderByDescending(x => x.CompletedAt)
             .ThenByDescending(x => x.BatchNumber)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
+
+        // Resolve this maker's Fee-invoice id per batch on the page (one
+        // translatable IN query, materialized into a lookup).
+        var pageBatchIds = pageRows.Select(r => r.Id).ToList();
+        var feeInvoiceByBatch = await db.Set<Invoice>()
+            .AsNoTracking()
+            .Where(i => i.MakerId == makerId && i.Type == InvoiceType.Fee
+                && i.PayoutBatchId != null && pageBatchIds.Contains(i.PayoutBatchId))
+            .Select(i => new { BatchId = i.PayoutBatchId!, i.Id })
+            .ToDictionaryAsync(x => x.BatchId, x => x.Id, ct);
+
+        var items = pageRows
+            .Select(r => new MakerPayoutListItemDto(
+                r.Id,
+                r.BatchNumber,
+                r.State,
+                r.MakerTotalPaidMinor,
+                r.OrderCount,
+                r.Currency,
+                r.CompletedAt,
+                feeInvoiceByBatch.TryGetValue(r.Id, out var invId) ? invId : null))
+            .ToList();
 
         return new PagedData<MakerPayoutListItemDto>(items, page, pageSize, totalCount);
     }
