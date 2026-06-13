@@ -15,6 +15,11 @@ export interface IMakerApi {
     label(orderId: string): Promise<void>;
 
     /**
+     * @return OK
+     */
+    invoices(invoiceId: string): Promise<void>;
+
+    /**
      * @param page (optional) 
      * @param pageSize (optional) 
      * @return OK
@@ -68,6 +73,13 @@ export interface IMakerApi {
     dispute(orderId: string, body: OpenMakerDisputeRequest): Promise<OpenMakerDisputeResponse>;
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    events(orderId: string, page: number | undefined, pageSize: number | undefined): Promise<GetMakerOutboxEventsResponse>;
+
+    /**
      * @return OK
      */
     attachments(orderId: string, attachmentId: string): Promise<void>;
@@ -76,6 +88,18 @@ export interface IMakerApi {
      * @return OK
      */
     invoice(orderId: string): Promise<void>;
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    payoutBatches(page: number | undefined, pageSize: number | undefined): Promise<GetMakerPayoutsResponse>;
+
+    /**
+     * @return OK
+     */
+    payoutBatches2(batchId: string): Promise<GetMakerPayoutDetailResponse>;
 
     /**
      * @param page (optional) 
@@ -256,6 +280,60 @@ export class MakerApi implements IMakerApi {
             let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result503 = ErrorDto.fromJS(resultData503);
             return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    invoices(invoiceId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/maker/files/invoices/{invoiceId}";
+        if (invoiceId === undefined || invoiceId === null)
+            throw new globalThis.Error("The parameter 'invoiceId' must be defined.");
+        url_ = url_.replace("{invoiceId}", encodeURIComponent("" + invoiceId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processInvoices(_response);
+        });
+    }
+
+    protected processInvoices(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 304) {
+            return response.text().then((_responseText) => {
+            return throwException("Not Modified", status, _responseText, _headers);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -909,6 +987,77 @@ export class MakerApi implements IMakerApi {
     }
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    events(orderId: string, page: number | undefined, pageSize: number | undefined): Promise<GetMakerOutboxEventsResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/events?";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processEvents(_response);
+        });
+    }
+
+    protected processEvents(response: Response): Promise<GetMakerOutboxEventsResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerOutboxEventsResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerOutboxEventsResponse>(null as any);
+    }
+
+    /**
      * @return OK
      */
     attachments(orderId: string, attachmentId: string): Promise<void> {
@@ -1017,6 +1166,135 @@ export class MakerApi implements IMakerApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    payoutBatches(page: number | undefined, pageSize: number | undefined): Promise<GetMakerPayoutsResponse> {
+        let url_ = this.baseUrl + "/api/v1/payout-batches?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPayoutBatches(_response);
+        });
+    }
+
+    protected processPayoutBatches(response: Response): Promise<GetMakerPayoutsResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerPayoutsResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerPayoutsResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    payoutBatches2(batchId: string): Promise<GetMakerPayoutDetailResponse> {
+        let url_ = this.baseUrl + "/api/v1/payout-batches/{batchId}";
+        if (batchId === undefined || batchId === null)
+            throw new globalThis.Error("The parameter 'batchId' must be defined.");
+        url_ = url_.replace("{batchId}", encodeURIComponent("" + batchId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processPayoutBatches2(_response);
+        });
+    }
+
+    protected processPayoutBatches2(response: Response): Promise<GetMakerPayoutDetailResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerPayoutDetailResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerPayoutDetailResponse>(null as any);
     }
 
     /**
@@ -2597,6 +2875,159 @@ export interface IGetMakerOrdersResponse {
     [key: string]: any;
 }
 
+export class GetMakerOutboxEventsResponse implements IGetMakerOutboxEventsResponse {
+    events!: PagedDataOfMakerOutboxEventDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerOutboxEventsResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.events = new PagedDataOfMakerOutboxEventDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.events = _data["events"] ? PagedDataOfMakerOutboxEventDto.fromJS(_data["events"]) : new PagedDataOfMakerOutboxEventDto();
+        }
+    }
+
+    static fromJS(data: any): GetMakerOutboxEventsResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerOutboxEventsResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["events"] = this.events ? this.events.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetMakerOutboxEventsResponse {
+    events: PagedDataOfMakerOutboxEventDto;
+
+    [key: string]: any;
+}
+
+export class GetMakerPayoutDetailResponse implements IGetMakerPayoutDetailResponse {
+    detail!: MakerPayoutDetailDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerPayoutDetailResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.detail = new MakerPayoutDetailDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.detail = _data["detail"] ? MakerPayoutDetailDto.fromJS(_data["detail"]) : new MakerPayoutDetailDto();
+        }
+    }
+
+    static fromJS(data: any): GetMakerPayoutDetailResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerPayoutDetailResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["detail"] = this.detail ? this.detail.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetMakerPayoutDetailResponse {
+    detail: MakerPayoutDetailDto;
+
+    [key: string]: any;
+}
+
+export class GetMakerPayoutsResponse implements IGetMakerPayoutsResponse {
+    payouts!: PagedDataOfMakerPayoutListItemDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerPayoutsResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.payouts = new PagedDataOfMakerPayoutListItemDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.payouts = _data["payouts"] ? PagedDataOfMakerPayoutListItemDto.fromJS(_data["payouts"]) : new PagedDataOfMakerPayoutListItemDto();
+        }
+    }
+
+    static fromJS(data: any): GetMakerPayoutsResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerPayoutsResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["payouts"] = this.payouts ? this.payouts.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetMakerPayoutsResponse {
+    payouts: PagedDataOfMakerPayoutListItemDto;
+
+    [key: string]: any;
+}
+
 export class HandOverOrderResponse implements IHandOverOrderResponse {
     orderId!: string;
 
@@ -2940,6 +3371,297 @@ export interface IMakerOrderListItemDto {
     shippingMethod: ShippingMethod;
     productTitle: string | undefined;
     unreadMessageCount: number | undefined;
+
+    [key: string]: any;
+}
+
+export class MakerOutboxEventDto implements IMakerOutboxEventDto {
+    eventType!: string;
+    status!: OutboxDeliveryStatus;
+    occurredAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerOutboxEventDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.eventType = _data["eventType"];
+            this.status = _data["status"];
+            this.occurredAt = _data["occurredAt"] ? new Date(_data["occurredAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MakerOutboxEventDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerOutboxEventDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["eventType"] = this.eventType;
+        data["status"] = this.status;
+        data["occurredAt"] = this.occurredAt ? this.occurredAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IMakerOutboxEventDto {
+    eventType: string;
+    status: OutboxDeliveryStatus;
+    occurredAt: Date;
+
+    [key: string]: any;
+}
+
+export class MakerPayoutDetailDto implements IMakerPayoutDetailDto {
+    batchId!: string;
+    batchNumber!: string;
+    state!: PayoutBatchState;
+    makerTotalPaidMinor!: number;
+    currency!: string;
+    completedAt!: Date | undefined;
+    feeInvoiceId!: string | undefined;
+    orders!: MakerPayoutOrderLineDto[];
+
+    [key: string]: any;
+
+    constructor(data?: IMakerPayoutDetailDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.orders = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.batchId = _data["batchId"];
+            this.batchNumber = _data["batchNumber"];
+            this.state = _data["state"];
+            this.makerTotalPaidMinor = _data["makerTotalPaidMinor"];
+            this.currency = _data["currency"];
+            this.completedAt = _data["completedAt"] ? new Date(_data["completedAt"].toString()) : undefined as any;
+            this.feeInvoiceId = _data["feeInvoiceId"];
+            if (Array.isArray(_data["orders"])) {
+                this.orders = [] as any;
+                for (let item of _data["orders"])
+                    this.orders!.push(MakerPayoutOrderLineDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): MakerPayoutDetailDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerPayoutDetailDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["batchId"] = this.batchId;
+        data["batchNumber"] = this.batchNumber;
+        data["state"] = this.state;
+        data["makerTotalPaidMinor"] = this.makerTotalPaidMinor;
+        data["currency"] = this.currency;
+        data["completedAt"] = this.completedAt ? this.completedAt.toISOString() : undefined as any;
+        data["feeInvoiceId"] = this.feeInvoiceId;
+        if (Array.isArray(this.orders)) {
+            data["orders"] = [];
+            for (let item of this.orders)
+                data["orders"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IMakerPayoutDetailDto {
+    batchId: string;
+    batchNumber: string;
+    state: PayoutBatchState;
+    makerTotalPaidMinor: number;
+    currency: string;
+    completedAt: Date | undefined;
+    feeInvoiceId: string | undefined;
+    orders: MakerPayoutOrderLineDto[];
+
+    [key: string]: any;
+}
+
+export class MakerPayoutListItemDto implements IMakerPayoutListItemDto {
+    batchId!: string;
+    batchNumber!: string;
+    state!: PayoutBatchState;
+    makerTotalPaidMinor!: number;
+    orderCount!: number;
+    currency!: string;
+    completedAt!: Date | undefined;
+    feeInvoiceId!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerPayoutListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.batchId = _data["batchId"];
+            this.batchNumber = _data["batchNumber"];
+            this.state = _data["state"];
+            this.makerTotalPaidMinor = _data["makerTotalPaidMinor"];
+            this.orderCount = _data["orderCount"];
+            this.currency = _data["currency"];
+            this.completedAt = _data["completedAt"] ? new Date(_data["completedAt"].toString()) : undefined as any;
+            this.feeInvoiceId = _data["feeInvoiceId"];
+        }
+    }
+
+    static fromJS(data: any): MakerPayoutListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerPayoutListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["batchId"] = this.batchId;
+        data["batchNumber"] = this.batchNumber;
+        data["state"] = this.state;
+        data["makerTotalPaidMinor"] = this.makerTotalPaidMinor;
+        data["orderCount"] = this.orderCount;
+        data["currency"] = this.currency;
+        data["completedAt"] = this.completedAt ? this.completedAt.toISOString() : undefined as any;
+        data["feeInvoiceId"] = this.feeInvoiceId;
+        return data;
+    }
+}
+
+export interface IMakerPayoutListItemDto {
+    batchId: string;
+    batchNumber: string;
+    state: PayoutBatchState;
+    makerTotalPaidMinor: number;
+    orderCount: number;
+    currency: string;
+    completedAt: Date | undefined;
+    feeInvoiceId: string | undefined;
+
+    [key: string]: any;
+}
+
+export class MakerPayoutOrderLineDto implements IMakerPayoutOrderLineDto {
+    orderId!: string;
+    orderNumber!: string;
+    productPriceMinor!: number;
+    shippingPriceMinor!: number;
+    platformFeeAmountMinor!: number;
+    makerPayoutAmountMinor!: number;
+    currency!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerPayoutOrderLineDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.productPriceMinor = _data["productPriceMinor"];
+            this.shippingPriceMinor = _data["shippingPriceMinor"];
+            this.platformFeeAmountMinor = _data["platformFeeAmountMinor"];
+            this.makerPayoutAmountMinor = _data["makerPayoutAmountMinor"];
+            this.currency = _data["currency"];
+        }
+    }
+
+    static fromJS(data: any): MakerPayoutOrderLineDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerPayoutOrderLineDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["productPriceMinor"] = this.productPriceMinor;
+        data["shippingPriceMinor"] = this.shippingPriceMinor;
+        data["platformFeeAmountMinor"] = this.platformFeeAmountMinor;
+        data["makerPayoutAmountMinor"] = this.makerPayoutAmountMinor;
+        data["currency"] = this.currency;
+        return data;
+    }
+}
+
+export interface IMakerPayoutOrderLineDto {
+    orderId: string;
+    orderNumber: string;
+    productPriceMinor: number;
+    shippingPriceMinor: number;
+    platformFeeAmountMinor: number;
+    makerPayoutAmountMinor: number;
+    currency: string;
 
     [key: string]: any;
 }
@@ -3444,6 +4166,12 @@ export enum OrderState {
     Disputed = "Disputed",
 }
 
+export enum OutboxDeliveryStatus {
+    Processed = "Processed",
+    Scheduled = "Scheduled",
+    Stalled = "Stalled",
+}
+
 export class PagedDataOfMakerOrderListItemDto implements IPagedDataOfMakerOrderListItemDto {
     items!: MakerOrderListItemDto[];
     page!: number;
@@ -3517,6 +4245,172 @@ export class PagedDataOfMakerOrderListItemDto implements IPagedDataOfMakerOrderL
 
 export interface IPagedDataOfMakerOrderListItemDto {
     items: MakerOrderListItemDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfMakerOutboxEventDto implements IPagedDataOfMakerOutboxEventDto {
+    items!: MakerOutboxEventDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfMakerOutboxEventDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(MakerOutboxEventDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfMakerOutboxEventDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfMakerOutboxEventDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfMakerOutboxEventDto {
+    items: MakerOutboxEventDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfMakerPayoutListItemDto implements IPagedDataOfMakerPayoutListItemDto {
+    items!: MakerPayoutListItemDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfMakerPayoutListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(MakerPayoutListItemDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfMakerPayoutListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfMakerPayoutListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfMakerPayoutListItemDto {
+    items: MakerPayoutListItemDto[];
     page: number;
     pageSize: number;
     totalCount: number;
@@ -3691,6 +4585,11 @@ export interface IPagedDataOfOrderMessageDto {
     hasPreviousPage?: boolean;
 
     [key: string]: any;
+}
+
+export enum PayoutBatchState {
+    Processing = "Processing",
+    Completed = "Completed",
 }
 
 export class PostMakerOrderMessageResponse implements IPostMakerOrderMessageResponse {
