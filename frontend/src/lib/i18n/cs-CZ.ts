@@ -499,12 +499,18 @@ export const messages = {
     'Žádné objednávky připravené k výplatě.',
   'payoutBatch.weekAlreadyProcessed':
     'Výplatní dávka pro tento týden už byla zpracována.',
+  'payoutBatch.alreadyOpen':
+    'Výplatní dávka se právě zpracovává. Zkuste to prosím za chvíli.',
   'payoutBatch.currencyMismatch':
     'Objednávky v dávce nemají jednotnou měnu. Kontaktujte podporu.',
   'payoutBatch.notFound':
     'Výplatní dávka nebyla nalezena.',
   'payoutBatch.csvNotReady':
     'CSV soubor výplatní dávky se ještě generuje. Zkuste to prosím za chvíli.',
+  // Admin / log surface (mirror of invoice.blobPathAlreadySet) — the CSV
+  // formatter is deterministic so a real overwrite is a programmer error.
+  'payoutBatch.csvPathAlreadySet':
+    'Cesta k CSV souboru výplatní dávky už byla nastavena. Tým byl informován.',
 
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's

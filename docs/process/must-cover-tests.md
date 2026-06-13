@@ -166,6 +166,8 @@ Known set-once invariants (this list grows; reviewer keeps it current):
 | `Order` | `ShippingCarrierRef` | Packeta label-issued callback | T-0067 |
 | `Invoice` | `PdfBlobPath` | T-0068b `InvoiceService.IssueAsync` after blob upload | T-0068a |
 | `Order` | `ShippingCarrierTrackingUrl` | T-0072 `ShipOrder.Handler` via `Order.Ship` 4th-param extension | T-0072 |
+| `PayoutBatch` | `CsvBlobPath` | T-0102b `PayoutArtifactService` via `PayoutBatch.AttachCsvBlobPath` after CSV blob upload | T-0101 |
+| `Order` | `PayoutBatchId` | T-0102a `CreatePayoutBatch.Handler` via `Order.AssignToPayoutBatch` | T-0101 |
 
 Add a row here when a new set-once property lands. The test sits next to the entity in `Core.Domain.Tests/Entities/`.
 

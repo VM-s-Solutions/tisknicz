@@ -57,6 +57,24 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             ["ix_makers_slug"] =
                 Error.Conflict("slug", BusinessErrorMessage.MakerSlugAlreadyExists),
 
+            // CreatePayoutBatch pre-checks GetOpenBatchAsync; the concurrent
+            // loser of the open-batch race (Monday-02:00 timer + an admin
+            // click, or two admins) committed second and violates the
+            // partial-unique index. Surface it as a typed Conflict so a
+            // money command stops 500-ing under its single most-likely race;
+            // the loser's whole UoW rolls back (no split/double claim) and
+            // the next retry resumes the WINNER's batch as Silent Success.
+            // payout-core-bundle review BLOCKER-1.
+            ["ux_payout_batches_open_per_country"] =
+                Error.Conflict("payoutBatch", BusinessErrorMessage.PayoutBatchAlreadyOpen),
+
+            // CreatePayoutBatch pre-checks GetByNumberAsync for the week
+            // guard; the concurrent loser of the same-ISO-week race surfaces
+            // here as the SAME typed Conflict the pre-check would have
+            // returned, rather than a raw 500. payout-core-bundle BLOCKER-1.
+            ["ux_payout_batches_country_batch_number"] =
+                Error.Conflict("batchNumber", BusinessErrorMessage.PayoutBatchWeekAlreadyProcessed),
+
             // Intentionally unmapped (T-0033 Copilot review):
             //   ix_makers_user_id — one Maker row per User. The handler
             //   adds exactly one Maker per RegisterMaker call, so a 23505

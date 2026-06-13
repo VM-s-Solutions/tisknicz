@@ -8,6 +8,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Money;
+using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Payouts;
@@ -177,6 +178,21 @@ public sealed class CreatePayoutBatchIntegrationTests : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Seed the FV-CZ-2026 invoice <see cref="NumberingSequence"/> row so
+    /// the Fee-invoice allocator locks an existing row instead of racing to
+    /// create it (see the concurrent race test). LastUsedValue stays 0 so
+    /// the first issued Fee invoice is FV-CZ-20260001 as in the other tests.
+    /// </summary>
+    private async Task SeedInvoiceSequenceAsync()
+    {
+        await using var db = _harness.CreateDbContext();
+        var at = new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        db.Set<NumberingSequence>().Add(
+            NumberingSequence.StartAt(CountryCode, NumberingScope.Invoice, 2026, at));
+        await db.SaveChangesAsync();
+    }
+
     private static string IssueToken(string userId, string email, UserRole role, string audience)
     {
         var issuer = new JwtIssuer(Options.Create(new JwtOptions
@@ -270,6 +286,88 @@ public sealed class CreatePayoutBatchIntegrationTests : IAsyncLifetime
         await using var db = _harness.CreateDbContext();
         (await db.Set<PayoutBatch>().AsNoTracking().CountAsync()).Should().Be(1);
         (await db.Set<Invoice>().AsNoTracking().Where(i => i.Type == InvoiceType.Fee).CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Concurrent_create_dispatches_produce_exactly_one_batch_and_never_500()
+    {
+        // payout-core-bundle BLOCKER-1. Two parallel CreatePayoutBatch
+        // dispatches against the SAME eligible set model the Monday-02:00
+        // timer racing an admin click. Both pass the GetOpenBatchAsync
+        // null-check; one commits first, the loser's SaveChangesAsync
+        // violates ux_payout_batches_open_per_country. The translator turns
+        // that 23505 into a typed Conflict (PayoutBatchAlreadyOpen) so the
+        // loser returns a deterministic 409 — NOT a raw 500 — and its whole
+        // UoW (batch + claims + fee invoices + outbox) rolls back. Exactly
+        // one batch row, zero split/double claim.
+        await SeedBaselineAsync(
+            new[] { new SeededMaker("maker-a", "user-maker-a", "addr-a", "111/0100", "Alpha s.r.o.", "27074358") },
+            new[]
+            {
+                ("o1", "maker-a", OrderState.Delivered, 30000L, 4500L, 0L),
+                ("o2", "maker-a", OrderState.Delivered, 15000L, 2250L, 0L),
+            });
+
+        // Pre-warm the FV-CZ-2026 invoice sequence row so the per-maker Fee
+        // invoice allocator FOR-UPDATE-locks an EXISTING row (serialised)
+        // rather than racing to INSERT it. Without this both runs would race
+        // on PK_numbering_sequence (a separate, intentionally-unmapped
+        // first-allocation race documented in InvoiceNumberGeneratorRace-
+        // SafetyTests) and mask the open-batch index race this test targets.
+        await SeedInvoiceSequenceAsync();
+
+        // Independent clients so the two requests run on independent
+        // DbContext scopes / connections — the real concurrent-commit race.
+        using var clientA = AdminClient();
+        using var clientB = AdminClient();
+
+        var taskA = clientA.PostAsync("/api/v1/payout-batches", null);
+        var taskB = clientB.PostAsync("/api/v1/payout-batches", null);
+        var responses = await Task.WhenAll(taskA, taskB);
+
+        // No raw 500 under the most-likely race (the BLOCKER).
+        responses.Should().NotContain(r => r.StatusCode == HttpStatusCode.InternalServerError,
+            because: "a money command must never 500 on its open-batch race");
+
+        var statuses = responses.Select(r => r.StatusCode).ToList();
+        // The winner returns 200. The loser returns either 200 (its read-
+        // check saw the committed winner and returned AlreadyExisted) or 409
+        // (it lost at the unique index and the translator mapped it).
+        statuses.Should().Contain(HttpStatusCode.OK);
+        statuses.Should().OnlyContain(s =>
+            s == HttpStatusCode.OK || s == HttpStatusCode.Conflict);
+
+        // If the loser surfaced as a Conflict it must be a TYPED, translated
+        // payout conflict — not an untranslated raw error. Both new mappings
+        // are valid: the loser's INSERT trips whichever unique index Postgres
+        // evaluates first — ux_payout_batches_country_batch_number
+        // (PayoutBatchWeekAlreadyProcessed) or ux_payout_batches_open_per_country
+        // (PayoutBatchAlreadyOpen). Either is the same "a batch already exists"
+        // semantics; what matters is it is translated, not a raw 500.
+        foreach (var r in responses.Where(r => r.StatusCode == HttpStatusCode.Conflict))
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(await r.Content.ReadAsStringAsync());
+            doc.RootElement.GetProperty("code").GetString()
+                .Should().BeOneOf(
+                    BusinessErrorMessage.PayoutBatchAlreadyOpen,
+                    BusinessErrorMessage.PayoutBatchWeekAlreadyProcessed);
+        }
+
+        await using var db = _harness.CreateDbContext();
+        // Exactly ONE batch row — the loser's batch INSERT rolled back.
+        (await db.Set<PayoutBatch>().AsNoTracking().CountAsync()).Should().Be(1,
+            because: "the open-per-country unique index admits exactly one Processing batch");
+        var batch = await db.Set<PayoutBatch>().AsNoTracking().SingleAsync();
+        // Both eligible orders are claimed by the single winning batch — no
+        // split, no double claim, no orphaned claim.
+        var claimed = await db.Set<Order>().AsNoTracking().Where(o => o.PayoutBatchId != null).ToListAsync();
+        claimed.Should().HaveCount(2);
+        claimed.Should().OnlyContain(o => o.PayoutBatchId == batch.Id);
+        // Exactly one maker's fee invoice — the loser's fee invoice rolled back.
+        (await db.Set<Invoice>().AsNoTracking().Where(i => i.Type == InvoiceType.Fee).CountAsync())
+            .Should().Be(1);
+
+        foreach (var r in responses) r.Dispose();
     }
 
     [Fact]

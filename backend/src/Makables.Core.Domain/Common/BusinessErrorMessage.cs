@@ -435,6 +435,20 @@ public static class BusinessErrorMessage
     public const string PayoutBatchWeekAlreadyProcessed = "payoutBatch.weekAlreadyProcessed";
 
     /// <summary>
+    /// A concurrent <c>CreatePayoutBatch</c> lost the open-batch race: the
+    /// handler's <c>GetOpenBatchAsync</c> null-check passed, but a parallel
+    /// run committed an open <see cref="Payouts.PayoutBatchState.Processing"/>
+    /// batch first, so the loser's <c>SaveChangesAsync</c> violated the
+    /// partial-unique index <c>ux_payout_batches_open_per_country</c>. The
+    /// translator surfaces this as a typed Conflict instead of a raw 500;
+    /// the loser's entire UoW (batch + claims + fee invoices + outbox) rolls
+    /// back atomically — no split/double claim. The next admin retry (or the
+    /// T-0104 timer's next pass) hits the read-check and resumes the WINNER's
+    /// batch as Silent Success. T-0102a (payout-core-bundle review BLOCKER-1).
+    /// </summary>
+    public const string PayoutBatchAlreadyOpen = "payoutBatch.alreadyOpen";
+
+    /// <summary>
     /// Eligible orders in the run do not share a single currency. Defensive
     /// money math — summing mixed currencies into one
     /// <c>TotalAmountMinor</c> would silently corrupt the wire amount.
