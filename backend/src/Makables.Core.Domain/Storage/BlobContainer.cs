@@ -24,12 +24,19 @@ public static class BlobContainer
     public const string Invoices = "invoices";
     public const string MakerDocuments = "maker-documents";
 
+    /// <summary>
+    /// Private container for the weekly payout CSVs (T-0102b). Streamed to
+    /// the admin host only; never directly linked from the browser.
+    /// </summary>
+    public const string Payouts = "payouts";
+
     public static readonly string[] All =
     {
         ProductImages,
         OrderAttachments,
         Invoices,
         MakerDocuments,
+        Payouts,
     };
 
     /// <summary>True for the single public-read container; false for the private three.</summary>

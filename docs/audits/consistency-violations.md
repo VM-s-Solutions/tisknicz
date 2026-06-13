@@ -88,6 +88,10 @@
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "class Handler"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:84:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:94:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
+- backend/src/Makables.Core.AppServices/Features/Payouts/CreatePayoutBatch.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:68:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:74:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X

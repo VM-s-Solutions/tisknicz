@@ -48,7 +48,7 @@ public class CreatePayoutBatchHandlerTests
         _ids.Next().Returns(_ => Guid.NewGuid().ToString("N"));
         _numberGenerator.For(CountryCode, Arg.Any<DateOnly>()).Returns("VYP-CZ-2026-W25");
         _countries.GetByCodeAsync(CountryCode, Arg.Any<CancellationToken>()).Returns(BuildConfig());
-        _artifacts.GenerateAsync(Arg.Any<PayoutBatch>(), Arg.Any<CancellationToken>())
+        _artifacts.GenerateAsync(Arg.Any<PayoutBatch>(), Arg.Any<IReadOnlyList<Order>?>(), Arg.Any<CancellationToken>())
             .Returns(new PayoutArtifactResult(Complete: true, FeeInvoiceCount: 2, CsvReady: true));
 
         var defaultCountry = Options.Create(new AuthDefaultCountryOptions { CountryCodePrimary = CountryCode });
@@ -223,12 +223,13 @@ public class CreatePayoutBatchHandlerTests
     public async Task Tz_boundary_sunday_2330_utc_uses_monday_local_date()
     {
         // Sunday 2026-06-14 23:30 UTC = Monday 2026-06-15 01:30 Prague (CEST).
+        var candidates = new List<PayoutCandidate>
+        {
+            Candidate(DeliveredOrder("o1", "maker-A", 10000), "maker-A", "111/0100"),
+        };
         _clock.UtcNow.Returns(DateTimeOffset.Parse("2026-06-14T23:30:00Z"));
         _orders.GetPayoutEligibleUnscopedAsync(CountryCode, Arg.Any<CancellationToken>())
-            .Returns(new List<PayoutCandidate>
-            {
-                Candidate(DeliveredOrder("o1", "maker-A", 10000), "maker-A", "111/0100"),
-            });
+            .Returns(candidates);
 
         await _sut.Handle(new CreatePayoutBatch.Command(), CancellationToken.None);
 
@@ -256,12 +257,13 @@ public class CreatePayoutBatchHandlerTests
     [Fact]
     public async Task Currency_mismatch_returns_failure()
     {
+        var candidates = new List<PayoutCandidate>
+        {
+            Candidate(DeliveredOrder("o1", "maker-A", 10000, "CZK"), "maker-A", "111/0100"),
+            Candidate(DeliveredOrder("o2", "maker-B", 5000, "EUR"), "maker-B", "222/0800"),
+        };
         _orders.GetPayoutEligibleUnscopedAsync(CountryCode, Arg.Any<CancellationToken>())
-            .Returns(new List<PayoutCandidate>
-            {
-                Candidate(DeliveredOrder("o1", "maker-A", 10000, "CZK"), "maker-A", "111/0100"),
-                Candidate(DeliveredOrder("o2", "maker-B", 5000, "EUR"), "maker-B", "222/0800"),
-            });
+            .Returns(candidates);
 
         var result = await _sut.Handle(new CreatePayoutBatch.Command(), CancellationToken.None);
 

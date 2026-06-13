@@ -257,6 +257,19 @@ public interface IOrderRepository
         string countryCode,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Load every order claimed by a payout batch
+    /// (<c>PayoutBatchId == payoutBatchId</c>), read-only. <b>Unscoped —
+    /// admin host only.</b> Backs T-0102b's artifact service: the per-maker
+    /// fee-invoice line items (order number + platform fee) and the CSV
+    /// amounts (summed maker payout) are derived from these rows. Read-only
+    /// (<c>AsNoTracking</c>) — the claim already committed; the artifact
+    /// service only reads.
+    /// </summary>
+    Task<IReadOnlyList<Order>> GetByPayoutBatchIdUnscopedAsync(
+        string payoutBatchId,
+        CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
 

@@ -144,6 +144,33 @@ public sealed class InvoiceRepository(MakablesDbContext db) : IInvoiceRepository
             .FirstOrDefaultAsync(i => i.OrderId == orderId, cancellationToken);
     }
 
+    public Task<Invoice?> GetByIdAsync(string id, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return Task.FromResult<Invoice?>(null);
+
+        // Tracked — the EmailSendService fee-invoice branch only reads, but
+        // keeping the tracked path mirrors the other GetBy* lookups; the
+        // global soft-delete filter applies.
+        return db.Set<Invoice>()
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Invoice>> GetByPayoutBatchIdAsync(
+        string payoutBatchId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(payoutBatchId))
+            return [];
+
+        // Tracked — the artifact service's re-entrancy path calls
+        // AttachPdfBlobPath on the returned Fee invoices when re-rendering a
+        // maker whose PdfBlobPath is still null. Global soft-delete filter
+        // applies.
+        return await db.Set<Invoice>()
+            .Where(i => i.PayoutBatchId == payoutBatchId)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task AddAsync(Invoice invoice, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(invoice);

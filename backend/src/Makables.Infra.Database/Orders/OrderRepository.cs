@@ -287,6 +287,27 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         return candidates;
     }
 
+    public async Task<IReadOnlyList<Order>> GetByPayoutBatchIdUnscopedAsync(
+        string payoutBatchId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(payoutBatchId))
+            return [];
+
+        // Read-only — the artifact service derives fee-invoice line items +
+        // CSV amounts from these already-claimed rows; it never mutates
+        // them. IgnoreAutoIncludes skips the Attachments eager-load (scalar
+        // fields only). Ordered by maker then order number so the per-maker
+        // grouping + CSV row ordering are deterministic.
+        return await db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => o.PayoutBatchId == payoutBatchId)
+            .OrderBy(o => o.MakerId)
+            .ThenBy(o => o.OrderNumber)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task AddAsync(Order order, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(order);

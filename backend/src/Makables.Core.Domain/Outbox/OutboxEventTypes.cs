@@ -139,6 +139,15 @@ public static class OutboxEventTypes
     public const string OrderRefundedCustomerEmail = "order.refunded.customerEmail";
 
     /// <summary>
+    /// "Your platform-fee invoice for this payout batch" maker notification
+    /// with the Fee invoice PDF attached, enqueued per maker by the T-0102b
+    /// <c>PayoutArtifactService</c> at batch creation. The PDF is looked up
+    /// at SEND time (T-0069 attachment pattern), never baked into the
+    /// payload. Routes through the existing <c>send-email</c> queue.
+    /// </summary>
+    public const string PayoutFeeInvoiceMakerEmail = "payout.feeInvoice.makerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -165,7 +174,8 @@ public static class OutboxEventTypes
                   or OrderCancelledCustomerEmail
                   or OrderRefundedCustomerEmail
                   or OrderDisputedAdminEmail
-                  or OrderDisputeResolvedCustomerEmail;
+                  or OrderDisputeResolvedCustomerEmail
+                  or PayoutFeeInvoiceMakerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

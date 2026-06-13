@@ -133,7 +133,9 @@ public static class CreatePayoutBatch
             if (openBatch is not null)
             {
                 metrics.RecordRun("already_open");
-                var artifacts = await artifactService.GenerateAsync(openBatch, cancellationToken);
+                // Re-run path: the claim is committed; the service reads it
+                // from the DB (pass null).
+                var artifacts = await artifactService.GenerateAsync(openBatch, claimedOrders: null, cancellationToken);
                 if (!artifacts.Complete)
                 {
                     logger.LogCritical(
@@ -249,16 +251,20 @@ public static class CreatePayoutBatch
 
             await payoutBatches.AddAsync(batch, cancellationToken);
 
+            var claimedOrders = new List<Order>(eligible.Count);
             foreach (var candidate in eligible)
             {
                 candidate.Order.AssignToPayoutBatch(batch.Id);
+                claimedOrders.Add(candidate.Order);
             }
 
             // Step 10: artifacts (T-0102b) — Fee invoices + CSV + maker
             // emails, all DB writes inside this same UoW (blob uploads are
-            // non-transactional but overwrite-safe). A failure is caught
-            // inside the service; we log Critical and still commit the claim.
-            var artifactResult = await artifactService.GenerateAsync(batch, cancellationToken);
+            // non-transactional but overwrite-safe). The just-claimed orders
+            // are passed in because the UoW has not committed them yet (a
+            // fresh DB query would see nothing). A failure is caught inside
+            // the service; we log Critical and still commit the claim.
+            var artifactResult = await artifactService.GenerateAsync(batch, claimedOrders, cancellationToken);
             if (!artifactResult.Complete)
             {
                 logger.LogCritical(

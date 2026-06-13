@@ -1,3 +1,4 @@
+using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payouts;
 
 namespace Makables.Core.AppServices.Features.Payouts;
@@ -20,7 +21,18 @@ namespace Makables.Core.AppServices.Features.Payouts;
 /// </summary>
 public interface IPayoutArtifactService
 {
-    Task<PayoutArtifactResult> GenerateAsync(PayoutBatch batch, CancellationToken cancellationToken);
+    /// <summary>
+    /// Generate (or resume) the artifacts for <paramref name="batch"/>.
+    /// <paramref name="claimedOrders"/> is supplied on the FIRST-run path —
+    /// the just-claimed (in-memory, tracked, not-yet-committed) orders, so
+    /// the service does not re-query the DB for rows the surrounding UoW has
+    /// not committed. On the RE-RUN path it is null and the service reads the
+    /// committed claim from the DB.
+    /// </summary>
+    Task<PayoutArtifactResult> GenerateAsync(
+        PayoutBatch batch,
+        IReadOnlyList<Order>? claimedOrders,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>

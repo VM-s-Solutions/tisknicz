@@ -132,14 +132,16 @@ public class AzureBlobStorageClientValidationTests
     // === BlobContainer helpers ===
 
     [Fact]
-    public void BlobContainer_All_lists_four_launch_containers()
+    public void BlobContainer_All_lists_the_launch_containers()
     {
+        // T-0102b adds the private "payouts" container for the weekly CSVs.
         BlobContainer.All.Should().BeEquivalentTo(new[]
         {
             "product-images",
             "order-attachments",
             "invoices",
             "maker-documents",
+            "payouts",
         });
     }
 

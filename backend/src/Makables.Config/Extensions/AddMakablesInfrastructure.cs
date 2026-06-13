@@ -1,6 +1,7 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.AppServices.Features.Outbox;
+using Makables.Core.AppServices.Features.Payouts;
 using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Addresses.Validators;
@@ -189,6 +190,13 @@ public static class MakablesInfrastructureExtensions
 
         // === Payout batches (T-0101) ===
         services.AddScoped<IPayoutBatchRepository, PayoutBatchRepository>();
+
+        // === Payout artifacts (T-0102b) ===
+        // CSV formatter is stateless + pure → singleton, keyed-ready for
+        // future bank-native exporters. The artifact orchestration is scoped
+        // (depends on the request-scoped repositories + outbox).
+        services.AddSingleton<IPayoutCsvFormatter, GenericPayoutCsvFormatter>();
+        services.AddScoped<IPayoutArtifactService, PayoutArtifactService>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
