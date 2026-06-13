@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Orders;
+using Makables.Core.AppServices.Features.Payouts;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
@@ -150,6 +151,26 @@ public sealed class OrdersController(
         string orderId, [FromBody] OpenMakerDisputeRequest request, CancellationToken ct) =>
         HandleResult(await mediator.Send(
             new OpenMakerDispute.Command(orderId, request.Category, request.Description), ct));
+
+    /// <summary>
+    /// Maker-scoped, read-only outbox audit trail for one of the maker's
+    /// orders (T-0112 / US-maker-0017): event type + a derived delivery status
+    /// + timestamp only. NO payload internals (customer PII), no error code, no
+    /// retry (admin-only). A cross-maker / unknown order id returns an EMPTY
+    /// page (IDOR shield in the projection — not 403, not an oracle).
+    /// </summary>
+    [HttpGet("{orderId}/events")]
+    [ProducesResponseType(typeof(GetMakerOutboxEventsForOrder.GetMakerOutboxEventsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Events(
+        string orderId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = GetMakerOutboxEventsForOrder.DefaultPageSize,
+        CancellationToken ct = default) =>
+        HandleResult(await mediator.Send(
+            new GetMakerOutboxEventsForOrder.Query(orderId, page, pageSize), ct));
 
     /// <summary>
     /// Streaming download of a customer-uploaded order attachment. Same

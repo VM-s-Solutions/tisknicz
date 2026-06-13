@@ -60,7 +60,7 @@ public class MarkPayoutBatchCompletedHandlerTests
 
     private void ScriptMaker(string makerId, string userId, string company)
     {
-        var maker = Maker.Create(
+        var maker = Makables.Core.Domain.Makers.Maker.Create(
             id: makerId, userId: userId, registrationNumber: makerId,
             vatId: null, companyName: company, legalForm: null,
             registeredAddressId: "addr-1", incorporatedOn: null,
@@ -242,8 +242,9 @@ public class MarkPayoutBatchCompletedHandlerTests
     {
         var batch = ProcessingBatch();
         _payoutBatches.GetByIdUnscopedAsync(BatchId, Arg.Any<CancellationToken>()).Returns(batch);
+        var orders = new[] { DeliveredOrder("o1", "maker-a", 1000), DeliveredOrder("o2", "maker-a", 2000) };
         _orders.GetByPayoutBatchIdForCompletionUnscopedAsync(BatchId, Arg.Any<CancellationToken>())
-            .Returns(new[] { DeliveredOrder("o1", "maker-a", 1000) });
+            .Returns(orders);
 
         var result = await _sut.Handle(Cmd(new DateOnly(2026, 6, 10)), CancellationToken.None);
 

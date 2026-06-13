@@ -1,9 +1,9 @@
 using FluentAssertions;
 using Makables.Core.AppServices.Features.Payouts;
-using Makables.Core.AppServices.Features.Payouts.DTOs;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Payouts;
+using Makables.Core.Domain.Payouts.Queries;
 using NSubstitute;
 
 namespace Makables.Tests.AppServices.Features.Payouts;
@@ -34,7 +34,7 @@ public class GetMakerPayoutsHandlerTests
         _sut = new GetMakerPayouts.Handler(_queries, _makers, _session);
     }
 
-    private static Maker ExistingMaker() => Maker.Create(
+    private static Makables.Core.Domain.Makers.Maker ExistingMaker() => Makables.Core.Domain.Makers.Maker.Create(
         id: MakerId, userId: UserId, registrationNumber: "27074358", vatId: null,
         companyName: "Avast s.r.o.", legalForm: null, registeredAddressId: "addr-1",
         incorporatedOn: null, isActiveInRegistry: true, sourceRegistry: "ares",
@@ -63,7 +63,8 @@ public class GetMakerPayoutsHandlerTests
     [Fact]
     public async Task No_maker_row_returns_MakerNotFound_and_queries_untouched()
     {
-        _makers.GetByUserIdAsync(UserId, Arg.Any<CancellationToken>()).Returns((Maker?)null);
+        _makers.GetByUserIdAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns((Makables.Core.Domain.Makers.Maker?)null);
 
         var result = await _sut.Handle(new GetMakerPayouts.Query(1, 20), CancellationToken.None);
 
