@@ -46,6 +46,10 @@ Task RetryStalledAsync(CancellationToken ct)
 - An event with `last_error_type = Permanent | Configuration` is never retried; admin must intervene.
 - `retry_count` is monotonically non-decreasing.
 
+## Read surfaces
+
+- **Maker-scoped read (T-0112, US-maker-0017):** `IPayoutQueries.GetMakerOutboxEventsForOrderAsync(makerId, orderId, page, pageSize, ct)` — a maker reads the outbox events of their OWN order for a delivery-status audit trail. Projection-only: event **type** + derived `OutboxDeliveryStatus` + **timestamp**; NO payload internals are exposed (the producing handler's snapshot stays internal). **No maker retry** — retry is admin-only (AC-2); this is a read-only window, not a control surface. IDOR shield in the projection: a cross-maker / unknown order id returns an EMPTY page (not an oracle, not a 403). Maker resolved from session → `IMakerRepository.GetByUserIdAsync`, NEVER from a request param. Feature: `backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerOutboxEventsForOrder.cs`; query impl `backend/src/Makables.Infra.Database/Payouts/PayoutQueries.cs:149`; DTO `MakerOutboxEventDto`.
+
 ## Implementation pointer
 
 Table: `outbox_event` (defined in ADR 0016). Function: `backend/src/Makables.Functions/ProcessOutboxFunction.cs`. Producer helper: `backend/src/Makables.Core.AppServices/Outbox/IOutbox.cs` + `OutboxRepository`.
