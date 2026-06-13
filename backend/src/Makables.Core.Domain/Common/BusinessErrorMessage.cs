@@ -415,6 +415,17 @@ public static class BusinessErrorMessage
     // === Payout batch ===
     public const string PayoutBatchEmpty = "payoutBatch.empty";
 
+    /// <summary>
+    /// <see cref="Payouts.PayoutBatch.AttachCsvBlobPath"/> was called with a
+    /// blob-path value that differs from the one already stored. Set-once:
+    /// an idempotent retry with the SAME value succeeds; a real overwrite
+    /// fails with this code. Mirrors
+    /// <see cref="InvoiceBlobPathAlreadySet"/> (T-0068a). Admin / log only —
+    /// the CSV formatter is deterministic so a real overwrite indicates a
+    /// programmer error, not a user-facing action. T-0101.
+    /// </summary>
+    public const string PayoutBatchCsvPathAlreadySet = "payoutBatch.csvPathAlreadySet";
+
     // === Invoice (T-0068a) ===
     /// <summary>
     /// <see cref="Invoices.Invoice.AttachPdfBlobPath"/> was called with a

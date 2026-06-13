@@ -129,8 +129,13 @@ public sealed class PostgresHarness : IAsyncLifetime
         // T-0106: extended to truncate disputes (the CASCADE off orders
         // would catch it via the FK, but explicit is cheaper to reason
         // about — T-0079 precedent).
+        // T-0101: extended to truncate payout_batches — the CreatePayoutBatch
+        // integration tests assert exactly-one batch row per run and the
+        // orders/invoices FK is ON DELETE RESTRICT (a plain DELETE on orders
+        // would fail), but TRUNCATE ... CASCADE bypasses FK constraints, so
+        // truncating both tables together clears the claim links cleanly.
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, invoices, order_messages, disputes, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, invoices, payout_batches, order_messages, disputes, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

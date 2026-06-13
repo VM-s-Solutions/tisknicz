@@ -15,6 +15,7 @@ using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Outbox;
@@ -35,6 +36,7 @@ using Makables.Infra.Database.Invoices;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.OrderMessages;
 using Makables.Infra.Database.Orders;
+using Makables.Infra.Database.Payouts;
 using Makables.Infra.Database.Products;
 using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
@@ -175,6 +177,9 @@ public static class MakablesInfrastructureExtensions
 
         // === Invoices (T-0068a) ===
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+
+        // === Payout batches (T-0101) ===
+        services.AddScoped<IPayoutBatchRepository, PayoutBatchRepository>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();

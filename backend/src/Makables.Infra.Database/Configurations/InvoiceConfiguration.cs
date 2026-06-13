@@ -190,10 +190,16 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasForeignKey(i => i.OrderId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // payout_batch_id has no FK at T-0068a — the payout_batches
-        // table does not exist yet. T-0101 adds the FK + the Fee-side
-        // ForMaker join. The XOR factory invariant prevents
-        // payout_batch_id from being set in any T-0068a/b code path.
+        // T-0101: payout_batch_id → payout_batches(id) ON DELETE RESTRICT
+        // (closes the T-0068a FK TODO — the payout_batches table now
+        // exists). A Fee invoice references the batch that charged the fee:
+        // a legal record, so deleting the batch must fail rather than orphan
+        // the invoice. All existing invoice rows are Customer-type with NULL
+        // payout_batch_id, so the constraint validates trivially.
+        builder.HasOne<Makables.Core.Domain.Payouts.PayoutBatch>()
+            .WithMany()
+            .HasForeignKey(i => i.PayoutBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         ConfigureAuditable(builder);
     }

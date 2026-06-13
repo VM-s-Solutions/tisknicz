@@ -175,6 +175,11 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.MakerPendingNotificationEmailAt)
             .HasColumnName("maker_pending_notification_email_at");
 
+        // T-0101: payout-batch claim link. TEXT NULL — set once when the
+        // weekly batch claims the order's maker payout (Order.AssignToPayoutBatch).
+        builder.Property(o => o.PayoutBatchId)
+            .HasColumnName("payout_batch_id").HasMaxLength(40);
+
         // === Customer notes ===
         builder.Property(o => o.CustomerNotes)
             .HasColumnName("customer_notes").HasMaxLength(Order.MaxCustomerNotesLength);
@@ -198,6 +203,23 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(o => o.State)
             .HasDatabaseName("ix_orders_state")
             .HasFilter("is_active");
+
+        // T-0101: partial index on the payout-batch claim link. Backs the
+        // T-0112 maker payout list + admin batch detail (T-0118) — "orders
+        // in batch X" — and stays small (only claimed rows are indexed).
+        builder.HasIndex(o => o.PayoutBatchId)
+            .HasDatabaseName("ix_orders_payout_batch_id")
+            .HasFilter("payout_batch_id IS NOT NULL");
+
+        // T-0101: payout_batch_id → payout_batches(id) ON DELETE RESTRICT.
+        // An order references the batch that paid it — legal traceability.
+        // Deleting a batch row must not cascade into orphaning settlement
+        // history, so RESTRICT makes any future hard-delete attempt fail
+        // loudly.
+        builder.HasOne<Makables.Core.Domain.Payouts.PayoutBatch>()
+            .WithMany()
+            .HasForeignKey(o => o.PayoutBatchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // === Attachments (T-0064) ===
         // One-to-many to OrderAttachment with cascade-delete at the FK
