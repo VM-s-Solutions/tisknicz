@@ -252,3 +252,31 @@
   - Both — belt and braces for a money-moving path.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0019 — Payout eligibility scan index degrades over time
+- **From:** optimizer (payout-core Gate 8 NOTE-1)
+- **Ticket / context:** payout-core bundle; weekly payout claim scan
+- **Asked:** 2026-06-12
+- **Blocking:** no
+- **Question:** The weekly claim scan filters `State == Delivered AND PayoutBatchId IS NULL`; only `ix_orders_state` serves it. Claimed orders KEEP `state = Delivered` + a non-null batch id, so they never leave the seek set — by end of year 1 the scan walks the full Delivered history every week.
+- **Options the agent has considered:**
+  - Add a partial index now (cheap, recommended — pre-empts the cliff): `ix_orders_payout_unclaimed ON orders(country_code) WHERE state = 'Delivered' AND payout_batch_id IS NULL AND is_active`.
+  - Add when volume warrants (defer until the Delivered history is large enough to measure the scan cost).
+  - Combine with a future "archive completed orders" policy so claimed/settled orders leave the hot table entirely.
+- **Status:** open
+- **Answer (filled by user):**
+- **Note:** S follow-up.
+
+## Q-0020 — Year-boundary ISO-week payout batch number
+- **From:** dotnet-backend (T-0102a risk note)
+- **Ticket / context:** T-0102a — payout batch numbering `VYP-CZ-YYYY-Www`
+- **Asked:** 2026-06-12
+- **Blocking:** no
+- **Question:** A Jan 1–3 batch falling in ISO week 52/53 of the prior year gets the new calendar year in `VYP-CZ-YYYY-Www` (cosmetic mismatch between the year and the ISO week); uniqueness still holds.
+- **Options the agent has considered:**
+  - Use the ISO-week-year (not the calendar year) in the number — strictly correct.
+  - Leave it (cosmetic; uniqueness is unaffected).
+  - Document the calendar-year convention so the discrepancy is intentional and on record.
+- **Status:** open
+- **Answer (filled by user):**
+- **Note:** Recorded in the ADR 0009 amendment trail.
