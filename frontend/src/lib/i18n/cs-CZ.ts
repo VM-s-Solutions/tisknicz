@@ -807,6 +807,60 @@ export const messages = {
   'dashboard.maker.orders.pagination.next': 'Další',
   'dashboard.maker.orders.pagination.page_of': 'Stránka {page} z {total}',
 
+  // Maker payouts dashboard at /dashboard/maker/vyplaty (T-0116,
+  // US-maker-0012/0013). Tykání throughout per CLAUDE.md. Two-value state
+  // mapping (no Pending). NO CSV anywhere — the maker downloads only their
+  // own Fee-invoice PDF.
+  'dashboard.maker.nav.payouts': 'Výplaty',
+  'dashboard.maker.payouts.metadata.title': 'Výplaty — Makables',
+  'dashboard.maker.payouts.metadata.description':
+    'Přehled tvých výplat a faktur za provizi na Makables.',
+  'dashboard.maker.payouts.title': 'Výplaty',
+  'dashboard.maker.payouts.subtitle':
+    'Přehled tvých výplatních dávek — co ti bylo vyplaceno za dokončené objednávky.',
+  'dashboard.maker.payouts.count': 'Výplat: {count}',
+  'dashboard.maker.payouts.state.processing': 'Připravujeme',
+  'dashboard.maker.payouts.state.completed': 'Vyplaceno',
+  'dashboard.maker.payouts.orderCount': 'Objednávek: {count}',
+  'dashboard.maker.payouts.table.number': 'Dávka',
+  'dashboard.maker.payouts.table.total': 'Vyplaceno',
+  'dashboard.maker.payouts.table.orders': 'Objednávky',
+  'dashboard.maker.payouts.table.state': 'Stav',
+  'dashboard.maker.payouts.table.date': 'Datum',
+  'dashboard.maker.payouts.datePlaceholder': '—',
+  'dashboard.maker.payouts.empty.title': 'Zatím nemáš žádné výplaty',
+  'dashboard.maker.payouts.empty.description':
+    'Jakmile budou tvé objednávky dokončené a proběhne výplatní dávka, najdeš ji tady.',
+  'dashboard.maker.payouts.error.title': 'Výplaty se nepodařilo načíst',
+  'dashboard.maker.payouts.error.body':
+    'Zkus to prosím znovu. Pokud potíže přetrvávají, ozvi se nám.',
+  'dashboard.maker.payouts.error.retry': 'Zkusit znovu',
+  'dashboard.maker.payouts.pagination.previous': 'Předchozí',
+  'dashboard.maker.payouts.pagination.next': 'Další',
+  'dashboard.maker.payouts.pagination.page_of': 'Stránka {page} z {total}',
+  'dashboard.maker.payoutDetail.metadata.title': 'Detail výplaty — Makables',
+  'dashboard.maker.payoutDetail.metadata.description': 'Rozpis výplatní dávky na Makables.',
+  'dashboard.maker.payoutDetail.backToList': 'Zpět na výplaty',
+  'dashboard.maker.payoutDetail.summary.heading': 'Souhrn výplaty',
+  'dashboard.maker.payoutDetail.summary.number': 'Číslo dávky',
+  'dashboard.maker.payoutDetail.summary.total': 'Vyplaceno celkem',
+  'dashboard.maker.payoutDetail.summary.orders': 'Počet objednávek',
+  'dashboard.maker.payoutDetail.summary.state': 'Stav',
+  'dashboard.maker.payoutDetail.summary.date': 'Datum',
+  'dashboard.maker.payoutDetail.breakdown.heading': 'Rozpis objednávek',
+  'dashboard.maker.payoutDetail.breakdown.order': 'Objednávka',
+  'dashboard.maker.payoutDetail.breakdown.productPrice': 'Cena výrobku',
+  'dashboard.maker.payoutDetail.breakdown.shipping': 'Doprava',
+  'dashboard.maker.payoutDetail.breakdown.platformFee': 'Provize platformy',
+  'dashboard.maker.payoutDetail.breakdown.netPayout': 'Čistá výplata',
+  'dashboard.maker.payoutDetail.download.label': 'Stáhnout fakturu',
+  'dashboard.maker.payoutDetail.download.pending': 'Stahuji…',
+  'dashboard.maker.payoutDetail.download.error':
+    'Fakturu se nepodařilo stáhnout. Zkus to prosím znovu.',
+  'dashboard.maker.payoutDetail.notFound.title': 'Výplata nebyla nalezena',
+  'dashboard.maker.payoutDetail.notFound.body':
+    'Tato výplatní dávka neexistuje nebo k ní nemáš přístup.',
+
   // Maker order detail at /dashboard/maker/objednavky/[orderId]
   // (T-0087b, US-maker-0006..0011). Tykání throughout per CLAUDE.md —
   // PENDING the tone question in docs/questions/open.md (catalog-only
