@@ -172,6 +172,101 @@ public sealed class MarkPayoutBatchCompletedIntegrationTests : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Seed a <see cref="PayoutBatchState.Processing"/> batch directly (NOT via
+    /// the claim endpoint, which only claims Delivered+eligible rows) with a
+    /// planted bad order so the settlement loop throws mid-pass. Returns the
+    /// seeded batch id. The bad order is force-assigned to the batch in
+    /// <see cref="OrderState.Cancelled"/> — <see cref="Order.Complete"/>'s guard
+    /// (Order.cs:768, state != Delivered) refuses it, which the handler surfaces
+    /// as a failure so the whole UoW rolls back (AC-8).
+    ///
+    /// <para>The completion query (<c>GetByPayoutBatchIdForCompletionUnscopedAsync</c>)
+    /// filters only on <c>PayoutBatchId</c> with no state filter, so the planted
+    /// Cancelled order IS materialized into the loop and triggers the refusal —
+    /// exercising the real domain guard, not a test double.</para>
+    /// </summary>
+    private async Task<string> SeedProcessingBatchWithBadOrderAsync()
+    {
+        const string batchId = "pb-rollback-1";
+        await using var db = _harness.CreateDbContext();
+        const string actor = "test-seed";
+        var at = new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
+
+        var admin = User.Create(AdminUserId, "admin@makables.cz", UserRole.Admin, "Admin", CountryCode,
+            passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+        admin.ConfirmEmail(at); admin.MarkCreated(actor, at);
+        db.Set<User>().Add(admin);
+
+        var customer = User.Create("user-customer-1", "anna@example.cz", UserRole.Customer, "Anna", CountryCode,
+            passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+        customer.ConfirmEmail(at); customer.MarkCreated(actor, at);
+        db.Set<User>().Add(customer);
+
+        var category = Category.Create("cat-1", "3D tisk", "3d-tisk", null, null, 10, CountryCode);
+        category.MarkCreated(actor, at);
+        db.Set<Category>().Add(category);
+
+        var mu = User.Create("user-maker-a", "maker-a@example.cz", UserRole.Maker, "Alpha s.r.o.", CountryCode,
+            passwordHash: "argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
+        mu.ConfirmEmail(at); mu.MarkCreated(actor, at);
+        db.Set<User>().Add(mu);
+
+        var addr = AddressEntity.Create("addr-a", "Pikrtova", "1737", "Praha", "14000", CountryCode, CountryCode);
+        addr.MarkCreated(actor, at);
+        db.Set<AddressEntity>().Add(addr);
+
+        var maker = MakerEntity.Create("maker-a", "user-maker-a", "27074358", null, "Alpha s.r.o.", null,
+            "addr-a", null, true, "ares", at, false, CountryCode, slug: "maker-a");
+        maker.UpdateProfile(bio: null, bankAccount: "111/0100", personalPickupEnabled: null, pickupNote: null);
+        maker.MarkCreated(actor, at);
+        db.Set<MakerEntity>().Add(maker);
+
+        var product = Product.Create("prod-maker-a", "maker-a", "cat-1", "Vase", null,
+            new Money(50000, Currency), PriceType.Fixed, 300, CountryCode);
+        product.MarkCreated(actor, at);
+        db.Set<Product>().Add(product);
+
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(at.AddDays(5));
+
+        // A normal Delivered order claimed by the batch — would Complete cleanly.
+        var good = Order.Create("o-good", "M-CZ-o-good", "user-customer-1", "maker-a", "prod-maker-a",
+            "Anna", "anna@example.cz", "+420 723 456 789",
+            30000, 0, 4500, 25500, 30000, Currency, 2100,
+            ShippingMethod.ZasilkovnaPickupPoint, "pp-1", CountryCode);
+        good.MarkAsPaid(clock, "tx-good");
+        good.Accept(clock);
+        good.Ship(clock, "PKT-good", 7);
+        good.MarkAsDelivered(clock, OrderDeliverySource.Auto);
+        good.AssignToPayoutBatch(batchId);
+        good.MarkCreated(actor, at);
+        db.Set<Order>().Add(good);
+
+        // The planted bad order: Cancelled, yet force-assigned to the batch.
+        // Order.Complete refuses (state != Delivered) → mid-loop failure.
+        var bad = Order.Create("o-bad", "M-CZ-o-bad", "user-customer-1", "maker-a", "prod-maker-a",
+            "Anna", "anna@example.cz", "+420 723 456 789",
+            15000, 0, 2250, 12750, 15000, Currency, 2100,
+            ShippingMethod.ZasilkovnaPickupPoint, "pp-1", CountryCode);
+        bad.MarkAsPaid(clock, "tx-bad");
+        bad.Cancel(clock);
+        bad.AssignToPayoutBatch(batchId);
+        bad.MarkCreated(actor, at);
+        db.Set<Order>().Add(bad);
+
+        var batch = PayoutBatch.Create(batchId, "VYP-CZ-2026-W24", CountryCode,
+            totalAmountMinor: 25500 + 12750, currency: Currency,
+            orderCount: 2, makerCount: 1,
+            excludedPartiallyRefundedOrderCount: 0, excludedNoBankAccountOrderCount: 0,
+            excludedNoBankAccountMakerCount: 0);
+        batch.MarkCreated(actor, at);
+        db.Set<PayoutBatch>().Add(batch);
+
+        await db.SaveChangesAsync();
+        return batchId;
+    }
+
     private static string IssueAdminToken()
     {
         var issuer = new JwtIssuer(Options.Create(new JwtOptions
@@ -320,5 +415,58 @@ public sealed class MarkPayoutBatchCompletedIntegrationTests : IAsyncLifetime
         var b = payloads.Single(p => p.MakerId == "maker-b");
         b.OrderCount.Should().Be(1);
         b.MakerTotalPaidMinor.Should().Be(21000 - 3150);
+    }
+
+    /// <summary>
+    /// AC-8 (single-UoW atomicity): a forced mid-loop failure persists NOTHING.
+    /// The batch's claimed orders are materialized then completed under ONE UoW
+    /// (<c>MarkPayoutBatchCompleted.cs:166-176</c>). When one claimed order is
+    /// non-Delivered, <see cref="Order.Complete"/> refuses mid-pass; the handler
+    /// returns failure and the UoW rolls the WHOLE settlement back — the batch
+    /// stays Processing, no order is left orphan-Completed, no payout-sent
+    /// outbox row is written, and (per AC-3: the audit pipeline only writes on
+    /// success) no audit row is written.
+    /// </summary>
+    [Fact]
+    public async Task Mid_loop_order_refusal_rolls_back_entire_settlement()
+    {
+        var batchId = await SeedProcessingBatchWithBadOrderAsync();
+        using var client = AdminClient();
+
+        var response = await client.PostAsJsonAsync($"/api/v1/payout-batches/{batchId}/complete",
+            new { bankReference = "WIRE-ROLLBACK", paymentDate = "2026-06-13" });
+
+        // The mid-loop Order.Complete refusal surfaces as a non-2xx (the handler
+        // returns BusinessResult.Failure with the order's conflict error).
+        response.StatusCode.Should().NotBe(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+
+        // (1) Batch unchanged: still Processing, no bank ref, no completed_at/by.
+        var batch = await db.Set<PayoutBatch>().AsNoTracking().SingleAsync(b => b.Id == batchId);
+        batch.State.Should().Be(PayoutBatchState.Processing, "the settlement rolled back");
+        batch.BankReference.Should().BeNull();
+        batch.CompletedAt.Should().BeNull();
+        batch.CompletedBy.Should().BeNull();
+
+        // (2) ALL claimed orders stay in their prior state — no partial Complete.
+        var claimed = await db.Set<Order>().AsNoTracking()
+            .Where(o => o.PayoutBatchId == batchId).ToListAsync();
+        claimed.Should().HaveCount(2);
+        claimed.Should().NotContain(o => o.State == OrderState.Completed,
+            "no order may be left orphan-Completed when the batch rolled back");
+        claimed.Single(o => o.Id == "o-good").State.Should().Be(OrderState.Delivered);
+        claimed.Single(o => o.Id == "o-bad").State.Should().Be(OrderState.Cancelled);
+
+        // (3) ZERO payout-sent outbox rows from the failed attempt.
+        (await db.Set<OutboxEvent>().AsNoTracking()
+            .CountAsync(e => e.EventType == OutboxEventTypes.PayoutBatchPayoutSentMakerEmail))
+            .Should().Be(0, "the failed settlement enqueued nothing");
+
+        // (4) ZERO audit rows — the audit pipeline writes only on success (AC-3),
+        // and this command failed, so no payoutBatch.complete row exists.
+        (await db.Set<AdminAuditLogEntry>().AsNoTracking()
+            .CountAsync(e => e.ActionCode == "payoutBatch.complete"))
+            .Should().Be(0, "a failed command writes no audit row");
     }
 }
