@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Shipping;
@@ -34,6 +35,7 @@ namespace Makables.Web.Maker.Controllers;
 [Authorize]
 public sealed class FilesController(
     IOrderRepository orders,
+    IInvoiceRepository invoices,
     IMakerRepository makers,
     IBlobStorageClient blobs,
     IShippingCarrierFactory carrierFactory,
@@ -167,6 +169,116 @@ public sealed class FilesController(
 
         Response.Headers.CacheControl = "public, max-age=31536000, immutable";
         return File(buffer, "application/pdf");
+    }
+
+    /// <summary>
+    /// Stream the maker's Fee-invoice PDF (T-0112a / US-maker-0013):
+    /// <c>GET /api/v1/maker/files/invoices/{invoiceId}</c>. Controller-direct
+    /// per ADR 0014 §"Handler-free read paths" (sibling to
+    /// <see cref="GetShippingLabel"/>). The lookup predicate IS the IDOR shield
+    /// (<c>i.Id == invoiceId &amp;&amp; i.MakerId == makerId</c>); a cross-maker
+    /// or unknown id, AND a Customer-invoice id via this Fee route, all 404
+    /// <c>order.notFound</c> — no existence oracle. A null
+    /// <c>PdfBlobPath</c> / blob-miss is 404 <c>invoice.notYetRendered</c>.
+    ///
+    /// <para>
+    /// Cache policy <c>private, no-store</c> + ETag/304 — Fee invoices carry
+    /// recipient PII (maker name, IČO/DIČ, address); NOT the label's
+    /// <c>public, immutable</c> family.
+    /// </para>
+    /// </summary>
+    [HttpGet("invoices/{invoiceId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadFeeInvoice(string invoiceId, CancellationToken ct)
+    {
+        // Step 1: session.
+        var userId = session.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(Error.Unauthorized());
+        }
+
+        // Step 2: maker resolution. A maker-audience user with no maker row
+        // 404s order.notFound and the invoice lookup is never performed
+        // (T-0088 AC-6 parity).
+        var maker = await makers.GetByUserIdAsync(userId, ct);
+        if (maker is null)
+        {
+            return NotFound(Error.NotFound("invoiceId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // Step 3: ownership-scoped read-only invoice load. Null for unknown ids
+        // AND cross-maker ids — same 404 shape (no IDOR oracle).
+        var invoice = await invoices.GetForMakerReadOnlyAsync(invoiceId, maker.Id, ct);
+        if (invoice is null)
+        {
+            return NotFound(Error.NotFound("invoiceId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // Step 4: route-purpose Fee gate — a maker-owned Customer invoice via
+        // this Fee route gets the same not-found shape (no leak that a Customer
+        // invoice with that id exists). Fires BEFORE the blob read.
+        if (invoice.Type != InvoiceType.Fee)
+        {
+            return NotFound(Error.NotFound("invoiceId", BusinessErrorMessage.OrderNotFound));
+        }
+
+        // Step 5: not-yet-rendered (PdfBlobPath null) → retryable 404.
+        if (string.IsNullOrEmpty(invoice.PdfBlobPath))
+        {
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        // Step 6: stream from the private Invoices container (PdfBlobPath is
+        // container-relative; used verbatim per ADR 0011).
+        var result = await blobs.DownloadAsync(BlobContainer.Invoices, invoice.PdfBlobPath, ct);
+        if (!result.IsSuccess)
+        {
+            // Blob-purged-but-row-remains race — retryable 404.
+            return NotFound(Error.NotFound("invoice", BusinessErrorMessage.InvoiceNotYetRendered));
+        }
+
+        var download = result.Value!;
+
+        // Recipient-PII document; intermediaries must not cache.
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers.ContentDisposition =
+            $"attachment; filename=\"faktura-{EscapeFilenameForHeader(invoice.InvoiceNumber)}.pdf\"";
+
+        if (!string.IsNullOrEmpty(download.ETag))
+        {
+            Response.Headers.ETag = download.ETag;
+
+            var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+            if (!string.IsNullOrEmpty(ifNoneMatch) && ETagMatches(ifNoneMatch, download.ETag))
+            {
+                await download.Content.DisposeAsync();
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+        }
+
+        // Range processing off per T-0075/T-0088 rationale (small platform
+        // artifact; range support is attack surface for zero benefit).
+        return File(download.Content, "application/pdf", enableRangeProcessing: false);
+    }
+
+    private static string EscapeFilenameForHeader(string sanitized) =>
+        sanitized.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    private static bool ETagMatches(string ifNoneMatchHeader, string etag)
+    {
+        if (ifNoneMatchHeader.Trim() == "*") return true;
+        foreach (var candidate in ifNoneMatchHeader.Split(','))
+        {
+            if (string.Equals(candidate.Trim(), etag, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private IActionResult MapShippingErrorToResponse(Error error)

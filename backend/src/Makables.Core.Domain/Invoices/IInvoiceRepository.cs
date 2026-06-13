@@ -96,6 +96,20 @@ public interface IInvoiceRepository
     Task<Invoice?> GetByIdForMakerAsync(string invoiceId, string makerId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Read-only (<c>AsNoTracking</c>) mirror of <see cref="GetByIdForMakerAsync"/>
+    /// per ADR 0025 — same <c>i.Id == invoiceId &amp;&amp; i.MakerId == makerId</c>
+    /// IDOR predicate + the same null-for-unknown/cross-maker return shape.
+    /// Surfaces BOTH invoice families (the <see cref="InvoiceType.Fee"/> gate
+    /// lives in the caller, so the repo stays type-agnostic). Backs T-0112a's
+    /// controller-direct Fee-invoice download, which only inspects
+    /// <see cref="Invoice.Type"/> + <see cref="Invoice.PdfBlobPath"/> +
+    /// <see cref="Invoice.InvoiceNumber"/> and never mutates. Analogous to the
+    /// T-0088 <c>GetByOrderIdReadOnlyAsync</c> read-only-mirror precedent. The
+    /// <see cref="ForMaker"/> queryable's Fee-list gap stays for T-0112/T-0116.
+    /// </summary>
+    Task<Invoice?> GetForMakerReadOnlyAsync(string invoiceId, string makerId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Load a single invoice without ownership scoping. <b>Admin host
     /// only</b> per ADR 0013. Used by admin lookups and GDPR
     /// reconciliation. Tracked.

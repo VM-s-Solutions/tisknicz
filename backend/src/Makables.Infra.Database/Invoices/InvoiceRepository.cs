@@ -89,6 +89,25 @@ public sealed class InvoiceRepository(MakablesDbContext db) : IInvoiceRepository
                 cancellationToken);
     }
 
+    public Task<Invoice?> GetForMakerReadOnlyAsync(
+        string invoiceId,
+        string makerId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceId) || string.IsNullOrWhiteSpace(makerId))
+            return Task.FromResult<Invoice?>(null);
+
+        // Read-only mirror of GetByIdForMakerAsync — T-0112a Fee-invoice
+        // download only reads (Type + PdfBlobPath + InvoiceNumber); ADR 0025
+        // §Performance item 2. Same i.Id == invoiceId && i.MakerId == makerId
+        // IDOR shield, same global soft-delete filter (no IgnoreQueryFilters).
+        return db.Set<Invoice>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                i => i.Id == invoiceId && i.MakerId == makerId,
+                cancellationToken);
+    }
+
     public Task<Invoice?> GetByIdUnscopedAsync(string invoiceId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(invoiceId))
