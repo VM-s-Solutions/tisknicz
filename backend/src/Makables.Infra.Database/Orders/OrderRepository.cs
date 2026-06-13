@@ -308,6 +308,27 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Order>> GetByPayoutBatchIdForCompletionUnscopedAsync(
+        string payoutBatchId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(payoutBatchId))
+            return [];
+
+        // TRACKED (the T-0103 settlement loop calls Order.Complete on each
+        // row inside the one UoW) — the read-only sibling above is the
+        // AsNoTracking artifact read. IgnoreAutoIncludes skips the
+        // Attachments eager-load (scalar fields only). No IgnoreQueryFilters:
+        // soft-deleted orders stay invisible. Ordered by maker then order
+        // number so the per-maker grouping is deterministic.
+        return await db.Set<Order>()
+            .IgnoreAutoIncludes()
+            .Where(o => o.PayoutBatchId == payoutBatchId)
+            .OrderBy(o => o.MakerId)
+            .ThenBy(o => o.OrderNumber)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task AddAsync(Order order, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(order);

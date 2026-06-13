@@ -507,6 +507,8 @@ export const messages = {
     'Výplatní dávka nebyla nalezena.',
   'payoutBatch.csvNotReady':
     'CSV soubor výplatní dávky se ještě generuje. Zkuste to prosím za chvíli.',
+  'payoutBatch.notProcessing':
+    'Tuto výplatní dávku nelze dokončit — není ve stavu zpracování.',
   // Admin / log surface (mirror of invoice.blobPathAlreadySet) — the CSV
   // formatter is deterministic so a real overwrite is a programmer error.
   'payoutBatch.csvPathAlreadySet':

@@ -469,6 +469,15 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string PayoutBatchCsvNotReady = "payoutBatch.csvNotReady";
 
+    /// <summary>
+    /// <see cref="Payouts.PayoutBatch.Complete"/> was targeted at a batch that
+    /// is not <see cref="Payouts.PayoutBatchState.Processing"/> (and not
+    /// already Completed — that path is the handler's Silent-Success echo).
+    /// Structurally unreachable with the two-value enum today; the guard makes
+    /// the domain method total and future-proofs a third state. T-0103.
+    /// </summary>
+    public const string PayoutBatchNotProcessing = "payoutBatch.notProcessing";
+
     // === Invoice (T-0068a) ===
     /// <summary>
     /// <see cref="Invoices.Invoice.AttachPdfBlobPath"/> was called with a

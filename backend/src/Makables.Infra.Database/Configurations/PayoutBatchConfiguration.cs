@@ -69,6 +69,11 @@ internal sealed class PayoutBatchConfiguration : IEntityTypeConfiguration<Payout
         builder.Property(b => b.CompletedBy)
             .HasColumnName("completed_by").HasMaxLength(PayoutBatch.MaxCompletedByLength);
 
+        // T-0103: operator's bank-assigned wire transaction id, nullable
+        // while Processing.
+        builder.Property(b => b.BankReference)
+            .HasColumnName("bank_reference").HasMaxLength(PayoutBatch.MaxBankReferenceLength);
+
         // Unique (country_code, batch_number) — ADR 0009 numbering uniqueness.
         builder.HasIndex(b => new { b.CountryCode, b.BatchNumber })
             .IsUnique()
