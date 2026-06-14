@@ -38,9 +38,10 @@ public static class DeleteUserPermanently
 
     /// <summary>
     /// The in-flight states that block an erase (Q-B) — money or fulfilment
-    /// still in motion. Settled states (Delivered/Completed/Cancelled/
-    /// Refunded/Disputed) are safe to anonymize. Single source of truth
-    /// shared by the interlock query and the predicate test.
+    /// still in motion, OR an unresolved dispute (escrowed money awaiting
+    /// admin adjudication). Terminal states (Delivered/Completed/Cancelled/
+    /// Refunded) are safe to anonymize. Single source of truth shared by the
+    /// interlock query and the predicate test.
     /// </summary>
     public static readonly IReadOnlyList<OrderState> InFlightOrderStates =
     [
@@ -48,6 +49,9 @@ public static class DeleteUserPermanently
         OrderState.Paid,
         OrderState.Accepted,
         OrderState.Shipped,
+        // Disputed: escrowed money + an unresolved dispute — erasing the
+        // subject mid-dispute is unsafe; the dispute must resolve first.
+        OrderState.Disputed,
     ];
 
     public sealed record Command(string UserId, string ConfirmedEmail, string Reason)

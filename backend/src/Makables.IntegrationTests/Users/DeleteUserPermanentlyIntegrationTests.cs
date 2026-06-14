@@ -10,10 +10,12 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Money;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Reviews;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Database;
+using Makables.Infra.Database.Privacy;
 using Makables.IntegrationTests.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -117,7 +119,8 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
     }
 
     /// <param name="inFlight">When true, the maker-user's order stays in Paid (blocks the erase).</param>
-    private async Task SeedAsync(bool inFlight = false)
+    /// <param name="disputed">When true, the maker-user's order is moved to Disputed (blocks the erase).</param>
+    private async Task SeedAsync(bool inFlight = false, bool disputed = false)
     {
         await using var db = _harness.CreateDbContext();
         const string actor = "test-seed";
@@ -179,7 +182,12 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
         }
 
         var delivered = BuildOrder("ord-delivered", "M-CZ-20260001");
-        if (!inFlight)
+        if (disputed)
+        {
+            // Disputed: escrowed money + an unresolved dispute → blocks the erase.
+            delivered.OpenDispute(clock);
+        }
+        else if (!inFlight)
         {
             delivered.Accept(clock);
             delivered.Ship(clock, "PKT-1", autoDeliverWindowDays: 7, trackingUrl: null);
@@ -205,6 +213,20 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
             rt.MarkCreated(actor, SeedAt);
             db.Set<RefreshToken>().Add(rt);
         }
+
+        // Two one-time tokens for the target (magic-link + reset) carrying an
+        // IpAddress — PII residue that erasure must purge (SecOps M-1).
+        var magicLink = OneTimeToken.Issue("ott-hash-magic", TargetUserId,
+            OneTimeTokenPurpose.MagicLink, SeedAt.AddMinutes(15), SeedAt, ipAddress: "203.0.113.7");
+        db.Set<OneTimeToken>().Add(magicLink);
+        var reset = OneTimeToken.Issue("ott-hash-reset", TargetUserId,
+            OneTimeTokenPurpose.PasswordReset, SeedAt.AddMinutes(15), SeedAt, ipAddress: "203.0.113.8");
+        db.Set<OneTimeToken>().Add(reset);
+
+        // A login-attempt bucket keyed by the target's normalized email —
+        // orphaned PII (email PK) once the user row is gone (SecOps M-2).
+        var bucket = LoginAttemptBucket.Create(User.NormalizeEmail(TargetEmail), SeedAt);
+        db.Set<LoginAttemptBucket>().Add(bucket);
 
         // An issued invoice for the order (retained untouched).
         var invoice = Invoice.Issue("inv-1", "FV-CZ-20260001", InvoiceType.Customer, "ord-delivered", null,
@@ -281,6 +303,14 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
         (await db.Set<RefreshToken>().IgnoreQueryFilters().AnyAsync(rt => rt.UserId == TargetUserId))
             .Should().BeFalse();
 
+        // One-time tokens gone (UserId + IpAddress PII purged — SecOps M-1).
+        (await db.Set<OneTimeToken>().AnyAsync(t => t.UserId == TargetUserId))
+            .Should().BeFalse();
+
+        // Login-attempt bucket gone (email-PK PII purged — SecOps M-2).
+        (await db.Set<LoginAttemptBucket>().AnyAsync(b => b.Id == User.NormalizeEmail(TargetEmail)))
+            .Should().BeFalse();
+
         // Unreferenced user address gone; the maker legal-seat address stays.
         (await db.Set<AddressEntity>().IgnoreQueryFilters().AnyAsync(a => a.Id == UserAddressId))
             .Should().BeFalse();
@@ -325,6 +355,108 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
         order.ContactEmail.Should().Be(TargetEmail, "nothing was anonymized");
         (await db.Set<AdminAuditLogEntry>().AsNoTracking().AnyAsync(a => a.TargetId == TargetUserId))
             .Should().BeFalse("a blocked command writes no audit row");
+    }
+
+    [Fact]
+    public async Task Disputed_order_blocks_409_and_nothing_is_mutated()
+    {
+        await SeedAsync(disputed: true);
+        using var client = CreateAdminClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/v1/users/{TargetUserId}/erase",
+            new { confirmedEmail = TargetEmail, reason = "GDPR-2026-014" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("code").GetString()
+            .Should().Be(BusinessErrorMessage.UserCannotDeleteWithInFlightOrders);
+
+        await using var db = _harness.CreateDbContext();
+        // Order really is Disputed, and nothing was erased / anonymized.
+        var order = await db.Set<Order>().IgnoreQueryFilters().FirstAsync(o => o.Id == "ord-delivered");
+        order.State.Should().Be(OrderState.Disputed);
+        order.ContactEmail.Should().Be(TargetEmail, "nothing was anonymized");
+        (await db.Set<User>().IgnoreQueryFilters().AnyAsync(u => u.Id == TargetUserId)).Should().BeTrue();
+        (await db.Set<AdminAuditLogEntry>().AsNoTracking().AnyAsync(a => a.TargetId == TargetUserId))
+            .Should().BeFalse("a blocked command writes no audit row");
+    }
+
+    [Fact]
+    public async Task Forced_throw_mid_erasure_rolls_back_everything_user_and_data_intact()
+    {
+        await SeedAsync();
+
+        // Replace the erasure seam with a decorator that runs the REAL matrix
+        // (staging every anonymize + hard-delete in the request's tracked
+        // context) then THROWS before returning — so the UoW pipeline never
+        // commits. Proves the single-UoW all-or-nothing structurally: a
+        // mid-matrix failure leaves the database byte-for-byte untouched.
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.Single(d => d.ServiceType == typeof(IUserDataDeletionService));
+                services.Remove(descriptor);
+                services.AddScoped<IUserDataDeletionService>(sp =>
+                    new ThrowingDeletionDecorator(
+                        new UserDataDeletionService(sp.GetRequiredService<MakablesDbContext>())));
+            }));
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", IssueAdminToken());
+
+        // The injected throw aborts the request before the UoW pipeline reaches
+        // SaveChangesAsync; the TestServer surfaces it to the caller. The point
+        // is the DB state below: nothing committed.
+        var act = async () => await client.PostAsJsonAsync(
+            $"/api/v1/users/{TargetUserId}/erase",
+            new { confirmedEmail = TargetEmail, reason = "GDPR-2026-014" });
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Injected mid-erasure failure*");
+
+        await using var db = _harness.CreateDbContext();
+
+        // User still present — no hard-delete committed.
+        (await db.Set<User>().IgnoreQueryFilters().AnyAsync(u => u.Id == TargetUserId)).Should().BeTrue();
+
+        // Orders NOT anonymized — contact snapshots intact.
+        var orders = await db.Set<Order>().IgnoreQueryFilters()
+            .Where(o => o.CustomerUserId == TargetUserId).ToListAsync();
+        orders.Should().OnlyContain(o => o.ContactEmail == TargetEmail);
+
+        // Maker NOT anonymized.
+        var maker = await db.Set<MakerEntity>().IgnoreQueryFilters().FirstAsync(m => m.Id == MakerId);
+        maker.CompanyName.Should().Be("Avast s.r.o.");
+        maker.IsRetainedForLegal.Should().BeFalse();
+
+        // Credential infra NOT purged.
+        (await db.Set<RefreshToken>().IgnoreQueryFilters().AnyAsync(rt => rt.UserId == TargetUserId))
+            .Should().BeTrue();
+        (await db.Set<OneTimeToken>().AnyAsync(t => t.UserId == TargetUserId)).Should().BeTrue();
+        (await db.Set<LoginAttemptBucket>().AnyAsync(b => b.Id == User.NormalizeEmail(TargetEmail)))
+            .Should().BeTrue();
+
+        // Unreferenced address NOT deleted.
+        (await db.Set<AddressEntity>().IgnoreQueryFilters().AnyAsync(a => a.Id == UserAddressId))
+            .Should().BeTrue();
+
+        // No audit row (the command never returned success).
+        (await db.Set<AdminAuditLogEntry>().AsNoTracking().AnyAsync(a => a.TargetId == TargetUserId))
+            .Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Runs the real erasure matrix (staging all mutations) then throws,
+    /// forcing the UoW pipeline to abort before <c>SaveChangesAsync</c>.
+    /// </summary>
+    private sealed class ThrowingDeletionDecorator(UserDataDeletionService inner) : IUserDataDeletionService
+    {
+        public async Task<BusinessResult> EraseAsync(string userId, CancellationToken ct)
+        {
+            await inner.EraseAsync(userId, ct);
+            throw new InvalidOperationException("Injected mid-erasure failure (rollback test).");
+        }
     }
 
     [Fact]

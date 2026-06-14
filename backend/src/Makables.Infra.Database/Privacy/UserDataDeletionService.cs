@@ -32,6 +32,9 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
         OrderState.Paid,
         OrderState.Accepted,
         OrderState.Shipped,
+        // Disputed: escrowed money + an unresolved dispute — erasing the
+        // subject mid-dispute is unsafe; the dispute must resolve first.
+        OrderState.Disputed,
     ];
 
     public async Task<BusinessResult> EraseAsync(string userId, CancellationToken ct)
@@ -100,17 +103,28 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
             db.Set<RefreshToken>().RemoveRange(refreshTokens);
         }
 
+        // OneTimeTokens (magic-link / reset / confirm) — same credential-infra
+        // tier as RefreshToken: keyed on UserId and carry an IpAddress (IP is
+        // personal data, GDPR Recital 30). No legal-retention case; purge them
+        // so no dangling UserId + subject-linkable IP survives the erasure.
+        var oneTimeTokens = await db.Set<OneTimeToken>()
+            .Where(t => t.UserId == userId)
+            .ToListAsync(ct);
+        if (oneTimeTokens.Count > 0)
+        {
+            db.Set<OneTimeToken>().RemoveRange(oneTimeTokens);
+        }
+
         // Unreferenced addresses created by the user — deleted only when no
         // live maker still references them (the maker legal-seat address
-        // stays referenced). IgnoreQueryFilters so the candidate + the
-        // referencing-maker probe both see all rows.
-        var referencedAddressIds = await db.Set<Maker>()
-            .IgnoreQueryFilters()
-            .Select(m => m.RegisteredAddressId)
-            .ToListAsync(ct);
+        // stays referenced). The referencing-maker check is a SQL NOT EXISTS
+        // anti-join so only the user's own addresses are evaluated (never a
+        // full materialization of every maker's RegisteredAddressId).
         var userAddresses = await db.Set<Address>()
             .IgnoreQueryFilters()
-            .Where(a => a.CreatedBy == userId && !referencedAddressIds.Contains(a.Id))
+            .Where(a => a.CreatedBy == userId
+                && !db.Set<Maker>().IgnoreQueryFilters()
+                    .Any(m => m.RegisteredAddressId == a.Id))
             .ToListAsync(ct);
         if (userAddresses.Count > 0)
         {
@@ -124,6 +138,19 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is not null)
         {
+            // LoginAttemptBucket is keyed by the user's normalized email (PK ==
+            // email). Once the User row is gone the bucket is orphaned anti-abuse
+            // state carrying the erased subject's email as PII — purge the
+            // bucket(s) for this email (same hard-delete tier; no lawful-basis
+            // retain since the key IS the user's email).
+            var emailBuckets = await db.Set<LoginAttemptBucket>()
+                .Where(b => b.Id == user.EmailNormalized)
+                .ToListAsync(ct);
+            if (emailBuckets.Count > 0)
+            {
+                db.Set<LoginAttemptBucket>().RemoveRange(emailBuckets);
+            }
+
             db.Set<User>().Remove(user);
         }
 

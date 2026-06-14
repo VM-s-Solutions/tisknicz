@@ -18,7 +18,7 @@ namespace Makables.Tests.Domain.Identity;
 public sealed class DeleteUserPermanentlyPredicateTests
 {
     [Fact]
-    public void InFlightOrderStates_contains_exactly_the_four_locked_states()
+    public void InFlightOrderStates_contains_exactly_the_five_locked_states()
     {
         DeleteUserPermanently.InFlightOrderStates.Should().BeEquivalentTo(new[]
         {
@@ -26,16 +26,18 @@ public sealed class DeleteUserPermanentlyPredicateTests
             OrderState.Paid,
             OrderState.Accepted,
             OrderState.Shipped,
+            // Disputed: escrowed money + an unresolved dispute — erasing the
+            // subject mid-dispute is unsafe; the dispute must resolve first.
+            OrderState.Disputed,
         });
 
-        // Settled / closed states are safe to anonymize — they must NOT
-        // block the erasure (the interlock only guards money/fulfilment in
-        // motion).
+        // Terminal states are safe to anonymize — they must NOT block the
+        // erasure (the interlock only guards money/fulfilment in motion or an
+        // unresolved dispute).
         DeleteUserPermanently.InFlightOrderStates.Should().NotContain(OrderState.Delivered);
         DeleteUserPermanently.InFlightOrderStates.Should().NotContain(OrderState.Completed);
         DeleteUserPermanently.InFlightOrderStates.Should().NotContain(OrderState.Cancelled);
         DeleteUserPermanently.InFlightOrderStates.Should().NotContain(OrderState.Refunded);
-        DeleteUserPermanently.InFlightOrderStates.Should().NotContain(OrderState.Disputed);
     }
 
     [Fact]
