@@ -10,6 +10,46 @@
 export interface IAdminApi {
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param state (optional) 
+     * @param country (optional) 
+     * @param makerId (optional) 
+     * @param customerEmail (optional) 
+     * @return OK
+     */
+    adminOrders(page: number | undefined, pageSize: number | undefined, state: OrderState | undefined, country: string | undefined, makerId: string | undefined, customerEmail: string | undefined): Promise<GetAllOrdersResponse>;
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param type (optional) 
+     * @param country (optional) 
+     * @param recipient (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @return OK
+     */
+    adminInvoices(page: number | undefined, pageSize: number | undefined, type: number | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse>;
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param adminUserId (optional) 
+     * @param actionCode (optional) 
+     * @param targetEntity (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @return OK
+     */
+    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAdminAuditLogResponse>;
+
+    /**
+     * @return OK
+     */
+    countryConfigurations(countryCode: string, body: UpdateCountryConfigurationRequest): Promise<UpdateCountryConfigurationResponse>;
+
+    /**
      * @return OK
      */
     refund(orderId: string, body: RefundOrderRequest): Promise<RefundOrderResponse>;
@@ -32,6 +72,16 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    retry(id: string): Promise<RetryOutboxEventResponse>;
+
+    /**
+     * @return OK
+     */
+    acknowledge(id: string, body: AcknowledgeOutboxEventRequest): Promise<AcknowledgeOutboxEventResponse>;
+
+    /**
+     * @return OK
+     */
     payoutBatches(): Promise<CreatePayoutBatchResponse>;
 
     /**
@@ -43,6 +93,11 @@ export interface IAdminApi {
      * @return OK
      */
     csv(id: string): Promise<void>;
+
+    /**
+     * @return OK
+     */
+    erase(id: string, body: EraseUserRequest): Promise<DeleteUserPermanentlyResponse>;
 
     /**
      * @return OK
@@ -135,6 +190,324 @@ export class AdminApi implements IAdminApi {
     constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
         this.http = http ? http : window as any;
         this.baseUrl = baseUrl ?? "http://localhost:5003/";
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param state (optional) 
+     * @param country (optional) 
+     * @param makerId (optional) 
+     * @param customerEmail (optional) 
+     * @return OK
+     */
+    adminOrders(page: number | undefined, pageSize: number | undefined, state: OrderState | undefined, country: string | undefined, makerId: string | undefined, customerEmail: string | undefined): Promise<GetAllOrdersResponse> {
+        let url_ = this.baseUrl + "/api/v1/admin-orders?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        if (state === null)
+            throw new globalThis.Error("The parameter 'state' cannot be null.");
+        else if (state !== undefined)
+            url_ += "state=" + encodeURIComponent("" + state) + "&";
+        if (country === null)
+            throw new globalThis.Error("The parameter 'country' cannot be null.");
+        else if (country !== undefined)
+            url_ += "country=" + encodeURIComponent("" + country) + "&";
+        if (makerId === null)
+            throw new globalThis.Error("The parameter 'makerId' cannot be null.");
+        else if (makerId !== undefined)
+            url_ += "makerId=" + encodeURIComponent("" + makerId) + "&";
+        if (customerEmail === null)
+            throw new globalThis.Error("The parameter 'customerEmail' cannot be null.");
+        else if (customerEmail !== undefined)
+            url_ += "customerEmail=" + encodeURIComponent("" + customerEmail) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAdminOrders(_response);
+        });
+    }
+
+    protected processAdminOrders(response: Response): Promise<GetAllOrdersResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetAllOrdersResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetAllOrdersResponse>(null as any);
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param type (optional) 
+     * @param country (optional) 
+     * @param recipient (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @return OK
+     */
+    adminInvoices(page: number | undefined, pageSize: number | undefined, type: number | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse> {
+        let url_ = this.baseUrl + "/api/v1/admin-invoices?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        if (type === null)
+            throw new globalThis.Error("The parameter 'type' cannot be null.");
+        else if (type !== undefined)
+            url_ += "type=" + encodeURIComponent("" + type) + "&";
+        if (country === null)
+            throw new globalThis.Error("The parameter 'country' cannot be null.");
+        else if (country !== undefined)
+            url_ += "country=" + encodeURIComponent("" + country) + "&";
+        if (recipient === null)
+            throw new globalThis.Error("The parameter 'recipient' cannot be null.");
+        else if (recipient !== undefined)
+            url_ += "recipient=" + encodeURIComponent("" + recipient) + "&";
+        if (dateFrom === null)
+            throw new globalThis.Error("The parameter 'dateFrom' cannot be null.");
+        else if (dateFrom !== undefined)
+            url_ += "dateFrom=" + encodeURIComponent(dateFrom ? "" + dateFrom.toISOString() : "") + "&";
+        if (dateTo === null)
+            throw new globalThis.Error("The parameter 'dateTo' cannot be null.");
+        else if (dateTo !== undefined)
+            url_ += "dateTo=" + encodeURIComponent(dateTo ? "" + dateTo.toISOString() : "") + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAdminInvoices(_response);
+        });
+    }
+
+    protected processAdminInvoices(response: Response): Promise<GetAllInvoicesResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetAllInvoicesResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetAllInvoicesResponse>(null as any);
+    }
+
+    /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @param adminUserId (optional) 
+     * @param actionCode (optional) 
+     * @param targetEntity (optional) 
+     * @param dateFrom (optional) 
+     * @param dateTo (optional) 
+     * @return OK
+     */
+    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAdminAuditLogResponse> {
+        let url_ = this.baseUrl + "/api/v1/audit-log?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        if (adminUserId === null)
+            throw new globalThis.Error("The parameter 'adminUserId' cannot be null.");
+        else if (adminUserId !== undefined)
+            url_ += "adminUserId=" + encodeURIComponent("" + adminUserId) + "&";
+        if (actionCode === null)
+            throw new globalThis.Error("The parameter 'actionCode' cannot be null.");
+        else if (actionCode !== undefined)
+            url_ += "actionCode=" + encodeURIComponent("" + actionCode) + "&";
+        if (targetEntity === null)
+            throw new globalThis.Error("The parameter 'targetEntity' cannot be null.");
+        else if (targetEntity !== undefined)
+            url_ += "targetEntity=" + encodeURIComponent("" + targetEntity) + "&";
+        if (dateFrom === null)
+            throw new globalThis.Error("The parameter 'dateFrom' cannot be null.");
+        else if (dateFrom !== undefined)
+            url_ += "dateFrom=" + encodeURIComponent(dateFrom ? "" + dateFrom.toISOString() : "") + "&";
+        if (dateTo === null)
+            throw new globalThis.Error("The parameter 'dateTo' cannot be null.");
+        else if (dateTo !== undefined)
+            url_ += "dateTo=" + encodeURIComponent(dateTo ? "" + dateTo.toISOString() : "") + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAuditLog(_response);
+        });
+    }
+
+    protected processAuditLog(response: Response): Promise<GetAdminAuditLogResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetAdminAuditLogResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetAdminAuditLogResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    countryConfigurations(countryCode: string, body: UpdateCountryConfigurationRequest): Promise<UpdateCountryConfigurationResponse> {
+        let url_ = this.baseUrl + "/api/v1/country-configurations/{countryCode}";
+        if (countryCode === undefined || countryCode === null)
+            throw new globalThis.Error("The parameter 'countryCode' must be defined.");
+        url_ = url_.replace("{countryCode}", encodeURIComponent("" + countryCode));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCountryConfigurations(_response);
+        });
+    }
+
+    protected processCountryConfigurations(response: Response): Promise<UpdateCountryConfigurationResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UpdateCountryConfigurationResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UpdateCountryConfigurationResponse>(null as any);
     }
 
     /**
@@ -456,6 +829,139 @@ export class AdminApi implements IAdminApi {
     /**
      * @return OK
      */
+    retry(id: string): Promise<RetryOutboxEventResponse> {
+        let url_ = this.baseUrl + "/api/v1/outbox-events/{id}/retry";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRetry(_response);
+        });
+    }
+
+    protected processRetry(response: Response): Promise<RetryOutboxEventResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = RetryOutboxEventResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<RetryOutboxEventResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    acknowledge(id: string, body: AcknowledgeOutboxEventRequest): Promise<AcknowledgeOutboxEventResponse> {
+        let url_ = this.baseUrl + "/api/v1/outbox-events/{id}/acknowledge";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAcknowledge(_response);
+        });
+    }
+
+    protected processAcknowledge(response: Response): Promise<AcknowledgeOutboxEventResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = AcknowledgeOutboxEventResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<AcknowledgeOutboxEventResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
     payoutBatches(): Promise<CreatePayoutBatchResponse> {
         let url_ = this.baseUrl + "/api/v1/payout-batches";
         url_ = url_.replace(/[?&]$/, "");
@@ -659,6 +1165,78 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    erase(id: string, body: EraseUserRequest): Promise<DeleteUserPermanentlyResponse> {
+        let url_ = this.baseUrl + "/api/v1/users/{id}/erase";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processErase(_response);
+        });
+    }
+
+    protected processErase(response: Response): Promise<DeleteUserPermanentlyResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = DeleteUserPermanentlyResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<DeleteUserPermanentlyResponse>(null as any);
     }
 
     /**
@@ -1245,6 +1823,362 @@ export class AdminApi implements IAdminApi {
     }
 }
 
+export class AcknowledgeOutboxEventRequest implements IAcknowledgeOutboxEventRequest {
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IAcknowledgeOutboxEventRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): AcknowledgeOutboxEventRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new AcknowledgeOutboxEventRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IAcknowledgeOutboxEventRequest {
+    reason: string;
+
+    [key: string]: any;
+}
+
+export class AcknowledgeOutboxEventResponse implements IAcknowledgeOutboxEventResponse {
+    outboxEventId!: string;
+    acknowledgedAt!: Date;
+    acknowledgedBy!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IAcknowledgeOutboxEventResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.outboxEventId = _data["outboxEventId"];
+            this.acknowledgedAt = _data["acknowledgedAt"] ? new Date(_data["acknowledgedAt"].toString()) : undefined as any;
+            this.acknowledgedBy = _data["acknowledgedBy"];
+        }
+    }
+
+    static fromJS(data: any): AcknowledgeOutboxEventResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AcknowledgeOutboxEventResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["outboxEventId"] = this.outboxEventId;
+        data["acknowledgedAt"] = this.acknowledgedAt ? this.acknowledgedAt.toISOString() : undefined as any;
+        data["acknowledgedBy"] = this.acknowledgedBy;
+        return data;
+    }
+}
+
+export interface IAcknowledgeOutboxEventResponse {
+    outboxEventId: string;
+    acknowledgedAt: Date;
+    acknowledgedBy: string;
+
+    [key: string]: any;
+}
+
+export class AdminAuditLogItemDto implements IAdminAuditLogItemDto {
+    id!: string;
+    adminUserId!: string;
+    actionCode!: string;
+    targetEntity!: string;
+    targetId!: string;
+    notes!: string | undefined;
+    ipAddress!: string | undefined;
+    createdAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IAdminAuditLogItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.adminUserId = _data["adminUserId"];
+            this.actionCode = _data["actionCode"];
+            this.targetEntity = _data["targetEntity"];
+            this.targetId = _data["targetId"];
+            this.notes = _data["notes"];
+            this.ipAddress = _data["ipAddress"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): AdminAuditLogItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AdminAuditLogItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["adminUserId"] = this.adminUserId;
+        data["actionCode"] = this.actionCode;
+        data["targetEntity"] = this.targetEntity;
+        data["targetId"] = this.targetId;
+        data["notes"] = this.notes;
+        data["ipAddress"] = this.ipAddress;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IAdminAuditLogItemDto {
+    id: string;
+    adminUserId: string;
+    actionCode: string;
+    targetEntity: string;
+    targetId: string;
+    notes: string | undefined;
+    ipAddress: string | undefined;
+    createdAt: Date;
+
+    [key: string]: any;
+}
+
+export class AdminInvoiceListItemDto implements IAdminInvoiceListItemDto {
+    invoiceId!: string;
+    invoiceNumber!: string;
+    type!: number;
+    countryCode!: string;
+    recipientName!: string;
+    totalMinor!: number;
+    currency!: string;
+    createdAt!: Date;
+    orderId!: string | undefined;
+    payoutBatchId!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IAdminInvoiceListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.invoiceId = _data["invoiceId"];
+            this.invoiceNumber = _data["invoiceNumber"];
+            this.type = _data["type"];
+            this.countryCode = _data["countryCode"];
+            this.recipientName = _data["recipientName"];
+            this.totalMinor = _data["totalMinor"];
+            this.currency = _data["currency"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.orderId = _data["orderId"];
+            this.payoutBatchId = _data["payoutBatchId"];
+        }
+    }
+
+    static fromJS(data: any): AdminInvoiceListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AdminInvoiceListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["invoiceId"] = this.invoiceId;
+        data["invoiceNumber"] = this.invoiceNumber;
+        data["type"] = this.type;
+        data["countryCode"] = this.countryCode;
+        data["recipientName"] = this.recipientName;
+        data["totalMinor"] = this.totalMinor;
+        data["currency"] = this.currency;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["orderId"] = this.orderId;
+        data["payoutBatchId"] = this.payoutBatchId;
+        return data;
+    }
+}
+
+export interface IAdminInvoiceListItemDto {
+    invoiceId: string;
+    invoiceNumber: string;
+    type: number;
+    countryCode: string;
+    recipientName: string;
+    totalMinor: number;
+    currency: string;
+    createdAt: Date;
+    orderId: string | undefined;
+    payoutBatchId: string | undefined;
+
+    [key: string]: any;
+}
+
+export class AdminOrderListItemDto implements IAdminOrderListItemDto {
+    orderId!: string;
+    orderNumber!: string;
+    state!: OrderState;
+    countryCode!: string;
+    totalAmountMinor!: number;
+    currency!: string;
+    createdAt!: Date;
+    makerId!: string;
+    makerName!: string;
+    customerEmail!: string;
+    productTitle!: string | undefined;
+    isActive!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IAdminOrderListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.state = _data["state"];
+            this.countryCode = _data["countryCode"];
+            this.totalAmountMinor = _data["totalAmountMinor"];
+            this.currency = _data["currency"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.makerId = _data["makerId"];
+            this.makerName = _data["makerName"];
+            this.customerEmail = _data["customerEmail"];
+            this.productTitle = _data["productTitle"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): AdminOrderListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AdminOrderListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["state"] = this.state;
+        data["countryCode"] = this.countryCode;
+        data["totalAmountMinor"] = this.totalAmountMinor;
+        data["currency"] = this.currency;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["makerId"] = this.makerId;
+        data["makerName"] = this.makerName;
+        data["customerEmail"] = this.customerEmail;
+        data["productTitle"] = this.productTitle;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface IAdminOrderListItemDto {
+    orderId: string;
+    orderNumber: string;
+    state: OrderState;
+    countryCode: string;
+    totalAmountMinor: number;
+    currency: string;
+    createdAt: Date;
+    makerId: string;
+    makerName: string;
+    customerEmail: string;
+    productTitle: string | undefined;
+    isActive: boolean;
+
+    [key: string]: any;
+}
+
 export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
     state!: OrderState;
 
@@ -1645,6 +2579,54 @@ export interface ICreatePayoutBatchResponse {
     [key: string]: any;
 }
 
+export class DeleteUserPermanentlyResponse implements IDeleteUserPermanentlyResponse {
+    erasedUserId!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IDeleteUserPermanentlyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.erasedUserId = _data["erasedUserId"];
+        }
+    }
+
+    static fromJS(data: any): DeleteUserPermanentlyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new DeleteUserPermanentlyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["erasedUserId"] = this.erasedUserId;
+        return data;
+    }
+}
+
+export interface IDeleteUserPermanentlyResponse {
+    erasedUserId: string;
+
+    [key: string]: any;
+}
+
 export enum DisputeCategory {
     NotDelivered = "NotDelivered",
     DamagedItem = "DamagedItem",
@@ -1658,6 +2640,58 @@ export enum DisputeResolutionOutcome {
     Refunded = "Refunded",
     Resumed = "Resumed",
     Cancelled = "Cancelled",
+}
+
+export class EraseUserRequest implements IEraseUserRequest {
+    confirmedEmail!: string;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IEraseUserRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.confirmedEmail = _data["confirmedEmail"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): EraseUserRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new EraseUserRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["confirmedEmail"] = this.confirmedEmail;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IEraseUserRequest {
+    confirmedEmail: string;
+    reason: string;
+
+    [key: string]: any;
 }
 
 export class ErrorDto implements IErrorDto {
@@ -1730,6 +2764,166 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export class GetAdminAuditLogResponse implements IGetAdminAuditLogResponse {
+    entries!: PagedDataOfAdminAuditLogItemDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetAdminAuditLogResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.entries = new PagedDataOfAdminAuditLogItemDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.entries = _data["entries"] ? PagedDataOfAdminAuditLogItemDto.fromJS(_data["entries"]) : new PagedDataOfAdminAuditLogItemDto();
+        }
+    }
+
+    static fromJS(data: any): GetAdminAuditLogResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetAdminAuditLogResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["entries"] = this.entries ? this.entries.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetAdminAuditLogResponse {
+    entries: PagedDataOfAdminAuditLogItemDto;
+
+    [key: string]: any;
+}
+
+export class GetAllInvoicesResponse implements IGetAllInvoicesResponse {
+    invoices!: PagedDataOfAdminInvoiceListItemDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetAllInvoicesResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.invoices = new PagedDataOfAdminInvoiceListItemDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.invoices = _data["invoices"] ? PagedDataOfAdminInvoiceListItemDto.fromJS(_data["invoices"]) : new PagedDataOfAdminInvoiceListItemDto();
+        }
+    }
+
+    static fromJS(data: any): GetAllInvoicesResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetAllInvoicesResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["invoices"] = this.invoices ? this.invoices.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetAllInvoicesResponse {
+    invoices: PagedDataOfAdminInvoiceListItemDto;
+
+    [key: string]: any;
+}
+
+export class GetAllOrdersResponse implements IGetAllOrdersResponse {
+    orders!: PagedDataOfAdminOrderListItemDto;
+
+    [key: string]: any;
+
+    constructor(data?: IGetAllOrdersResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.orders = new PagedDataOfAdminOrderListItemDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orders = _data["orders"] ? PagedDataOfAdminOrderListItemDto.fromJS(_data["orders"]) : new PagedDataOfAdminOrderListItemDto();
+        }
+    }
+
+    static fromJS(data: any): GetAllOrdersResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetAllOrdersResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orders"] = this.orders ? this.orders.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface IGetAllOrdersResponse {
+    orders: PagedDataOfAdminOrderListItemDto;
+
+    [key: string]: any;
+}
+
+export enum InvoicingMode {
+    None = "None",
+    StandardVat = "StandardVat",
+    ReverseCharge = "ReverseCharge",
+    StrictFiscalReporting = "StrictFiscalReporting",
 }
 
 export class LoginRequest implements ILoginRequest {
@@ -2030,6 +3224,255 @@ export enum OrderState {
     Cancelled = "Cancelled",
     Refunded = "Refunded",
     Disputed = "Disputed",
+}
+
+export class PagedDataOfAdminAuditLogItemDto implements IPagedDataOfAdminAuditLogItemDto {
+    items!: AdminAuditLogItemDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfAdminAuditLogItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AdminAuditLogItemDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfAdminAuditLogItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfAdminAuditLogItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfAdminAuditLogItemDto {
+    items: AdminAuditLogItemDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfAdminInvoiceListItemDto implements IPagedDataOfAdminInvoiceListItemDto {
+    items!: AdminInvoiceListItemDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfAdminInvoiceListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AdminInvoiceListItemDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfAdminInvoiceListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfAdminInvoiceListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfAdminInvoiceListItemDto {
+    items: AdminInvoiceListItemDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
+export class PagedDataOfAdminOrderListItemDto implements IPagedDataOfAdminOrderListItemDto {
+    items!: AdminOrderListItemDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfAdminOrderListItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AdminOrderListItemDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfAdminOrderListItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfAdminOrderListItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfAdminOrderListItemDto {
+    items: AdminOrderListItemDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
 }
 
 export enum PayoutBatchState {
@@ -2417,6 +3860,242 @@ export interface IResolveDisputeResponse {
     orderId: string;
     state: OrderState;
     outcome: DisputeResolutionOutcome;
+
+    [key: string]: any;
+}
+
+export class RetryOutboxEventResponse implements IRetryOutboxEventResponse {
+    outboxEventId!: string;
+    retryCount!: number;
+    nextRetryAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IRetryOutboxEventResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.outboxEventId = _data["outboxEventId"];
+            this.retryCount = _data["retryCount"];
+            this.nextRetryAt = _data["nextRetryAt"] ? new Date(_data["nextRetryAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): RetryOutboxEventResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new RetryOutboxEventResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["outboxEventId"] = this.outboxEventId;
+        data["retryCount"] = this.retryCount;
+        data["nextRetryAt"] = this.nextRetryAt ? this.nextRetryAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IRetryOutboxEventResponse {
+    outboxEventId: string;
+    retryCount: number;
+    nextRetryAt: Date;
+
+    [key: string]: any;
+}
+
+export class UpdateCountryConfigurationRequest implements IUpdateCountryConfigurationRequest {
+    standardVatRateBp!: number;
+    reducedVatRateBp!: number | undefined;
+    invoicingMode!: InvoicingMode;
+    platformFeeRateBp!: number;
+    defaultShippingPriceMinor!: number;
+    defaultPaymentProvider!: string;
+    defaultShippingCarrier!: string;
+    defaultRegistry!: string;
+    defaultEmailProvider!: string;
+    confirmedProviderCode!: string | undefined;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IUpdateCountryConfigurationRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.standardVatRateBp = _data["standardVatRateBp"];
+            this.reducedVatRateBp = _data["reducedVatRateBp"];
+            this.invoicingMode = _data["invoicingMode"];
+            this.platformFeeRateBp = _data["platformFeeRateBp"];
+            this.defaultShippingPriceMinor = _data["defaultShippingPriceMinor"];
+            this.defaultPaymentProvider = _data["defaultPaymentProvider"];
+            this.defaultShippingCarrier = _data["defaultShippingCarrier"];
+            this.defaultRegistry = _data["defaultRegistry"];
+            this.defaultEmailProvider = _data["defaultEmailProvider"];
+            this.confirmedProviderCode = _data["confirmedProviderCode"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCountryConfigurationRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCountryConfigurationRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["standardVatRateBp"] = this.standardVatRateBp;
+        data["reducedVatRateBp"] = this.reducedVatRateBp;
+        data["invoicingMode"] = this.invoicingMode;
+        data["platformFeeRateBp"] = this.platformFeeRateBp;
+        data["defaultShippingPriceMinor"] = this.defaultShippingPriceMinor;
+        data["defaultPaymentProvider"] = this.defaultPaymentProvider;
+        data["defaultShippingCarrier"] = this.defaultShippingCarrier;
+        data["defaultRegistry"] = this.defaultRegistry;
+        data["defaultEmailProvider"] = this.defaultEmailProvider;
+        data["confirmedProviderCode"] = this.confirmedProviderCode;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IUpdateCountryConfigurationRequest {
+    standardVatRateBp: number;
+    reducedVatRateBp: number | undefined;
+    invoicingMode: InvoicingMode;
+    platformFeeRateBp: number;
+    defaultShippingPriceMinor: number;
+    defaultPaymentProvider: string;
+    defaultShippingCarrier: string;
+    defaultRegistry: string;
+    defaultEmailProvider: string;
+    confirmedProviderCode: string | undefined;
+    reason: string;
+
+    [key: string]: any;
+}
+
+export class UpdateCountryConfigurationResponse implements IUpdateCountryConfigurationResponse {
+    countryCode!: string;
+    standardVatRateBp!: number;
+    reducedVatRateBp!: number | undefined;
+    invoicingMode!: InvoicingMode;
+    platformFeeRateBp!: number;
+    defaultShippingPriceMinor!: number;
+    defaultPaymentProvider!: string;
+    defaultShippingCarrier!: string;
+    defaultRegistry!: string;
+    defaultEmailProvider!: string;
+    inFlightOrderCount!: number;
+    providerChanged!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IUpdateCountryConfigurationResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.countryCode = _data["countryCode"];
+            this.standardVatRateBp = _data["standardVatRateBp"];
+            this.reducedVatRateBp = _data["reducedVatRateBp"];
+            this.invoicingMode = _data["invoicingMode"];
+            this.platformFeeRateBp = _data["platformFeeRateBp"];
+            this.defaultShippingPriceMinor = _data["defaultShippingPriceMinor"];
+            this.defaultPaymentProvider = _data["defaultPaymentProvider"];
+            this.defaultShippingCarrier = _data["defaultShippingCarrier"];
+            this.defaultRegistry = _data["defaultRegistry"];
+            this.defaultEmailProvider = _data["defaultEmailProvider"];
+            this.inFlightOrderCount = _data["inFlightOrderCount"];
+            this.providerChanged = _data["providerChanged"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCountryConfigurationResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCountryConfigurationResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["countryCode"] = this.countryCode;
+        data["standardVatRateBp"] = this.standardVatRateBp;
+        data["reducedVatRateBp"] = this.reducedVatRateBp;
+        data["invoicingMode"] = this.invoicingMode;
+        data["platformFeeRateBp"] = this.platformFeeRateBp;
+        data["defaultShippingPriceMinor"] = this.defaultShippingPriceMinor;
+        data["defaultPaymentProvider"] = this.defaultPaymentProvider;
+        data["defaultShippingCarrier"] = this.defaultShippingCarrier;
+        data["defaultRegistry"] = this.defaultRegistry;
+        data["defaultEmailProvider"] = this.defaultEmailProvider;
+        data["inFlightOrderCount"] = this.inFlightOrderCount;
+        data["providerChanged"] = this.providerChanged;
+        return data;
+    }
+}
+
+export interface IUpdateCountryConfigurationResponse {
+    countryCode: string;
+    standardVatRateBp: number;
+    reducedVatRateBp: number | undefined;
+    invoicingMode: InvoicingMode;
+    platformFeeRateBp: number;
+    defaultShippingPriceMinor: number;
+    defaultPaymentProvider: string;
+    defaultShippingCarrier: string;
+    defaultRegistry: string;
+    defaultEmailProvider: string;
+    inFlightOrderCount: number;
+    providerChanged: boolean;
 
     [key: string]: any;
 }
