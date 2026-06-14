@@ -472,6 +472,17 @@ export const messages = {
     'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
   'order.dispute.notOpen':
     'K této objednávce není otevřená žádná reklamace.',
+
+  // T-0100 review error codes (parity with BusinessErrorMessage —
+  // resolveErrorMessage maps the dotted code 1:1). Vykání on the customer
+  // surfaces. PM/UX to refine on PR review.
+  'review.alreadyExists': 'K této objednávce už recenze existuje.',
+  'review.orderNotDelivered': 'Recenzi lze přidat až po doručení objednávky.',
+  'review.ratingOutOfRange': 'Hodnocení musí být 1 až 5 hvězdiček.',
+  'review.bodyTooLong': 'Text recenze může mít nejvýše 1000 znaků.',
+  'review.replyEmpty': 'Odpověď nesmí být prázdná.',
+  'review.replyTooLong': 'Odpověď může mít nejvýše 500 znaků.',
+  'review.notFound': 'Recenze nebyla nalezena.',
   // Admin / ops surface only — the outbox row parks until the
   // ADMIN_NOTIFICATION_EMAIL config lands.
   'email.adminRecipientNotConfigured':

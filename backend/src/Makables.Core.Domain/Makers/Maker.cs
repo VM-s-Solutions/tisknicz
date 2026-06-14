@@ -249,6 +249,20 @@ public sealed class Maker : Auditable
     }
 
     /// <summary>
+    /// Recompute the denormalized rating from the review rows (T-0100,
+    /// Q5 recompute-from-rows). Thin forward to <see cref="SetCatalogStats"/>
+    /// that keeps <see cref="TotalOrders"/> UNTOUCHED — the order-completion
+    /// flow owns that field. The caller (the <c>SubmitReview</c> handler)
+    /// supplies <paramref name="ratingCount"/> + <paramref name="ratingAverageBp"/>
+    /// computed by an <c>AVG(rating)</c> over the maker's ACTIVE reviews
+    /// (recompute-from-rows is self-healing under soft-delete; a running
+    /// average would drift permanently after any deactivation). The
+    /// existing 0..50000-bp guard on <see cref="SetCatalogStats"/> applies.
+    /// </summary>
+    public Maker RecomputeRating(int ratingCount, int ratingAverageBp) =>
+        SetCatalogStats(ratingAverageBp, ratingCount, TotalOrders);
+
+    /// <summary>
     /// Maker self-service profile patch (T-0034 <c>UpdateMakerProfile</c>).
     /// Null arguments mean "don't change this field"; an explicit empty
     /// string clears an optional value. <see cref="BankAccount"/> format

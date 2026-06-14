@@ -22,6 +22,7 @@ using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Registry;
+using Makables.Core.Domain.Reviews;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Common.Addresses;
 using Makables.Infra.Common.Auth;
@@ -44,6 +45,7 @@ using Makables.Infra.Database.Numbering;
 using Makables.Infra.Database.Outbox;
 using Makables.Infra.Database.Registry;
 using Makables.Infra.Database.Repositories;
+using Makables.Infra.Database.Reviews;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -172,6 +174,12 @@ public static class MakablesInfrastructureExtensions
 
         // === Disputes (T-0106) ===
         services.AddScoped<IDisputeRepository, DisputeRepository>();
+
+        // === Reviews (T-0100) ===
+        // Write-side + read-side split per ADR 0023. Both scoped lifetime
+        // (the underlying DbContext is request-scoped).
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IReviewQueries, ReviewQueries>();
 
         // === Order read-side queries (T-0080 / T-0081 / T-0082) ===
         // Separate from IOrderRepository per ADR 0023 — projection-only
