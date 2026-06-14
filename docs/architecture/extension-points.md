@@ -121,9 +121,9 @@ The single orchestration seam for "right to erasure" (GDPR Art. 17). Invoked by 
 
 **Method:**
 - `EraseAsync(string userId, CancellationToken) → BusinessResult` — runs the whole pass inside the handler's pipeline UoW; **never** calls `SaveChangesAsync()` (the pipeline commits). The pass order is fixed:
-  1. **In-flight-order guard** (runs first, before any mutation) — if the user has any order in `[PendingPayment, Paid, Accepted, Shipped]`, return `BusinessResult.Failure(user.cannotDeleteWithInFlightOrders)`. The admin resolves the in-flight orders first; nothing is erased.
+  1. **In-flight-order guard** (runs first, before any mutation) — if the user has any order in `[PendingPayment, Paid, Accepted, Shipped, Disputed]` (as customer **or** maker), return `BusinessResult.Failure(user.cannotDeleteWithInFlightOrders)`. The admin resolves the in-flight orders first; nothing is erased. (`Disputed` is included because a dispute holds escrowed money + an unresolved claim — admin-ops bundle fold, SecOps/QA 2026-06-14.)
   2. **Anonymize pass** (replace-in-place sentinel, no tombstone table) — Order contact snapshots, Review author, Maker PII.
-  3. **Hard-delete pass** (`Remove()` + commit) — `User`, `RefreshToken`s, unreferenced `Address`es.
+  3. **Hard-delete pass** (`Remove()` + commit) — `User`, `RefreshToken`s, `OneTimeToken`s, `LoginAttemptBucket` (keyed by `EmailNormalized`), unreferenced `Address`es.
   4. **Invoices untouched** — never loaded for mutation.
 
 **Erasure matrix (the documented contract):**
@@ -132,7 +132,9 @@ The single orchestration seam for "right to erasure" (GDPR Art. 17). Invoked by 
 |---|---|---|
 | `User` | **HARD-DELETE** | The anchor row. Gone after the first run. |
 | `RefreshToken` | **HARD-DELETE** | All tokens for the user. |
-| `Address` | **HARD-DELETE** if unreferenced | Deleted only when no other entity (order snapshot, maker) still references it; otherwise left in place. |
+| `OneTimeToken` | **HARD-DELETE** | All tokens for the user (`UserId` + `IpAddress` are personal data — GDPR Recital 30). Same credential-infra tier as `RefreshToken`. |
+| `LoginAttemptBucket` | **HARD-DELETE** | The bucket whose PK == the user's `EmailNormalized` (the email is the user's PII). Orphaned anti-abuse state once the user is gone. |
+| `Address` | **HARD-DELETE** if unreferenced | Deleted only when no other entity (order snapshot, maker legal seat) still references it; evaluated via a SQL `NOT EXISTS` anti-join scoped to the target user. |
 | `Order` contact snapshot | **ANONYMIZE** | `ContactName` / `ContactEmail` / `ContactPhone` → `"Anonymized"`. The order itself is retained (legal/commercial record). |
 | `Review` author | **ANONYMIZE** | Author display PII → `"Anonymized"`; the review text/rating stays. |
 | `Maker` PII | **ANONYMIZE + flag** | PII fields → `"Anonymized"`; **RETAIN `IČO` + `BankAccount`** (legal/payout obligation); set `IsRetainedForLegal = true`. |
