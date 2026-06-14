@@ -149,4 +149,97 @@ public class OutboxEventTests
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    // === T-0109 RequeueForRetry (admin force-retry) — load-bearing
+    // pure-logic surface. One-shot "try now": NextRetryAt = now,
+    // RetryCount++, the backoff ladder is PRESERVED (NOT reset). Red-first
+    // per the TDD policy (the method does not exist yet). Locked A.1.
+
+    [Fact]
+    public void RequeueForRetry_sets_next_retry_to_now_and_bumps_retry_count()
+    {
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.RecordFailure(OutboxErrorKind.Permanent, "x.permanent", null);
+        e.RetryCount.Should().Be(1);
+        e.NextRetryAt.Should().BeNull("a Permanent failure stalls the row");
+
+        e.RequeueForRetry(Now.AddHours(2));
+
+        e.NextRetryAt.Should().Be(Now.AddHours(2));
+        e.RetryCount.Should().Be(2);
+        e.ProcessedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void RequeueForRetry_does_NOT_reset_the_backoff_ladder()
+    {
+        // Fail through four transient attempts → RetryCount == 4.
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        for (var i = 1; i <= 4; i++)
+        {
+            e.RecordFailure(
+                OutboxErrorKind.Transient,
+                "x.transient",
+                Makables.Core.AppServices.Common.OutboxRetryPolicy.NextAttempt(
+                    OutboxErrorKind.Transient, i, Now));
+        }
+        e.RetryCount.Should().Be(4);
+
+        // Admin force-retry: one extra attempt counted, ladder preserved.
+        e.RequeueForRetry(Now);
+        e.RetryCount.Should().Be(5);
+
+        // The next REAL failure resumes the ladder from the bumped count —
+        // the delay is TransientBackoffs[5] (24h), NOT TransientBackoffs[0]
+        // (1m). This is the locked A.1 assertion: retry counts, it does not
+        // restart the 31-hour retry budget.
+        var nextAttempt = Makables.Core.AppServices.Common.OutboxRetryPolicy.NextAttempt(
+            OutboxErrorKind.Transient, 6, Now);
+        e.RecordFailure(OutboxErrorKind.Transient, "x.transient", nextAttempt);
+
+        e.RetryCount.Should().Be(6);
+        nextAttempt.Should().Be(
+            Now + Makables.Core.AppServices.Common.OutboxRetryPolicy.TransientBackoffs[5]);
+    }
+
+    [Fact]
+    public void RequeueForRetry_preserves_last_error_diagnostics()
+    {
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.RecordFailure(OutboxErrorKind.Permanent, "email.invalidAddress", null);
+
+        e.RequeueForRetry(Now.AddMinutes(5));
+
+        e.LastErrorKind.Should().Be(OutboxErrorKind.Permanent,
+            "the stall diagnostic survives until the next attempt overwrites it");
+        e.LastErrorCode.Should().Be("email.invalidAddress");
+    }
+
+    [Fact]
+    public void RequeueForRetry_refuses_already_processed_row()
+    {
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.MarkProcessed(Now);
+
+        var act = () => e.RequeueForRetry(Now.AddMinutes(1));
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void RequeueForRetry_on_a_transient_due_row_still_advances()
+    {
+        // An event with a future NextRetryAt (not yet stalled): "try now"
+        // overrides the backoff wait and bumps the count.
+        var e = OutboxEvent.Enqueue("01H-1", "a", "t", "{}", Now);
+        e.RecordFailure(OutboxErrorKind.Transient, "x.transient", Now.AddHours(1));
+        e.RecordFailure(OutboxErrorKind.Transient, "x.transient", Now.AddHours(6));
+        e.RetryCount.Should().Be(2);
+        e.NextRetryAt.Should().Be(Now.AddHours(6));
+
+        e.RequeueForRetry(Now);
+
+        e.NextRetryAt.Should().Be(Now);
+        e.RetryCount.Should().Be(3);
+    }
 }
