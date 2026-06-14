@@ -720,6 +720,21 @@ export const messages = {
   'customer.orders.markDeliveredButton': 'Označit jako doručeno',
   'customer.orderDetail.markDelivered.inFlight': 'Potvrzuji…',
 
+  // T-0115 customer review-submission surface (vykání). The form + the
+  // read-only submitted-review block on /objednavka/[id]. PM/UX to refine.
+  'customer.review.heading': 'Vaše hodnocení',
+  'customer.review.prompt': 'Jak jste byli s objednávkou spokojeni? Ohodnoťte výrobce.',
+  'customer.review.starLabel': '{rating} z 5 hvězdiček',
+  'customer.review.ratingGroupLabel': 'Hodnocení hvězdičkami',
+  'customer.review.comment.label': 'Komentář (nepovinný)',
+  'customer.review.comment.placeholder': 'Napište pár slov o své zkušenosti…',
+  'customer.review.comment.counter': '{count}/1000',
+  'customer.review.submit': 'Odeslat hodnocení',
+  'customer.review.submitting': 'Odesílám…',
+  'customer.review.submittedHeading': 'Vaše hodnocení',
+  'customer.review.submittedOn': 'Hodnoceno {date}',
+  'customer.review.makerReplyHeading': 'Odpověď výrobce',
+
   // Shared order-message thread (T-0086b creates, T-0087b reuses on the
   // maker detail). Audience-neutral phrasing; {count} keys follow the
   // plural-neutral "Label: N" convention.

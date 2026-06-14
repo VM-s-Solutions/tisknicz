@@ -14,6 +14,11 @@ import {
   OrderState,
   ShippingMethod,
 } from '@/lib/api-client-helpers/orders-client';
+import {
+  getReviewableOrders,
+  getSubmittedReviews,
+  type SubmittedReview as SubmittedReviewDto,
+} from '@/lib/api-client-helpers/reviews-client';
 import { formatFileSize } from '@/lib/format/file-size';
 import { t } from '@/lib/i18n';
 import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-labels';
@@ -23,6 +28,8 @@ import { FileDownloadButton, MarkDeliveredButton } from './order-actions-client'
 import { OrderBreakdown, OrderPriceCards } from './order-breakdown';
 import { OrderThreadClient } from './order-thread-client';
 import { PayButtonClient } from './pay-button-client';
+import { ReviewFormClient } from './review-form-client';
+import { SubmittedReview } from './submitted-review';
 import { toThreadMessagesPage } from './thread-mapping';
 import { OrderTimeline } from './timeline';
 
@@ -151,11 +158,46 @@ function hasUrl(value: string | undefined): value is string {
   return typeof value === 'string' && value !== '';
 }
 
+/**
+ * Resolve the review surface for this order from the T-0100 dashboard
+ * endpoints (T-0115 §C fallback path — the contract exposes reviews via
+ * `IReviewQueries`-backed reads, not a detail-DTO fold). Two SSR sibling
+ * fetches under the same audience cookie (ADR 0024): the customer's
+ * submitted reviews and their reviewable orders. The branch matches this
+ * order's id against both. A fetch failure degrades to "no review block"
+ * (loudly recoverable on the next `router.refresh()`, no mock). Eligibility
+ * stays backend-authoritative — the page only reads the signals.
+ */
+async function resolveReviewState(
+  orderId: string,
+): Promise<
+  { readonly kind: 'submitted'; readonly review: SubmittedReviewDto }
+  | { readonly kind: 'canReview' }
+  | { readonly kind: 'none' }
+> {
+  const submittedResult = await getSubmittedReviews();
+  if (submittedResult.success) {
+    const mine = submittedResult.value.find((r) => r.orderId === orderId);
+    if (mine) {
+      return { kind: 'submitted', review: mine };
+    }
+  }
+
+  const reviewableResult = await getReviewableOrders();
+  if (reviewableResult.success && reviewableResult.value.some((o) => o.orderId === orderId)) {
+    return { kind: 'canReview' };
+  }
+
+  return { kind: 'none' };
+}
+
 async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail }) {
   const messagesResult = await getOrderMessages(detail.orderId, 1);
   const initialThreadPage: OrderMessagesPage = messagesResult.success
     ? toThreadMessagesPage(messagesResult.value)
     : { items: [], page: 1, totalCount: 0, hasNextPage: false };
+
+  const reviewState = await resolveReviewState(detail.orderId);
 
   const shippingMethodLabel =
     detail.shippingMethod === ShippingMethod.PersonalPickup
@@ -260,6 +302,14 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
           canPost={detail.state !== OrderState.PendingPayment}
         />
       </Card>
+
+      {/* Terminal post-delivery action — renders last, after the thread.
+          Three states from the backend signals: form / read-only / nothing. */}
+      {reviewState.kind === 'canReview' ? (
+        <ReviewFormClient orderId={detail.orderId} />
+      ) : reviewState.kind === 'submitted' ? (
+        <SubmittedReview review={reviewState.review} />
+      ) : null}
     </section>
   );
 }
