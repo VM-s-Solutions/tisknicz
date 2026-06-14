@@ -84,7 +84,7 @@ public sealed class UpdateCountryConfigurationHandlerTests
     public async Task Provider_change_without_matching_confirmation_is_rejected()
     {
         var config = SeedConfig();
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
 
         var result = await _sut.Handle(CommandFrom(config, payment: "stripe", confirm: null), default);
 
@@ -97,7 +97,7 @@ public sealed class UpdateCountryConfigurationHandlerTests
     public async Task Unregistered_provider_code_is_rejected_before_the_retype_gate()
     {
         var config = SeedConfig();
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
 
         // "adyen" is not registered AND not confirmed — must return
         // providerNotRegistered (more actionable), not the mismatch.
@@ -112,7 +112,7 @@ public sealed class UpdateCountryConfigurationHandlerTests
     public async Task Happy_path_provider_change_with_correct_retype_succeeds()
     {
         var config = SeedConfig();
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
 
         var result = await _sut.Handle(CommandFrom(config, payment: "stripe", confirm: "stripe"), default);
 
@@ -127,7 +127,7 @@ public sealed class UpdateCountryConfigurationHandlerTests
     public async Task Happy_path_vat_only_change_no_provider_gate()
     {
         var config = SeedConfig();
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
 
         var result = await _sut.Handle(CommandFrom(config, standardVat: 1900, confirm: null), default);
 
@@ -142,7 +142,7 @@ public sealed class UpdateCountryConfigurationHandlerTests
     public async Task No_op_all_values_unchanged_returns_success_without_mutation()
     {
         var config = SeedConfig();
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns(config);
 
         var result = await _sut.Handle(CommandFrom(config), default);
 
@@ -161,13 +161,13 @@ public sealed class UpdateCountryConfigurationHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.Unauthorized);
-        await _configs.DidNotReceive().GetByCodeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _configs.DidNotReceive().GetByCodeForUpdateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Config_not_found_returns_not_found()
     {
-        _configs.GetByCodeAsync(CZ, Arg.Any<CancellationToken>()).Returns((CountryConfiguration?)null);
+        _configs.GetByCodeForUpdateAsync(CZ, Arg.Any<CancellationToken>()).Returns((CountryConfiguration?)null);
 
         var result = await _sut.Handle(CommandFrom(SeedConfig()), default);
 

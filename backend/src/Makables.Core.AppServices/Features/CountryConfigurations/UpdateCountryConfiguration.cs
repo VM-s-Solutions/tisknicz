@@ -175,8 +175,10 @@ public static class UpdateCountryConfiguration
                 return BusinessResult.Failure<UpdateCountryConfigurationResponse>(Error.Unauthorized());
             }
 
-            // 2. Load the tracked row.
-            var config = await configs.GetByCodeAsync(command.CountryCode, cancellationToken);
+            // 2. Load the TRACKED row (GetByCodeForUpdateAsync — the read-side
+            // GetByCodeAsync is AsNoTracking for the hot provider-resolution
+            // path, so mutating its result would never commit).
+            var config = await configs.GetByCodeForUpdateAsync(command.CountryCode, cancellationToken);
             if (config is null)
             {
                 return BusinessResult.Failure<UpdateCountryConfigurationResponse>(

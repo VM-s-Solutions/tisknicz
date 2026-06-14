@@ -5,6 +5,9 @@
      New findings outside this list break the build. Shrink, never grow. -->
 
 - backend/src/Makables.Core.AppServices/Behaviors/UnitOfWorkPipelineBehavior.cs:63:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminAuditLog.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAllInvoices.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAllOrders.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/CompleteGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/ConfirmEmail.cs:1:T1  feature file must declare a public static class wrapper
@@ -33,6 +36,7 @@
 - backend/src/Makables.Core.AppServices/Features/Categories/DeactivateCategory.cs:66:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:83:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/CountryConfigurations/UpdateCountryConfiguration.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "class Validator"
@@ -76,6 +80,7 @@
 - backend/src/Makables.Core.AppServices/Features/Orders/RefundOrder.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/ResolveDispute.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Outbox/AcknowledgeOutboxEvent.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Validator"
@@ -88,6 +93,7 @@
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "class Handler"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:84:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:94:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
+- backend/src/Makables.Core.AppServices/Features/Outbox/RetryOutboxEvent.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Payouts/CreatePayoutBatch.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerOutboxEventsForOrder.cs:1:T1  feature file must declare a public static class wrapper
@@ -115,18 +121,19 @@
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:85:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:93:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerReviewableOrders.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerSubmittedReviews.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetMakerReceivedReviews.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/RespondToReview.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/SubmitReview.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:55:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:43:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:56:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerReviewableOrders.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerSubmittedReviews.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetMakerReceivedReviews.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/RespondToReview.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/SubmitReview.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreShippingLabel.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Users/DeleteUserPermanently.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Infra.Azure.Storage.Blobs/AzureBlobStorageClient.cs:92:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Infra.Clients/Ares/AresCompanyRegistry.cs:186:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Infra.Database/Auditing/AdminAuditLogWriter.cs:79:T4  `dynamic` is forbidden — model the contract with a concrete type

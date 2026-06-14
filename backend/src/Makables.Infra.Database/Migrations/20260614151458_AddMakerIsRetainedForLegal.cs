@@ -10,6 +10,10 @@ namespace Makables.Infra.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_reviews_users_customer_user_id",
+                table: "reviews");
+
             migrationBuilder.AddColumn<bool>(
                 name: "is_retained_for_legal",
                 table: "makers",
@@ -24,6 +28,14 @@ namespace Makables.Infra.Database.Migrations
             migrationBuilder.DropColumn(
                 name: "is_retained_for_legal",
                 table: "makers");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_reviews_users_customer_user_id",
+                table: "reviews",
+                column: "customer_user_id",
+                principalTable: "users",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Restrict);
         }
     }
 }

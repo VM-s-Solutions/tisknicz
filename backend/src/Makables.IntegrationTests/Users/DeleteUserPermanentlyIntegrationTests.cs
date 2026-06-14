@@ -210,7 +210,7 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
         var invoice = Invoice.Issue("inv-1", "FV-CZ-20260001", InvoiceType.Customer, "ord-delivered", null,
             MakerId, "JVM YORE s.r.o.", "12345678", null, null, "Maker Person", TargetEmail,
             null, null, new DateOnly(2026, 5, 1), null, new DateOnly(2026, 5, 15),
-            InvoicingMode.None, 57900, 2100, 10049, 57900, Currency, CZ);
+            InvoicingMode.None, 57900, 0, 0, 57900, Currency, CZ);
         invoice.MarkCreated(actor, SeedAt);
         db.Set<Invoice>().Add(invoice);
 

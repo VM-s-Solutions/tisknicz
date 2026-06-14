@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    [Migration("20260614145349_AddMakerIsRetainedForLegal")]
+    [Migration("20260614151458_AddMakerIsRetainedForLegal")]
     partial class AddMakerIsRetainedForLegal
     {
         /// <inheritdoc />
@@ -2481,12 +2481,6 @@ namespace Makables.Infra.Database.Migrations
 
             modelBuilder.Entity("Makables.Core.Domain.Reviews.Review", b =>
                 {
-                    b.HasOne("Makables.Core.Domain.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Makables.Core.Domain.Makers.Maker", null)
                         .WithMany()
                         .HasForeignKey("MakerId")

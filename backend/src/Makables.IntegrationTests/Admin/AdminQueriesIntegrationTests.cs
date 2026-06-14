@@ -125,9 +125,9 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
             return u;
         }
 
-        MakerEntity NewMaker(string id, string userId, string addressId, string company, string slug)
+        MakerEntity NewMaker(string id, string userId, string addressId, string company, string slug, string ico)
         {
-            var m = MakerEntity.Create(id, userId, "27074358", null, company, null, addressId,
+            var m = MakerEntity.Create(id, userId, ico, null, company, null, addressId,
                 null, true, "ares", SeedAt, false, CountryCode, slug);
             m.MarkCreated(actor, SeedAt);
             return m;
@@ -140,8 +140,8 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         Add(NewUser("user-maker-y", "y@example.cz", UserRole.Maker));
         Add(NewAddress("addr-x"));
         Add(NewAddress("addr-y"));
-        Add(NewMaker("maker-x", "user-maker-x", "addr-x", "Avast s.r.o.", "avast"));
-        Add(NewMaker("maker-y", "user-maker-y", "addr-y", "Seznam a.s.", "seznam"));
+        Add(NewMaker("maker-x", "user-maker-x", "addr-x", "Avast s.r.o.", "avast", "27074358"));
+        Add(NewMaker("maker-y", "user-maker-y", "addr-y", "Seznam a.s.", "seznam", "26168685"));
 
         var category = Category.Create("cat-1", "3D tisk", "3d-tisk", null, null, 10, CountryCode);
         category.MarkCreated(actor, SeedAt);
@@ -168,6 +168,11 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         // Soft-deleted (mimics a T-0110 anonymised reconciliation row).
         Add(NewOrder("ord-c", "M-CZ-20260003", "user-cust-a", "anna@example.cz", "maker-x", SeedAt.AddHours(2), false));
 
+        var batch = Makables.Core.Domain.Payouts.PayoutBatch.Create(
+            "batch-1", "VYP-CZ-2026-W18", CountryCode, 100000, Currency, 1, 1, 0, 0, 0);
+        batch.MarkCreated(actor, SeedAt);
+        Add(batch);
+
         Invoice NewInvoice(string id, string number, InvoiceType type, string recipient, string country, string? orderId, string? batchId)
         {
             var inv = Invoice.Issue(id, number, type, orderId, batchId, "maker-x",
@@ -180,7 +185,7 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
 
         Add(NewInvoice("inv-1", "FV-CZ-20260001", InvoiceType.Customer, "Anna", "CZ", "ord-a", null));
         Add(NewInvoice("inv-2", "FV-CZ-20260002", InvoiceType.Fee, "JVM maker fee", "CZ", null, "batch-1"));
-        Add(NewInvoice("inv-3", "FV-SK-20260001", InvoiceType.Fee, "SK maker fee", "SK", null, "batch-2"));
+        Add(NewInvoice("inv-3", "FV-SK-20260001", InvoiceType.Fee, "SK maker fee", "SK", null, "batch-1"));
 
         AdminAuditLogEntry NewAudit(string id, string action, string entity, string targetId, DateTimeOffset at)
             => AdminAuditLogEntry.Record(id, AdminUserId, action, entity, targetId, "{}", "{}", at, notes: "n");
@@ -214,6 +219,17 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         return client;
     }
 
+    // The API serialises enums as strings (JsonStringEnumConverter) — the
+    // test reader needs the same converter to parse OrderState / InvoiceType.
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOpts = new(
+        System.Text.Json.JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
+    private static async Task<T> ReadAsync<T>(HttpResponseMessage response) =>
+        (await response.Content.ReadFromJsonAsync<T>(JsonOpts))!;
+
     [Fact]
     public async Task GET_admin_orders_returns_cross_tenant_rows()
     {
@@ -223,7 +239,7 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin-orders");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<GetAllOrdersEnvelope>();
+        var body = await ReadAsync<GetAllOrdersEnvelope>(response);
         body!.Orders.TotalCount.Should().Be(3, "two active + one soft-deleted cross-tenant order");
         body.Orders.Items.Should().Contain(o => o.MakerId == "maker-x" && o.CustomerEmail == "anna@example.cz");
         body.Orders.Items.Should().Contain(o => o.MakerId == "maker-y" && o.CustomerEmail == "bara@example.cz");
@@ -238,8 +254,7 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         await SeedCrossTenantAsync();
         using var client = CreateAdminClient();
 
-        var body = await (await client.GetAsync("/api/v1/admin-orders"))
-            .Content.ReadFromJsonAsync<GetAllOrdersEnvelope>();
+        var body = await ReadAsync<GetAllOrdersEnvelope>(await client.GetAsync("/api/v1/admin-orders"));
 
         body!.Orders.Items.Should().Contain(o => o.OrderId == "ord-c" && !o.IsActive);
         body.Orders.Items.Should().Contain(o => o.OrderId == "ord-a" && o.IsActive);
@@ -251,8 +266,8 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         await SeedCrossTenantAsync();
         using var client = CreateAdminClient();
 
-        var body = await (await client.GetAsync("/api/v1/admin-invoices?type=Fee&country=CZ"))
-            .Content.ReadFromJsonAsync<GetAllInvoicesEnvelope>();
+        var body = await ReadAsync<GetAllInvoicesEnvelope>(
+            await client.GetAsync("/api/v1/admin-invoices?type=Fee&country=CZ"));
 
         body!.Invoices.TotalCount.Should().Be(1, "only the CZ Fee invoice matches");
         body.Invoices.Items.Single().InvoiceNumber.Should().Be("FV-CZ-20260002");
@@ -265,9 +280,8 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
         await SeedCrossTenantAsync();
         using var client = CreateAdminClient();
 
-        var body = await (await client.GetAsync(
-                "/api/v1/audit-log?actionCode=order.refund&dateFrom=2026-04-15T00:00:00Z&dateTo=2026-06-01T00:00:00Z"))
-            .Content.ReadFromJsonAsync<GetAuditLogEnvelope>();
+        var body = await ReadAsync<GetAuditLogEnvelope>(await client.GetAsync(
+            "/api/v1/audit-log?actionCode=order.refund&dateFrom=2026-04-15T00:00:00Z&dateTo=2026-06-01T00:00:00Z"));
 
         body!.Entries.TotalCount.Should().Be(1, "only aud-3 (order.refund, 2026-05-01) is in range");
         body.Entries.Items.Single().Id.Should().Be("aud-3");

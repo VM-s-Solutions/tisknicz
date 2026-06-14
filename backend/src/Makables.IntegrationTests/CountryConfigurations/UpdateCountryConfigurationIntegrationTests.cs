@@ -53,6 +53,18 @@ public sealed class UpdateCountryConfigurationIntegrationTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _harness.ResetMutableTablesAsync();
+        // country_configuration is a seed table the harness does NOT truncate,
+        // so a prior provider-change test would leave the CZ row mutated.
+        // Reset it to the seed values so each test starts deterministic.
+        await using (var db = _harness.CreateDbContext())
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE country_configuration SET standard_vat_rate_bp = 2100, " +
+                "reduced_vat_rate_bp = 1200, platform_fee_rate_bp = 1500, " +
+                "default_shipping_price_minor = 7900, invoicing_mode = 'None', " +
+                "default_payment_provider = 'comgate', default_shipping_carrier = 'packeta', " +
+                "default_registry = 'ares', default_email_provider = 'resend' WHERE id = 'CZ';");
+        }
         _factory = new WebApplicationFactory<Makables.Web.Admin.Program>()
             .WithWebHostBuilder(builder =>
             {
