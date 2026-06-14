@@ -148,6 +148,16 @@ public static class OutboxEventTypes
     public const string PayoutFeeInvoiceMakerEmail = "payout.feeInvoice.makerEmail";
 
     /// <summary>
+    /// "Your payout for batch {{batch_number}} has been sent" maker
+    /// notification — one per maker per batch, enqueued by
+    /// <c>MarkPayoutBatchCompleted.Handler</c> at settlement. Summarizes the
+    /// total paid to that maker + the order count + a deep link to the maker
+    /// fee-invoice page. No PDF attachment. Routes through the existing
+    /// <c>send-email</c> queue. T-0103.
+    /// </summary>
+    public const string PayoutBatchPayoutSentMakerEmail = "payout.payoutSent.makerEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -175,7 +185,8 @@ public static class OutboxEventTypes
                   or OrderRefundedCustomerEmail
                   or OrderDisputedAdminEmail
                   or OrderDisputeResolvedCustomerEmail
-                  or PayoutFeeInvoiceMakerEmail;
+                  or PayoutFeeInvoiceMakerEmail
+                  or PayoutBatchPayoutSentMakerEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

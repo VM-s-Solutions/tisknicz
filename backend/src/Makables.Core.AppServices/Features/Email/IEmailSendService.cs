@@ -104,6 +104,9 @@ public sealed class EmailSendService(
             OutboxEventTypes.PayoutFeeInvoiceMakerEmail
                 => SendPayoutFeeInvoiceMakerEmailAsync(payloadJson, cancellationToken),
 
+            OutboxEventTypes.PayoutBatchPayoutSentMakerEmail
+                => SendPayoutSentMakerEmailAsync(payloadJson, cancellationToken),
+
             _ => UnknownEventTypeAsync(outboxEventType),
         };
     }
@@ -189,6 +192,41 @@ public sealed class EmailSendService(
                 ["language_code"] = payload.LanguageCode,
             },
             attachment: attachment,
+            cancellationToken: cancellationToken);
+    }
+
+    // === T-0103: Payout-sent (maker) email branch. ===
+
+    private Task<BusinessResult<EmailSentReceipt>> SendPayoutSentMakerEmailAsync(
+        string payloadJson, CancellationToken cancellationToken)
+    {
+        var payloadResult = DeserializeOrderPayload<PayoutBatchPayoutSentMakerEmailPayload>(
+            payloadJson, OutboxEventTypes.PayoutBatchPayoutSentMakerEmail);
+        if (!payloadResult.IsSuccess)
+        {
+            return Task.FromResult(BusinessResult.Failure<EmailSentReceipt>(payloadResult.Error!));
+        }
+        var payload = payloadResult.Value!;
+
+        // Plain summary — NO PDF attachment (unlike the fee-invoice email).
+        // {{total_paid}} is server-formatted CZK; the fee-invoice page deep
+        // link is pre-baked into the payload at enqueue time.
+        return DispatchOrderEmailAsync(
+            templateType: EmailTemplateType.PayoutSentMaker,
+            toAddress: payload.MakerEmail,
+            toName: null,
+            languageCode: payload.LanguageCode,
+            substitutions: new Dictionary<string, object>
+            {
+                ["batch_number"] = payload.BatchNumber,
+                ["total_paid_minor"] = payload.MakerTotalPaidMinor,
+                ["total_paid"] = FormatAmount(payload.MakerTotalPaidMinor, payload.Currency),
+                ["currency"] = payload.Currency,
+                ["order_count"] = payload.OrderCount,
+                ["fee_invoice_url"] = payload.FeeInvoiceActionUrl,
+                ["language_code"] = payload.LanguageCode,
+            },
+            attachment: null,
             cancellationToken: cancellationToken);
     }
 

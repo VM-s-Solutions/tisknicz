@@ -280,3 +280,17 @@
 - **Status:** open
 - **Answer (filled by user):**
 - **Note:** Recorded in the ADR 0009 amendment trail.
+
+## Q-0021 — AdminAuditPipelineBehavior writes a no-op audit row on idempotent Silent-Success re-calls
+- **From:** reviewer (payout-settlement T-0103 AC-3 conflict)
+- **Ticket / context:** T-0103 (MarkPayoutBatchCompleted); payout-settlement bundle
+- **Asked:** 2026-06-13
+- **Blocking:** no
+- **Question:** The shared `AdminAuditPipelineBehavior` writes an audit row on EVERY successful `IAdminAuditableCommand` regardless of whether state changed; so an idempotent re-call (`MarkPayoutBatchCompleted` on an already-`Completed` batch, `RefundOrder` re-refund, etc.) writes a benign no-op audit row. T-0103's AC-3 "no second audit row" is therefore unattainable without changing the shared pipeline. The bundle kept `IAdminAuditableCommand` (money attribution is mandatory) + asserts robust idempotency (no second outbox, state unchanged, first bank-ref authoritative) instead.
+- **Options the agent has considered:**
+  - (a) Accept the no-op audit rows as benign noise platform-wide (recommended — they record "admin attempted X", which is itself audit-worthy).
+  - (b) Make the pipeline skip the audit write when before==after snapshot (touches Refund/Dispute/ChangeState/Payout — needs its own ticket + careful snapshot-timing handling; a prior naive attempt suppressed live-transition rows).
+  - (c) Per-command opt-out flag.
+- **Status:** open
+- **Answer (filled by user):**
+- **Note:** Architect to rule; affects the AC-3 wording on T-0103 retroactively.

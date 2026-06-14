@@ -37,6 +37,11 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    complete(id: string, body: MarkPayoutBatchCompletedRequest): Promise<MarkPayoutBatchCompletedResponse>;
+
+    /**
+     * @return OK
+     */
     csv(id: string): Promise<void>;
 
     /**
@@ -511,6 +516,85 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<CreatePayoutBatchResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    complete(id: string, body: MarkPayoutBatchCompletedRequest): Promise<MarkPayoutBatchCompletedResponse> {
+        let url_ = this.baseUrl + "/api/v1/payout-batches/{id}/complete";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processComplete(_response);
+        });
+    }
+
+    protected processComplete(response: Response): Promise<MarkPayoutBatchCompletedResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = MarkPayoutBatchCompletedResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<MarkPayoutBatchCompletedResponse>(null as any);
     }
 
     /**
@@ -1700,6 +1784,138 @@ export interface ILoginRequest {
     [key: string]: any;
 }
 
+export class MarkPayoutBatchCompletedRequest implements IMarkPayoutBatchCompletedRequest {
+    bankReference!: string;
+    paymentDate!: Date | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IMarkPayoutBatchCompletedRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.bankReference = _data["bankReference"];
+            this.paymentDate = _data["paymentDate"] ? new Date(_data["paymentDate"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MarkPayoutBatchCompletedRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new MarkPayoutBatchCompletedRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["bankReference"] = this.bankReference;
+        data["paymentDate"] = this.paymentDate ? formatDate(this.paymentDate) : undefined as any;
+        return data;
+    }
+}
+
+export interface IMarkPayoutBatchCompletedRequest {
+    bankReference: string;
+    paymentDate: Date | undefined;
+
+    [key: string]: any;
+}
+
+export class MarkPayoutBatchCompletedResponse implements IMarkPayoutBatchCompletedResponse {
+    batchId!: string;
+    state!: PayoutBatchState;
+    completedAt!: Date;
+    bankReference!: string;
+    orderCount!: number;
+    makerCount!: number;
+    totalAmountMinor!: number;
+    currency!: string;
+    alreadyCompleted!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IMarkPayoutBatchCompletedResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.batchId = _data["batchId"];
+            this.state = _data["state"];
+            this.completedAt = _data["completedAt"] ? new Date(_data["completedAt"].toString()) : undefined as any;
+            this.bankReference = _data["bankReference"];
+            this.orderCount = _data["orderCount"];
+            this.makerCount = _data["makerCount"];
+            this.totalAmountMinor = _data["totalAmountMinor"];
+            this.currency = _data["currency"];
+            this.alreadyCompleted = _data["alreadyCompleted"];
+        }
+    }
+
+    static fromJS(data: any): MarkPayoutBatchCompletedResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new MarkPayoutBatchCompletedResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["batchId"] = this.batchId;
+        data["state"] = this.state;
+        data["completedAt"] = this.completedAt ? this.completedAt.toISOString() : undefined as any;
+        data["bankReference"] = this.bankReference;
+        data["orderCount"] = this.orderCount;
+        data["makerCount"] = this.makerCount;
+        data["totalAmountMinor"] = this.totalAmountMinor;
+        data["currency"] = this.currency;
+        data["alreadyCompleted"] = this.alreadyCompleted;
+        return data;
+    }
+}
+
+export interface IMarkPayoutBatchCompletedResponse {
+    batchId: string;
+    state: PayoutBatchState;
+    completedAt: Date;
+    bankReference: string;
+    orderCount: number;
+    makerCount: number;
+    totalAmountMinor: number;
+    currency: string;
+    alreadyCompleted: boolean;
+
+    [key: string]: any;
+}
+
 export class OpenAdminDisputeRequest implements IOpenAdminDisputeRequest {
     category!: DisputeCategory;
     description!: string;
@@ -2315,6 +2531,12 @@ export interface IUpdateProfileRequest {
     phone: string | undefined;
 
     [key: string]: any;
+}
+
+function formatDate(d: Date) {
+    return d.getFullYear() + '-' + 
+        (d.getMonth() < 9 ? ('0' + (d.getMonth()+1)) : (d.getMonth()+1)) + '-' +
+        (d.getDate() < 10 ? ('0' + d.getDate()) : d.getDate());
 }
 
 export class ApiException extends Error {

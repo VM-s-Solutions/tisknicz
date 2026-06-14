@@ -191,6 +191,11 @@ public static class MakablesInfrastructureExtensions
         // === Payout batches (T-0101) ===
         services.AddScoped<IPayoutBatchRepository, PayoutBatchRepository>();
 
+        // === Payout read-side queries (T-0112) ===
+        // Maker-scoped projection reads (AsNoTracking + IgnoreAutoIncludes),
+        // separate from the admin-scoped IPayoutBatchRepository per ADR 0023.
+        services.AddScoped<IPayoutQueries, PayoutQueries>();
+
         // === Payout artifacts (T-0102b) ===
         // CSV formatter is stateless + pure → singleton, keyed-ready for
         // future bank-native exporters. The artifact orchestration is scoped

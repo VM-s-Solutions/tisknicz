@@ -2035,6 +2035,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("id");
 
+                    b.Property<string>("BankReference")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)")
+                        .HasColumnName("bank_reference");
+
                     b.Property<string>("BatchNumber")
                         .IsRequired()
                         .HasMaxLength(40)

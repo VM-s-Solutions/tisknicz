@@ -123,4 +123,14 @@ public enum EmailTemplateType
     /// Tykání (maker audience). T-0102b.
     /// </summary>
     PayoutFeeInvoiceMaker = 15,
+
+    /// <summary>
+    /// "Výplata za dávku {{batch_number}} odeslána" maker notification —
+    /// summarizes the wire (total paid to this maker, order count) with a
+    /// deep link to the maker fee-invoice page. No PDF attachment (unlike
+    /// <see cref="PayoutFeeInvoiceMaker"/>). Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.PayoutBatchPayoutSentMakerEmail"/>.
+    /// Tykání (maker audience). T-0103.
+    /// </summary>
+    PayoutSentMaker = 16,
 }

@@ -17,10 +17,10 @@ namespace Makables.Core.Domain.Payouts;
 /// Fee invoices issued at creation (T-0102b) are legally immutable, so
 /// removing an order would orphan an issued invoice. The only mutations
 /// are the set-once <see cref="AttachCsvBlobPath"/> and the T-0103
-/// completion (via EF change tracking; <c>Complete()</c> ships with its
-/// only caller in T-0103, no dead code now). The
-/// <see cref="CompletedAt"/>/<see cref="CompletedBy"/> columns ship now so
-/// T-0103 is migration-free.
+/// completion (via EF change tracking; <see cref="Complete"/> ships with
+/// its only caller in T-0103). The
+/// <see cref="CompletedAt"/>/<see cref="CompletedBy"/> columns shipped at
+/// T-0101; the <see cref="BankReference"/> column is the one T-0103 migration.
 /// </para>
 ///
 /// <para>
@@ -47,6 +47,9 @@ public sealed class PayoutBatch : Auditable
 
     /// <summary>Wire-shape of the completed-by column.</summary>
     public const int MaxCompletedByLength = 200;
+
+    /// <summary>Wire-shape of the bank-reference column (T-0103).</summary>
+    public const int MaxBankReferenceLength = 140;
 
     /// <summary>
     /// Customer-facing batch number <c>VYP-{CC}-{YYYY}-W{ww}</c>, immutable
@@ -100,6 +103,13 @@ public sealed class PayoutBatch : Auditable
 
     /// <summary>Admin user id who marked the batch settled (T-0103). Null while Processing.</summary>
     public string? CompletedBy { get; private set; }
+
+    /// <summary>
+    /// Operator's bank-assigned wire transaction id (T-0103). Null while
+    /// Processing; set once at completion for the audit trail + the
+    /// maker-facing "paid on / ref" reconciliation surface.
+    /// </summary>
+    public string? BankReference { get; private set; }
 
     // EF Core needs a parameterless ctor.
     private PayoutBatch() { }
@@ -208,6 +218,58 @@ public sealed class PayoutBatch : Auditable
         }
 
         CsvBlobPath = trimmed;
+        return BusinessResult.Success();
+    }
+
+    /// <summary>
+    /// Settle the batch: <see cref="PayoutBatchState.Processing"/> →
+    /// <see cref="PayoutBatchState.Completed"/> once the operator records the
+    /// executed bank wire (T-0103). Forward-only — there is no un-complete
+    /// (completion makes the Fee invoices, the wire, the payout-sent emails,
+    /// and the post-payout refund gate immutable; errors are corrected
+    /// forward via refund / manual state change).
+    ///
+    /// <para>
+    /// On success sets <see cref="State"/>, <see cref="BankReference"/>
+    /// (trimmed), <see cref="CompletedBy"/>, and <see cref="CompletedAt"/> —
+    /// the value-date the operator chose (<paramref name="paymentDate"/> at
+    /// midnight UTC) when supplied, else <c>clock.UtcNow</c>. A non-Processing
+    /// batch returns <see cref="BusinessErrorMessage.PayoutBatchNotProcessing"/>;
+    /// the already-Completed Silent-Success echo is the handler's job, so the
+    /// guard never observes it as a success.
+    /// </para>
+    ///
+    /// <para>
+    /// Throws <see cref="ArgumentException"/> for impossible inputs (blank
+    /// <paramref name="bankReference"/>/<paramref name="completedBy"/> or an
+    /// over-length reference) — the Validator + the fail-closed session check
+    /// catch these as a clean 400 / 401 upstream.
+    /// </para>
+    /// </summary>
+    public BusinessResult Complete(
+        IClock clock, string bankReference, DateOnly? paymentDate, string completedBy)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (string.IsNullOrWhiteSpace(bankReference))
+            throw new ArgumentException("BankReference is required.", nameof(bankReference));
+        if (string.IsNullOrWhiteSpace(completedBy))
+            throw new ArgumentException("CompletedBy is required.", nameof(completedBy));
+
+        var trimmedReference = bankReference.Trim();
+        if (trimmedReference.Length > MaxBankReferenceLength)
+            throw new ArgumentException(
+                $"BankReference must be at most {MaxBankReferenceLength} chars.", nameof(bankReference));
+
+        if (State != PayoutBatchState.Processing)
+            return BusinessResult.Failure(
+                Error.Conflict("state", BusinessErrorMessage.PayoutBatchNotProcessing));
+
+        State = PayoutBatchState.Completed;
+        BankReference = trimmedReference;
+        CompletedBy = completedBy;
+        CompletedAt = paymentDate is not null
+            ? paymentDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            : clock.UtcNow;
         return BusinessResult.Success();
     }
 }

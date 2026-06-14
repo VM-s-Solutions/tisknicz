@@ -44,6 +44,32 @@ public sealed class PayoutBatchesController(
     public async Task<IActionResult> Create(CancellationToken ct) =>
         HandleResult(await Mediator.Send(new CreatePayoutBatch.Command(), ct));
 
+    /// <summary>Request body for <see cref="Complete"/>. The batch id rides the route.</summary>
+    public sealed record MarkPayoutBatchCompletedRequest(string BankReference, DateOnly? PaymentDate);
+
+    /// <summary>
+    /// Settle a Processing batch: record the executed bank wire
+    /// (<c>BankReference</c> + optional <c>PaymentDate</c>), move the batch to
+    /// Completed, drive every claimed order to Completed, and enqueue one
+    /// payout-sent email per maker — all in ONE UoW (T-0103, US-admin-0007
+    /// AC-2). 200 on both the live-transition and the Silent-Success
+    /// (<c>AlreadyCompleted = true</c>) re-call paths. 404
+    /// <c>payoutBatch.notFound</c> for an unknown id; 409
+    /// <c>payoutBatch.notProcessing</c> for a non-Processing/-Completed batch.
+    /// A customer/maker JWT cannot replay here (admin audience).
+    /// </summary>
+    [HttpPost("{id}/complete")]
+    [ProducesResponseType(typeof(MarkPayoutBatchCompleted.MarkPayoutBatchCompletedResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Complete(
+        string id, [FromBody] MarkPayoutBatchCompletedRequest body, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(
+            new MarkPayoutBatchCompleted.Command(id, body.BankReference, body.PaymentDate), ct));
+
     /// <summary>
     /// Stream the batch's bank-transfer CSV (T-0102b §C.12). Controller-direct
     /// per the T-0088 precedent — byte streams don't fit the

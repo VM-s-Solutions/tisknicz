@@ -270,6 +270,23 @@ public interface IOrderRepository
         string payoutBatchId,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// <b>Tracked</b> sibling of <see cref="GetByPayoutBatchIdUnscopedAsync"/>
+    /// for the T-0103 settlement loop: every order claimed by
+    /// <paramref name="payoutBatchId"/>, change-tracked so the handler can
+    /// drive each <see cref="Order.Complete"/> (Delivered → Completed) inside
+    /// the one settlement UoW. The read-only sibling stays
+    /// <c>AsNoTracking</c> for T-0102b's artifact reads; this one intentionally
+    /// tracks because it mutates. <b>Unscoped — admin host only</b> per
+    /// ADR 0013. No <c>IgnoreQueryFilters</c>: soft-deleted orders stay
+    /// invisible to the settlement. The Maker is NOT eager-loaded (Order has
+    /// no Maker EF navigation) — the handler resolves makers per group via
+    /// <see cref="Makers.IMakerRepository"/> for the per-maker email.
+    /// </summary>
+    Task<IReadOnlyList<Order>> GetByPayoutBatchIdForCompletionUnscopedAsync(
+        string payoutBatchId,
+        CancellationToken cancellationToken);
+
     /// <summary>Track <paramref name="order"/> as a pending insert.</summary>
     Task AddAsync(Order order, CancellationToken cancellationToken);
 

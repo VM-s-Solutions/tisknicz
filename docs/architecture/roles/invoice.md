@@ -94,6 +94,12 @@ Be the legal record of a payment between two parties (platform↔customer for an
 - Headers: `Content-Disposition: attachment; filename="faktura-{InvoiceNumber}.pdf"`, `Content-Type: application/pdf`, `Cache-Control: private, no-store` + ETag/304 conditional GET (T-0064 PII policy — invoices carry recipient name/address/tax ids; NOT the T-0075 label `public, immutable` family). No range processing.
 - 404 semantics: cross-tenant / unknown order → `order.notFound` (IDOR-oracle-free, same shape as nonexistent); owned order with no Invoice row, null `PdfBlobPath`, or blob-purged race → `invoice.notYetRendered` (transient-shaped; FE retry per the existing i18n copy). No re-render fallback inside the web request — rendering stays owned by the queue pipeline.
 
+**T-0112a shipped (maker Fee-invoice download — read surface):**
+
+- Read surface: `IInvoiceRepository.GetForMakerReadOnlyAsync(invoiceId, makerId, ct)` — read-only (`AsNoTracking`) mirror of `GetByIdForMakerAsync` with the same `i.Id == invoiceId && i.MakerId == makerId` IDOR predicate and the same null-for-unknown/cross-maker return shape (no oracle). Surfaces BOTH invoice families (the `InvoiceType.Fee` gate lives in the caller, so the repo stays type-agnostic). Declared on `backend/src/Makables.Core.Domain/Invoices/IInvoiceRepository.cs:110`; impl `backend/src/Makables.Infra.Database/Invoices/InvoiceRepository.cs:92`.
+- Controller: backs the maker-host controller-direct Fee-invoice download (`Makables.Web.Maker/Controllers/FilesController.cs:215`) — the caller inspects only `Invoice.Type` (rejects non-`Fee`) + `Invoice.PdfBlobPath` + `Invoice.InvoiceNumber` and never mutates. Maker resolved from session → `IMakerRepository.GetByUserIdAsync`, NEVER from a request param. Analogous to the T-0088 `GetByOrderIdReadOnlyAsync` read-only-mirror precedent.
+- `ForMaker` queryable now surfaces Fee invoices: the `:57 TODO (T-0101)` on `IInvoiceRepository.ForMaker` — "extend to also surface `InvoiceType.Fee` invoices targeting the maker via the PayoutBatch → MakerId join" — is **closed**. With `payout_batches` landed and the denormalised `Invoice.MakerId` populated for Fee invoices at issue time, the maker queryable + read-only single-load both cover Customer and Fee families. (The maker Fee-list projection itself rides T-0112/T-0116.)
+
 **Out of scope at T-0069 (deferred):**
 
 - Customer-facing PDF download endpoint (T-0086 per T-0068b locked decision 9 — strict OOS). *Backend endpoints shipped by T-0088 (see above); the FE CTA lands in T-0086b/T-0087b.*
