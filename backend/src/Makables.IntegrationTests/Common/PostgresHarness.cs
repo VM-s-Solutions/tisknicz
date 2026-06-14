@@ -134,8 +134,11 @@ public sealed class PostgresHarness : IAsyncLifetime
         // orders/invoices FK is ON DELETE RESTRICT (a plain DELETE on orders
         // would fail), but TRUNCATE ... CASCADE bypasses FK constraints, so
         // truncating both tables together clears the claim links cleanly.
+        // T-0100: extended to truncate reviews (the CASCADE off orders +
+        // makers would catch it via the new FKs, but explicit is cheaper to
+        // reason about — T-0079/T-0106 precedent).
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, invoices, payout_batches, order_messages, disputes, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, invoices, payout_batches, order_messages, disputes, reviews, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }
