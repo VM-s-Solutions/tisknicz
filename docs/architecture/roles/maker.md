@@ -30,6 +30,7 @@ Represent a registered Czech business that produces goods for sale on the platfo
 - Categories offered
 - Denormalized stats: rating average + count, total orders, total revenue (haléře)
 - `IsVerified` (admin badge), `IsActive` (`Auditable`)
+- `IsRetainedForLegal` (T-0110) — `boolean NOT NULL DEFAULT false`; `true` once this maker row has been anonymized-but-legally-retained by a GDPR erasure
 
 ## Does NOT know
 
@@ -45,8 +46,15 @@ Represent a registered Czech business that produces goods for sale on the platfo
   - `UpdateMakerProfile.Command` — maker action (bio, pickup, bank account, categories)
   - `VerifyMaker.Command` — admin action (audited)
   - `DeactivateMaker.Command` — admin action (audited)
+  - `AnonymizeForErasure()` — invoked ONLY by the `IUserDataDeletionService` seam during a GDPR erasure of the owning user (T-0110); see below
 - **Persisted by:** `IMakerRepository`
-- **Destroyed by:** never (soft delete only via `Deactivated()`)
+- **Destroyed by:** never (soft delete only via `Deactivated()`; under GDPR erasure the row is ANONYMIZED-AND-RETAINED, never hard-deleted — tax records reference it)
+
+## GDPR erasure — `AnonymizeForErasure` + `IsRetainedForLegal` (T-0110)
+
+When the owning user is erased (`DeleteUserPermanently` → `IUserDataDeletionService`, patterns §A.23), the maker is **anonymized in place, not hard-deleted** — its `IČO` + `BankAccount` are referenced by retained tax records (invoices, payout batches), so deleting the row would orphan those and violate the legal-retention duty (GDPR Art. 17(3)(b)).
+
+`Maker.AnonymizeForErasure()` is a pure, idempotent transform: it scrubs the free-text PII (`CompanyName`, `LegalForm`, `Bio`, `PickupNote` → the `"Anonymized"` sentinel; `VatId` → null), **RETAINS** `RegistrationNumber` (IČO) + `BankAccount`, and sets `IsRetainedForLegal = true` so the row is a lawful tombstone. Order-completion / rating fields are NOT touched. A second call leaves IČO/bank intact and the flag true (idempotent). `IsRetainedForLegal` lets active-maker / customer-facing surfaces exclude erased tombstones.
 
 ## Invariants
 
@@ -66,5 +74,7 @@ Represent a registered Czech business that produces goods for sale on the platfo
 ## Related
 
 - ADRs: 0004, 0010, 0012, 0013, 0014, 0018, 0023
+- Patterns: §A.23 (GDPR erasure seam — `AnonymizeForErasure` is invoked here)
+- Extension points: §14 (erasure matrix — Maker = ANONYMIZE + flag)
 - Stories: maker registration, maker profile update, admin verify, respond to a review
 - Roles: `user`, `company-registry`, `address`, `product`, `payout-batch`, `review`

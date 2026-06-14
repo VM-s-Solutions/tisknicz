@@ -1097,6 +1097,12 @@ When a single privileged command must erase a subject's personal data **across m
 4. **Sentinel strategy is replace-in-place.** Anonymized free-text PII columns are overwritten with a fixed sentinel (`"Anonymized"`); no separate tombstone/archive row. The column stays NOT NULL; downstream reads see the sentinel.
 5. **Irreversible — no Silent-Success re-call.** Unlike §A.20/§A.22-open idempotency, the erasure is one-shot: after the first run the subject's anchor row (the `User`) is gone, so a second call returns `*.notFound`, not a benign re-success. The seam is not retry-safe by design; the in-flight guard runs first so the command fails *before* any irreversible mutation.
 
+> **Erasure-compatible denormalized author id — no enforced User FK.** An entity that must outlive the user who created it (retained for legal/commercial reasons) stores the author's user id as a **plain denormalized column with NO enforced foreign key to `users`**. The erasure seam can then HARD-DELETE the `User` row (rule 3 above) while the retained entity stays in place — an enforced FK would turn that delete into a Postgres `23503` (`RESTRICT`) violation, and a `CASCADE` would wrongly delete the retained record. This is a **two-entity pattern** in the codebase:
+> - **`Order.CustomerUserId`** — the order is a retained commercial record; only its contact-snapshot PII is anonymized. The denormalized id has no User FK (`OrderConfiguration`); `ix_orders_customer_created` still backs the customer-order-list read.
+> - **`Review.CustomerUserId`** — the review CONTENT is retained (it's about the maker); erasure scrubs the audit-trail author id to the `"Anonymized"` sentinel (not a real user id) AND the user row is hard-deleted. No User FK (`ReviewConfiguration.cs:92`); `ix_reviews_customer_user` still backs the customer reads.
+>
+> In both cases the column keeps a real index for the read paths, but the relationship to `users` is unenforced precisely so the subject can be hard-deleted under GDPR erasure without a `23503`. Adding an enforced FK to either column is a regression — the reviewer rejects it.
+
 First use: `IUserDataDeletionService` invoked by `DeleteUserPermanently` (admin-ops bundle, T-0110, locks 2026-06-14). See [extension-points.md §14](./extension-points.md#14-user-data-deletion-gdpr-erasure) for the seam contract and the full erasure matrix. Supersedes the under-specified service named in [ADR 0013 §Hard delete (GDPR)](../adr/0013-data-scoping-and-soft-delete.md).
 
 ---
