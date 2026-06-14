@@ -158,24 +158,28 @@ function hasUrl(value: string | undefined): value is string {
   return typeof value === 'string' && value !== '';
 }
 
+type ReviewState =
+  | { readonly kind: 'submitted'; readonly review: SubmittedReviewDto }
+  | { readonly kind: 'canReview' }
+  | { readonly kind: 'none' };
+
 /**
  * Resolve the review surface for this order from the T-0100 dashboard
  * endpoints (T-0115 §C fallback path — the contract exposes reviews via
- * `IReviewQueries`-backed reads, not a detail-DTO fold). Two SSR sibling
- * fetches under the same audience cookie (ADR 0024): the customer's
- * submitted reviews and their reviewable orders. The branch matches this
- * order's id against both. A fetch failure degrades to "no review block"
- * (loudly recoverable on the next `router.refresh()`, no mock). Eligibility
- * stays backend-authoritative — the page only reads the signals.
+ * `IReviewQueries`-backed reads, not a detail-DTO fold). Both SSR sibling
+ * reads (submitted reviews + reviewable orders) are fetched in parallel by
+ * the caller and passed in already-resolved; this stays a pure branch over
+ * the two `Result`s. A fetch failure degrades to "no review block" (loudly
+ * recoverable on the next `router.refresh()`, no mock). Eligibility stays
+ * backend-authoritative — the page only reads the signals. The submitted
+ * signal wins (a submitted review takes precedence over a stale reviewable
+ * row).
  */
-async function resolveReviewState(
+function resolveReviewState(
   orderId: string,
-): Promise<
-  { readonly kind: 'submitted'; readonly review: SubmittedReviewDto }
-  | { readonly kind: 'canReview' }
-  | { readonly kind: 'none' }
-> {
-  const submittedResult = await getSubmittedReviews();
+  submittedResult: Awaited<ReturnType<typeof getSubmittedReviews>>,
+  reviewableResult: Awaited<ReturnType<typeof getReviewableOrders>>,
+): ReviewState {
   if (submittedResult.success) {
     const mine = submittedResult.value.find((r) => r.orderId === orderId);
     if (mine) {
@@ -183,7 +187,6 @@ async function resolveReviewState(
     }
   }
 
-  const reviewableResult = await getReviewableOrders();
   if (reviewableResult.success && reviewableResult.value.some((o) => o.orderId === orderId)) {
     return { kind: 'canReview' };
   }
@@ -192,12 +195,20 @@ async function resolveReviewState(
 }
 
 async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail }) {
-  const messagesResult = await getOrderMessages(detail.orderId, 1);
+  // The three reads are mutually independent (messages, submitted reviews,
+  // reviewable orders); run them in parallel so the SSR round-trips overlap
+  // (Gate 8 — no serial waterfall) while keeping per-read degrade semantics.
+  const [messagesResult, submittedResult, reviewableResult] = await Promise.all([
+    getOrderMessages(detail.orderId, 1),
+    getSubmittedReviews(),
+    getReviewableOrders(),
+  ]);
+
   const initialThreadPage: OrderMessagesPage = messagesResult.success
     ? toThreadMessagesPage(messagesResult.value)
     : { items: [], page: 1, totalCount: 0, hasNextPage: false };
 
-  const reviewState = await resolveReviewState(detail.orderId);
+  const reviewState = resolveReviewState(detail.orderId, submittedResult, reviewableResult);
 
   const shippingMethodLabel =
     detail.shippingMethod === ShippingMethod.PersonalPickup

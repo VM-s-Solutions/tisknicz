@@ -75,6 +75,15 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             ["ux_payout_batches_country_batch_number"] =
                 Error.Conflict("batchNumber", BusinessErrorMessage.PayoutBatchWeekAlreadyProcessed),
 
+            // SubmitReview pre-checks ExistsForOrderAsync; the concurrent
+            // double-submit loser of the one-review-per-order race committed
+            // second and violates the partial-unique index. Surface it as the
+            // SAME typed Conflict the pre-check would have returned (AC-4),
+            // rather than a raw 500. reviews-loop-bundle BLOCKER-1 (the exact
+            // payout-core BLOCKER-1 precedent).
+            ["ux_reviews_order_active"] =
+                Error.Conflict("orderId", BusinessErrorMessage.ReviewAlreadyExists),
+
             // Intentionally unmapped (T-0033 Copilot review):
             //   ix_makers_user_id — one Maker row per User. The handler
             //   adds exactly one Maker per RegisterMaker call, so a 23505

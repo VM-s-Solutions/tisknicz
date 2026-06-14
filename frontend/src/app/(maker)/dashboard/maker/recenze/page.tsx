@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
 import { Icon } from '@/components/ui/icon';
 import { StarRating } from '@/components/ui/star-rating';
+import { RATING_BP_PER_STAR } from '@/lib/api-client-helpers/catalog';
 import { getMakerReviews, type MakerReviewsPage } from '@/lib/api-client-helpers/reviews-client';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
@@ -111,9 +112,9 @@ function ReviewsResults({ data }: { readonly data: MakerReviewsPage }) {
 
 /**
  * Live aggregate header — reads the maker's authoritative fields off the
- * envelope (Q5). `ratingAverageBp / 10000` is the same bp→0–5 presentation
- * conversion the existing `Stars` precedent does; NO division over the
- * listed page items (AC-6).
+ * envelope (Q5). `ratingAverageBp / RATING_BP_PER_STAR` is the same bp→0–5
+ * presentation conversion the existing `Stars` precedent does; NO division
+ * over the listed page items (AC-6).
  */
 function AggregateHeader({
   ratingAverageBp,
@@ -127,7 +128,7 @@ function AggregateHeader({
       <p className="text-sm text-zinc-500">{t('dashboard.maker.reviews.aggregate.none')}</p>
     );
   }
-  const average = ratingAverageBp / 10_000;
+  const average = ratingAverageBp / RATING_BP_PER_STAR;
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-800 bg-surface-card px-5 py-4">
       <StarRating value={average} size="md" />

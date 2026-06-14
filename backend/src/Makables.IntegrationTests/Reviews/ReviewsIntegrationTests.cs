@@ -185,8 +185,18 @@ public sealed class ReviewsIntegrationTests : IAsyncLifetime
     /// <paramref name="makerId"/>. <see cref="Auditable.MarkCreated"/> is
     /// stamped so the audit interceptor sees a complete row at seed time.
     /// </summary>
-    private async Task SeedDeliveredOrderAsync(
-        string orderId, string orderNumber, string customerUserId, string makerId)
+    private Task SeedDeliveredOrderAsync(
+        string orderId, string orderNumber, string customerUserId, string makerId) =>
+        SeedOrderAsync(orderId, orderNumber, customerUserId, makerId, delivered: true);
+
+    /// <summary>
+    /// Seed an order owned by <paramref name="customerUserId"/> +
+    /// <paramref name="makerId"/>, advanced to Delivered (<paramref name="delivered"/>
+    /// = <c>true</c>) or stopped at Shipped (<c>false</c>). The Shipped variant
+    /// pins the pre-delivery eligibility gate e2e (secops Gate 3 LOW).
+    /// </summary>
+    private async Task SeedOrderAsync(
+        string orderId, string orderNumber, string customerUserId, string makerId, bool delivered)
     {
         await using var db = _harness.CreateDbContext();
         const string seedActor = "test-seed";
@@ -205,7 +215,10 @@ public sealed class ReviewsIntegrationTests : IAsyncLifetime
         order.MarkAsPaid(clock, $"tx-{orderId}");
         order.Accept(clock);
         order.Ship(clock, $"PKT-{orderId}", 7);
-        order.MarkAsDelivered(clock, OrderDeliverySource.Carrier);
+        if (delivered)
+        {
+            order.MarkAsDelivered(clock, OrderDeliverySource.Carrier);
+        }
         order.MarkCreated(seedActor, SeedAt);
         db.Set<Order>().Add(order);
 
@@ -306,6 +319,95 @@ public sealed class ReviewsIntegrationTests : IAsyncLifetime
         await using var db = _harness.CreateDbContext();
         var count = await db.Set<Review>().AsNoTracking().CountAsync(r => r.OrderId == "ord-1");
         count.Should().Be(1, "the partial unique index keeps exactly one active review");
+    }
+
+    // === Concurrent double-submit: 23505 → ReviewAlreadyExists, not 500 (AC-4) ===
+
+    /// <summary>
+    /// Proves the <c>ux_reviews_order_active</c> translator entry +
+    /// partial-unique-index backstop. An active review row is inserted
+    /// directly (committed in its own context) so the in-flight
+    /// <c>SubmitReview.ExistsForOrderAsync</c> app-gate is bypassed and the
+    /// duplicate insert reaches Postgres — the exact post-app-gate race a
+    /// concurrent double-submit produces. The loser must surface
+    /// <see cref="BusinessErrorMessage.ReviewAlreadyExists"/> (translated
+    /// 23505), NOT a raw 500, with exactly one review persisted and the
+    /// maker rating reflecting that single review. reviews-loop-bundle
+    /// BLOCKER-1.
+    /// </summary>
+    [Fact]
+    public async Task Concurrent_double_submit_loser_returns_alreadyExists_not_500()
+    {
+        await SeedGraphAsync();
+        await SeedDeliveredOrderAsync("ord-1", "M-CZ-20260042", CustomerAUserId, MakerId);
+        _session.UserId = CustomerAUserId;
+
+        // Race winner: an active review row already exists for ord-1, committed
+        // in its own context. The losing dispatch's app-gate read does not see
+        // it within its own transaction snapshot semantics — but even if it did
+        // here, the point under test is the post-gate index backstop, so we drive
+        // SubmitReview against the existing row to force the 23505 path.
+        await using (var seed = _harness.CreateDbContext())
+        {
+            var winner = Review.Create(
+                id: "rev-winner", orderId: "ord-1", makerId: MakerId,
+                customerUserId: CustomerAUserId, rating: 5, body: "První.",
+                countryCode: CountryCode);
+            winner.MarkCreated("test-seed", SeedAt.AddHours(2));
+            seed.Set<Review>().Add(winner);
+            // Recompute the maker rating for the winner so the persisted
+            // aggregate reflects exactly one review (the loser must not change it).
+            var maker = await seed.Set<MakerEntity>().FirstAsync(m => m.Id == MakerId);
+            maker.RecomputeRating(1, 50_000);
+            await seed.SaveChangesAsync();
+        }
+
+        // Loser: SubmitReview for the same order. The duplicate insert hits the
+        // partial unique index; UnitOfWorkPipelineBehavior translates the 23505.
+        var loser = await SendAsync(new SubmitReview.Command("ord-1", 1, "Druhá."));
+
+        loser.IsSuccess.Should().BeFalse("the duplicate insert loses the unique-index race");
+        loser.Error!.Code.Should().Be(
+            BusinessErrorMessage.ReviewAlreadyExists,
+            "the 23505 is translated to the typed conflict, NOT a raw 500");
+        loser.Error.Type.Should().Be(ErrorType.Conflict);
+
+        await using var db = _harness.CreateDbContext();
+        var count = await db.Set<Review>().AsNoTracking().CountAsync(r => r.OrderId == "ord-1");
+        count.Should().Be(1, "the partial unique index keeps exactly one active review");
+
+        var persisted = await db.Set<MakerEntity>().AsNoTracking().FirstAsync(m => m.Id == MakerId);
+        persisted.RatingCount.Should().Be(1, "only the winner's review counts");
+        persisted.RatingAverageBp.Should().Be(50_000, "the loser's rollback leaves the winner aggregate");
+    }
+
+    // === Pre-delivery eligibility e2e (secops Gate 3 LOW) ===
+
+    /// <summary>
+    /// A Shipped (non-Delivered) order owned by the customer must be rejected
+    /// by the eligibility gate with
+    /// <see cref="BusinessErrorMessage.ReviewOrderNotDelivered"/> and no review
+    /// row written. The unit test pins the predicate; this pins the full
+    /// Postgres path.
+    /// </summary>
+    [Fact]
+    public async Task Pre_delivery_shipped_order_returns_orderNotDelivered_without_writes()
+    {
+        await SeedGraphAsync();
+        await SeedOrderAsync("ord-ship", "M-CZ-20260055", CustomerAUserId, MakerId, delivered: false);
+        _session.UserId = CustomerAUserId;
+
+        var result = await SendAsync(new SubmitReview.Command("ord-ship", 5, "Předčasně."));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.ReviewOrderNotDelivered);
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+
+        await using var db = _harness.CreateDbContext();
+        (await db.Set<Review>().AsNoTracking().AnyAsync()).Should().BeFalse(
+            "no review is seated for a pre-delivery order");
+        var maker = await db.Set<MakerEntity>().AsNoTracking().FirstAsync(m => m.Id == MakerId);
+        maker.RatingCount.Should().Be(0, "the maker rating is untouched");
     }
 
     // === Customer cross-tenant IDOR (AC-7) ===
