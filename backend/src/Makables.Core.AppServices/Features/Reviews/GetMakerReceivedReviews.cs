@@ -22,7 +22,17 @@ public static class GetMakerReceivedReviews
     public sealed record Query(int Page, int PageSize)
         : IQuery<GetMakerReceivedReviewsResponse>;
 
-    public sealed record GetMakerReceivedReviewsResponse(PagedData<MakerReceivedReviewDto> Reviews);
+    /// <summary>
+    /// The paged list PLUS the maker's live aggregate
+    /// (<see cref="Makers.Maker.RatingAverageBp"/> /
+    /// <see cref="Makers.Maker.RatingCount"/>) so the T-0117 dashboard
+    /// header reads the authoritative recompute-over-all-active-rows value
+    /// (Q5) rather than averaging the paged window (§A.3).
+    /// </summary>
+    public sealed record GetMakerReceivedReviewsResponse(
+        PagedData<MakerReceivedReviewDto> Reviews,
+        int RatingAverageBp,
+        int RatingCount);
 
     public sealed class Validator : AbstractValidator<Query>
     {
@@ -60,13 +70,14 @@ public static class GetMakerReceivedReviews
             {
                 // Maker-audience JWT without a maker row → empty page (no leak).
                 return BusinessResult.Success(new GetMakerReceivedReviewsResponse(
-                    PagedData<MakerReceivedReviewDto>.Empty(query.Page, query.PageSize)));
+                    PagedData<MakerReceivedReviewDto>.Empty(query.Page, query.PageSize), 0, 0));
             }
 
             var page = await reviews.GetMakerReceivedReviewsPagedAsync(
                 maker.Id, query.Page, query.PageSize, cancellationToken);
 
-            return BusinessResult.Success(new GetMakerReceivedReviewsResponse(page));
+            return BusinessResult.Success(new GetMakerReceivedReviewsResponse(
+                page, maker.RatingAverageBp, maker.RatingCount));
         }
     }
 }
