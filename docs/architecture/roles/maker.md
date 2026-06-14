@@ -59,8 +59,12 @@ Represent a registered Czech business that produces goods for sale on the platfo
 
 `backend/src/Makables.Core.Domain/Makers/Maker.cs`.
 
+## Rating recompute producer (T-0100)
+
+`RatingAverageBp` / `RatingCount` were shipped dormant by T-0043 (the catalog sort + profile DTO already read them). T-0100 wires the producer: `Maker.RecomputeRating(ratingCount, ratingAverageBp)` is a thin forward to the existing `SetCatalogStats` that keeps `TotalOrders` untouched. The `SubmitReview` handler computes `AVG(rating)` over the maker's **active** reviews (recompute-from-rows, self-healing under soft-delete — a running average would drift after any deactivation), converts to basis points (`round(avgStars * 10000)`, clamped `[0, 50000]`), and applies it against a **row-locked** Maker (`GetByIdForUpdateAsync`, `SELECT ... FOR UPDATE`) so concurrent submits to the same maker serialize. The insert + recompute commit in one UoW (ADR 0014).
+
 ## Related
 
-- ADRs: 0004, 0010, 0012, 0014, 0018
-- Stories: maker registration, maker profile update, admin verify
-- Roles: `user`, `company-registry`, `address`, `product`, `payout-batch`
+- ADRs: 0004, 0010, 0012, 0013, 0014, 0018, 0023
+- Stories: maker registration, maker profile update, admin verify, respond to a review
+- Roles: `user`, `company-registry`, `address`, `product`, `payout-batch`, `review`

@@ -60,4 +60,15 @@ public interface IMakerRepository
     /// unique. Active-only via the global soft-delete query filter.
     /// </summary>
     Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load the Maker by id with a <c>SELECT ... FOR UPDATE</c> row lock
+    /// held for the surrounding transaction (T-0100 §A.5). Serializes
+    /// concurrent rating recomputes to the same maker so two parallel
+    /// review submits don't last-writer-wins each other's stat write.
+    /// Tracked — the <c>SubmitReview</c> handler mutates via
+    /// <see cref="Maker.RecomputeRating"/> and the UoW pipeline commits.
+    /// Returns <c>null</c> for unknown / soft-deleted ids.
+    /// </summary>
+    Task<Maker?> GetByIdForUpdateAsync(string id, CancellationToken cancellationToken);
 }

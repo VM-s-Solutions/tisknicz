@@ -472,6 +472,17 @@ export const messages = {
     'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
   'order.dispute.notOpen':
     'K této objednávce není otevřená žádná reklamace.',
+
+  // T-0100 review error codes (parity with BusinessErrorMessage —
+  // resolveErrorMessage maps the dotted code 1:1). Vykání on the customer
+  // surfaces. PM/UX to refine on PR review.
+  'review.alreadyExists': 'K této objednávce už recenze existuje.',
+  'review.orderNotDelivered': 'Recenzi lze přidat až po doručení objednávky.',
+  'review.ratingOutOfRange': 'Hodnocení musí být 1 až 5 hvězdiček.',
+  'review.bodyTooLong': 'Text recenze může mít nejvýše 1000 znaků.',
+  'review.replyEmpty': 'Odpověď nesmí být prázdná.',
+  'review.replyTooLong': 'Odpověď může mít nejvýše 500 znaků.',
+  'review.notFound': 'Recenze nebyla nalezena.',
   // Admin / ops surface only — the outbox row parks until the
   // ADMIN_NOTIFICATION_EMAIL config lands.
   'email.adminRecipientNotConfigured':
@@ -709,6 +720,21 @@ export const messages = {
   'customer.orders.markDeliveredButton': 'Označit jako doručeno',
   'customer.orderDetail.markDelivered.inFlight': 'Potvrzuji…',
 
+  // T-0115 customer review-submission surface (vykání). The form + the
+  // read-only submitted-review block on /objednavka/[id]. PM/UX to refine.
+  'customer.review.heading': 'Vaše hodnocení',
+  'customer.review.prompt': 'Jak jste byli s objednávkou spokojeni? Ohodnoťte výrobce.',
+  'customer.review.starLabel': '{rating} z 5 hvězdiček',
+  'customer.review.ratingGroupLabel': 'Hodnocení hvězdičkami',
+  'customer.review.comment.label': 'Komentář (nepovinný)',
+  'customer.review.comment.placeholder': 'Napište pár slov o své zkušenosti…',
+  'customer.review.comment.counter': '{count}/1000',
+  'customer.review.submit': 'Odeslat hodnocení',
+  'customer.review.submitting': 'Odesílám…',
+  'customer.review.submittedHeading': 'Vaše hodnocení',
+  'customer.review.submittedOn': 'Hodnoceno {date}',
+  'customer.review.makerReplyHeading': 'Odpověď výrobce',
+
   // Shared order-message thread (T-0086b creates, T-0087b reuses on the
   // maker detail). Audience-neutral phrasing; {count} keys follow the
   // plural-neutral "Label: N" convention.
@@ -838,6 +864,37 @@ export const messages = {
   'dashboard.maker.payouts.pagination.previous': 'Předchozí',
   'dashboard.maker.payouts.pagination.next': 'Další',
   'dashboard.maker.payouts.pagination.page_of': 'Stránka {page} z {total}',
+
+  // T-0117 maker review-reply dashboard (tykání — maker surface; a tone
+  // flip is catalog-only per the open question). PM/UX to refine.
+  'dashboard.maker.nav.reviews': 'Recenze',
+  'dashboard.maker.reviews.metadata.title': 'Recenze — Makables',
+  'dashboard.maker.reviews.metadata.description': 'Recenze zákazníků k tvým objednávkám na Makables.',
+  'dashboard.maker.reviews.title': 'Recenze',
+  'dashboard.maker.reviews.subtitle': 'Přečti si, co zákazníci napsali, a odpověz jim veřejně.',
+  'dashboard.maker.reviews.aggregate.label': 'Průměrné hodnocení',
+  'dashboard.maker.reviews.aggregate.count': 'Počet recenzí: {count}',
+  'dashboard.maker.reviews.aggregate.none': 'Zatím bez hodnocení',
+  'dashboard.maker.reviews.card.order': 'Objednávka {orderNumber}',
+  'dashboard.maker.reviews.card.noComment': 'Bez komentáře',
+  'dashboard.maker.reviews.reply.heading': 'Tvoje odpověď',
+  'dashboard.maker.reviews.reply.answeredOn': 'Odpovězeno {date}',
+  'dashboard.maker.reviews.reply.edit': 'Upravit odpověď',
+  'dashboard.maker.reviews.reply.label': 'Veřejná odpověď',
+  'dashboard.maker.reviews.reply.placeholder': 'Poděkuj zákazníkovi nebo reaguj na jeho zpětnou vazbu…',
+  'dashboard.maker.reviews.reply.hint': 'Maximálně 500 znaků',
+  'dashboard.maker.reviews.reply.submit': 'Odeslat odpověď',
+  'dashboard.maker.reviews.reply.submitting': 'Odesílám…',
+  'dashboard.maker.reviews.reply.cancel': 'Zrušit',
+  'dashboard.maker.reviews.empty.title': 'Zatím nemáš žádné recenze',
+  'dashboard.maker.reviews.empty.description':
+    'Jakmile zákazníci ohodnotí své doručené objednávky, jejich recenze se zobrazí tady.',
+  'dashboard.maker.reviews.error.title': 'Recenze se nepodařilo načíst',
+  'dashboard.maker.reviews.error.body': 'Zkus to prosím za chvíli znovu.',
+  'dashboard.maker.reviews.error.retry': 'Zkusit znovu',
+  'dashboard.maker.reviews.pagination.previous': 'Předchozí',
+  'dashboard.maker.reviews.pagination.next': 'Další',
+  'dashboard.maker.reviews.pagination.page_of': 'Stránka {page} z {total}',
   'dashboard.maker.payoutDetail.metadata.title': 'Detail výplaty — Makables',
   'dashboard.maker.payoutDetail.metadata.description': 'Rozpis výplatní dávky na Makables.',
   'dashboard.maker.payoutDetail.backToList': 'Zpět na výplaty',

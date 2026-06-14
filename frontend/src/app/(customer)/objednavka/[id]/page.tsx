@@ -14,6 +14,11 @@ import {
   OrderState,
   ShippingMethod,
 } from '@/lib/api-client-helpers/orders-client';
+import {
+  getReviewableOrders,
+  getSubmittedReviews,
+  type SubmittedReview as SubmittedReviewDto,
+} from '@/lib/api-client-helpers/reviews-client';
 import { formatFileSize } from '@/lib/format/file-size';
 import { t } from '@/lib/i18n';
 import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-labels';
@@ -23,6 +28,8 @@ import { FileDownloadButton, MarkDeliveredButton } from './order-actions-client'
 import { OrderBreakdown, OrderPriceCards } from './order-breakdown';
 import { OrderThreadClient } from './order-thread-client';
 import { PayButtonClient } from './pay-button-client';
+import { ReviewFormClient } from './review-form-client';
+import { SubmittedReview } from './submitted-review';
 import { toThreadMessagesPage } from './thread-mapping';
 import { OrderTimeline } from './timeline';
 
@@ -151,11 +158,57 @@ function hasUrl(value: string | undefined): value is string {
   return typeof value === 'string' && value !== '';
 }
 
+type ReviewState =
+  | { readonly kind: 'submitted'; readonly review: SubmittedReviewDto }
+  | { readonly kind: 'canReview' }
+  | { readonly kind: 'none' };
+
+/**
+ * Resolve the review surface for this order from the T-0100 dashboard
+ * endpoints (T-0115 §C fallback path — the contract exposes reviews via
+ * `IReviewQueries`-backed reads, not a detail-DTO fold). Both SSR sibling
+ * reads (submitted reviews + reviewable orders) are fetched in parallel by
+ * the caller and passed in already-resolved; this stays a pure branch over
+ * the two `Result`s. A fetch failure degrades to "no review block" (loudly
+ * recoverable on the next `router.refresh()`, no mock). Eligibility stays
+ * backend-authoritative — the page only reads the signals. The submitted
+ * signal wins (a submitted review takes precedence over a stale reviewable
+ * row).
+ */
+function resolveReviewState(
+  orderId: string,
+  submittedResult: Awaited<ReturnType<typeof getSubmittedReviews>>,
+  reviewableResult: Awaited<ReturnType<typeof getReviewableOrders>>,
+): ReviewState {
+  if (submittedResult.success) {
+    const mine = submittedResult.value.find((r) => r.orderId === orderId);
+    if (mine) {
+      return { kind: 'submitted', review: mine };
+    }
+  }
+
+  if (reviewableResult.success && reviewableResult.value.some((o) => o.orderId === orderId)) {
+    return { kind: 'canReview' };
+  }
+
+  return { kind: 'none' };
+}
+
 async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail }) {
-  const messagesResult = await getOrderMessages(detail.orderId, 1);
+  // The three reads are mutually independent (messages, submitted reviews,
+  // reviewable orders); run them in parallel so the SSR round-trips overlap
+  // (Gate 8 — no serial waterfall) while keeping per-read degrade semantics.
+  const [messagesResult, submittedResult, reviewableResult] = await Promise.all([
+    getOrderMessages(detail.orderId, 1),
+    getSubmittedReviews(),
+    getReviewableOrders(),
+  ]);
+
   const initialThreadPage: OrderMessagesPage = messagesResult.success
     ? toThreadMessagesPage(messagesResult.value)
     : { items: [], page: 1, totalCount: 0, hasNextPage: false };
+
+  const reviewState = resolveReviewState(detail.orderId, submittedResult, reviewableResult);
 
   const shippingMethodLabel =
     detail.shippingMethod === ShippingMethod.PersonalPickup
@@ -260,6 +313,14 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
           canPost={detail.state !== OrderState.PendingPayment}
         />
       </Card>
+
+      {/* Terminal post-delivery action — renders last, after the thread.
+          Three states from the backend signals: form / read-only / nothing. */}
+      {reviewState.kind === 'canReview' ? (
+        <ReviewFormClient orderId={detail.orderId} />
+      ) : reviewState.kind === 'submitted' ? (
+        <SubmittedReview review={reviewState.review} />
+      ) : null}
     </section>
   );
 }

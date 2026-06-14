@@ -2280,6 +2280,104 @@ namespace Makables.Infra.Database.Migrations
                     b.ToTable("company_registry_cache", (string)null);
                 });
 
+            modelBuilder.Entity("Makables.Core.Domain.Reviews.Review", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country_code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("CustomerUserId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("customer_user_id");
+
+                    b.Property<DateTimeOffset?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<string>("DeactivatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("deactivated_by");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("MakerId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("maker_id");
+
+                    b.Property<string>("MakerReply")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("maker_reply");
+
+                    b.Property<DateTimeOffset?>("MakerReplyAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("maker_reply_at");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("order_id");
+
+                    b.Property<short>("Rating")
+                        .HasColumnType("smallint")
+                        .HasColumnName("rating");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerUserId")
+                        .HasDatabaseName("ix_reviews_customer_user");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reviews_order_active")
+                        .HasFilter("is_active");
+
+                    b.HasIndex("MakerId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_reviews_maker_created");
+
+                    b.ToTable("reviews", (string)null);
+                });
+
             modelBuilder.Entity("Makables.Core.Domain.Invoices.Invoice", b =>
                 {
                     b.HasOne("Makables.Core.Domain.Orders.Order", null)
@@ -2370,6 +2468,27 @@ namespace Makables.Infra.Database.Migrations
                         });
 
                     b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("Makables.Core.Domain.Reviews.Review", b =>
+                {
+                    b.HasOne("Makables.Core.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Makables.Core.Domain.Makers.Maker", null)
+                        .WithMany()
+                        .HasForeignKey("MakerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Makables.Core.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Makables.Core.Domain.Orders.Order", b =>

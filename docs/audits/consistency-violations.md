@@ -115,6 +115,11 @@
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:85:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:93:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerReviewableOrders.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerSubmittedReviews.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetMakerReceivedReviews.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/RespondToReview.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/SubmitReview.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:55:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:1:T1  feature file must declare a public static class wrapper

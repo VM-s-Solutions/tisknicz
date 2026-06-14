@@ -81,6 +81,21 @@ export interface ICustomerApi {
     /**
      * @return OK
      */
+    review(orderId: string, body: SubmitReviewRequest): Promise<SubmitReviewResponse>;
+
+    /**
+     * @return OK
+     */
+    reviewableOrders(): Promise<GetCustomerReviewableOrdersResponse>;
+
+    /**
+     * @return OK
+     */
+    mine(): Promise<GetCustomerSubmittedReviewsResponse>;
+
+    /**
+     * @return OK
+     */
     meGET(): Promise<void>;
 
     /**
@@ -1035,6 +1050,187 @@ export class CustomerApi implements ICustomerApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    review(orderId: string, body: SubmitReviewRequest): Promise<SubmitReviewResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/review";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReview(_response);
+        });
+    }
+
+    protected processReview(response: Response): Promise<SubmitReviewResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = SubmitReviewResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SubmitReviewResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    reviewableOrders(): Promise<GetCustomerReviewableOrdersResponse> {
+        let url_ = this.baseUrl + "/api/v1/reviews/reviewable-orders";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReviewableOrders(_response);
+        });
+    }
+
+    protected processReviewableOrders(response: Response): Promise<GetCustomerReviewableOrdersResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetCustomerReviewableOrdersResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetCustomerReviewableOrdersResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    mine(): Promise<GetCustomerSubmittedReviewsResponse> {
+        let url_ = this.baseUrl + "/api/v1/reviews/mine";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMine(_response);
+        });
+    }
+
+    protected processMine(response: Response): Promise<GetCustomerSubmittedReviewsResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetCustomerSubmittedReviewsResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetCustomerSubmittedReviewsResponse>(null as any);
     }
 
     /**
@@ -2474,6 +2670,124 @@ export interface IGetCustomerOrdersResponse {
     [key: string]: any;
 }
 
+export class GetCustomerReviewableOrdersResponse implements IGetCustomerReviewableOrdersResponse {
+    orders!: ReviewableOrderDto[];
+
+    [key: string]: any;
+
+    constructor(data?: IGetCustomerReviewableOrdersResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.orders = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["orders"])) {
+                this.orders = [] as any;
+                for (let item of _data["orders"])
+                    this.orders!.push(ReviewableOrderDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): GetCustomerReviewableOrdersResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetCustomerReviewableOrdersResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.orders)) {
+            data["orders"] = [];
+            for (let item of this.orders)
+                data["orders"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IGetCustomerReviewableOrdersResponse {
+    orders: ReviewableOrderDto[];
+
+    [key: string]: any;
+}
+
+export class GetCustomerSubmittedReviewsResponse implements IGetCustomerSubmittedReviewsResponse {
+    reviews!: SubmittedReviewDto[];
+
+    [key: string]: any;
+
+    constructor(data?: IGetCustomerSubmittedReviewsResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.reviews = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["reviews"])) {
+                this.reviews = [] as any;
+                for (let item of _data["reviews"])
+                    this.reviews!.push(SubmittedReviewDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): GetCustomerSubmittedReviewsResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetCustomerSubmittedReviewsResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.reviews)) {
+            data["reviews"] = [];
+            for (let item of this.reviews)
+                data["reviews"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IGetCustomerSubmittedReviewsResponse {
+    reviews: SubmittedReviewDto[];
+
+    [key: string]: any;
+}
+
 export class LoginRequest implements ILoginRequest {
     email!: string;
     password!: string;
@@ -3313,9 +3627,257 @@ export interface IRequestPasswordResetRequest {
     [key: string]: any;
 }
 
+export class ReviewableOrderDto implements IReviewableOrderDto {
+    orderId!: string;
+    orderNumber!: string;
+    makerId!: string;
+    makerCompanyName!: string;
+    deliveredAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IReviewableOrderDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.makerId = _data["makerId"];
+            this.makerCompanyName = _data["makerCompanyName"];
+            this.deliveredAt = _data["deliveredAt"] ? new Date(_data["deliveredAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): ReviewableOrderDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReviewableOrderDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["makerId"] = this.makerId;
+        data["makerCompanyName"] = this.makerCompanyName;
+        data["deliveredAt"] = this.deliveredAt ? this.deliveredAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IReviewableOrderDto {
+    orderId: string;
+    orderNumber: string;
+    makerId: string;
+    makerCompanyName: string;
+    deliveredAt: Date;
+
+    [key: string]: any;
+}
+
 export enum ShippingMethod {
     ZasilkovnaPickupPoint = "ZasilkovnaPickupPoint",
     PersonalPickup = "PersonalPickup",
+}
+
+export class SubmitReviewRequest implements ISubmitReviewRequest {
+    rating!: number;
+    body!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: ISubmitReviewRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.rating = _data["rating"];
+            this.body = _data["body"];
+        }
+    }
+
+    static fromJS(data: any): SubmitReviewRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new SubmitReviewRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["rating"] = this.rating;
+        data["body"] = this.body;
+        return data;
+    }
+}
+
+export interface ISubmitReviewRequest {
+    rating: number;
+    body: string | undefined;
+
+    [key: string]: any;
+}
+
+export class SubmitReviewResponse implements ISubmitReviewResponse {
+    reviewId!: string;
+    rating!: number;
+    createdAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: ISubmitReviewResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reviewId = _data["reviewId"];
+            this.rating = _data["rating"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): SubmitReviewResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new SubmitReviewResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reviewId"] = this.reviewId;
+        data["rating"] = this.rating;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ISubmitReviewResponse {
+    reviewId: string;
+    rating: number;
+    createdAt: Date;
+
+    [key: string]: any;
+}
+
+export class SubmittedReviewDto implements ISubmittedReviewDto {
+    reviewId!: string;
+    orderId!: string;
+    makerId!: string;
+    makerCompanyName!: string;
+    rating!: number;
+    body!: string | undefined;
+    makerReply!: string | undefined;
+    createdAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: ISubmittedReviewDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reviewId = _data["reviewId"];
+            this.orderId = _data["orderId"];
+            this.makerId = _data["makerId"];
+            this.makerCompanyName = _data["makerCompanyName"];
+            this.rating = _data["rating"];
+            this.body = _data["body"];
+            this.makerReply = _data["makerReply"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): SubmittedReviewDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SubmittedReviewDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reviewId"] = this.reviewId;
+        data["orderId"] = this.orderId;
+        data["makerId"] = this.makerId;
+        data["makerCompanyName"] = this.makerCompanyName;
+        data["rating"] = this.rating;
+        data["body"] = this.body;
+        data["makerReply"] = this.makerReply;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ISubmittedReviewDto {
+    reviewId: string;
+    orderId: string;
+    makerId: string;
+    makerCompanyName: string;
+    rating: number;
+    body: string | undefined;
+    makerReply: string | undefined;
+    createdAt: Date;
+
+    [key: string]: any;
 }
 
 export class UpdateMakerProfileRequest implements IUpdateMakerProfileRequest {

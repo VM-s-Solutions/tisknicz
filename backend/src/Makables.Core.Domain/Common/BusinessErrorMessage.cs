@@ -403,9 +403,25 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string ShippingMethodNotEligible = "shipping.methodNotEligible";
 
-    // === Review ===
+    // === Review (T-0100) ===
+    /// <summary>An active review already exists for the order (US-customer-0015 AC-2).</summary>
     public const string ReviewAlreadyExists = "review.alreadyExists";
+    /// <summary>Review submitted on an order not yet Delivered/Completed (US-customer-0015 AC-3).</summary>
     public const string ReviewOrderNotDelivered = "review.orderNotDelivered";
+    /// <summary><c>SubmitReview</c> Validator: rating outside 1..5 (US-customer-0015 AC-6).</summary>
+    public const string ReviewRatingOutOfRange = "review.ratingOutOfRange";
+    /// <summary><c>SubmitReview</c> Validator: body exceeds 1000 chars (US-customer-0015 AC-6).</summary>
+    public const string ReviewBodyTooLong = "review.bodyTooLong";
+    /// <summary><c>RespondToReview</c> Validator: empty/whitespace reply.</summary>
+    public const string ReviewReplyEmpty = "review.replyEmpty";
+    /// <summary><c>RespondToReview</c> Validator: reply exceeds 500 chars (US-maker-0014 AC-10).</summary>
+    public const string ReviewReplyTooLong = "review.replyTooLong";
+    /// <summary>
+    /// Maker-side cross-tenant / missing-review 404 path
+    /// (US-maker-0014 AC-2/AC-9). <c>OrderNotFound</c> is REUSED for the
+    /// customer-side cross-tenant order miss (no new code).
+    /// </summary>
+    public const string ReviewNotFound = "review.notFound";
 
     // === File ===
     public const string FileInvalid = "file.invalid";

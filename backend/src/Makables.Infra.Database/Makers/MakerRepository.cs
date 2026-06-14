@@ -55,4 +55,24 @@ public sealed class MakerRepository(MakablesDbContext db) : IMakerRepository
         return db.Set<Maker>()
             .AnyAsync(m => m.Slug == trimmed, cancellationToken);
     }
+
+    public Task<Maker?> GetByIdForUpdateAsync(string id, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Maker?>(null);
+
+        // SELECT ... FOR UPDATE row-lock held for the surrounding UoW
+        // transaction (T-0100 §A.5 — serialize concurrent rating
+        // recomputes to the same maker). FromSqlInterpolated bypasses the
+        // global soft-delete query filter, so the is_active predicate is
+        // restated here to keep the active-only contract (mirrors the
+        // NumberingSequenceAllocator FOR UPDATE precedent on a non-tracked
+        // raw read; the returned instance IS tracked because the handler
+        // mutates it via Maker.RecomputeRating).
+        return db.Set<Maker>()
+            .FromSqlInterpolated($@"
+                SELECT * FROM makers
+                WHERE id = {id} AND is_active
+                FOR UPDATE")
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }
