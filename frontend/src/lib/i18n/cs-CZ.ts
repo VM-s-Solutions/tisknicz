@@ -525,6 +525,12 @@ export const messages = {
   'payoutBatch.csvPathAlreadySet':
     'Cesta k CSV souboru výplatní dávky už byla nastavena. Tým byl informován.',
 
+  // T-0109 admin outbox retry/acknowledge codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 outbox UI).
+  'outbox.rowNotFound': 'Tato fronta událostí už neexistuje.',
+  'outbox.alreadyProcessed':
+    'Tato událost už byla zpracována — není co opakovat.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

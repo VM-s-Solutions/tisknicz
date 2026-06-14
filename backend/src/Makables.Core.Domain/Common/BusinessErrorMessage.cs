@@ -617,6 +617,13 @@ public static class BusinessErrorMessage
     // === Outbox processor (T-0029) ===
     public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
     public const string OutboxRowNotFound = "outbox.rowNotFound";
+    /// <summary>
+    /// Admin force-retry (T-0109) targeted a row whose <c>ProcessedAt</c> is
+    /// already set — there is nothing to retry on a drained row. Surfaced as
+    /// a clean 409 rather than a Silent-Success so the operator sees they
+    /// clicked Retry on a row that already ran (locked A.3).
+    /// </summary>
+    public const string OutboxAlreadyProcessed = "outbox.alreadyProcessed";
 
     // === Geocoder (T-0031) ===
     public const string GeocoderInvalidInput = "geocoder.invalidInput";
