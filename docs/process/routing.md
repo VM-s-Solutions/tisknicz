@@ -102,7 +102,7 @@ A "bundle" is 3-6 tightly-coupled tickets in the same subsystem that ship as a s
 
 1. **Grooming:** PM grooms ALL tickets in the bundle BEFORE implementation starts. User answers all AskUserQuestion deliberations up front (batched across tickets). Each ticket's `## Locked design decisions` section is populated; `status: ready`.
 2. **Branch:** single feature branch (e.g., `feat/shipping-pipeline-bundle`).
-3. **Implementation:** dotnet-backend (or relevant implementer) processes tickets sequentially in the same branch. One `feat(T-NNNN):` commit per ticket (or per logical sub-feature within a ticket). TDD-with-commit-order still applies per ticket.
+3. **Implementation:** dotnet-backend (or relevant implementer) processes tickets sequentially in the same branch. One `feat(T-NNNN):` commit per ticket (or per logical sub-feature within a ticket). TDD-with-commit-order still applies per ticket. **NSwag regen must cover EVERY host whose controllers changed in the bundle, not just the primary one; verify with `npm run check:api` before PR-open.** (Codifies the admin-drift lesson from payout-settlement: a bundle that touches Customer + Maker + Admin controllers must regen all three clients, or Gate 6 contract-parity fails late.)
 4. **Parallel reviewer:** runs ONCE for the whole bundle from `in_progress` state. Draft notes at `docs/review/runs/<bundle-name>-draft.md`. Per-ticket draft notes are NOT required for bundles.
 5. **Final review + Gate 8 + Gate 9:** single pass over the full bundle diff at PR-open. Reviewer reads ALL ticket files in the bundle + all modified source files.
 6. **Fold:** single `chore(<bundle>): fold reviewer findings` commit.
