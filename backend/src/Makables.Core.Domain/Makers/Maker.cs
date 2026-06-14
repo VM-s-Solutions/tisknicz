@@ -138,6 +138,17 @@ public sealed class Maker : Auditable
     /// </summary>
     public int TotalOrders { get; private set; }
 
+    /// <summary>
+    /// True when this maker row has been ANONYMIZED-BUT-LEGALLY-RETAINED by
+    /// a GDPR erasure (T-0110). The PII fields are scrubbed to
+    /// <c>"Anonymized"</c> but <see cref="RegistrationNumber"/> (IČO) +
+    /// <see cref="BankAccount"/> are retained because tax records (invoices,
+    /// payout batches) reference them. Default <c>false</c>; flipped to
+    /// <c>true</c> by <see cref="AnonymizeForErasure"/>. Lets active-maker
+    /// surfaces exclude erased tombstones.
+    /// </summary>
+    public bool IsRetainedForLegal { get; private set; }
+
     private Maker() { }
 
     public static Maker Create(
@@ -339,6 +350,30 @@ public sealed class Maker : Auditable
         IsActiveInRegistry = isActiveInRegistry;
         SnapshotFetchedAt = snapshotFetchedAt;
         SnapshotIsStale = snapshotIsStale;
+        return this;
+    }
+
+    /// <summary>
+    /// GDPR erasure transform (T-0110, locked Q-A). Scrubs the maker PII to
+    /// the <c>"Anonymized"</c> sentinel, RETAINS <see cref="RegistrationNumber"/>
+    /// (IČO) + <see cref="BankAccount"/> (referenced by retained tax records
+    /// — invoices, payout batches), and sets <see cref="IsRetainedForLegal"/>
+    /// so the row is a lawful tombstone. Pure transform; idempotent (a second
+    /// call leaves IČO/bank intact and the flag true). The order-completion /
+    /// rating fields are NOT touched. Invoked only by the
+    /// <c>IUserDataDeletionService</c> seam — the single hard-delete path.
+    /// </summary>
+    public Maker AnonymizeForErasure()
+    {
+        const string sentinel = "Anonymized";
+        CompanyName = sentinel;
+        LegalForm = sentinel;
+        VatId = null;
+        Bio = sentinel;
+        PickupNote = sentinel;
+        // RETAIN RegistrationNumber (IČO) + BankAccount — legal/payout records
+        // reference them; scrubbing would orphan those rows (Q-A / Option I).
+        IsRetainedForLegal = true;
         return this;
     }
 }

@@ -69,6 +69,13 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.RatingAverageBp).HasColumnName("rating_average_bp").IsRequired();
         builder.Property(m => m.RatingCount).HasColumnName("rating_count").IsRequired();
         builder.Property(m => m.TotalOrders).HasColumnName("total_orders").IsRequired();
+
+        // T-0110 GDPR-erasure tombstone flag: true when the maker was
+        // anonymized-but-legally-retained (IČO + bank account kept).
+        builder.Property(m => m.IsRetainedForLegal)
+            .HasColumnName("is_retained_for_legal")
+            .HasDefaultValue(false)
+            .IsRequired();
         // Composite index backing the default catalog sort
         // (rating_average_bp DESC, total_orders DESC) over active rows.
         builder.HasIndex(m => new { m.RatingAverageBp, m.TotalOrders })

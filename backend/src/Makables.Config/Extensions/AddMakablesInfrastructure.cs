@@ -18,6 +18,7 @@ using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payouts;
+using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Observability;
@@ -228,6 +229,12 @@ public static class MakablesInfrastructureExtensions
         // IServiceProvider cannot enumerate keys, hence the captured collection.
         services.AddSingleton<IProviderRegistry>(_ =>
             new Makables.Infra.Database.Configuration.ProviderRegistry(services));
+
+        // === GDPR erasure seam (T-0110) ===
+        // The single orchestration for "right to erasure" — the ONLY place
+        // EF Core Remove() runs against User data (ADR 0013). Stages the
+        // matrix into the command's UoW; never calls SaveChangesAsync.
+        services.AddScoped<IUserDataDeletionService, Makables.Infra.Database.Privacy.UserDataDeletionService>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();

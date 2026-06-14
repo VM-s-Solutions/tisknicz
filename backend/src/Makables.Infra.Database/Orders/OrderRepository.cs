@@ -336,6 +336,30 @@ public sealed class OrderRepository(MakablesDbContext db) : IOrderRepository
         return Task.CompletedTask;
     }
 
+    public Task<bool> HasInFlightOrderForUserAsync(
+        string customerUserId,
+        string? makerId,
+        IReadOnlyCollection<OrderState> states,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(states);
+        if (string.IsNullOrWhiteSpace(customerUserId) && string.IsNullOrWhiteSpace(makerId))
+        {
+            return Task.FromResult(false);
+        }
+
+        // IgnoreQueryFilters: a soft-deleted-but-in-flight order must still
+        // block the GDPR erase — scrubbing the contact snapshot off an order
+        // whose money/fulfilment is in motion is the exact hazard the
+        // interlock guards (T-0110 Q-B). Unscoped (admin host only).
+        return db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(o => o.CustomerUserId == customerUserId
+                || (makerId != null && o.MakerId == makerId))
+            .AnyAsync(o => states.Contains(o.State), cancellationToken);
+    }
+
     public async Task<OrderAttachment?> GetAttachmentForCustomerAsync(
         string orderId,
         string attachmentId,

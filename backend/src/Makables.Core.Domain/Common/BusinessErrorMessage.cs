@@ -588,6 +588,12 @@ public static class BusinessErrorMessage
 
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
+    /// <summary>GDPR erase (T-0110) targeted a user id that does not exist
+    /// (or one already erased — the irreversible op has no Silent-Success).</summary>
+    public const string UserNotFound = "user.notFound";
+    /// <summary>The retyped <c>ConfirmedEmail</c> does not match the user's
+    /// email (after normalization) — the T-0110 erase confirmation failed.</summary>
+    public const string UserDeleteConfirmationMismatch = "user.deleteConfirmationMismatch";
 
     // === Email pipeline (T-0028) ===
     public const string EmailTemplateNotFound = "email.templateNotFound";

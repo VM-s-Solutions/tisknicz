@@ -540,6 +540,14 @@ export const messages = {
   'countryConfiguration.notFound':
     'Konfigurace pro tuto zemi nebyla nalezena.',
 
+  // T-0110 admin GDPR-erasure codes (parity with BusinessErrorMessage).
+  // Admin-surface only (T-0118 erase UI).
+  'user.notFound': 'Uživatel nebyl nalezen.',
+  'user.deleteConfirmationMismatch':
+    'Zadaný e-mail neodpovídá uživateli — smazání nebylo potvrzeno.',
+  'user.cannotDeleteWithInFlightOrders':
+    'Uživatele nelze smazat — má rozpracované objednávky. Nejprve je vyřešte.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064
