@@ -266,6 +266,12 @@ public static class BusinessErrorMessage
     public const string CountryConfigMissing = "country.configMissing";
     public const string CountryProviderNotRegistered = "country.providerNotRegistered";
     /// <summary>
+    /// The retyped <c>ConfirmedProviderCode</c> does not match the new
+    /// provider value (T-0108 / US-admin-0006 AC-3 high-stakes retype
+    /// interlock failed). Surfaced as a 400.
+    /// </summary>
+    public const string CountryProviderConfirmationMismatch = "country.providerConfirmationMismatch";
+    /// <summary>
     /// The <c>CountryConfiguration</c> row for the requested country code
     /// is missing — used by <see cref="ProductNotOrderable"/>-adjacent
     /// flows where the upstream country lookup fails and the caller wants

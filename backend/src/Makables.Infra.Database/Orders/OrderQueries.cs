@@ -292,6 +292,33 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
     }
 
     /// <summary>
+    /// The four "in flight" states — money or fulfilment is still in motion.
+    /// Static so the predicate is a single source of truth. T-0108.
+    /// </summary>
+    private static readonly OrderState[] InFlightStates =
+    [
+        OrderState.PendingPayment,
+        OrderState.Paid,
+        OrderState.Accepted,
+        OrderState.Shipped,
+    ];
+
+    public Task<int> CountInFlightByCountryAsync(string countryCode, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(countryCode))
+        {
+            return Task.FromResult(0);
+        }
+
+        // Unscoped (admin host only); soft-deleted rows excluded by the
+        // global Auditable filter (no IgnoreQueryFilters).
+        return db.Set<Order>()
+            .AsNoTracking()
+            .Where(o => o.CountryCode == countryCode && InFlightStates.Contains(o.State))
+            .CountAsync(ct);
+    }
+
+    /// <summary>
     /// Compute the VAT-portion of the gross total in minor units, given
     /// the gross and the rate in basis points (2100 = 21%). The gross
     /// already includes VAT in our snapshot model (T-0060 / T-0061 +

@@ -531,6 +531,15 @@ export const messages = {
   'outbox.alreadyProcessed':
     'Tato událost už byla zpracována — není co opakovat.',
 
+  // T-0108 admin country-configuration codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 countries UI).
+  'country.providerNotRegistered':
+    'Zadaný kód poskytovatele není zaregistrován v systému.',
+  'country.providerConfirmationMismatch':
+    'Pro potvrzení změny poskytovatele přepište nový kód přesně.',
+  'countryConfiguration.notFound':
+    'Konfigurace pro tuto zemi nebyla nalezena.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

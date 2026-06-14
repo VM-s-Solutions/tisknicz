@@ -218,6 +218,17 @@ public static class MakablesInfrastructureExtensions
         // (the admin-only escape hatch, ADR 0013) + the append-only audit log.
         services.AddScoped<IAdminQueries, AdminQueries>();
 
+        // === Provider registry (T-0108) ===
+        // Write-time validation seam for CountryConfiguration provider codes.
+        // Captures the registered IServiceCollection by reference and
+        // enumerates the keyed payment/shipping service keys LAZILY on first
+        // resolution (a singleton factory) — by then every AddMakables* call
+        // (incl. AddMakablesClients, which registers the keyed providers) has
+        // run, so the discovery sees the complete set. The runtime
+        // IServiceProvider cannot enumerate keys, hence the captured collection.
+        services.AddSingleton<IProviderRegistry>(_ =>
+            new Makables.Infra.Database.Configuration.ProviderRegistry(services));
+
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
 

@@ -94,4 +94,14 @@ public interface IOrderQueries
         string orderId,
         string makerId,
         CancellationToken ct);
+
+    /// <summary>
+    /// Count orders for <paramref name="countryCode"/> that are in flight
+    /// (<c>PendingPayment | Paid | Accepted | Shipped</c>) — the T-0108
+    /// provider-change advisory. <b>Unscoped — admin host only</b> (the
+    /// count spans every maker/customer in the country). <c>AsNoTracking</c>;
+    /// soft-deleted rows are excluded by the global query filter (no
+    /// <c>IgnoreQueryFilters</c>). WARN-only: never blocks the config save.
+    /// </summary>
+    Task<int> CountInFlightByCountryAsync(string countryCode, CancellationToken ct);
 }
