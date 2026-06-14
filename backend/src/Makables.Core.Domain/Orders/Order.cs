@@ -1189,6 +1189,23 @@ public sealed class Order : Auditable
         PayoutBatchId = payoutBatchId.Trim();
     }
 
+    /// <summary>
+    /// GDPR erasure transform (T-0110, locked Q-A). Scrubs the three
+    /// contact-snapshot columns (<see cref="ContactName"/> /
+    /// <see cref="ContactEmail"/> / <see cref="ContactPhone"/>) to the
+    /// <c>"Anonymized"</c> sentinel and touches NOTHING else — the order
+    /// itself is a retained tax/commercial record; only the PII snapshot is
+    /// erased. Pure transform; idempotent. Invoked only by the
+    /// <c>IUserDataDeletionService</c> seam.
+    /// </summary>
+    public void AnonymizeContact()
+    {
+        const string sentinel = "Anonymized";
+        ContactName = sentinel;
+        ContactEmail = sentinel;
+        ContactPhone = sentinel;
+    }
+
     private static BusinessResult InvalidTransition() =>
         BusinessResult.Failure(
             Error.Conflict("state", BusinessErrorMessage.OrderInvalidTransition));

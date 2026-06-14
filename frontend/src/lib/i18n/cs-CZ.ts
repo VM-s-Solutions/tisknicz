@@ -525,6 +525,29 @@ export const messages = {
   'payoutBatch.csvPathAlreadySet':
     'Cesta k CSV souboru výplatní dávky už byla nastavena. Tým byl informován.',
 
+  // T-0109 admin outbox retry/acknowledge codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 outbox UI).
+  'outbox.rowNotFound': 'Tato fronta událostí už neexistuje.',
+  'outbox.alreadyProcessed':
+    'Tato událost už byla zpracována — není co opakovat.',
+
+  // T-0108 admin country-configuration codes (parity with
+  // BusinessErrorMessage). Admin-surface only (T-0118 countries UI).
+  'country.providerNotRegistered':
+    'Zadaný kód poskytovatele není zaregistrován v systému.',
+  'country.providerConfirmationMismatch':
+    'Pro potvrzení změny poskytovatele přepište nový kód přesně.',
+  'countryConfiguration.notFound':
+    'Konfigurace pro tuto zemi nebyla nalezena.',
+
+  // T-0110 admin GDPR-erasure codes (parity with BusinessErrorMessage).
+  // Admin-surface only (T-0118 erase UI).
+  'user.notFound': 'Uživatel nebyl nalezen.',
+  'user.deleteConfirmationMismatch':
+    'Zadaný e-mail neodpovídá uživateli — smazání nebylo potvrzeno.',
+  'user.cannotDeleteWithInFlightOrders':
+    'Uživatele nelze smazat — má rozpracované objednávky. Nejprve je vyřešte.',
+
   // Error-code parity keys consumed by the checkout-flow bundle
   // (T-0084a/b). auth.emailNotConfirmed comes from the customer host's
   // RequireEmailConfirmedMiddleware 403; file.* from the T-0064

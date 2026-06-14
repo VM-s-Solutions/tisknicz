@@ -137,8 +137,15 @@ public sealed class PostgresHarness : IAsyncLifetime
         // T-0100: extended to truncate reviews (the CASCADE off orders +
         // makers would catch it via the new FKs, but explicit is cheaper to
         // reason about — T-0079/T-0106 precedent).
+        // T-0110: extended to truncate refresh_tokens — the GDPR-erasure
+        // integration tests seed tokens per run and there is no FK from
+        // refresh_tokens back to users (the erasure hard-deletes them
+        // directly), so the orders/users CASCADE never clears them.
+        // T-0110 (fold): also one_time_tokens + login_attempt_buckets — the
+        // erasure e2e now seeds both (M-1/M-2 PII purge assertions) and
+        // neither has an FK back to users, so nothing CASCADE-clears them.
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE numbering_sequence, invoices, payout_batches, order_messages, disputes, reviews, orders, products, makers, categories, addresses, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
+            "TRUNCATE TABLE numbering_sequence, invoices, payout_batches, order_messages, disputes, reviews, orders, products, makers, categories, addresses, refresh_tokens, one_time_tokens, login_attempt_buckets, users, outbox_event, admin_audit_log RESTART IDENTITY CASCADE;",
             cancellationToken);
     }
 }

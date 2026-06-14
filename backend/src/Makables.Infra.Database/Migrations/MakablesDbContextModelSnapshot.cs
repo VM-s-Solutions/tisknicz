@@ -1244,6 +1244,12 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active_in_registry");
 
+                    b.Property<bool>("IsRetainedForLegal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_retained_for_legal");
+
                     b.Property<bool>("IsVerified")
                         .HasColumnType("boolean")
                         .HasColumnName("is_verified");
@@ -2472,12 +2478,6 @@ namespace Makables.Infra.Database.Migrations
 
             modelBuilder.Entity("Makables.Core.Domain.Reviews.Review", b =>
                 {
-                    b.HasOne("Makables.Core.Domain.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("CustomerUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Makables.Core.Domain.Makers.Maker", null)
                         .WithMany()
                         .HasForeignKey("MakerId")

@@ -160,4 +160,18 @@ public sealed class Review : Auditable
         MakerReplyAt = at;
         return this;
     }
+
+    /// <summary>
+    /// GDPR erasure transform (T-0110, locked Q-A). De-identifies the author
+    /// by scrubbing the audit-trail <see cref="CustomerUserId"/> to the
+    /// <c>"Anonymized"</c> sentinel; the review content (<see cref="Rating"/>
+    /// + <see cref="Body"/>) STAYS — it is about the maker and remains in the
+    /// public corpus de-identified. Pure transform; idempotent. Invoked only
+    /// by the <c>IUserDataDeletionService</c> seam.
+    /// </summary>
+    public Review AnonymizeAuthor()
+    {
+        CustomerUserId = "Anonymized";
+        return this;
+    }
 }

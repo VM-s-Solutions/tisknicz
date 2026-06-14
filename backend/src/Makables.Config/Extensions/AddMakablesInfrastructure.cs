@@ -5,6 +5,7 @@ using Makables.Core.AppServices.Features.Payouts;
 using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Addresses.Validators;
+using Makables.Core.Domain.Admin;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
@@ -17,6 +18,7 @@ using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.OrderMessages;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payouts;
+using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Numbering;
 using Makables.Core.Domain.Observability;
@@ -31,6 +33,7 @@ using Makables.Infra.Common.Outbox;
 using Makables.Infra.Common.Time;
 using Makables.Infra.Database;
 using Makables.Infra.Database.Addresses;
+using Makables.Infra.Database.Admin;
 using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Catalog;
@@ -210,6 +213,28 @@ public static class MakablesInfrastructureExtensions
         // (depends on the request-scoped repositories + outbox).
         services.AddSingleton<IPayoutCsvFormatter, GenericPayoutCsvFormatter>();
         services.AddScoped<IPayoutArtifactService, PayoutArtifactService>();
+
+        // === Admin cross-tenant read-side (T-0111) ===
+        // Composes over IOrderRepository.Unscoped() / IInvoiceRepository.Unscoped()
+        // (the admin-only escape hatch, ADR 0013) + the append-only audit log.
+        services.AddScoped<IAdminQueries, AdminQueries>();
+
+        // === Provider registry (T-0108) ===
+        // Write-time validation seam for CountryConfiguration provider codes.
+        // Captures the registered IServiceCollection by reference and
+        // enumerates the keyed payment/shipping service keys LAZILY on first
+        // resolution (a singleton factory) — by then every AddMakables* call
+        // (incl. AddMakablesClients, which registers the keyed providers) has
+        // run, so the discovery sees the complete set. The runtime
+        // IServiceProvider cannot enumerate keys, hence the captured collection.
+        services.AddSingleton<IProviderRegistry>(_ =>
+            new Makables.Infra.Database.Configuration.ProviderRegistry(services));
+
+        // === GDPR erasure seam (T-0110) ===
+        // The single orchestration for "right to erasure" — the ONLY place
+        // EF Core Remove() runs against User data (ADR 0013). Stages the
+        // matrix into the command's UoW; never calls SaveChangesAsync.
+        services.AddScoped<IUserDataDeletionService, Makables.Infra.Database.Privacy.UserDataDeletionService>();
 
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();

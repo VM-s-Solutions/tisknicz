@@ -103,6 +103,36 @@ public sealed class OutboxEvent
         NextRetryAt = parkedUntil;
     }
 
+    /// <summary>
+    /// Admin force-retry of a STALLED event (T-0109 / US-admin-0014 AC-1).
+    /// One-shot "try now": sets <see cref="NextRetryAt"/> to
+    /// <paramref name="now"/> so the next ProcessOutbox sweep re-picks the
+    /// row, and increments <see cref="RetryCount"/> so the attempt is
+    /// counted. Does NOT reset the backoff ladder — on the next failure,
+    /// <see cref="RecordFailure"/> + <c>OutboxRetryPolicy.NextAttempt</c>
+    /// continue from the bumped <see cref="RetryCount"/> (re-entering the
+    /// ladder at the current rung, or stalling immediately if
+    /// MaxTransientAttempts is already exhausted). Per locked decision A.1.
+    ///
+    /// <para>
+    /// Deliberately does NOT touch <see cref="LastErrorKind"/> /
+    /// <see cref="LastErrorCode"/> — the stall's diagnostic remains visible
+    /// until the next attempt overwrites it via <see cref="RecordFailure"/>
+    /// or clears it via <see cref="MarkProcessed"/>. Refuses an
+    /// already-processed row (the handler pre-guards with a clean
+    /// <c>outbox.alreadyProcessed</c>; this throw is the belt-and-braces
+    /// backstop). The <c>checked(...)</c> mirrors <see cref="RecordFailure"/>'s
+    /// overflow guard.
+    /// </para>
+    /// </summary>
+    public void RequeueForRetry(DateTimeOffset now)
+    {
+        if (ProcessedAt is not null)
+            throw new InvalidOperationException("Cannot retry an already-processed event.");
+        RetryCount = checked(RetryCount + 1);
+        NextRetryAt = now;
+    }
+
     /// <summary>Admin marks a stalled event as acknowledged (won't be retried).</summary>
     public void Acknowledge(string adminUserId, DateTimeOffset now)
     {

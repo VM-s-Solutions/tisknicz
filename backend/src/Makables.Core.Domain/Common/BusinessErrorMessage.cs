@@ -266,6 +266,12 @@ public static class BusinessErrorMessage
     public const string CountryConfigMissing = "country.configMissing";
     public const string CountryProviderNotRegistered = "country.providerNotRegistered";
     /// <summary>
+    /// The retyped <c>ConfirmedProviderCode</c> does not match the new
+    /// provider value (T-0108 / US-admin-0006 AC-3 high-stakes retype
+    /// interlock failed). Surfaced as a 400.
+    /// </summary>
+    public const string CountryProviderConfirmationMismatch = "country.providerConfirmationMismatch";
+    /// <summary>
     /// The <c>CountryConfiguration</c> row for the requested country code
     /// is missing — used by <see cref="ProductNotOrderable"/>-adjacent
     /// flows where the upstream country lookup fails and the caller wants
@@ -582,6 +588,12 @@ public static class BusinessErrorMessage
 
     // === User ===
     public const string UserCannotDeleteWithInFlightOrders = "user.cannotDeleteWithInFlightOrders";
+    /// <summary>GDPR erase (T-0110) targeted a user id that does not exist
+    /// (or one already erased — the irreversible op has no Silent-Success).</summary>
+    public const string UserNotFound = "user.notFound";
+    /// <summary>The retyped <c>ConfirmedEmail</c> does not match the user's
+    /// email (after normalization) — the T-0110 erase confirmation failed.</summary>
+    public const string UserDeleteConfirmationMismatch = "user.deleteConfirmationMismatch";
 
     // === Email pipeline (T-0028) ===
     public const string EmailTemplateNotFound = "email.templateNotFound";
@@ -617,6 +629,13 @@ public static class BusinessErrorMessage
     // === Outbox processor (T-0029) ===
     public const string OutboxQueuePublishFailed = "outbox.queuePublishFailed";
     public const string OutboxRowNotFound = "outbox.rowNotFound";
+    /// <summary>
+    /// Admin force-retry (T-0109) targeted a row whose <c>ProcessedAt</c> is
+    /// already set — there is nothing to retry on a drained row. Surfaced as
+    /// a clean 409 rather than a Silent-Success so the operator sees they
+    /// clicked Retry on a row that already ran (locked A.3).
+    /// </summary>
+    public const string OutboxAlreadyProcessed = "outbox.alreadyProcessed";
 
     // === Geocoder (T-0031) ===
     public const string GeocoderInvalidInput = "geocoder.invalidInput";

@@ -156,6 +156,7 @@
   - Defer until traffic data exists — the surface requires a valid JWT and MVP volume is small.
 - **Status:** open
 - **Answer (filled by user):**
+- **Note (2026-06-14, admin-ops bundle):** touched but not closed by the admin-ops bundle (T-0108/T-0109/T-0110/T-0111); admin endpoints are admin-JWT-gated (low spam risk); stays open as a standalone secops follow-up against the customer/maker hosts. Flagged for secops Gate 3 re-confirmation of the admin mutation surface; no scope expansion in any bundle ticket.
 
 ## Q-0012 — Email-enrichment collaborator sprawl (ADR 0015 budget)
 - **From:** reviewer (order-cleanup-bundle Gate 4, MEDIUM-3)
@@ -291,6 +292,34 @@
   - (a) Accept the no-op audit rows as benign noise platform-wide (recommended — they record "admin attempted X", which is itself audit-worthy).
   - (b) Make the pipeline skip the audit write when before==after snapshot (touches Refund/Dispute/ChangeState/Payout — needs its own ticket + careful snapshot-timing handling; a prior naive attempt suppressed live-transition rows).
   - (c) Per-command opt-out flag.
+- **Status:** answered
+- **Answer (filled by user):** (a) accepted 2026-06-14 (architect) — the shared `AdminAuditPipelineBehavior` correctly writes an audit row on EVERY successful `IAdminAuditableCommand`, including idempotent no-op re-calls; a no-op row is itself an audit-worthy "admin attempted X" record. NO change to the pipeline. The unattainable "no second audit row" AC wording (T-0103 AC-3) is dropped platform-wide; idempotency ACs assert robust state-idempotency (no second outbox/transition) instead.
+- **Note:** Architect to rule; affects the AC-3 wording on T-0103 retroactively. RULED 2026-06-14 — T-0103 AC-3's "no new audit row" clause softened in the ticket Status log; the assertion is now "no second outbox row, state unchanged, first bank-ref authoritative".
+
+## Q-0022 — Admin surfaces carry no ADR 0023 §1 performance budget row
+- **From:** optimizer (admin-ops bundle, Gate 8)
+- **Ticket / context:** admin-ops bundle (T-0108/T-0109/T-0110/T-0111); ADR 0023 §1
+- **Asked:** 2026-06-14
+- **Blocking:** no
+- **Question:** The 3 admin list/query surfaces (GetAllOrders, GetAllInvoices, audit-log) + the GDPR erasure have no defined p95 in ADR 0023 §1. Reviewed against CZ-only MVP scale (fine — low-frequency, ~2 admin users), but there is no budget to gate against, and two multi-country-latent index gaps were noted: (a) GetAllOrders / GetAllInvoices filter `country_code` with no leading index on it (seq-scan-friendly once multi-country lands); (b) the customer-email / recipient admin search is a leading-wildcard `ILIKE` → forced sequential scan. What budget + indexes should gate these?
+- **Options the agent has considered:**
+  - Add an admin §1 budget row to ADR 0023 + the `country_code`-leading composite indexes (orders/invoices) when multi-country lands.
+  - Accept admin as explicitly best-effort (low-frequency, ~2 users) — no budget row; document the latency posture as intentional.
+  - Add a `pg_trgm` GIN index for the email/recipient search if it scales past the seq-scan threshold.
 - **Status:** open
 - **Answer (filled by user):**
-- **Note:** Architect to rule; affects the AC-3 wording on T-0103 retroactively.
+- **Note:** Non-blocking; architect/optimizer to set when multi-country is on the roadmap. CZ-only MVP scale is unaffected.
+
+## Q-0023 — T-0124 provider-registry email-provider mismatch
+- **From:** dotnet-backend (T-0108 impl) + reviewer-confirmed
+- **Ticket / context:** admin-ops bundle (T-0108 `UpdateCountryConfiguration` + `IProviderRegistry`); forward note for T-0124
+- **Asked:** 2026-06-14
+- **Blocking:** no — latent, not a T-0108 defect
+- **Question:** The CZ seed sets `default_email_provider = 'resend'`, but `IProviderRegistry`'s static email fallback (`ProviderRegistry.EmailCodes`) expects `'sendgrid'` (email isn't keyed-registered until T-0124). So an admin CHANGING the email provider today would be rejected as `country.providerNotRegistered`, and the current seed value isn't itself in the fallback set. No test exercises it (email isn't keyed until T-0124). How should the registry + seed be reconciled?
+- **Options the agent has considered:**
+  - At T-0124 (when `IEmailProvider` becomes keyed): replace the static `EmailCodes`/`RegistryCodes` fallbacks with the same keyed-container probe used for payment/shipping, and ensure the registered key(s) match the CZ seed (`'resend'`).
+  - Interim: align the static `EmailCodes` fallback to `{ "resend" }` now so the seed value validates, deferring the keyed probe to T-0124.
+  - Leave as-is until T-0124 (no admin changes the email provider before then; the field is effectively frozen at the seed value).
+- **Status:** open
+- **Answer (filled by user):**
+- **Note:** T-0124 owner must reconcile `ProviderRegistry` fallback + the seed when email providers become keyed. Recorded on `roles/country-configuration.md` (provider-validation seam).

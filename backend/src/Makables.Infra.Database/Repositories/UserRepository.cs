@@ -11,6 +11,17 @@ public sealed class UserRepository(MakablesDbContext db) : IUserRepository
         return db.Set<User>().FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
     }
 
+    public Task<User?> GetByIdIgnoringFiltersAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return Task.FromResult<User?>(null);
+        // IgnoreQueryFilters: GDPR erasure (T-0110) must reach a
+        // soft-deleted/deactivated user — a deactivation does not satisfy a
+        // right-to-erasure request (ADR 0013 §"Hard delete (GDPR)").
+        return db.Set<User>()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    }
+
     public Task<User?> GetByEmailNormalizedAsync(string emailNormalized, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(emailNormalized)) return Task.FromResult<User?>(null);

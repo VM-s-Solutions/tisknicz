@@ -89,10 +89,14 @@ internal sealed class ReviewEntityConfiguration : IEntityTypeConfiguration<Revie
             .HasForeignKey(r => r.MakerId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne<User>()
-            .WithMany()
-            .HasForeignKey(r => r.CustomerUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // NO enforced FK to users on CustomerUserId (T-0110): the GDPR
+        // erasure de-identifies the author by overwriting this column with
+        // the "Anonymized" sentinel (which is not a real user id) and
+        // hard-deletes the user row while the review CONTENT is retained
+        // (it's about the maker). An enforced FK would make either step a
+        // 23503/Restrict violation. This mirrors Order.CustomerUserId, which
+        // likewise keeps a denormalized author id with no enforced FK. The
+        // ix_reviews_customer_user index above still backs the customer reads.
 
         ConfigureAuditable(builder);
     }

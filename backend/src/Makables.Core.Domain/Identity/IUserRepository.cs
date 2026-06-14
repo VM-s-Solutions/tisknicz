@@ -13,6 +13,14 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(string userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Load a user by id bypassing the soft-delete query filter
+    /// (<c>.IgnoreQueryFilters()</c>). GDPR erasure (T-0110) must reach a
+    /// soft-deleted/deactivated user too — a deactivation does NOT satisfy a
+    /// right-to-erasure request. Tracked. Returns <c>null</c> for unknown ids.
+    /// </summary>
+    Task<User?> GetByIdIgnoringFiltersAsync(string userId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Look up by normalized email (see <see cref="User.NormalizeEmail"/>).
     /// Returns the tracked entity if present, INCLUDING soft-deleted rows —
     /// the service layer needs to distinguish "no such account" from

@@ -291,6 +291,21 @@ public interface IOrderRepository
     Task AddAsync(Order order, CancellationToken cancellationToken);
 
     /// <summary>
+    /// True if the user — as customer (<c>CustomerUserId == customerUserId</c>)
+    /// OR as maker (<c>MakerId == makerId</c>, when non-null) — has ANY order
+    /// in one of <paramref name="states"/>. The T-0110 GDPR-erasure in-flight
+    /// interlock: a single <c>EXISTS</c> query (no list materialisation) that
+    /// short-circuits the irreversible erase before any mutation. <b>Unscoped
+    /// — admin host only</b> per ADR 0013. <c>IgnoreQueryFilters()</c> so a
+    /// soft-deleted-but-in-flight order still blocks the erase.
+    /// </summary>
+    Task<bool> HasInFlightOrderForUserAsync(
+        string customerUserId,
+        string? makerId,
+        IReadOnlyCollection<OrderState> states,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Load a single <see cref="OrderAttachment"/> belonging to an order
     /// owned by <paramref name="customerUserId"/>. Returns <c>null</c>
     /// when any of <paramref name="orderId"/> / <paramref name="attachmentId"/>
