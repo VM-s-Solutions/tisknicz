@@ -111,6 +111,41 @@ Method: `SendAsync(string templateCode, string to, object data, CancellationToke
 
 **Sanctioned-command dispatch rule:** `ResolveDispute` orchestrates only — it selects the outcome handler for `ResolutionOutcome`, and the handler dispatches the **sanctioned command** for any side effect (e.g. outcome `Refund` dispatches `RefundOrder` / T-0105 via `IMediator`). ResolveDispute never mutates payment state, never writes `refunded_amount_minor`, never transitions to `Refunded` itself. This keeps the T-0107 manual-transition allow-list authoritative: there is exactly one command per privileged transition, and dispute resolution reuses it instead of growing a parallel path.
 
+## 14. User data deletion (GDPR erasure)
+
+The single orchestration seam for "right to erasure" (GDPR Art. 17). Invoked by the `DeleteUserPermanently` handler (T-0110, admin-ops bundle, locks 2026-06-14); executes the **full erasure matrix in ONE UnitOfWork**. See [patterns.md §A.23](./patterns.md#a23-orchestrated-multi-entity-gdpr-erasure-in-one-uow). Designs the service named — but never specified — in [ADR 0013 §Hard delete (GDPR)](../adr/0013-data-scoping-and-soft-delete.md).
+
+- Interface: `Makables.Core.Domain.Privacy.IUserDataDeletionService`
+- Adapter: `Makables.Infra.Database.Privacy.UserDataDeletionService`
+- Caller: `DeleteUserPermanently.Handler` (`Web.Admin` only)
+
+**Method:**
+- `EraseAsync(string userId, CancellationToken) → BusinessResult` — runs the whole pass inside the handler's pipeline UoW; **never** calls `SaveChangesAsync()` (the pipeline commits). The pass order is fixed:
+  1. **In-flight-order guard** (runs first, before any mutation) — if the user has any order in `[PendingPayment, Paid, Accepted, Shipped]`, return `BusinessResult.Failure(user.cannotDeleteWithInFlightOrders)`. The admin resolves the in-flight orders first; nothing is erased.
+  2. **Anonymize pass** (replace-in-place sentinel, no tombstone table) — Order contact snapshots, Review author, Maker PII.
+  3. **Hard-delete pass** (`Remove()` + commit) — `User`, `RefreshToken`s, unreferenced `Address`es.
+  4. **Invoices untouched** — never loaded for mutation.
+
+**Erasure matrix (the documented contract):**
+
+| Entity | Disposition | Detail |
+|---|---|---|
+| `User` | **HARD-DELETE** | The anchor row. Gone after the first run. |
+| `RefreshToken` | **HARD-DELETE** | All tokens for the user. |
+| `Address` | **HARD-DELETE** if unreferenced | Deleted only when no other entity (order snapshot, maker) still references it; otherwise left in place. |
+| `Order` contact snapshot | **ANONYMIZE** | `ContactName` / `ContactEmail` / `ContactPhone` → `"Anonymized"`. The order itself is retained (legal/commercial record). |
+| `Review` author | **ANONYMIZE** | Author display PII → `"Anonymized"`; the review text/rating stays. |
+| `Maker` PII | **ANONYMIZE + flag** | PII fields → `"Anonymized"`; **RETAIN `IČO` + `BankAccount`** (legal/payout obligation); set `IsRetainedForLegal = true`. |
+| `Invoice` | **RETAIN UNTOUCHED** | GDPR Art. 17(3)(b) legal-obligation exemption — immutable tax records. Not loaded for mutation; the invoice repo exposes no `Update`/`Delete`. |
+
+**Sentinel:** the fixed string `"Anonymized"`, written in place over the free-text PII columns (which stay NOT NULL). No tombstone/archive table.
+
+**Idempotency / irreversibility:** **one-shot, no Silent-Success re-call.** After the first run the `User` row is gone, so a second `DeleteUserPermanently` returns `user.notFound` (not a benign re-success). The in-flight guard runs before any irreversible mutation, so a guarded rejection erases nothing. Unlike §A.20 webhooks / §A.22 detour-open, this seam is **not retry-safe by design**.
+
+**Confirmation interlock (handler-side, not the seam):** the admin retypes the user's email to confirm (T-0108 retype idiom); the hard interlock is the in-flight-order guard above, not the retype.
+
+**Schema addition for the implementer (dotnet-db):** add `Maker.IsRetainedForLegal` — `boolean NOT NULL DEFAULT false`, mapped on `MakerConfiguration`, one migration. Set `true` whenever a maker is anonymized-but-legally-retained by `EraseAsync` (so retained-but-erased makers are queryable / excluded from active-maker surfaces). No other entity gains a column.
+
 ## Rule for reviewers
 
 If a PR adds code that **branches on country, currency, or provider** outside of `Infra.*` adapter classes, it is violating an extension point. Request changes.

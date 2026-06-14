@@ -1086,6 +1086,21 @@ First use: `Order.State = Disputed` + `Order.PreDisputeState` (refund-dispute bu
 
 ---
 
+### A.23 Orchestrated multi-entity GDPR erasure in one UoW
+
+When a single privileged command must erase a subject's personal data **across many aggregates with mixed dispositions** (hard-delete some rows, anonymize others in place, retain others untouched for legal obligation), the work is owned by **one orchestration seam** — a domain interface (`Core.Domain`), one infra implementation (`Infra.*`) — invoked by the command handler and executed inside the **single pipeline UoW**. The handler stays thin; the service holds the erasure matrix.
+
+**Rules:**
+1. **One seam, one transaction.** The interface exposes a single orchestration method. Its whole pass (guard → anonymize → hard-delete → retain) runs in the handler's UoW; the service never calls `SaveChangesAsync()` (the pipeline commits). A partial erasure is a correctness hole — either everything commits or nothing does.
+2. **Disposition matrix is the documented contract.** Every related entity is classified once: HARD-DELETE, ANONYMIZE (replace-in-place with a sentinel, no tombstone table), or RETAIN-UNTOUCHED. The matrix lives in [extension-points.md](./extension-points.md) next to the seam; new related entities are added to the matrix, never silently defaulted.
+3. **Legal-retention beats erasure.** Rows under a statutory retention duty (GDPR Art. 17(3)(b) — e.g. immutable tax invoices) are RETAINED untouched; their repository exposes no `Update`/`Delete`. Entities that must keep specific legal fields while shedding PII (e.g. a maker keeping IČO + bank account) are ANONYMIZED in place and flagged with a `IsRetainedForLegal` boolean.
+4. **Sentinel strategy is replace-in-place.** Anonymized free-text PII columns are overwritten with a fixed sentinel (`"Anonymized"`); no separate tombstone/archive row. The column stays NOT NULL; downstream reads see the sentinel.
+5. **Irreversible — no Silent-Success re-call.** Unlike §A.20/§A.22-open idempotency, the erasure is one-shot: after the first run the subject's anchor row (the `User`) is gone, so a second call returns `*.notFound`, not a benign re-success. The seam is not retry-safe by design; the in-flight guard runs first so the command fails *before* any irreversible mutation.
+
+First use: `IUserDataDeletionService` invoked by `DeleteUserPermanently` (admin-ops bundle, T-0110, locks 2026-06-14). See [extension-points.md §14](./extension-points.md#14-user-data-deletion-gdpr-erasure) for the seam contract and the full erasure matrix. Supersedes the under-specified service named in [ADR 0013 §Hard delete (GDPR)](../adr/0013-data-scoping-and-soft-delete.md).
+
+---
+
 ## B — Frontend patterns (Next.js)
 
 ### B.1 The frontend is a pure presentation layer

@@ -156,6 +156,7 @@
   - Defer until traffic data exists — the surface requires a valid JWT and MVP volume is small.
 - **Status:** open
 - **Answer (filled by user):**
+- **Note (2026-06-14, admin-ops bundle):** touched but not closed by the admin-ops bundle (T-0108/T-0109/T-0110/T-0111); admin endpoints are admin-JWT-gated (low spam risk); stays open as a standalone secops follow-up against the customer/maker hosts. Flagged for secops Gate 3 re-confirmation of the admin mutation surface; no scope expansion in any bundle ticket.
 
 ## Q-0012 — Email-enrichment collaborator sprawl (ADR 0015 budget)
 - **From:** reviewer (order-cleanup-bundle Gate 4, MEDIUM-3)
@@ -291,6 +292,6 @@
   - (a) Accept the no-op audit rows as benign noise platform-wide (recommended — they record "admin attempted X", which is itself audit-worthy).
   - (b) Make the pipeline skip the audit write when before==after snapshot (touches Refund/Dispute/ChangeState/Payout — needs its own ticket + careful snapshot-timing handling; a prior naive attempt suppressed live-transition rows).
   - (c) Per-command opt-out flag.
-- **Status:** open
-- **Answer (filled by user):**
-- **Note:** Architect to rule; affects the AC-3 wording on T-0103 retroactively.
+- **Status:** answered
+- **Answer (filled by user):** (a) accepted 2026-06-14 (architect) — the shared `AdminAuditPipelineBehavior` correctly writes an audit row on EVERY successful `IAdminAuditableCommand`, including idempotent no-op re-calls; a no-op row is itself an audit-worthy "admin attempted X" record. NO change to the pipeline. The unattainable "no second audit row" AC wording (T-0103 AC-3) is dropped platform-wide; idempotency ACs assert robust state-idempotency (no second outbox/transition) instead.
+- **Note:** Architect to rule; affects the AC-3 wording on T-0103 retroactively. RULED 2026-06-14 — T-0103 AC-3's "no new audit row" clause softened in the ticket Status log; the assertion is now "no second outbox row, state unchanged, first bank-ref authoritative".
