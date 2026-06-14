@@ -140,6 +140,18 @@ export interface IMakerApi {
     imagesDELETE(productId: string, imageId: string): Promise<void>;
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    reviews(page: number | undefined, pageSize: number | undefined): Promise<GetMakerReceivedReviewsResponse>;
+
+    /**
+     * @return OK
+     */
+    reply(reviewId: string, body: RespondToReviewRequest): Promise<RespondToReviewResponse>;
+
+    /**
      * @return OK
      */
     meGET(): Promise<void>;
@@ -1694,6 +1706,146 @@ export class MakerApi implements IMakerApi {
     }
 
     /**
+     * @param page (optional) 
+     * @param pageSize (optional) 
+     * @return OK
+     */
+    reviews(page: number | undefined, pageSize: number | undefined): Promise<GetMakerReceivedReviewsResponse> {
+        let url_ = this.baseUrl + "/api/v1/reviews?";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReviews(_response);
+        });
+    }
+
+    protected processReviews(response: Response): Promise<GetMakerReceivedReviewsResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetMakerReceivedReviewsResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetMakerReceivedReviewsResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    reply(reviewId: string, body: RespondToReviewRequest): Promise<RespondToReviewResponse> {
+        let url_ = this.baseUrl + "/api/v1/reviews/{reviewId}/reply";
+        if (reviewId === undefined || reviewId === null)
+            throw new globalThis.Error("The parameter 'reviewId' must be defined.");
+        url_ = url_.replace("{reviewId}", encodeURIComponent("" + reviewId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReply(_response);
+        });
+    }
+
+    protected processReply(response: Response): Promise<RespondToReviewResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = RespondToReviewResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 403) {
+            return response.text().then((_responseText) => {
+            let result403: any = null;
+            let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result403 = ErrorDto.fromJS(resultData403);
+            return throwException("Forbidden", status, _responseText, _headers, result403);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<RespondToReviewResponse>(null as any);
+    }
+
+    /**
      * @return OK
      */
     meGET(): Promise<void> {
@@ -3028,6 +3180,65 @@ export interface IGetMakerPayoutsResponse {
     [key: string]: any;
 }
 
+export class GetMakerReceivedReviewsResponse implements IGetMakerReceivedReviewsResponse {
+    reviews!: PagedDataOfMakerReceivedReviewDto;
+    ratingAverageBp!: number;
+    ratingCount!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IGetMakerReceivedReviewsResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.reviews = new PagedDataOfMakerReceivedReviewDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reviews = _data["reviews"] ? PagedDataOfMakerReceivedReviewDto.fromJS(_data["reviews"]) : new PagedDataOfMakerReceivedReviewDto();
+            this.ratingAverageBp = _data["ratingAverageBp"];
+            this.ratingCount = _data["ratingCount"];
+        }
+    }
+
+    static fromJS(data: any): GetMakerReceivedReviewsResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetMakerReceivedReviewsResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reviews"] = this.reviews ? this.reviews.toJSON() : undefined as any;
+        data["ratingAverageBp"] = this.ratingAverageBp;
+        data["ratingCount"] = this.ratingCount;
+        return data;
+    }
+}
+
+export interface IGetMakerReceivedReviewsResponse {
+    reviews: PagedDataOfMakerReceivedReviewDto;
+    ratingAverageBp: number;
+    ratingCount: number;
+
+    [key: string]: any;
+}
+
 export class HandOverOrderResponse implements IHandOverOrderResponse {
     orderId!: string;
 
@@ -3853,6 +4064,82 @@ export interface IMakerProductListItem {
     [key: string]: any;
 }
 
+export class MakerReceivedReviewDto implements IMakerReceivedReviewDto {
+    reviewId!: string;
+    orderId!: string;
+    orderNumber!: string;
+    rating!: number;
+    body!: string | undefined;
+    makerReply!: string | undefined;
+    makerReplyAt!: Date | undefined;
+    createdAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IMakerReceivedReviewDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reviewId = _data["reviewId"];
+            this.orderId = _data["orderId"];
+            this.orderNumber = _data["orderNumber"];
+            this.rating = _data["rating"];
+            this.body = _data["body"];
+            this.makerReply = _data["makerReply"];
+            this.makerReplyAt = _data["makerReplyAt"] ? new Date(_data["makerReplyAt"].toString()) : undefined as any;
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MakerReceivedReviewDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MakerReceivedReviewDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reviewId"] = this.reviewId;
+        data["orderId"] = this.orderId;
+        data["orderNumber"] = this.orderNumber;
+        data["rating"] = this.rating;
+        data["body"] = this.body;
+        data["makerReply"] = this.makerReply;
+        data["makerReplyAt"] = this.makerReplyAt ? this.makerReplyAt.toISOString() : undefined as any;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IMakerReceivedReviewDto {
+    reviewId: string;
+    orderId: string;
+    orderNumber: string;
+    rating: number;
+    body: string | undefined;
+    makerReply: string | undefined;
+    makerReplyAt: Date | undefined;
+    createdAt: Date;
+
+    [key: string]: any;
+}
+
 export class MarkMakerOrderMessagesAsReadResponse implements IMarkMakerOrderMessagesAsReadResponse {
     markedCount!: number;
 
@@ -4504,6 +4791,89 @@ export interface IPagedDataOfMakerProductListItem {
     [key: string]: any;
 }
 
+export class PagedDataOfMakerReceivedReviewDto implements IPagedDataOfMakerReceivedReviewDto {
+    items!: MakerReceivedReviewDto[];
+    page!: number;
+    pageSize!: number;
+    totalCount!: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IPagedDataOfMakerReceivedReviewDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(MakerReceivedReviewDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+            this.hasNextPage = _data["hasNextPage"];
+            this.hasPreviousPage = _data["hasPreviousPage"];
+        }
+    }
+
+    static fromJS(data: any): PagedDataOfMakerReceivedReviewDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedDataOfMakerReceivedReviewDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        data["hasNextPage"] = this.hasNextPage;
+        data["hasPreviousPage"] = this.hasPreviousPage;
+        return data;
+    }
+}
+
+export interface IPagedDataOfMakerReceivedReviewDto {
+    items: MakerReceivedReviewDto[];
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages?: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
+
+    [key: string]: any;
+}
+
 export class PagedDataOfOrderMessageDto implements IPagedDataOfOrderMessageDto {
     items!: OrderMessageDto[];
     page!: number;
@@ -4906,6 +5276,110 @@ export class RequestPasswordResetRequest implements IRequestPasswordResetRequest
 
 export interface IRequestPasswordResetRequest {
     email: string;
+
+    [key: string]: any;
+}
+
+export class RespondToReviewRequest implements IRespondToReviewRequest {
+    reply!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IRespondToReviewRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reply = _data["reply"];
+        }
+    }
+
+    static fromJS(data: any): RespondToReviewRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new RespondToReviewRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reply"] = this.reply;
+        return data;
+    }
+}
+
+export interface IRespondToReviewRequest {
+    reply: string;
+
+    [key: string]: any;
+}
+
+export class RespondToReviewResponse implements IRespondToReviewResponse {
+    reviewId!: string;
+    makerReply!: string;
+    makerReplyAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IRespondToReviewResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.reviewId = _data["reviewId"];
+            this.makerReply = _data["makerReply"];
+            this.makerReplyAt = _data["makerReplyAt"] ? new Date(_data["makerReplyAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): RespondToReviewResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new RespondToReviewResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["reviewId"] = this.reviewId;
+        data["makerReply"] = this.makerReply;
+        data["makerReplyAt"] = this.makerReplyAt ? this.makerReplyAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IRespondToReviewResponse {
+    reviewId: string;
+    makerReply: string;
+    makerReplyAt: Date;
 
     [key: string]: any;
 }
