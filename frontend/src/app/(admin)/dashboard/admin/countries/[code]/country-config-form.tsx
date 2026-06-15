@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  type CountryConfig,
   InvoicingMode,
   type UpdateCountryConfigInput,
   updateCountryConfig,
@@ -17,21 +18,28 @@ import { type MessageKey, t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 
 /**
- * Country-config edit form (T-0118c §2). Client island. Edits the T-0108
- * editable set + a mandatory reason. On submit, if ANY `Default*Provider`
- * field changed, the save opens a confirmation modal that requires
- * retyping the NEW provider code (A.5 — the retype-the-code idiom, distinct
- * from the delete-user retype-the-email and lower blast radius). A
- * VAT/fee-only edit saves directly with no modal. The provider gate, the
- * unregistered-code rejection (`country.providerNotRegistered`), the
- * mismatch (`country.providerConfirmationMismatch`) and the
- * `inFlightOrderCount` advisory are ALL backend — this form posts inputs
- * and renders the verdict. No business logic, no pricing math: the bp
- * fields are entered/sent verbatim, the shipping price scales whole-CZK →
- * minor units at submit (display scaling only). Disabled-while-pending.
+ * Country-config edit form (T-0118c §2 / T-0127 re-wire). Client island.
+ * Edits the T-0108 editable set + a mandatory reason. The form pre-fills
+ * from the GetCountryConfiguration SSR read (`initialConfig`) so the
+ * operator edits the current row instead of a blank slate.
  *
- * NO server pre-fill (no GET on the contract — gap): every field starts
- * blank and the operator enters the full set.
+ * On submit, the save opens the retype-the-code confirmation modal (A.5 —
+ * the retype-the-code idiom, distinct from the delete-user retype-the-email
+ * and lower blast radius) ONLY when a `Default*Provider` value DIFFERS from
+ * the loaded config (a real provider change). A VAT/fee-only edit — or any
+ * edit that leaves the provider codes untouched — saves directly with no
+ * modal (T-0118c AC-5). When there is no loaded config (404 → blank form),
+ * any non-empty provider code is treated as a change and gated by the
+ * modal (the friction-preserving default — there is nothing to diff
+ * against). The provider gate, the unregistered-code rejection
+ * (`country.providerNotRegistered`), the mismatch
+ * (`country.providerConfirmationMismatch`) and the `inFlightOrderCount`
+ * advisory are ALL backend — this form posts inputs and renders the
+ * verdict. The diff-based modal is UX only; the backend re-validates.
+ *
+ * No business logic, no pricing math: the bp fields are entered/sent
+ * verbatim, the shipping price scales whole-CZK → minor units at submit
+ * (display scaling only). Disabled-while-pending.
  */
 
 const INVOICING_MODE_VALUES: readonly InvoicingMode[] = [
@@ -70,7 +78,7 @@ interface FormState {
   readonly reason: string;
 }
 
-const INITIAL_FORM: FormState = {
+const BLANK_FORM: FormState = {
   standardVatBp: '',
   reducedVatBp: '',
   platformFeeBp: '',
@@ -83,9 +91,40 @@ const INITIAL_FORM: FormState = {
   reason: '',
 };
 
-export function CountryConfigForm({ countryCode }: { readonly countryCode: string }) {
+/**
+ * Pre-fill the form from the loaded config (T-0127). The shipping price
+ * scales minor → whole-CZK for display (the inverse of the submit scaling);
+ * the bp fields round-trip verbatim. `reason` always starts empty — it is a
+ * per-change audit note, never carried over from the loaded row.
+ */
+function formFromConfig(config: CountryConfig | undefined): FormState {
+  if (!config) return BLANK_FORM;
+  return {
+    standardVatBp: String(config.standardVatRateBp),
+    reducedVatBp:
+      config.reducedVatRateBp === undefined || config.reducedVatRateBp === null
+        ? ''
+        : String(config.reducedVatRateBp),
+    platformFeeBp: String(config.platformFeeRateBp),
+    shippingPriceWhole: String(Math.trunc(config.defaultShippingPriceMinor / 100)),
+    invoicingMode: config.invoicingMode,
+    paymentProvider: config.defaultPaymentProvider,
+    shippingCarrier: config.defaultShippingCarrier,
+    registry: config.defaultRegistry,
+    emailProvider: config.defaultEmailProvider,
+    reason: '',
+  };
+}
+
+export function CountryConfigForm({
+  countryCode,
+  initialConfig,
+}: {
+  readonly countryCode: string;
+  readonly initialConfig: CountryConfig | undefined;
+}) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [form, setForm] = useState<FormState>(() => formFromConfig(initialConfig));
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [advisory, setAdvisory] = useState<string | null>(null);
@@ -100,19 +139,40 @@ export function CountryConfigForm({ countryCode }: { readonly countryCode: strin
   const reducedVatBp = form.reducedVatBp.trim() === '' ? undefined : parseInt0(form.reducedVatBp);
   const reasonValid = form.reason.trim() !== '';
 
-  // A provider field is "set" when non-empty; ALL four are required for a
-  // valid PUT (the backend validates registration). Any non-empty provider
-  // value means the save is treated as a provider change → modal (the form
-  // has no prior value to diff against because there is no GET; treating a
-  // provided code as a change is the safe, friction-preserving default per
-  // A.5 — the operator confirms the code they intend to set).
   const providers = {
     paymentProvider: form.paymentProvider.trim(),
     shippingCarrier: form.shippingCarrier.trim(),
     registry: form.registry.trim(),
     emailProvider: form.emailProvider.trim(),
   };
-  const anyProviderSet = Object.values(providers).some((v) => v !== '');
+
+  // T-0127 diff-based modal gate (T-0118c AC-4/AC-5). The retype modal fires
+  // ONLY when an entered provider code DIFFERS from the loaded config. With a
+  // loaded config, a VAT/fee-only edit (providers untouched) skips the modal;
+  // changing any `Default*Provider` opens it. With NO loaded config (404 →
+  // blank form), there is nothing to diff against, so any non-empty provider
+  // code is treated as a change (the friction-preserving default). The
+  // backend `country.providerConfirmationMismatch` gate stays authoritative —
+  // this diff is UX only.
+  const loadedProviders: Readonly<Record<keyof typeof providers, string>> | undefined =
+    initialConfig
+      ? {
+          paymentProvider: initialConfig.defaultPaymentProvider.trim(),
+          shippingCarrier: initialConfig.defaultShippingCarrier.trim(),
+          registry: initialConfig.defaultRegistry.trim(),
+          emailProvider: initialConfig.defaultEmailProvider.trim(),
+        }
+      : undefined;
+
+  const changedProviders: Readonly<Record<string, string>> = Object.fromEntries(
+    (Object.entries(providers) as [keyof typeof providers, string][])
+      .filter(([key, value]) => {
+        if (loadedProviders) return value !== loadedProviders[key];
+        return value !== '';
+      })
+      .map(([key, value]) => [key, value]),
+  );
+  const anyProviderChanged = Object.keys(changedProviders).length > 0;
 
   const baseValid =
     standardVatBp !== null &&
@@ -177,10 +237,10 @@ export function CountryConfigForm({ countryCode }: { readonly countryCode: strin
 
   function handlePrimaryClick() {
     if (!baseValid || busy) return;
-    // Provider set → open the retype-the-code modal (A.5). VAT/fee-only
-    // edits would skip it; here any provided code is confirmed via the
-    // modal (no prior value to diff against — no GET).
-    if (anyProviderSet) {
+    // A provider code DIFFERS from the loaded config → open the
+    // retype-the-code modal (A.5 / T-0127 diff gate). A VAT/fee-only edit
+    // (no provider diff) saves directly with no modal (T-0118c AC-5).
+    if (anyProviderChanged) {
       setModalOpen(true);
       return;
     }
@@ -329,7 +389,7 @@ export function CountryConfigForm({ countryCode }: { readonly countryCode: strin
 
       {modalOpen ? (
         <ProviderConfirmModal
-          providers={providers}
+          providers={changedProviders}
           busy={busy}
           onClose={() => {
             if (!busy) setModalOpen(false);

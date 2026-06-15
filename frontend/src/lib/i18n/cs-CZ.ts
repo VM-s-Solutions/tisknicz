@@ -1189,6 +1189,16 @@ export const messages = {
   'dashboard.admin.orderActions.header.country': 'Země',
   'dashboard.admin.orderActions.header.maker': 'Maker',
   'dashboard.admin.orderActions.header.customer': 'E-mail zákazníka',
+  'dashboard.admin.orderActions.header.contactName': 'Kontaktní osoba',
+  'dashboard.admin.orderActions.header.contactPhone': 'Telefon',
+  'dashboard.admin.orderActions.header.createdAt': 'Vytvořeno',
+  'dashboard.admin.orderActions.header.product': 'Produkt',
+  'dashboard.admin.orderActions.header.breakdown.heading': 'Rozpis částky',
+  'dashboard.admin.orderActions.header.breakdown.productPrice': 'Cena produktu',
+  'dashboard.admin.orderActions.header.breakdown.shipping': 'Doprava',
+  'dashboard.admin.orderActions.header.breakdown.platformFee': 'Provize platformy',
+  'dashboard.admin.orderActions.header.breakdown.makerPayout': 'Výplata makerovi',
+  'dashboard.admin.orderActions.header.breakdown.refunded': 'Refundováno',
   'dashboard.admin.orderActions.header.degraded.title': 'Detail objednávky není k dispozici',
   'dashboard.admin.orderActions.header.degraded.body':
     'Hlavičku objednávky se nepodařilo načíst, proto nejsou dostupné akce. Historie auditu níže zůstává platná. Zkuste stránku obnovit.',
@@ -1279,20 +1289,23 @@ export const messages = {
   'dashboard.admin.ops.outbox.stalledCount.label': 'Zaseknuté události',
   'dashboard.admin.ops.outbox.stalledCount.unavailable':
     'Počet zaseknutých událostí se nepodařilo načíst.',
-  'dashboard.admin.ops.outbox.stalledCount.none':
-    'Žádné zaseknuté události. Fronta je v pořádku.',
-  'dashboard.admin.ops.outbox.listGap.title': 'Seznam událostí zatím není k dispozici',
-  'dashboard.admin.ops.outbox.listGap.body':
-    'Backend zatím nevystavuje seznam jednotlivých zaseknutých událostí — pouze jejich počet. Akce opakování a potvrzení proto cílí na konkrétní ID události. Doplnění seznamového endpointu je evidováno jako následný backendový úkol.',
-  'dashboard.admin.ops.outbox.actions.heading': 'Akce nad událostí',
-  'dashboard.admin.ops.outbox.actions.intro':
-    'Zadejte ID události a zvolte akci. Opakování je jednorázový pokus o nové doručení; potvrzení vyžaduje důvod a událost přestane být sledována.',
-  'dashboard.admin.ops.outbox.eventIdLabel': 'ID události',
-  'dashboard.admin.ops.outbox.eventIdHint': 'Identifikátor řádku ve frontě událostí (GUID).',
+  // Browsable stalled-event list (T-0127 §8).
+  'dashboard.admin.ops.outbox.list.error.title': 'Seznam událostí se nepodařilo načíst',
+  'dashboard.admin.ops.outbox.list.error.body':
+    'Při načítání seznamu zaseknutých událostí došlo k chybě. Zkuste stránku obnovit.',
+  'dashboard.admin.ops.outbox.list.empty.title': 'Žádné zaseknuté události',
+  'dashboard.admin.ops.outbox.list.empty.body':
+    'Fronta událostí je v pořádku — žádná událost nečeká na zásah.',
+  'dashboard.admin.ops.outbox.list.count': 'Celkem {count} zaseknutých událostí.',
+  'dashboard.admin.ops.outbox.list.aggregateId': 'ID agregátu',
+  'dashboard.admin.ops.outbox.list.createdAt': 'Vytvořeno',
+  'dashboard.admin.ops.outbox.list.lastErrorCode': 'Poslední chyba',
+  'dashboard.admin.ops.outbox.list.retryCount': 'Pokusů: {count}',
   'dashboard.admin.ops.outbox.retry.button': 'Opakovat doručení',
   'dashboard.admin.ops.outbox.retry.pending': 'Opakuji…',
   'dashboard.admin.ops.outbox.retry.success':
     'Doručení naplánováno znovu (pokus č. {retryCount}).',
+  'dashboard.admin.ops.outbox.ack.toggle': 'Potvrdit a přestat sledovat',
   'dashboard.admin.ops.outbox.ack.button': 'Potvrdit a přestat sledovat',
   'dashboard.admin.ops.outbox.ack.pending': 'Potvrzuji…',
   'dashboard.admin.ops.outbox.ack.reasonLabel': 'Důvod potvrzení',
@@ -1308,7 +1321,11 @@ export const messages = {
   'dashboard.admin.ops.country.subtitle':
     'Úprava řídicí konfigurace země: sazby DPH, provize platformy, výchozí poskytovatelé a režim fakturace. Změna se projeví u nových objednávek.',
   'dashboard.admin.ops.country.noPrefillNote':
-    'Pozor: uložení přepíše CELOU konfiguraci země (úplná náhrada, ne dílčí úprava). Formulář se zatím nepředvyplňuje, proto musíte zadat VŠECHNY hodnoty — sazby DPH, provizi, cenu dopravy i všechny poskytovatele. Prázdné nebo chybně zadané pole tiše přepíše stávající hodnotu pro všechny budoucí objednávky. Před uložením ověřte každé pole. (Předvyplnění z načítacího endpointu je evidováno jako následný backendový úkol.)',
+    'Pozor: uložení přepíše CELOU konfiguraci země (úplná náhrada, ne dílčí úprava). Pro tuto zemi zatím není uložená konfigurace, proto se formulář nepředvyplnil — musíte zadat VŠECHNY hodnoty: sazby DPH, provizi, cenu dopravy i všechny poskytovatele. Prázdné nebo chybně zadané pole tiše přepíše stávající hodnotu pro všechny budoucí objednávky. Před uložením ověřte každé pole.',
+  'dashboard.admin.ops.country.fullReplaceNote':
+    'Formulář je předvyplněný aktuální konfigurací země. Uložení nahradí CELOU konfiguraci zadanými hodnotami (úplná náhrada, ne dílčí úprava), proto před uložením zkontrolujte všechna pole.',
+  'dashboard.admin.ops.country.loadError':
+    'Aktuální konfiguraci země se nepodařilo načíst, formulář proto není předvyplněný. Můžete zadat všechny hodnoty ručně, nebo stránku obnovit a načtení zopakovat.',
   'dashboard.admin.ops.country.section.tax': 'Daně a provize',
   'dashboard.admin.ops.country.section.providers': 'Výchozí poskytovatelé',
   'dashboard.admin.ops.country.standardVatLabel': 'Standardní sazba DPH (v bazických bodech)',
@@ -1356,19 +1373,17 @@ export const messages = {
   'dashboard.admin.ops.payouts.processingCount.label': 'Dávky ke zpracování',
   'dashboard.admin.ops.payouts.processingCount.unavailable':
     'Počet zpracovávaných dávek se nepodařilo načíst.',
-  'dashboard.admin.ops.payouts.processingCount.none':
-    'Žádné dávky ke zpracování.',
-  'dashboard.admin.ops.payouts.listGap.title': 'Seznam dávek zatím není k dispozici',
-  'dashboard.admin.ops.payouts.listGap.body':
-    'Backend zatím nevystavuje seznam výplatních dávek — pouze počet zpracovávaných. Akce dokončení a stažení CSV proto cílí na konkrétní ID dávky. Doplnění seznamového endpointu je evidováno jako následný backendový úkol.',
-  'dashboard.admin.ops.payouts.actions.heading': 'Akce nad dávkou',
-  'dashboard.admin.ops.payouts.actions.intro':
-    'Zadejte ID dávky pro dokončení převodu nebo stažení bankovního CSV souboru.',
-  'dashboard.admin.ops.payouts.batchIdLabel': 'ID výplatní dávky',
-  'dashboard.admin.ops.payouts.batchIdHint': 'Identifikátor výplatní dávky (GUID).',
-  'dashboard.admin.ops.payouts.batchNumberLabel': 'Číslo dávky (pro název souboru)',
-  'dashboard.admin.ops.payouts.batchNumberHint':
-    'Volitelné. Použije se v názvu staženého CSV (vyplaty-{číslo}.csv).',
+  // Browsable payout-batch list (T-0127 §8).
+  'dashboard.admin.ops.payouts.list.error.title': 'Seznam dávek se nepodařilo načíst',
+  'dashboard.admin.ops.payouts.list.error.body':
+    'Při načítání seznamu výplatních dávek došlo k chybě. Zkuste stránku obnovit.',
+  'dashboard.admin.ops.payouts.list.empty.title': 'Žádné výplatní dávky',
+  'dashboard.admin.ops.payouts.list.empty.body':
+    'Zatím nejsou žádné výplatní dávky ke zpracování. Dávky vytváří týdenní časovač.',
+  'dashboard.admin.ops.payouts.list.count': 'Celkem {count} výplatních dávek.',
+  'dashboard.admin.ops.payouts.list.total': 'Celková částka',
+  'dashboard.admin.ops.payouts.list.createdAt': 'Vytvořeno',
+  'dashboard.admin.ops.payouts.list.completedAt': 'Vyplaceno dne',
   'dashboard.admin.ops.payouts.state.processing': 'Zpracovává se',
   'dashboard.admin.ops.payouts.state.completed': 'Vyplaceno',
   'dashboard.admin.ops.payouts.complete.button': 'Označit jako vyplacené',
@@ -1387,8 +1402,6 @@ export const messages = {
     'Tato dávka už byla dříve dokončena — stav se nezměnil.',
   'dashboard.admin.ops.payouts.csv.button': 'Stáhnout CSV',
   'dashboard.admin.ops.payouts.csv.pending': 'Stahuji…',
-  'dashboard.admin.ops.payouts.csv.intro':
-    'Bankovní soubor pro provedení převodu (obsahuje čísla účtů všech makerů — pouze pro operátora).',
   'dashboard.admin.ops.payouts.csv.error':
     'CSV soubor se nepodařilo stáhnout. Zkuste to prosím znovu.',
 
@@ -1408,9 +1421,10 @@ export const messages = {
   'dashboard.admin.ops.users.lookup.emailHint':
     'E-mail uživatele, kterého chcete smazat. Bude vyžadováno jeho přesné přepsání.',
   'dashboard.admin.ops.users.lookup.submit': 'Pokračovat ke smazání',
+  'dashboard.admin.ops.users.lookup.checking': 'Ověřuji objednávky…',
   'dashboard.admin.ops.users.lookupGap.title': 'Vyhledání uživatele zatím není automatické',
   'dashboard.admin.ops.users.lookupGap.body':
-    'Backend zatím nevystavuje vyhledání uživatele ani jeho rozpracovaných objednávek. ID a e-mail proto zadáváte ručně a blokaci kvůli rozpracovaným objednávkám zobrazí backend až při odeslání. Doplnění čtecích endpointů je evidováno jako následný backendový úkol.',
+    'Backend zatím nevystavuje vyhledání uživatele podle jména ani e-mailu, proto ID a e-mail zadáváte ručně. Rozpracované objednávky se ověří automaticky — pokud uživatel nějakou má, smazání se zablokuje ještě před odesláním. Doplnění vyhledávacího endpointu je evidováno jako následný backendový úkol.',
   'dashboard.admin.ops.users.irreversibleBanner.title': 'Nevratné smazání',
   'dashboard.admin.ops.users.irreversibleBanner.body':
     'Data uživatele nelze obnovit. Faktury zůstávají zachovány dle GDPR čl. 17 odst. 3 písm. b).',
@@ -1435,7 +1449,10 @@ export const messages = {
     'Uživatel již byl smazán.',
   'dashboard.admin.ops.users.reset': 'Zpět na vyhledání',
 
-  // --- Shared route error/loading copy for the ops segments ---
+  // --- Shared paginations + route error/loading copy for the ops segments ---
+  'dashboard.admin.ops.pagination.previous': 'Předchozí',
+  'dashboard.admin.ops.pagination.next': 'Další',
+  'dashboard.admin.ops.pagination.pageOf': 'Strana {page} z {total}',
   'dashboard.admin.ops.error.title': 'Stránku se nepodařilo načíst',
   'dashboard.admin.ops.error.body':
     'Při načítání stránky došlo k chybě. Zkuste ji prosím obnovit.',

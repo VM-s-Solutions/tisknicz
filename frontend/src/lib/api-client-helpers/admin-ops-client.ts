@@ -23,31 +23,25 @@
  * the delete-user double interlock are ALL backend business logic — these
  * helpers only post inputs and surface the typed verdict.
  *
- * CONTRACT GAPS (flagged in the ticket follow-up, NOT papered over here):
- *   - No outbox-event LIST read exists (only `count()` for the stalled
- *     total). The outbox triage page therefore renders the stalled count +
- *     a by-id action surface; a thin list endpoint is the clean fix.
- *   - No payout-batch LIST read exists (the `payoutBatches()` generated
- *     method is the POST that CREATES a batch — A.3 forbids calling it from
- *     this UI; `count2()` is the processing count). The payout page renders
- *     the processing count + a by-id complete/CSV surface; a list endpoint
- *     is the clean fix.
- *   - No country-config GET exists (only the PUT). The form ships without a
- *     server pre-fill (operator enters the full editable set); a GET is the
- *     clean fix.
- *   - No user-lookup / per-user-order read exists (only `erase`). The
- *     delete-user screen surfaces the in-flight block as the backend's
- *     post-call verdict (`user.cannotDeleteWithInFlightOrders`) rather than
- *     pre-disabling; a per-user read is the clean fix.
+ * T-0127 closed the four read gaps these surfaces logged against
+ * themselves (Q-0029 + Q-0024): the country-config GET (`getCountryConfig`
+ * — pre-fills the form), the stalled-outbox LIST (`getStalledOutboxEvents`
+ * — browsable triage), the payout-batch LIST (`getPayoutBatches` —
+ * browsable settlement) and the per-user in-flight filter on the admin-
+ * orders read (in `admin-orders.ts` — drives the delete-user proactive
+ * pre-disable). The count reads stay for the dashboard tiles.
  */
 
 import {
-  InvoicingMode,
   type IAcknowledgeOutboxEventResponse,
+  type IAdminPayoutBatchListItemDto,
   type IDeleteUserPermanentlyResponse,
+  type IGetCountryConfigurationResponse,
   type IMarkPayoutBatchCompletedResponse,
   type IRetryOutboxEventResponse,
+  type IStalledOutboxEventDto,
   type IUpdateCountryConfigurationResponse,
+  InvoicingMode,
   PayoutBatchState,
 } from '../api-client/admin-api.v1';
 import { apiFetch } from '../runtime/api-fetch';
@@ -71,19 +65,78 @@ const InvoicesBase = '/api/v1/admin-invoices';
  */
 const DOWNLOAD_TIMEOUT_MS = 120_000;
 
+// ---- Shared list constants ----
+
+/**
+ * Mirrors of the backend list Validators' DefaultPageSize / MaxPageSize
+ * (PagedData clamp `[1,50]`, default 20). UX-only duplicates for URL
+ * clamping — the backend Validator stays authoritative (admin-client.ts
+ * precedent). The stalled-outbox + payout-batch LISTs share the window.
+ */
+export const ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE = 20;
+export const ADMIN_OPS_LIST_MAX_PAGE_SIZE = 50;
+
+/** Generic wire shape of <c>PagedData&lt;T&gt;</c> (totalPages/hasNext/hasPrevious optional). */
+export interface AdminOpsPage<TItem> {
+  readonly items: readonly TItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly totalCount: number;
+  readonly totalPages?: number;
+  readonly hasNextPage?: boolean;
+  readonly hasPreviousPage?: boolean;
+}
+
 // ---- Outbox count (T-0126 GET /outbox-events/stalled/count) ----
 
 /**
- * Stalled-outbox count (T-0126). The ONLY outbox read on the contract —
- * there is no event LIST endpoint, so the triage page renders this count +
- * a by-id action surface (gap flagged). `null` on failure so the page
- * degrades gracefully.
+ * Stalled-outbox count (T-0126). The dashboard-tile read — the triage page
+ * now browses the LIST (see {@link getStalledOutboxEvents}); this count
+ * still backs the KPI tile. `null` on failure so the page degrades
+ * gracefully.
  */
 export async function getStalledOutboxCount(): Promise<Result<number, ApiError>> {
   const result = await apiFetch<{ count: number }>('admin', `${OutboxBase}/stalled/count`, {
     method: 'GET',
   });
   return result.success ? ok(result.value.count) : result;
+}
+
+// ---- Stalled-outbox LIST (T-0127 GET /outbox-events/stalled) ----
+
+/** Mirror of <c>StalledOutboxEventDto</c> (T-0127). <c>createdAt</c> wire-shape <c>string</c> (ISO 8601). */
+export type StalledOutboxEvent = Readonly<Omit<IStalledOutboxEventDto, 'createdAt'>> & {
+  readonly createdAt: string;
+};
+
+/** Generated envelope around the list page (<c>GetStalledOutboxEventsResponse { events }</c>). */
+interface GetStalledOutboxEventsEnvelope {
+  readonly events: AdminOpsPage<StalledOutboxEvent>;
+}
+
+/**
+ * Stalled-outbox LIST (T-0127, US-admin-0014). Browsable paged triage —
+ * the SAME stalled set <c>CountStalledAsync</c> counts
+ * (`ProcessedAt == null && NextRetryAt == null && LastErrorKind != None`),
+ * `CreatedAt DESC`. The operator browses + retries/acknowledges by visible
+ * id instead of pasting one blind. Params emitted only when they diverge
+ * from the backend defaults (patterns.md B.8). Backend Validator
+ * authoritative.
+ */
+export async function getStalledOutboxEvents(
+  page: number,
+  pageSize: number = ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE,
+): Promise<Result<AdminOpsPage<StalledOutboxEvent>, ApiError>> {
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  if (pageSize !== ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE) params.set('pageSize', String(pageSize));
+  const query = params.toString();
+  const result = await apiFetch<GetStalledOutboxEventsEnvelope>(
+    'admin',
+    query ? `${OutboxBase}/stalled?${query}` : `${OutboxBase}/stalled`,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.events) : result;
 }
 
 // ---- Outbox retry (T-0109 POST /outbox-events/{id}/retry) ----
@@ -129,6 +182,36 @@ export async function acknowledgeOutboxEvent(
   );
 }
 
+// ---- Country-config read (T-0127 GET /country-configurations/{code}) ----
+
+/**
+ * Mirror of <c>GetCountryConfigurationResponse</c> (T-0127). The SAME field
+ * set <c>UpdateCountryConfiguration</c>'s Response echoes, so the form
+ * round-trips byte-for-byte (the GET pre-fills, the PUT full-replaces). No
+ * <c>Date</c> fields → no wire-shape override needed.
+ */
+export type CountryConfig = Readonly<IGetCountryConfigurationResponse>;
+
+/**
+ * Country-config read (T-0127, US-admin-0006). Pre-fills the edit form
+ * SSR so the operator edits the current row instead of retyping the full
+ * set — this REMOVES the PR-2 full-replace silent-overwrite hazard and
+ * lets the provider retype modal gate on a real diff (the loaded provider
+ * codes vs the entered ones). 404 → <c>countryConfiguration.notFound</c>
+ * (reused code), surfaced to the page so it can fall back to the blank
+ * form + warning banner (graceful). Read through
+ * <c>ICountryConfigurationRepository.GetByCodeAsync</c> (AsNoTracking).
+ */
+export async function getCountryConfig(
+  countryCode: string,
+): Promise<Result<CountryConfig, ApiError>> {
+  return apiFetch<CountryConfig>(
+    'admin',
+    `${CountryBase}/${encodeURIComponent(countryCode)}`,
+    { method: 'GET' },
+  );
+}
+
 // ---- Country-config update (T-0108 PUT /country-configurations/{code}) ----
 
 /** The editable T-0108 field set + the optional provider-confirmation + mandatory reason. */
@@ -158,8 +241,10 @@ export type UpdateCountryConfigResult = Readonly<IUpdateCountryConfigurationResp
  * Country-config update (T-0108, US-admin-0006). The provider-confirmation
  * gate, the unregistered-code rejection (`country.providerNotRegistered`)
  * and the in-flight advisory (`inFlightOrderCount` — informational, never
- * blocking) are ALL backend. There is NO GET on the contract, so the form
- * has no server pre-fill (gap flagged). Failure codes:
+ * blocking) are ALL backend. The PUT is a full-replace; the form pre-fills
+ * via {@link getCountryConfig} (T-0127) so the operator edits the current
+ * row, and `confirmedProviderCode` is sent ONLY when a `Default*Provider`
+ * value diverges from the loaded config (a real change). Failure codes:
  * `countryConfiguration.notFound` (404),
  * `country.providerConfirmationMismatch` / `country.providerNotRegistered`.
  */
@@ -192,10 +277,9 @@ export async function updateCountryConfig(
 // ---- Payout processing count (T-0126 GET /payout-batches/count?state=) ----
 
 /**
- * Processing-payout count (T-0126). The only payout READ on the contract
- * (the `payoutBatches()` generated method is the CREATE POST — A.3 forbids
- * it here; there is no LIST read). The payout page renders this count + a
- * by-id complete/CSV surface (gap flagged). `null` on failure.
+ * Processing-payout count (T-0126). The dashboard-tile read — the payout
+ * page now browses the LIST (see {@link getPayoutBatches}); this count
+ * still backs the KPI tile. `null` on failure.
  */
 export async function getProcessingPayoutsCount(): Promise<Result<number, ApiError>> {
   const result = await apiFetch<{ count: number }>(
@@ -204,6 +288,49 @@ export async function getProcessingPayoutsCount(): Promise<Result<number, ApiErr
     { method: 'GET' },
   );
   return result.success ? ok(result.value.count) : result;
+}
+
+// ---- Payout-batch LIST (T-0127 GET /payout-batches) ----
+
+/**
+ * Mirror of <c>AdminPayoutBatchListItemDto</c> (T-0127). <c>createdAt</c> /
+ * <c>completedAt</c> wire-shape <c>string</c> (ISO 8601); <c>completedAt</c>
+ * is absent on Processing batches.
+ */
+export type AdminPayoutBatch = Readonly<
+  Omit<IAdminPayoutBatchListItemDto, 'createdAt' | 'completedAt'>
+> & {
+  readonly createdAt: string;
+  readonly completedAt: string | undefined;
+};
+
+/** Generated envelope around the list page (<c>GetPayoutBatchesResponse { batches }</c>). */
+interface GetPayoutBatchesEnvelope {
+  readonly batches: AdminOpsPage<AdminPayoutBatch>;
+}
+
+/**
+ * Payout-batch LIST (T-0127, US-admin-0007). Browsable cross-maker
+ * (Unscoped) settlement list — Processing + Completed batches, `CreatedAt
+ * DESC`. The GET on the existing `/payout-batches` route (the POST is
+ * CreatePayoutBatch — different verb, same route). The operator browses +
+ * completes/downloads CSV by visible id. Params emitted only when they
+ * diverge from the backend defaults (B.8). Backend Validator authoritative.
+ */
+export async function getPayoutBatches(
+  page: number,
+  pageSize: number = ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE,
+): Promise<Result<AdminOpsPage<AdminPayoutBatch>, ApiError>> {
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  if (pageSize !== ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE) params.set('pageSize', String(pageSize));
+  const query = params.toString();
+  const result = await apiFetch<GetPayoutBatchesEnvelope>(
+    'admin',
+    query ? `${PayoutBase}?${query}` : PayoutBase,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.batches) : result;
 }
 
 // ---- Payout complete (T-0103 POST /payout-batches/{id}/complete) ----
