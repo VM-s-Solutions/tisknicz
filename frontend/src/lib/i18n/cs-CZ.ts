@@ -1005,6 +1005,168 @@ export const messages = {
     'Potvrzením vytvoříme skutečnou zásilku u dopravce a vygenerujeme štítek. Tento krok je nevratný — pokračuj, jen pokud je balíček připravený k odeslání.',
   'dashboard.maker.orderDetail.shipConfirm.confirm': 'Ano, odeslat',
   'dashboard.maker.orderDetail.shipConfirm.cancel': 'Zrušit',
+
+  // ===========================================================================
+  // Admin dashboard (T-0118a) — vykání (V form: admins are JVM YORE operators,
+  // addressed formally). Every admin-facing string is keyed here (T8 gate live).
+  // ===========================================================================
+
+  // Admin shell — nav + header
+  'dashboard.admin.shell.brand': 'Makables Admin',
+  'dashboard.admin.shell.identityFallback': 'Administrátor',
+  'dashboard.admin.shell.logout': 'Odhlásit se',
+  'dashboard.admin.shell.openMenu': 'Otevřít menu',
+  'dashboard.admin.nav.overview': 'Přehled',
+  'dashboard.admin.nav.orders': 'Objednávky',
+  'dashboard.admin.nav.invoices': 'Faktury',
+  'dashboard.admin.nav.audit': 'Audit log',
+  // Forward-compat nav entries (slices b/c) — rendered visibly pending,
+  // never as live links to not-yet-built routes (AC-3 / Option H).
+  'dashboard.admin.nav.payouts': 'Výplaty',
+  'dashboard.admin.nav.outbox': 'Fronta událostí',
+  'dashboard.admin.nav.makers': 'Makeři',
+  'dashboard.admin.nav.users': 'Uživatelé',
+  'dashboard.admin.nav.config': 'Nastavení zemí',
+  'dashboard.admin.nav.pendingBadge': 'Připravujeme',
+
+  // Admin login
+  'dashboard.admin.login.metadata.title': 'Přihlášení administrátora — Makables',
+  'dashboard.admin.login.title': 'Přihlášení administrátora',
+  'dashboard.admin.login.subtitle': 'Přístup pouze pro provozovatele platformy.',
+  'dashboard.admin.login.email': 'E-mail',
+  'dashboard.admin.login.password': 'Heslo',
+  'dashboard.admin.login.submit': 'Přihlásit se',
+  'dashboard.admin.login.submitting': 'Přihlašuji…',
+  'dashboard.admin.login.error.invalidCredentials': 'Nesprávný e-mail nebo heslo.',
+  'dashboard.admin.login.error.locked':
+    'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to prosím za chvíli.',
+  'dashboard.admin.login.error.forbidden': 'Tento účet nemá oprávnění administrátora.',
+  'dashboard.admin.login.error.oauthNotAllowed':
+    'Administrátoři se přihlašují pouze e-mailem a heslem.',
+  'dashboard.admin.login.error.generic': 'Přihlášení se nezdařilo. Zkuste to prosím znovu.',
+
+  // Overview
+  'dashboard.admin.overview.metadata.title': 'Přehled — Makables Admin',
+  'dashboard.admin.overview.metadata.description':
+    'Přehled stavu platformy: objednávky, výplaty, fronta událostí a spory.',
+  'dashboard.admin.overview.title': 'Přehled platformy',
+  'dashboard.admin.overview.subtitle': 'Rychlá orientace ve stavu objednávek, výplat a provozu.',
+  'dashboard.admin.overview.orders.heading': 'Objednávky podle stavu',
+  'dashboard.admin.overview.ops.heading': 'Provoz',
+  'dashboard.admin.overview.tile.viewList': 'Zobrazit seznam',
+  'dashboard.admin.overview.tile.unavailableAria': 'Počet není k dispozici',
+  'dashboard.admin.overview.tile.paid': 'Zaplacené',
+  'dashboard.admin.overview.tile.accepted': 'Přijaté',
+  'dashboard.admin.overview.tile.shipped': 'Odeslané',
+  'dashboard.admin.overview.tile.disputed': 'Spory',
+  'dashboard.admin.overview.tile.payouts': 'Výplaty ke zpracování',
+  'dashboard.admin.overview.tile.outbox': 'Zaseknuté události',
+  'dashboard.admin.overview.tile.pendingNote':
+    'Tato sekce se připravuje — odkaz vede na budoucí přehled.',
+  'dashboard.admin.overview.countFollowUp':
+    'Souhrnné počty zatím nejsou k dispozici. Otevřete seznam pro aktuální data.',
+  'dashboard.admin.overview.error.title': 'Přehled se nepodařilo načíst',
+  'dashboard.admin.overview.error.retry': 'Zkusit znovu',
+
+  // All-orders list
+  'dashboard.admin.orders.metadata.title': 'Objednávky — Makables Admin',
+  'dashboard.admin.orders.metadata.description': 'Všechny objednávky napříč makery a zákazníky.',
+  'dashboard.admin.orders.title': 'Objednávky',
+  'dashboard.admin.orders.subtitle': 'Všechny objednávky platformy, seřazené od nejnovějších.',
+  'dashboard.admin.orders.count': 'Celkem {count} objednávek',
+  'dashboard.admin.orders.table.number': 'Číslo',
+  'dashboard.admin.orders.table.created': 'Vytvořeno',
+  'dashboard.admin.orders.table.state': 'Stav',
+  'dashboard.admin.orders.table.maker': 'Maker',
+  'dashboard.admin.orders.table.customer': 'Zákazník',
+  'dashboard.admin.orders.table.country': 'Země',
+  'dashboard.admin.orders.table.total': 'Částka',
+  'dashboard.admin.orders.filter.state': 'Stav',
+  'dashboard.admin.orders.filter.stateAll': 'Všechny stavy',
+  'dashboard.admin.orders.filter.country': 'Země',
+  'dashboard.admin.orders.filter.maker': 'ID makera',
+  'dashboard.admin.orders.filter.customer': 'E-mail zákazníka',
+  'dashboard.admin.orders.filter.apply': 'Filtrovat',
+  'dashboard.admin.orders.filter.reset': 'Vymazat filtry',
+  'dashboard.admin.orders.empty.title': 'Žádné objednávky',
+  'dashboard.admin.orders.empty.description':
+    'Zadaným filtrům neodpovídají žádné objednávky. Upravte filtry nebo je vymažte.',
+  'dashboard.admin.orders.error.title': 'Objednávky se nepodařilo načíst',
+  'dashboard.admin.orders.error.body':
+    'Při načítání seznamu objednávek došlo k chybě. Zkuste to prosím znovu.',
+  'dashboard.admin.orders.error.retry': 'Zkusit znovu',
+  'dashboard.admin.orders.pagination.previous': 'Předchozí',
+  'dashboard.admin.orders.pagination.next': 'Další',
+  'dashboard.admin.orders.pagination.page_of': 'Stránka {page} z {total}',
+
+  // All-invoices list
+  'dashboard.admin.invoices.metadata.title': 'Faktury — Makables Admin',
+  'dashboard.admin.invoices.metadata.description': 'Všechny faktury platformy.',
+  'dashboard.admin.invoices.title': 'Faktury',
+  'dashboard.admin.invoices.subtitle': 'Všechny faktury platformy, seřazené od nejnovějších.',
+  'dashboard.admin.invoices.count': 'Celkem {count} faktur',
+  'dashboard.admin.invoices.table.number': 'Číslo',
+  'dashboard.admin.invoices.table.type': 'Typ',
+  'dashboard.admin.invoices.table.country': 'Země',
+  'dashboard.admin.invoices.table.recipient': 'Příjemce',
+  'dashboard.admin.invoices.table.total': 'Částka',
+  'dashboard.admin.invoices.table.created': 'Vystaveno',
+  'dashboard.admin.invoices.table.actions': 'Akce',
+  'dashboard.admin.invoices.type.customer': 'Zákaznická',
+  'dashboard.admin.invoices.type.fee': 'Provize',
+  'dashboard.admin.invoices.type.unknown': 'Neznámý typ',
+  'dashboard.admin.invoices.filter.type': 'Typ',
+  'dashboard.admin.invoices.filter.typeAll': 'Všechny typy',
+  'dashboard.admin.invoices.filter.country': 'Země',
+  'dashboard.admin.invoices.filter.recipient': 'Příjemce',
+  'dashboard.admin.invoices.filter.dateFrom': 'Datum od',
+  'dashboard.admin.invoices.filter.dateTo': 'Datum do',
+  'dashboard.admin.invoices.filter.apply': 'Filtrovat',
+  'dashboard.admin.invoices.filter.reset': 'Vymazat filtry',
+  'dashboard.admin.invoices.download.label': 'Stáhnout fakturu',
+  'dashboard.admin.invoices.download.unavailable':
+    'Stahování faktur zatím není dostupné — připravuje se backendový endpoint.',
+  'dashboard.admin.invoices.empty.title': 'Žádné faktury',
+  'dashboard.admin.invoices.empty.description':
+    'Zadaným filtrům neodpovídají žádné faktury. Upravte filtry nebo je vymažte.',
+  'dashboard.admin.invoices.error.title': 'Faktury se nepodařilo načíst',
+  'dashboard.admin.invoices.error.body':
+    'Při načítání seznamu faktur došlo k chybě. Zkuste to prosím znovu.',
+  'dashboard.admin.invoices.error.retry': 'Zkusit znovu',
+  'dashboard.admin.invoices.pagination.previous': 'Předchozí',
+  'dashboard.admin.invoices.pagination.next': 'Další',
+  'dashboard.admin.invoices.pagination.page_of': 'Stránka {page} z {total}',
+
+  // Audit-log list
+  'dashboard.admin.audit.metadata.title': 'Audit log — Makables Admin',
+  'dashboard.admin.audit.metadata.description': 'Záznamy administrátorských akcí.',
+  'dashboard.admin.audit.title': 'Audit log',
+  'dashboard.admin.audit.subtitle': 'Záznamy administrátorských akcí, seřazené od nejnovějších.',
+  'dashboard.admin.audit.count': 'Celkem {count} záznamů',
+  'dashboard.admin.audit.table.created': 'Čas',
+  'dashboard.admin.audit.table.adminUser': 'Administrátor',
+  'dashboard.admin.audit.table.action': 'Akce',
+  'dashboard.admin.audit.table.target': 'Cíl',
+  'dashboard.admin.audit.table.targetId': 'ID cíle',
+  'dashboard.admin.audit.table.notes': 'Poznámka',
+  'dashboard.admin.audit.notesPlaceholder': '—',
+  'dashboard.admin.audit.filter.adminUser': 'ID administrátora',
+  'dashboard.admin.audit.filter.action': 'Kód akce',
+  'dashboard.admin.audit.filter.target': 'Cílová entita',
+  'dashboard.admin.audit.filter.dateFrom': 'Datum od',
+  'dashboard.admin.audit.filter.dateTo': 'Datum do',
+  'dashboard.admin.audit.filter.apply': 'Filtrovat',
+  'dashboard.admin.audit.filter.reset': 'Vymazat filtry',
+  'dashboard.admin.audit.empty.title': 'Žádné záznamy',
+  'dashboard.admin.audit.empty.description':
+    'Zadaným filtrům neodpovídají žádné záznamy. Upravte filtry nebo je vymažte.',
+  'dashboard.admin.audit.error.title': 'Audit log se nepodařilo načíst',
+  'dashboard.admin.audit.error.body':
+    'Při načítání audit logu došlo k chybě. Zkuste to prosím znovu.',
+  'dashboard.admin.audit.error.retry': 'Zkusit znovu',
+  'dashboard.admin.audit.pagination.previous': 'Předchozí',
+  'dashboard.admin.audit.pagination.next': 'Další',
+  'dashboard.admin.audit.pagination.page_of': 'Stránka {page} z {total}',
 } as const;
 
 export type MessageKey = keyof typeof messages;
