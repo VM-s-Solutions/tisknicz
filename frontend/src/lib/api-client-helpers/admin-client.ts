@@ -76,7 +76,7 @@ export interface AdminOrdersPage {
   readonly hasPreviousPage?: boolean;
 }
 
-/** Filter/page inputs for {@link getAdminOrders} — 1:1 with the T-0105 GET contract. */
+/** Filter/page inputs for {@link getAdminOrders} — 1:1 with the T-0105 / T-0127 GET contract. */
 export interface AdminOrdersInput {
   readonly page?: number;
   /** Clamped to {@link ADMIN_LIST_MAX_PAGE_SIZE} by the page; backend authoritative. */
@@ -86,6 +86,13 @@ export interface AdminOrdersInput {
   readonly country?: string;
   readonly makerId?: string;
   readonly customerEmail?: string;
+  /**
+   * T-0127 per-user filter — the delete-user proactive in-flight signal
+   * (§A.3). When set, the read returns only that user's orders; combined
+   * with a `state` filter and an emptiness check it answers "does this
+   * user have any in-flight order".
+   */
+  readonly customerUserId?: string;
 }
 
 /** Generated envelope around the list page (<c>GetAllOrdersResponse { orders }</c>). */
@@ -113,6 +120,9 @@ export async function getAdminOrders(
   if (input.makerId !== undefined && input.makerId !== '') params.set('makerId', input.makerId);
   if (input.customerEmail !== undefined && input.customerEmail !== '') {
     params.set('customerEmail', input.customerEmail);
+  }
+  if (input.customerUserId !== undefined && input.customerUserId !== '') {
+    params.set('customerUserId', input.customerUserId);
   }
   const query = params.toString();
   const result = await apiFetch<GetAllOrdersEnvelope>(

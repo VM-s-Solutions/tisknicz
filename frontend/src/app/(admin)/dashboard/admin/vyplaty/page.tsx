@@ -3,24 +3,29 @@ import { redirect } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import { getProcessingPayoutsCount } from '@/lib/api-client-helpers/admin-ops-client';
+import {
+  ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE,
+  type AdminOpsPage,
+  type AdminPayoutBatch,
+  getPayoutBatches,
+  getProcessingPayoutsCount,
+} from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
-import { PayoutActions } from './payout-actions';
+import { OpsPagination } from '../ops-pagination';
+import { PayoutBatchCard } from './payout-batch-card';
 
 /**
- * Admin payout view (T-0118c §3, US-admin-0007). Server Component,
- * `force-dynamic`. VIEW + complete-action + operator CSV; NO manual
- * create-batch (A.3 — the T-0104 weekly timer + its HTTP escape-hatch own
- * creation). The CSV is the cross-maker bank file — admin/operator-only,
- * INVERTING the T-0116 maker absence (A.4).
+ * Admin payout view (T-0118c §3 / T-0127 re-wire, US-admin-0007). Server
+ * Component, `force-dynamic`. VIEW + complete-action + operator CSV; NO
+ * manual create-batch (A.3 — the T-0104 weekly timer + its HTTP
+ * escape-hatch own creation). The CSV is the cross-maker bank file —
+ * admin/operator-only, INVERTING the T-0116 maker absence (A.4).
  *
- * CONTRACT GAP (flagged): the admin contract exposes the processing COUNT
- * (T-0126) but NO payout-batch LIST read (the generated `payoutBatches()`
- * method is the CREATE POST — A.3 forbids it here). The page therefore
- * renders the processing count + a by-id complete/CSV surface; a list
- * endpoint is the clean fix and is logged as a backend follow-up. With no
- * list, there is no list to paginate, so `?page=` URL-state pagination is
- * deferred to when the list endpoint lands (gap flagged).
+ * T-0127 closed the list gap: the page now renders the browsable paged
+ * payout-batch LIST (cross-maker / Unscoped, Processing + Completed,
+ * `CreatedAt DESC`) with URL-state pagination (T-0087a). The operator
+ * browses + completes/downloads CSV per row by VISIBLE id instead of
+ * pasting one blind. The processing count tile stays as the at-a-glance KPI.
  */
 
 export function generateMetadata(): Metadata {
@@ -34,14 +39,38 @@ export const dynamic = 'force-dynamic';
 
 const ROUTE_PATH = '/dashboard/admin/vyplaty';
 
-export default async function AdminPayoutsPage() {
-  const result = await getProcessingPayoutsCount();
+interface PageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
-  if (!result.success && result.error.type === 'Unauthorized') {
+function readString(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
+function parsePositiveInt(raw: string, fallback: number): number {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+export default async function AdminPayoutsPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePositiveInt(readString(sp.page), 1);
+
+  const [countResult, listResult] = await Promise.all([
+    getProcessingPayoutsCount(),
+    getPayoutBatches(page, ADMIN_OPS_LIST_DEFAULT_PAGE_SIZE),
+  ]);
+
+  const countUnauthorized = !countResult.success && countResult.error.type === 'Unauthorized';
+  const listUnauthorized = !listResult.success && listResult.error.type === 'Unauthorized';
+  if (countUnauthorized || listUnauthorized) {
     redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
   }
 
-  const count = result.success ? result.value : null;
+  const count = countResult.success ? countResult.value : null;
+  const list = listResult.success ? listResult.value : null;
 
   return (
     <section className="py-12 lg:py-16">
@@ -71,23 +100,70 @@ export default async function AdminPayoutsPage() {
           <Alert variant="warning" className="mb-6">
             <p className="text-sm">{t('dashboard.admin.ops.payouts.processingCount.unavailable')}</p>
           </Alert>
-        ) : count === 0 ? (
-          <Alert variant="info" className="mb-6">
-            <p className="text-sm">{t('dashboard.admin.ops.payouts.processingCount.none')}</p>
-          </Alert>
         ) : null}
 
-        <Alert variant="info" className="mb-6">
-          <div>
-            <p className="font-semibold">{t('dashboard.admin.ops.payouts.listGap.title')}</p>
-            <p className="mt-1 text-sm opacity-90">
-              {t('dashboard.admin.ops.payouts.listGap.body')}
-            </p>
-          </div>
-        </Alert>
-
-        <PayoutActions />
+        <PayoutList list={list} />
       </div>
     </section>
+  );
+}
+
+function PayoutList({
+  list,
+}: {
+  readonly list: AdminOpsPage<AdminPayoutBatch> | null;
+}) {
+  if (list === null) {
+    return (
+      <Alert variant="error">
+        <p className="font-semibold">{t('dashboard.admin.ops.payouts.list.error.title')}</p>
+        <p className="mt-1 text-sm opacity-90">
+          {t('dashboard.admin.ops.payouts.list.error.body')}
+        </p>
+      </Alert>
+    );
+  }
+
+  if (list.totalCount === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+          <Icon name="creditCard" size={28} />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-100">
+            {t('dashboard.admin.ops.payouts.list.empty.title')}
+          </h2>
+          <p className="mt-2 max-w-md text-sm text-zinc-400">
+            {t('dashboard.admin.ops.payouts.list.empty.body')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPages = list.totalPages ?? 1;
+
+  return (
+    <>
+      <p className="mb-4 text-sm text-zinc-500">
+        {t('dashboard.admin.ops.payouts.list.count', { count: list.totalCount })}
+      </p>
+      <ul className="flex flex-col gap-4">
+        {list.items.map((batch) => (
+          <li key={batch.batchId}>
+            <PayoutBatchCard batch={batch} />
+          </li>
+        ))}
+      </ul>
+
+      <OpsPagination
+        page={list.page}
+        totalPages={totalPages}
+        hasNext={list.hasNextPage ?? false}
+        hasPrevious={list.hasPreviousPage ?? false}
+        routePath={ROUTE_PATH}
+      />
+    </>
   );
 }

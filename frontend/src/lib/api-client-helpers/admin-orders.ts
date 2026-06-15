@@ -28,6 +28,7 @@
 import {
   DisputeCategory,
   DisputeResolutionOutcome,
+  type IAdminOrderDetailDto,
   type IChangeOrderStateManuallyResponse,
   type IOpenDisputeResponse,
   type IRefundOrderResponse,
@@ -41,7 +42,12 @@ import {
   ADMIN_LIST_DEFAULT_PAGE_SIZE,
   ADMIN_LIST_MAX_PAGE_SIZE,
   getAdminAuditLog,
+  getAdminOrders,
 } from './admin-client';
+
+// Leading slash matters: apiFetch concatenates `${baseUrl}${path}` against
+// host URLs with no trailing slash (admin-client.ts precedent).
+const AdminOrdersBase = '/api/v1/admin-orders';
 
 // Leading slash matters: apiFetch concatenates `${baseUrl}${path}` against
 // host URLs with no trailing slash (admin-client.ts precedent).
@@ -183,16 +189,119 @@ export async function resolveDispute(
   );
 }
 
+// ---- Admin order detail (T-0127 GET /admin-orders/{orderId}) ----
+
+/**
+ * Mirror of <c>AdminOrderDetailDto</c> (T-0127, Q-0024). The full
+ * privileged order header — number, state, all amounts/breakdown, country,
+ * maker, `customerEmail`, contact snapshot, lifecycle timestamps. Admin is
+ * privileged → NO GDPR redaction. <c>Date</c> fields are overridden to
+ * wire-shape <c>string</c> (apiFetch returns raw JSON without the generated
+ * class's Date-parsing constructor — admin-client.ts B1 rationale); the
+ * page formats them with the cs-CZ date utils.
+ */
+export type AdminOrderDetail = Readonly<
+  Omit<
+    IAdminOrderDetailDto,
+    | 'createdAt'
+    | 'paidAt'
+    | 'acceptedAt'
+    | 'shippedAt'
+    | 'deliveredAt'
+    | 'completedAt'
+    | 'cancelledAt'
+    | 'refundedAt'
+    | 'disputedAt'
+  >
+> & {
+  readonly createdAt: string;
+  readonly paidAt: string | undefined;
+  readonly acceptedAt: string | undefined;
+  readonly shippedAt: string | undefined;
+  readonly deliveredAt: string | undefined;
+  readonly completedAt: string | undefined;
+  readonly cancelledAt: string | undefined;
+  readonly refundedAt: string | undefined;
+  readonly disputedAt: string | undefined;
+};
+
+/** Generated envelope around the detail (<c>GetAdminOrderDetailResponse { order }</c>). */
+interface GetAdminOrderDetailEnvelope {
+  readonly order: AdminOrderDetail;
+}
+
+/**
+ * Admin order detail (T-0127, US-admin-0009 AC-2). The real privileged
+ * header — replaces T-0118b's list-row scan. Unscoped (cross-tenant) over
+ * `GetByIdUnscopedAsync`, AsNoTracking. 404 (unknown / inactive id) →
+ * `OrderNotFound` (reused code). The detail header + the existing audit-log
+ * trail together cover the route; line items / message thread stay out of
+ * scope (ticket §Out of scope).
+ */
+export async function getAdminOrderDetail(
+  orderId: string,
+): Promise<Result<AdminOrderDetail, ApiError>> {
+  const result = await apiFetch<GetAdminOrderDetailEnvelope>(
+    'admin',
+    `${AdminOrdersBase}/${encodeURIComponent(orderId)}`,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.order) : result;
+}
+
+// ---- Per-user in-flight signal (T-0127, the delete-user pre-disable) ----
+
+/**
+ * The order states that BLOCK a GDPR hard-delete (§A.3) — T-0110's
+ * interlock set plus `Disputed`. A user with any order in one of these
+ * states cannot be erased; the backend T-0110 gate
+ * (`user.cannotDeleteWithInFlightOrders`) stays authoritative. This list
+ * drives the PROACTIVE pre-disable only (UX layer).
+ */
+const IN_FLIGHT_ORDER_STATES: readonly OrderState[] = [
+  OrderState.PendingPayment,
+  OrderState.Paid,
+  OrderState.Accepted,
+  OrderState.Shipped,
+  OrderState.Disputed,
+];
+
+/**
+ * Per-user in-flight signal (T-0127, Q-0024 §A.3). Probes the filtered
+ * admin-orders read once per in-flight state for the target user; the
+ * FIRST non-empty page means the user has a blocking order. Drives the
+ * delete-user proactive pre-disable (AC-12). On a read failure returns
+ * `false` (do NOT pre-disable on a transient error — the backend gate is
+ * authoritative and re-checks at submit). The admin-orders read takes a
+ * single `state` per call (1:1 with T-0105's contract), so the few in-
+ * flight states are probed with `pageSize: 1` — emptiness is the signal,
+ * no rows are rendered.
+ */
+export async function userHasInFlightOrders(
+  customerUserId: string,
+): Promise<Result<boolean, ApiError>> {
+  for (const state of IN_FLIGHT_ORDER_STATES) {
+    const result = await getAdminOrders({
+      page: 1,
+      pageSize: 1,
+      state,
+      customerUserId,
+    });
+    if (!result.success) return result;
+    if (result.value.totalCount > 0) return ok(true);
+  }
+  return ok(false);
+}
+
 // ---- Order-scoped audit trail (T-0108 GET /audit-log filtered to the order) ----
 
 /**
- * The order's audit trail (the load-bearing read for the detail route —
- * §C.2). No order-detail DTO exists (Q-0024 gap, logged follow-up), so
- * the detail header degrades to the list-row fields and the audit-log
- * query is the route's rich read. The generated `auditLog` query has no
- * `targetId` filter, so we fetch the `targetEntity: "order"` slice and
- * narrow to this order client-side (on the server) before paginating —
- * the same shape the global audit list (T-0118a) consumes.
+ * The order's audit trail (the audit read for the detail route — §C.2).
+ * Paired with the privileged header from {@link getAdminOrderDetail}
+ * (T-0127). The generated `auditLog` query has no `targetId` filter, so we
+ * fetch the `targetEntity: "order"` slice and narrow to this order client-
+ * side (on the server) before paginating — the same shape the global audit
+ * list (T-0118a) consumes.
  *
  * NOTE: because the backend filter is entity-coarse, a busy log could
  * page past this order's rows; the gap is bounded and logged with the
