@@ -59,3 +59,5 @@ Run this for every PR. If a row fails, request changes — do not approve.
 
 ## J. Mechanical checks
 - [ ] scripts/check-consistency.mjs exit-0 against this diff (no NEW violations).
+- [ ] **T8 (i18n parity, `hard`):** every new `BusinessErrorMessage` code has a parallel `cs-CZ.ts` key OR is in the `T8_NO_KEY_REQUIRED` allowlist (codes that intentionally render the `errors.ts` type-fallback). Hard-fail — never baselined.
+- [ ] **T9 (unique-index→translator, `hard`):** every new NAMED unique index (`.IsUnique().HasDatabaseName("x")`) is a `UniqueConstraintTranslator` key OR carries a `// no-translator: <reason>` marker, with a concurrent-loser integration test when mapped. Hard-fail — never baselined.
