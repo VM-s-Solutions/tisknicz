@@ -232,8 +232,8 @@ interface GetAdminOrderDetailEnvelope {
 
 /**
  * Admin order detail (T-0127, US-admin-0009 AC-2). The real privileged
- * header — replaces T-0118b's list-row scan. Unscoped (cross-tenant) over
- * `GetByIdUnscopedAsync`, AsNoTracking. 404 (unknown / inactive id) →
+ * header — replaces T-0118b's list-row scan. Unscoped (cross-tenant) via
+ * `orders.Unscoped()`, AsNoTracking. 404 (unknown / inactive id) →
  * `OrderNotFound` (reused code). The detail header + the existing audit-log
  * trail together cover the route; line items / message thread stay out of
  * scope (ticket §Out of scope).

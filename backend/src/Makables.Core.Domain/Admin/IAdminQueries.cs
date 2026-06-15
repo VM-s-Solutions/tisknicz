@@ -61,12 +61,11 @@ public interface IAdminQueries
     Task<AdminOrderDetailDto?> GetOrderDetailAsync(string orderId, CancellationToken ct);
 
     /// <summary>
-    /// Paged cross-maker payout-batch list (T-0127 / Q-0029). Composes over
-    /// <c>IPayoutBatchRepository.Unscoped()</c> — wait, the batch repo has
-    /// no Unscoped queryable, so this reads the DbSet directly,
-    /// <c>AsNoTracking</c>. Spans every maker (the admin browse list, NOT
-    /// the per-maker T-0112 surface). The global soft-delete filter applies
-    /// (a batch is never destroyed). Sorted <c>CreatedAt DESC</c>.
+    /// Paged cross-maker payout-batch list (T-0127 / Q-0029). Reads the
+    /// payout-batch DbSet directly, <c>AsNoTracking</c> (the batch repo
+    /// exposes no Unscoped queryable). Spans every maker (the admin browse
+    /// list, NOT the per-maker T-0112 surface). The global soft-delete filter
+    /// applies (a batch is never destroyed). Sorted <c>CreatedAt DESC</c>.
     /// </summary>
     Task<PagedData<AdminPayoutBatchListItemDto>> GetPayoutBatchesPagedAsync(
         int page, int pageSize, CancellationToken ct);
