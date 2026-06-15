@@ -42,6 +42,12 @@
          booting either host. -->
     <ProjectReference Include="..\Makables.Web.Customer\Makables.Web.Customer.csproj" />
     <ProjectReference Include="..\Makables.Web.Maker\Makables.Web.Maker.csproj" />
+    <!-- T-0126: the admin invoice-PDF download action is controller-direct
+         (ADR 0014 handler-free read paths, T-0088 precedent), so its unit
+         tests construct AdminInvoicesController directly with NSubstitute
+         mocks + a DefaultHttpContext — same shape as the Customer/Maker
+         controller references above. -->
+    <ProjectReference Include="..\Makables.Web.Admin\Makables.Web.Admin.csproj" />
     <!-- T-0069: GenerateInvoiceFunction lives on Makables.Functions. The
          unit tests construct it directly with NSubstitute mocks of
          IOutboxConsumerRepository + ISender — same shape as the existing
