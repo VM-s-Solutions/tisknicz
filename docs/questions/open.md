@@ -355,8 +355,8 @@
 - **Options the agent has considered:**
   - Thin backend ticket: `GET /api/v1/admin-invoices/{invoiceId}/pdf` on Web.Admin, controller-direct streaming per T-0088, `IInvoiceRepository.Unscoped()` lookup (admin sees any invoice), ETag + private/no-store. ~S. Then re-enable the T-0118a button (one helper + remove the disabled state).
   - Defer until a sprint needs admin invoice download in production.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Option a — groomed as **T-0126** (admin-reads-followups bundle, 2026-06-15). `GET /api/v1/admin-invoices/{invoiceId}/pdf` on Web.Admin, controller-direct streaming per the T-0088 precedent, Unscoped-by-invoice-id lookup (admin sees ANY invoice — new read-only `IInvoiceRepository.GetByIdUnscopedReadOnlyAsync` per ADR 0025), 404 reuses `InvoiceNotYetRendered` (no new code), `private, no-store` + ETag/304 + `faktura-{InvoiceNumber}.pdf` (T-0064/T-0088 PII policy). Backend-only; the T-0118a "Stáhnout fakturu" re-enable rides a tiny FE follow-up once T-0126 ships the endpoint + admin NSwag regen.
 
 ## Q-0027 — Admin overview KPI count reads absent (Processing payouts + stalled outbox)
 - **From:** frontend (T-0118a overview)
@@ -368,5 +368,18 @@
   - Thin count endpoints (`GET /api/v1/payout-batches/count?state=Processing`, `/outbox-events/stalled/count`) consumed by the overview. ~S backend.
   - Let slice c ship the payout + outbox LIST views; the overview deep-links to them and shows the count once those reads exist (no dedicated count endpoint; the list's totalCount serves the tile, same pattern as the order-state probes).
   - Defer the two tiles to slice c entirely (overview ships order-state counts only at PR 1).
+- **Status:** answered
+- **Answer (filled by user):** Option a — groomed as **T-0126** (admin-reads-followups bundle, 2026-06-15). Two thin admin-host count endpoints: `GET /api/v1/payout-batches/count?state=Processing` → `{ count }` (new `IPayoutBatchRepository.CountByStateAsync`, AsNoTracking/Unscoped) + `GET /api/v1/outbox-events/stalled/count` → `{ count }` (new `IOutboxConsumerRepository.CountStalledAsync` with the exact stalled-set predicate `ProcessedAt==null AND NextRetryAt==null AND LastErrorKind!=None`, matching T-0109's stalled set — acknowledged rows excluded by `ProcessedAt==null`). Globally-unique Response names; read-only (no new codes). The overview consumes these to replace the "—" tiles + drive the US-admin-0002 AC-2 stalled-outbox banner. Backend-only; the FE wire-up rides a tiny T-0118a follow-up once T-0126 ships + admin NSwag regen.
+
+## Q-0028 — Admin invoice-PDF reads are not audited
+- **From:** secops (T-0126 Gate 3, F1)
+- **Ticket / context:** T-0126 admin invoice-PDF download (`GET /api/v1/admin-invoices/{id}/pdf`)
+- **Asked:** 2026-06-15
+- **Blocking:** no — the read is admin-audience-gated; the question is forensic-trail completeness, not access control.
+- **Question:** The admin invoice-PDF download is controller-direct (not an `IAdminAuditableCommand`), so streaming a customer's invoice as admin leaves NO audit row — unlike T-0110 erasure (audited). Customer invoices carry PII (recipient name/address/line items). Should privileged admin reads of customer financial PII emit an audit row ("admin X downloaded invoice Y")?
+- **Options the agent has considered:**
+  - Audit all admin invoice-PDF reads (a read-side audit hook — the admin-audit pipeline is command-only today; a read needs a thin explicit AppendAsync in the controller, or a read-audit behavior). Strongest forensic trail; one extra write per download.
+  - Audit nothing (status quo) — admin is a 2-person trusted role; access is gated; the invoice already exists as a legal record.
+  - Audit only on a future "admin accessed customer PII" policy bucket (broader than invoices — would also cover the admin order list showing customerEmail).
 - **Status:** open
 - **Answer (filled by user):**

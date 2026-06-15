@@ -8,6 +8,8 @@
 - backend/src/Makables.Core.AppServices/Features/Admin/GetAdminAuditLog.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Admin/GetAllInvoices.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Admin/GetAllOrders.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Admin/GetProcessingPayoutsCount.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxCount.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/CompleteGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/ConfirmEmail.cs:1:T1  feature file must declare a public static class wrapper

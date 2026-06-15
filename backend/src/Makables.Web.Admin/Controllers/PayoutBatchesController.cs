@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.AppServices.Features.Admin;
 using Makables.Core.AppServices.Features.Payouts;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Payouts;
@@ -43,6 +44,21 @@ public sealed class PayoutBatchesController(
     [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(CancellationToken ct) =>
         HandleResult(await Mediator.Send(new CreatePayoutBatch.Command(), ct));
+
+    /// <summary>
+    /// Count payout batches in a given state (T-0126 / Q-0027). Backs the admin
+    /// overview's "Processing payouts" KPI tile (default
+    /// <see cref="PayoutBatchState.Processing"/>). Read-only, admin-audience only
+    /// (ADR 0013). Empty set → <c>{ count: 0 }</c>, never 404.
+    /// </summary>
+    [HttpGet("count")]
+    [ProducesResponseType(typeof(GetProcessingPayoutsCount.GetProcessingPayoutsCountResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Count(
+        [FromQuery] PayoutBatchState state = PayoutBatchState.Processing,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetProcessingPayoutsCount.Query(state), ct));
 
     /// <summary>Request body for <see cref="Complete"/>. The batch id rides the route.</summary>
     public sealed record MarkPayoutBatchCompletedRequest(string BankReference, DateOnly? PaymentDate);

@@ -122,6 +122,21 @@ public interface IInvoiceRepository
     Task<Invoice?> GetByIdUnscopedAsync(string invoiceId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Read-only (<c>AsNoTracking</c>) mirror of <see cref="GetByIdUnscopedAsync"/>
+    /// per ADR 0025 — same unscoped <c>i.Id == invoiceId</c> lookup +
+    /// <c>.IgnoreQueryFilters()</c> (so admin reconciliation sees
+    /// soft-deleted / anonymised rows) + the same null-for-unknown-id return
+    /// shape, but adds <c>.AsNoTracking()</c> because the caller never mutates
+    /// the returned aggregate. <b>Admin host only</b> per ADR 0013. Backs
+    /// T-0126's controller-direct admin invoice-PDF download, which only
+    /// inspects <see cref="Invoice.PdfBlobPath"/> + <see cref="Invoice.InvoiceNumber"/>
+    /// before streaming the blob (no order / maker owner scoping — the admin
+    /// reads ANY invoice by id). Analogous to the T-0088
+    /// <c>GetByOrderIdReadOnlyAsync</c> read-only-mirror precedent.
+    /// </summary>
+    Task<Invoice?> GetByIdUnscopedReadOnlyAsync(string invoiceId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Look up an invoice by its customer-facing number
     /// (<c>FV-CZ-20260001</c>). <b>Unscoped</b> — backs admin search and
     /// reconciliation. The global soft-delete filter still applies;

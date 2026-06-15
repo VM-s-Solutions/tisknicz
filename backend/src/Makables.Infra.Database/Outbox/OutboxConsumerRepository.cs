@@ -40,4 +40,22 @@ public sealed class OutboxConsumerRepository(MakablesDbContext db) : IOutboxCons
         if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<OutboxEvent?>(null);
         return db.Set<OutboxEvent>().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
+
+    public Task<int> CountStalledAsync(CancellationToken cancellationToken)
+    {
+        // Stalled set (T-0126 / Q-0027) — exactly T-0109's definition: the
+        // retry ladder exhausted (RecordFailure with nextRetryAt: null), not
+        // yet processed, and a real failure recorded. This is the inverse of
+        // LoadDueAsync's due-set narrowed to failed-and-not-rescheduled, and
+        // mirrors OutboxEvent.ParkPendingConsumer's stall guard. An
+        // acknowledged row has ProcessedAt set, so ProcessedAt == null already
+        // excludes it. AsNoTracking — this is a pure count, never an entity.
+        return db.Set<OutboxEvent>()
+            .AsNoTracking()
+            .CountAsync(
+                e => e.ProcessedAt == null
+                  && e.NextRetryAt == null
+                  && e.LastErrorKind != OutboxErrorKind.None,
+                cancellationToken);
+    }
 }

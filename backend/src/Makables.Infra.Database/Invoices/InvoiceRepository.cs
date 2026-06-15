@@ -120,6 +120,22 @@ public sealed class InvoiceRepository(MakablesDbContext db) : IInvoiceRepository
             .FirstOrDefaultAsync(i => i.Id == invoiceId, cancellationToken);
     }
 
+    public Task<Invoice?> GetByIdUnscopedReadOnlyAsync(string invoiceId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceId))
+            return Task.FromResult<Invoice?>(null);
+
+        // Read-only mirror of GetByIdUnscopedAsync — T-0126 admin invoice
+        // download only reads (PdfBlobPath + InvoiceNumber) and never mutates;
+        // AsNoTracking per ADR 0025 §Performance item 2. IgnoreQueryFilters
+        // keeps the admin/GDPR-reconciliation visibility (soft-deleted /
+        // anonymised rows), same policy as GetByIdUnscopedAsync.
+        return db.Set<Invoice>()
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.Id == invoiceId, cancellationToken);
+    }
+
     public Task<Invoice?> GetByInvoiceNumberAsync(string invoiceNumber, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(invoiceNumber))

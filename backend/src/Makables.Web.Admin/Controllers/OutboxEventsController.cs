@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.AppServices.Features.Admin;
 using Makables.Core.AppServices.Features.Outbox;
 using Makables.Core.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,19 @@ public sealed class OutboxEventsController : MakablesApiController
 {
     /// <summary>Request body for <see cref="Acknowledge"/>. The id rides the route.</summary>
     public sealed record AcknowledgeOutboxEventRequest(string Reason);
+
+    /// <summary>
+    /// Count stalled outbox events (T-0126 / Q-0027) — the retry ladder
+    /// exhausted (<c>ProcessedAt == null AND NextRetryAt == null AND
+    /// LastErrorKind != None</c>). Backs the admin overview's stalled-outbox KPI
+    /// tile + the US-admin-0002 AC-2 banner. Read-only, admin-audience only
+    /// (ADR 0013). No params; empty set → <c>{ count: 0 }</c>, never 404.
+    /// </summary>
+    [HttpGet("stalled/count")]
+    [ProducesResponseType(typeof(GetStalledOutboxCount.GetStalledOutboxCountResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> StalledCount(CancellationToken ct) =>
+        HandleResult(await Mediator.Send(new GetStalledOutboxCount.Query(), ct));
 
     /// <summary>
     /// Force-retry a stalled event — one-shot "try now". 409
