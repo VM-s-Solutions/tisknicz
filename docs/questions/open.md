@@ -355,8 +355,8 @@
 - **Options the agent has considered:**
   - Thin backend ticket: `GET /api/v1/admin-invoices/{invoiceId}/pdf` on Web.Admin, controller-direct streaming per T-0088, `IInvoiceRepository.Unscoped()` lookup (admin sees any invoice), ETag + private/no-store. ~S. Then re-enable the T-0118a button (one helper + remove the disabled state).
   - Defer until a sprint needs admin invoice download in production.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Option a — groomed as **T-0126** (admin-reads-followups bundle, 2026-06-15). `GET /api/v1/admin-invoices/{invoiceId}/pdf` on Web.Admin, controller-direct streaming per the T-0088 precedent, Unscoped-by-invoice-id lookup (admin sees ANY invoice — new read-only `IInvoiceRepository.GetByIdUnscopedReadOnlyAsync` per ADR 0025), 404 reuses `InvoiceNotYetRendered` (no new code), `private, no-store` + ETag/304 + `faktura-{InvoiceNumber}.pdf` (T-0064/T-0088 PII policy). Backend-only; the T-0118a "Stáhnout fakturu" re-enable rides a tiny FE follow-up once T-0126 ships the endpoint + admin NSwag regen.
 
 ## Q-0027 — Admin overview KPI count reads absent (Processing payouts + stalled outbox)
 - **From:** frontend (T-0118a overview)
@@ -368,5 +368,5 @@
   - Thin count endpoints (`GET /api/v1/payout-batches/count?state=Processing`, `/outbox-events/stalled/count`) consumed by the overview. ~S backend.
   - Let slice c ship the payout + outbox LIST views; the overview deep-links to them and shows the count once those reads exist (no dedicated count endpoint; the list's totalCount serves the tile, same pattern as the order-state probes).
   - Defer the two tiles to slice c entirely (overview ships order-state counts only at PR 1).
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Option a — groomed as **T-0126** (admin-reads-followups bundle, 2026-06-15). Two thin admin-host count endpoints: `GET /api/v1/payout-batches/count?state=Processing` → `{ count }` (new `IPayoutBatchRepository.CountByStateAsync`, AsNoTracking/Unscoped) + `GET /api/v1/outbox-events/stalled/count` → `{ count }` (new `IOutboxConsumerRepository.CountStalledAsync` with the exact stalled-set predicate `ProcessedAt==null AND NextRetryAt==null AND LastErrorKind!=None`, matching T-0109's stalled set — acknowledged rows excluded by `ProcessedAt==null`). Globally-unique Response names; read-only (no new codes). The overview consumes these to replace the "—" tiles + drive the US-admin-0002 AC-2 stalled-outbox banner. Backend-only; the FE wire-up rides a tiny T-0118a follow-up once T-0126 ships + admin NSwag regen.
