@@ -69,4 +69,14 @@ public sealed class PayoutBatchRepository(MakablesDbContext db) : IPayoutBatchRe
                 b => b.CountryCode == normalizedCc && b.BatchNumber == trimmedNumber,
                 cancellationToken);
     }
+
+    public Task<int> CountByStateAsync(PayoutBatchState state, CancellationToken cancellationToken)
+    {
+        // AsNoTracking aggregate (T-0126) — the overview KPI tile reads a
+        // count, never an entity. The global soft-delete filter applies (no
+        // IgnoreQueryFilters): the count is of active batches.
+        return db.Set<PayoutBatch>()
+            .AsNoTracking()
+            .CountAsync(b => b.State == state, cancellationToken);
+    }
 }

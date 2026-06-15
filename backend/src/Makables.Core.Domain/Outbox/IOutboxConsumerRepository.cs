@@ -30,4 +30,20 @@ public interface IOutboxConsumerRepository
     /// authoritative outbox row. Returns <c>null</c> if no row exists.
     /// </summary>
     Task<OutboxEvent?> GetByIdAsync(string id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Count <b>stalled</b> events (T-0126 / Q-0027) — the retry ladder has
+    /// exhausted and admin intervention is the only legal next state. The
+    /// predicate matches T-0109's stalled set exactly (the inverse of the
+    /// <c>LoadDueAsync</c> due-set, narrowed to failed-and-not-rescheduled):
+    /// <c>ProcessedAt == null AND NextRetryAt == null AND LastErrorKind != None</c>.
+    /// An acknowledged row has <see cref="OutboxEvent.ProcessedAt"/> set
+    /// (<c>Acknowledge</c> sets both <c>ProcessedAt</c> + <c>NextRetryAt = null</c>),
+    /// so <c>ProcessedAt == null</c> already excludes it; the same predicate is
+    /// <see cref="OutboxEvent.ParkPendingConsumer"/>'s own "refuses to park a
+    /// stalled row" guard. Read-only (<c>AsNoTracking</c>) aggregate; backs the
+    /// admin overview's stalled-outbox KPI tile + the US-admin-0002 AC-2 banner.
+    /// Empty set → 0.
+    /// </summary>
+    Task<int> CountStalledAsync(CancellationToken cancellationToken);
 }

@@ -47,4 +47,14 @@ public interface IPayoutBatchRepository
     /// unique index). Tracked. Admin host only.
     /// </summary>
     Task<PayoutBatch?> GetByNumberAsync(string countryCode, string batchNumber, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Count batches in <paramref name="state"/> across all countries
+    /// (T-0126 / Q-0027). Backs the admin overview's "Processing payouts"
+    /// KPI tile. Read-only (<c>AsNoTracking</c>) aggregate; the global
+    /// soft-delete filter applies (a batch is never destroyed, but the
+    /// count is of active rows). <b>Admin host only</b> per ADR 0013 —
+    /// the aggregate is a privileged money record. Empty set → 0.
+    /// </summary>
+    Task<int> CountByStateAsync(PayoutBatchState state, CancellationToken cancellationToken);
 }
