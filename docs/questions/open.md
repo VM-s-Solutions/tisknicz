@@ -323,3 +323,25 @@
 - **Status:** open
 - **Answer (filled by user):**
 - **Note:** T-0124 owner must reconcile `ProviderRegistry` fallback + the seed when email providers become keyed. Recorded on `roles/country-configuration.md` (provider-validation seam).
+
+## Q-0024 — No admin order-detail read DTO (admin order detail renders only list-row + audit-log fields)
+- **From:** BA (T-0118b grooming)
+- **Ticket / context:** T-0118b admin order detail (`/dashboard/admin/orders/[orderId]`); US-admin-0009 AC-2
+- **Asked:** 2026-06-15
+- **Blocking:** no — T-0118b ships the richest detail the current contract allows (the T-0111 `AdminOrderListItemDto` fields + the order's audit trail via the audit-log query); the gap is bounded and labelled, not silent
+- **Question:** T-0111 shipped only the admin cross-tenant *list* (`AdminOrderListItemDto`) and the *global* audit-log query — there is **no** admin order-detail read (line items, lifecycle timeline, payout/VAT breakdown, attachments, message thread). The T-0082 maker/customer detail DTOs are owner-scoped (loaded via `GetByIdForMakerAsync`/`GetByIdForCustomerAsync`) and not reusable on the admin host. Should a thin `GetAdminOrderDetail` query + DTO be added (composing over `IOrderRepository.GetByIdUnscopedAsync`, which already exists for T-0105/T-0107) so the admin detail page renders a full order, not a degraded list-row header?
+- **Options the agent has considered:**
+  - Add `GetAdminOrderDetail` (Query + `AdminOrderDetailDto` + admin endpoint) as a small backend follow-up ticket — composes over the existing unscoped lookup; the richest fit for US-admin-0009 AC-2.
+  - Leave T-0118b on the bounded composition (list-row header + audit trail) at MVP — the audit trail is the load-bearing read; the header degrades gracefully; revisit if admin ops needs line items.
+- **Status:** open
+- **Answer (filled by user):**
+- **Note:** Out of scope for the T-0118 frontend bundle (frontend slices are read-only consumers; no backend added). If accepted, owner is dotnet-backend; T-0118b's detail header upgrades to consume the new DTO with no UI restructure.
+
+## Q-0025 — T-0118 INDEX `depends_on` omits T-0110 + T-0103 (slice-c dependencies)
+- **From:** BA (T-0118b grooming — dependency-gap fix flagged in the split)
+- **Ticket / context:** `docs/tickets/INDEX.md` T-0118 row + the T-0118a/b/c split
+- **Asked:** 2026-06-15
+- **Blocking:** no — documentation/dependency-graph correctness; does not block T-0118a or T-0118b
+- **Question:** The INDEX `depends_on` for T-0118 lists `T-0102, T-0105, T-0106, T-0107, T-0108, T-0109, T-0111` but **OMITS T-0110 (GDPR DeleteUserPermanently — slice c) and T-0103 (MarkPayoutBatchCompleted — slice c payout "complete" action + BankReference capture)**. Both are consumed by T-0118c (ops + control-plane). The split's overall dependency set and T-0118c's `depends_on` must add T-0110 + T-0103.
+- **Status:** resolved (documentation)
+- **Answer (filled by user):** Flagged in the grooming commit. T-0118c (when written) must carry `depends_on: [T-0118a, T-0102, T-0103, T-0108, T-0109, T-0110]`; the INDEX T-0118 aggregate row gains T-0110 + T-0103 when PM splits the row into a/b/c. Recorded here so the gap is not lost between grooming and the slice-c ticket.
