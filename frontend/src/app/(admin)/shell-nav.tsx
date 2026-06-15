@@ -17,9 +17,11 @@ import type { MessageKey } from '@/lib/i18n';
  * to /admin/login). The session gate itself lives server-side in
  * `layout.tsx`; this component renders only for an authenticated admin.
  *
- * The live read sections (Přehled / Objednávky / Faktury / Audit log)
- * are real `<Link>`s. The slice-b/c sections render as visibly-pending
- * non-links (Option H: no live link to a not-yet-built route).
+ * The live sections (Přehled / Objednávky / Faktury / Audit log +, since
+ * T-0118c, Výplaty / Fronta událostí / Uživatelé / Nastavení zemí) are
+ * real `<Link>`s. Only sections with no slice yet (Makeři) render as
+ * visibly-pending non-links (Option H: no live link to a not-yet-built
+ * route).
  */
 
 interface NavItem {
@@ -31,17 +33,15 @@ const LIVE_NAV: readonly NavItem[] = [
   { href: '/dashboard/admin', labelKey: 'dashboard.admin.nav.overview' },
   { href: '/dashboard/admin/orders', labelKey: 'dashboard.admin.nav.orders' },
   { href: '/dashboard/admin/faktury', labelKey: 'dashboard.admin.nav.invoices' },
+  { href: '/dashboard/admin/vyplaty', labelKey: 'dashboard.admin.nav.payouts' },
+  { href: '/dashboard/admin/outbox', labelKey: 'dashboard.admin.nav.outbox' },
+  { href: '/dashboard/admin/users', labelKey: 'dashboard.admin.nav.users' },
+  { href: '/dashboard/admin/countries/CZ', labelKey: 'dashboard.admin.nav.config' },
   { href: '/dashboard/admin/audit', labelKey: 'dashboard.admin.nav.audit' },
 ];
 
-/** Slice b/c sections — rendered visibly pending, never as live links (AC-3). */
-const PENDING_NAV: readonly MessageKey[] = [
-  'dashboard.admin.nav.payouts',
-  'dashboard.admin.nav.outbox',
-  'dashboard.admin.nav.makers',
-  'dashboard.admin.nav.users',
-  'dashboard.admin.nav.config',
-];
+/** Sections with no slice yet — rendered visibly pending, never as live links (AC-3). */
+const PENDING_NAV: readonly MessageKey[] = ['dashboard.admin.nav.makers'];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/dashboard/admin') return pathname === href;

@@ -8,10 +8,10 @@ import { InvoiceDownload } from './invoice-download';
 /**
  * Presentational admin invoice rows (T-0118a, US-admin-0012 AC-1).
  * Server-safe markup; the only client island is the per-row download
- * button (currently disabled — the admin invoice-PDF endpoint is a logged
- * backend follow-up, see invoice-download.tsx). Two layouts: stacked
- * cards below `md`, a grid "table" at `md+`. Invoices have no detail page
- * in any slice, so the row is not a `<Link>`.
+ * button (re-enabled in T-0118c — the admin invoice-PDF endpoint T-0126
+ * now exists; see invoice-download.tsx). Two layouts: stacked cards below
+ * `md`, a grid "table" at `md+`. Invoices have no detail page in any
+ * slice, so the row is not a `<Link>`.
  *
  * `type` is the InvoiceType ordinal (0 = Customer zákaznická, 1 = Fee
  * provize) — a presentation-only label map, not business logic.
@@ -71,7 +71,7 @@ function InvoiceRow({ item }: { readonly item: AdminInvoiceListItem }) {
           {formatDate(item.createdAt)}
         </span>
         <span className="hidden md:flex md:justify-end">
-          <InvoiceDownload invoiceNumber={item.invoiceNumber} />
+          <InvoiceDownload invoiceId={item.invoiceId} invoiceNumber={item.invoiceNumber} />
         </span>
       </div>
 
@@ -87,7 +87,7 @@ function InvoiceRow({ item }: { readonly item: AdminInvoiceListItem }) {
           </span>
         </div>
         <div className="mt-1">
-          <InvoiceDownload invoiceNumber={item.invoiceNumber} />
+          <InvoiceDownload invoiceId={item.invoiceId} invoiceNumber={item.invoiceNumber} />
         </div>
       </div>
     </div>

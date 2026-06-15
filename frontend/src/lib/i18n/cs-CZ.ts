@@ -1126,6 +1126,11 @@ export const messages = {
   'dashboard.admin.invoices.download.label': 'Stáhnout fakturu',
   'dashboard.admin.invoices.download.unavailable':
     'Stahování faktur zatím není dostupné — připravuje se backendový endpoint.',
+  // T-0118c: the admin invoice-PDF endpoint (T-0126) now exists — the
+  // disabled button is re-enabled as a blob download.
+  'dashboard.admin.invoices.download.downloading': 'Stahuji…',
+  'dashboard.admin.invoices.download.error':
+    'Fakturu se nepodařilo stáhnout. Zkuste to prosím znovu.',
   'dashboard.admin.invoices.empty.title': 'Žádné faktury',
   'dashboard.admin.invoices.empty.description':
     'Zadaným filtrům neodpovídají žádné faktury. Upravte filtry nebo je vymažte.',
@@ -1167,6 +1172,274 @@ export const messages = {
   'dashboard.admin.audit.pagination.previous': 'Předchozí',
   'dashboard.admin.audit.pagination.next': 'Další',
   'dashboard.admin.audit.pagination.page_of': 'Stránka {page} z {total}',
+
+  // T-0118b admin order detail + money/state action surfaces (vykání).
+  // The surfaced error codes (payment.refund.*, order.manualTransition.*,
+  // order.dispute.*, order.invalidTransition) already have keys above —
+  // resolveErrorMessage maps them 1:1. PM/UX to refine copy on PR review.
+  'dashboard.admin.orderActions.metadata.title': 'Detail objednávky — Makables Admin',
+  'dashboard.admin.orderActions.metadata.description':
+    'Detail objednávky, historie auditu a administrátorské akce.',
+  'dashboard.admin.orderActions.backToList': 'Zpět na objednávky',
+  'dashboard.admin.orderActions.section.actions': 'Akce',
+  'dashboard.admin.orderActions.section.dispute': 'Reklamace',
+
+  'dashboard.admin.orderActions.header.idLabel': 'ID objednávky',
+  'dashboard.admin.orderActions.header.total': 'Částka',
+  'dashboard.admin.orderActions.header.country': 'Země',
+  'dashboard.admin.orderActions.header.maker': 'Maker',
+  'dashboard.admin.orderActions.header.customer': 'E-mail zákazníka',
+  'dashboard.admin.orderActions.header.degraded.title': 'Detail objednávky není k dispozici',
+  'dashboard.admin.orderActions.header.degraded.body':
+    'Hlavičku objednávky se nepodařilo načíst, proto nejsou dostupné akce. Historie auditu níže zůstává platná. Zkuste stránku obnovit.',
+
+  'dashboard.admin.orderActions.notFound.title': 'Objednávka nenalezena',
+  'dashboard.admin.orderActions.notFound.body':
+    'Tato objednávka neexistuje nebo k ní nemáme žádný záznam.',
+
+  // Refund modal (A.1) — money path, post-payout ack.
+  'dashboard.admin.orderActions.refund.trigger': 'Refundovat',
+  'dashboard.admin.orderActions.refund.title': 'Refundace objednávky {orderNumber}',
+  'dashboard.admin.orderActions.refund.intro':
+    'Zadejte částku k refundaci a důvod. Plnou částku můžete snížit pro částečnou refundaci.',
+  'dashboard.admin.orderActions.refund.irreversibleNote':
+    'Refundace přesouvá skutečné peníze přes platební bránu a nelze ji z administrace vrátit zpět.',
+  'dashboard.admin.orderActions.refund.amountLabel': 'Částka k refundaci (Kč)',
+  'dashboard.admin.orderActions.refund.amountHint': 'Celková částka objednávky: {total}.',
+  'dashboard.admin.orderActions.refund.reasonLabel': 'Důvod refundace',
+  'dashboard.admin.orderActions.refund.postPayoutAck':
+    'Objednávka už byla vyplacena výrobci. Potvrzuji, že přesto chci provést refundaci.',
+  'dashboard.admin.orderActions.refund.submit': 'Refundovat',
+  'dashboard.admin.orderActions.refund.submitting': 'Refunduji…',
+
+  // Manual state change modal (A.2) — mandatory reason, backend allow-list.
+  'dashboard.admin.orderActions.state.trigger': 'Změnit stav',
+  'dashboard.admin.orderActions.state.title': 'Ruční změna stavu objednávky {orderNumber}',
+  'dashboard.admin.orderActions.state.intro':
+    'Aktuální stav: {current}. Vyberte cílový stav. Povolené přechody vyhodnotí systém.',
+  'dashboard.admin.orderActions.state.targetLabel': 'Cílový stav',
+  'dashboard.admin.orderActions.state.reasonLabel': 'Důvod změny',
+  'dashboard.admin.orderActions.state.reasonHint': 'Důvod musí mít alespoň 10 znaků.',
+  'dashboard.admin.orderActions.state.submit': 'Změnit stav',
+  'dashboard.admin.orderActions.state.submitting': 'Měním stav…',
+
+  // Dispute inline forms (A.3) — open + resolve.
+  'dashboard.admin.orderActions.dispute.categoryLabel': 'Kategorie reklamace',
+  'dashboard.admin.orderActions.dispute.descriptionLabel': 'Popis reklamace',
+  'dashboard.admin.orderActions.dispute.outcomeLabel': 'Výsledek reklamace',
+  'dashboard.admin.orderActions.dispute.resolutionNotesLabel': 'Poznámka k vyřízení',
+  'dashboard.admin.orderActions.dispute.resolutionNotesHint':
+    'Tato poznámka je viditelná pro zákazníka.',
+  'dashboard.admin.orderActions.dispute.open.title': 'Otevřít reklamaci',
+  'dashboard.admin.orderActions.dispute.open.intro':
+    'Zaznamenejte reklamaci nahlášenou zákazníkem (např. telefonicky).',
+  'dashboard.admin.orderActions.dispute.open.submit': 'Otevřít reklamaci',
+  'dashboard.admin.orderActions.dispute.open.submitting': 'Otevírám…',
+  'dashboard.admin.orderActions.dispute.resolve.title': 'Vyřídit reklamaci',
+  'dashboard.admin.orderActions.dispute.resolve.intro':
+    'Po prostudování historie auditu vyberte výsledek a doplňte poznámku.',
+  'dashboard.admin.orderActions.dispute.resolve.submit': 'Vyřídit reklamaci',
+  'dashboard.admin.orderActions.dispute.resolve.submitting': 'Vyřizuji…',
+  'dashboard.admin.orderActions.dispute.category.notDelivered': 'Nedoručeno',
+  'dashboard.admin.orderActions.dispute.category.damagedItem': 'Poškozené zboží',
+  'dashboard.admin.orderActions.dispute.category.notAsDescribed': 'Neodpovídá popisu',
+  'dashboard.admin.orderActions.dispute.category.carrierReturned': 'Vráceno dopravcem',
+  'dashboard.admin.orderActions.dispute.category.carrierFailed': 'Selhání dopravce',
+  'dashboard.admin.orderActions.dispute.category.other': 'Jiné',
+  'dashboard.admin.orderActions.dispute.outcome.refunded': 'Refundováno',
+  'dashboard.admin.orderActions.dispute.outcome.resumed': 'Obnoveno',
+  'dashboard.admin.orderActions.dispute.outcome.cancelled': 'Zrušeno',
+
+  // Audit-trail panel on the detail (load-bearing read — §C.2).
+  'dashboard.admin.orderActions.audit.heading': 'Historie auditu',
+  'dashboard.admin.orderActions.audit.empty':
+    'K této objednávce zatím nejsou žádné záznamy auditu.',
+  'dashboard.admin.orderActions.audit.byAdmin': 'Administrátor: {adminUserId}',
+  'dashboard.admin.orderActions.audit.previous': 'Předchozí',
+  'dashboard.admin.orderActions.audit.next': 'Další',
+  'dashboard.admin.orderActions.audit.error.title': 'Historii auditu se nepodařilo načíst',
+  'dashboard.admin.orderActions.audit.error.body':
+    'Při načítání historie auditu došlo k chybě. Zkuste stránku obnovit.',
+
+  // =====================================================================
+  // T-0118c — Admin ops + control-plane (vykání). Outbox triage /
+  // country-config / payout view+complete+CSV / GDPR delete-user. Every
+  // rendered string keyed (T8 gate live). Backend error codes consumed
+  // from their existing parity keys (outbox.* / country.* / payoutBatch.* /
+  // user.*) via resolveErrorMessage.
+  // =====================================================================
+
+  // --- Outbox triage ---
+  'dashboard.admin.ops.outbox.metadata.title': 'Fronta událostí — Makables Admin',
+  'dashboard.admin.ops.outbox.metadata.description':
+    'Triáž zaseknutých událostí: opakování a potvrzení.',
+  'dashboard.admin.ops.outbox.title': 'Fronta událostí',
+  'dashboard.admin.ops.outbox.subtitle':
+    'Triáž zaseknutých událostí výstupní fronty. Opakujte doručení, nebo událost potvrďte a přestaňte ji sledovat.',
+  'dashboard.admin.ops.outbox.stalledCount.label': 'Zaseknuté události',
+  'dashboard.admin.ops.outbox.stalledCount.unavailable':
+    'Počet zaseknutých událostí se nepodařilo načíst.',
+  'dashboard.admin.ops.outbox.stalledCount.none':
+    'Žádné zaseknuté události. Fronta je v pořádku.',
+  'dashboard.admin.ops.outbox.listGap.title': 'Seznam událostí zatím není k dispozici',
+  'dashboard.admin.ops.outbox.listGap.body':
+    'Backend zatím nevystavuje seznam jednotlivých zaseknutých událostí — pouze jejich počet. Akce opakování a potvrzení proto cílí na konkrétní ID události. Doplnění seznamového endpointu je evidováno jako následný backendový úkol.',
+  'dashboard.admin.ops.outbox.actions.heading': 'Akce nad událostí',
+  'dashboard.admin.ops.outbox.actions.intro':
+    'Zadejte ID události a zvolte akci. Opakování je jednorázový pokus o nové doručení; potvrzení vyžaduje důvod a událost přestane být sledována.',
+  'dashboard.admin.ops.outbox.eventIdLabel': 'ID události',
+  'dashboard.admin.ops.outbox.eventIdHint': 'Identifikátor řádku ve frontě událostí (GUID).',
+  'dashboard.admin.ops.outbox.retry.button': 'Opakovat doručení',
+  'dashboard.admin.ops.outbox.retry.pending': 'Opakuji…',
+  'dashboard.admin.ops.outbox.retry.success':
+    'Doručení naplánováno znovu (pokus č. {retryCount}).',
+  'dashboard.admin.ops.outbox.ack.button': 'Potvrdit a přestat sledovat',
+  'dashboard.admin.ops.outbox.ack.pending': 'Potvrzuji…',
+  'dashboard.admin.ops.outbox.ack.reasonLabel': 'Důvod potvrzení',
+  'dashboard.admin.ops.outbox.ack.reasonHint':
+    'Povinné. Poznámka se zapíše do auditního logu (max. 2000 znaků).',
+  'dashboard.admin.ops.outbox.ack.success': 'Událost byla potvrzena a přestane být sledována.',
+
+  // --- Country configuration ---
+  'dashboard.admin.ops.country.metadata.title': 'Nastavení země — Makables Admin',
+  'dashboard.admin.ops.country.metadata.description':
+    'Úprava DPH, provize, poskytovatelů a režimu fakturace pro zemi.',
+  'dashboard.admin.ops.country.title': 'Nastavení země {code}',
+  'dashboard.admin.ops.country.subtitle':
+    'Úprava řídicí konfigurace země: sazby DPH, provize platformy, výchozí poskytovatelé a režim fakturace. Změna se projeví u nových objednávek.',
+  'dashboard.admin.ops.country.noPrefillNote':
+    'Pozor: uložení přepíše CELOU konfiguraci země (úplná náhrada, ne dílčí úprava). Formulář se zatím nepředvyplňuje, proto musíte zadat VŠECHNY hodnoty — sazby DPH, provizi, cenu dopravy i všechny poskytovatele. Prázdné nebo chybně zadané pole tiše přepíše stávající hodnotu pro všechny budoucí objednávky. Před uložením ověřte každé pole. (Předvyplnění z načítacího endpointu je evidováno jako následný backendový úkol.)',
+  'dashboard.admin.ops.country.section.tax': 'Daně a provize',
+  'dashboard.admin.ops.country.section.providers': 'Výchozí poskytovatelé',
+  'dashboard.admin.ops.country.standardVatLabel': 'Standardní sazba DPH (v bazických bodech)',
+  'dashboard.admin.ops.country.standardVatHint':
+    '2100 b. b. = 21 %. Zadejte v bazických bodech (1 % = 100 b. b.).',
+  'dashboard.admin.ops.country.reducedVatLabel': 'Snížená sazba DPH (v bazických bodech)',
+  'dashboard.admin.ops.country.reducedVatHint': 'Volitelné. Ponechte prázdné, pokud se nepoužívá.',
+  'dashboard.admin.ops.country.platformFeeLabel': 'Provize platformy (v bazických bodech)',
+  'dashboard.admin.ops.country.platformFeeHint': '1500 b. b. = 15 %.',
+  'dashboard.admin.ops.country.shippingPriceLabel': 'Výchozí cena dopravy (Kč)',
+  'dashboard.admin.ops.country.shippingPriceHint': 'Zadejte v celých korunách.',
+  'dashboard.admin.ops.country.invoicingModeLabel': 'Režim fakturace',
+  'dashboard.admin.ops.country.invoicingMode.none': 'Žádný',
+  'dashboard.admin.ops.country.invoicingMode.standardVat': 'Standardní DPH',
+  'dashboard.admin.ops.country.invoicingMode.reverseCharge': 'Přenesená daňová povinnost',
+  'dashboard.admin.ops.country.invoicingMode.strictFiscalReporting': 'Striktní fiskální reporting',
+  'dashboard.admin.ops.country.paymentProviderLabel': 'Poskytovatel plateb',
+  'dashboard.admin.ops.country.shippingCarrierLabel': 'Dopravce',
+  'dashboard.admin.ops.country.registryLabel': 'Registr firem',
+  'dashboard.admin.ops.country.emailProviderLabel': 'Poskytovatel e-mailů',
+  'dashboard.admin.ops.country.reasonLabel': 'Důvod změny',
+  'dashboard.admin.ops.country.reasonHint': 'Povinné. Zapíše se do auditního logu.',
+  'dashboard.admin.ops.country.save': 'Uložit konfiguraci',
+  'dashboard.admin.ops.country.saving': 'Ukládám…',
+  'dashboard.admin.ops.country.success':
+    'Konfigurace země byla uložena.',
+  'dashboard.admin.ops.country.providerModal.title': 'Potvrzení změny poskytovatele',
+  'dashboard.admin.ops.country.providerModal.intro':
+    'Měníte výchozího poskytovatele. Tato změna ovlivní všechny nové objednávky v zemi. Pro potvrzení přesně přepište nový kód poskytovatele.',
+  'dashboard.admin.ops.country.providerModal.changedHeading': 'Měněné kódy poskytovatelů:',
+  'dashboard.admin.ops.country.providerModal.confirmLabel': 'Přepište nový kód poskytovatele',
+  'dashboard.admin.ops.country.providerModal.confirmPlaceholder': 'Zadejte přesně nový kód',
+  'dashboard.admin.ops.country.providerModal.confirm': 'Potvrdit a uložit',
+  'dashboard.admin.ops.country.providerModal.confirming': 'Ukládám…',
+  'dashboard.admin.ops.country.inFlightAdvisory':
+    '{count} rozpracovaných objednávek si ponechá stávajícího poskytovatele. Změna se týká pouze nových objednávek.',
+
+  // --- Payout view + complete + CSV ---
+  'dashboard.admin.ops.payouts.metadata.title': 'Výplaty — Makables Admin',
+  'dashboard.admin.ops.payouts.metadata.description':
+    'Přehled výplatních dávek, dokončení a stažení bankovního CSV.',
+  'dashboard.admin.ops.payouts.title': 'Výplaty',
+  'dashboard.admin.ops.payouts.subtitle':
+    'Správa výplatních dávek: dokončení převodu a stažení bankovního souboru. Vytváření dávek zajišťuje týdenní časovač.',
+  'dashboard.admin.ops.payouts.processingCount.label': 'Dávky ke zpracování',
+  'dashboard.admin.ops.payouts.processingCount.unavailable':
+    'Počet zpracovávaných dávek se nepodařilo načíst.',
+  'dashboard.admin.ops.payouts.processingCount.none':
+    'Žádné dávky ke zpracování.',
+  'dashboard.admin.ops.payouts.listGap.title': 'Seznam dávek zatím není k dispozici',
+  'dashboard.admin.ops.payouts.listGap.body':
+    'Backend zatím nevystavuje seznam výplatních dávek — pouze počet zpracovávaných. Akce dokončení a stažení CSV proto cílí na konkrétní ID dávky. Doplnění seznamového endpointu je evidováno jako následný backendový úkol.',
+  'dashboard.admin.ops.payouts.actions.heading': 'Akce nad dávkou',
+  'dashboard.admin.ops.payouts.actions.intro':
+    'Zadejte ID dávky pro dokončení převodu nebo stažení bankovního CSV souboru.',
+  'dashboard.admin.ops.payouts.batchIdLabel': 'ID výplatní dávky',
+  'dashboard.admin.ops.payouts.batchIdHint': 'Identifikátor výplatní dávky (GUID).',
+  'dashboard.admin.ops.payouts.batchNumberLabel': 'Číslo dávky (pro název souboru)',
+  'dashboard.admin.ops.payouts.batchNumberHint':
+    'Volitelné. Použije se v názvu staženého CSV (vyplaty-{číslo}.csv).',
+  'dashboard.admin.ops.payouts.state.processing': 'Zpracovává se',
+  'dashboard.admin.ops.payouts.state.completed': 'Vyplaceno',
+  'dashboard.admin.ops.payouts.complete.button': 'Označit jako vyplacené',
+  'dashboard.admin.ops.payouts.complete.title': 'Dokončit výplatní dávku',
+  'dashboard.admin.ops.payouts.complete.intro':
+    'Po provedení bankovního převodu zadejte referenci a (volitelně) datum platby. Tato akce je nevratná — dávka přejde do stavu Vyplaceno.',
+  'dashboard.admin.ops.payouts.complete.bankReferenceLabel': 'Bankovní reference',
+  'dashboard.admin.ops.payouts.complete.bankReferenceHint': 'Povinné. Reference provedeného převodu.',
+  'dashboard.admin.ops.payouts.complete.paymentDateLabel': 'Datum platby',
+  'dashboard.admin.ops.payouts.complete.paymentDateHint': 'Volitelné.',
+  'dashboard.admin.ops.payouts.complete.submit': 'Dokončit dávku',
+  'dashboard.admin.ops.payouts.complete.submitting': 'Dokončuji…',
+  'dashboard.admin.ops.payouts.complete.success':
+    'Dávka {batchId} byla označena jako vyplacená ({total}).',
+  'dashboard.admin.ops.payouts.complete.alreadyCompleted':
+    'Tato dávka už byla dříve dokončena — stav se nezměnil.',
+  'dashboard.admin.ops.payouts.csv.button': 'Stáhnout CSV',
+  'dashboard.admin.ops.payouts.csv.pending': 'Stahuji…',
+  'dashboard.admin.ops.payouts.csv.intro':
+    'Bankovní soubor pro provedení převodu (obsahuje čísla účtů všech makerů — pouze pro operátora).',
+  'dashboard.admin.ops.payouts.csv.error':
+    'CSV soubor se nepodařilo stáhnout. Zkuste to prosím znovu.',
+
+  // --- Delete-user (the dangerous screen) ---
+  'dashboard.admin.ops.users.metadata.title': 'Smazání uživatele — Makables Admin',
+  'dashboard.admin.ops.users.metadata.description':
+    'Trvalé smazání uživatele dle GDPR. Nevratná operace.',
+  'dashboard.admin.ops.users.title': 'Trvalé smazání uživatele',
+  'dashboard.admin.ops.users.subtitle':
+    'Trvalé smazání osobních údajů uživatele dle GDPR. Tato operace je nevratná a vyžaduje přesné potvrzení.',
+  'dashboard.admin.ops.users.lookup.heading': 'Vyhledání uživatele',
+  'dashboard.admin.ops.users.lookup.intro':
+    'Zadejte ID uživatele a jeho e-mail. E-mail musíte níže přesně přepsat pro potvrzení smazání.',
+  'dashboard.admin.ops.users.lookup.idLabel': 'ID uživatele',
+  'dashboard.admin.ops.users.lookup.idHint': 'Identifikátor uživatele (GUID).',
+  'dashboard.admin.ops.users.lookup.emailLabel': 'E-mail uživatele',
+  'dashboard.admin.ops.users.lookup.emailHint':
+    'E-mail uživatele, kterého chcete smazat. Bude vyžadováno jeho přesné přepsání.',
+  'dashboard.admin.ops.users.lookup.submit': 'Pokračovat ke smazání',
+  'dashboard.admin.ops.users.lookupGap.title': 'Vyhledání uživatele zatím není automatické',
+  'dashboard.admin.ops.users.lookupGap.body':
+    'Backend zatím nevystavuje vyhledání uživatele ani jeho rozpracovaných objednávek. ID a e-mail proto zadáváte ručně a blokaci kvůli rozpracovaným objednávkám zobrazí backend až při odeslání. Doplnění čtecích endpointů je evidováno jako následný backendový úkol.',
+  'dashboard.admin.ops.users.irreversibleBanner.title': 'Nevratné smazání',
+  'dashboard.admin.ops.users.irreversibleBanner.body':
+    'Data uživatele nelze obnovit. Faktury zůstávají zachovány dle GDPR čl. 17 odst. 3 písm. b).',
+  'dashboard.admin.ops.users.targetEmailLabel': 'Uživatel ke smazání',
+  'dashboard.admin.ops.users.confirmEmailLabel': 'Pro potvrzení přepište přesně e-mail uživatele',
+  'dashboard.admin.ops.users.confirmEmailPlaceholder': 'Zadejte přesně e-mail uživatele',
+  'dashboard.admin.ops.users.confirmEmailMismatch':
+    'Zadaný e-mail zatím neodpovídá uživateli.',
+  'dashboard.admin.ops.users.reasonLabel': 'Důvod smazání',
+  'dashboard.admin.ops.users.reasonHint':
+    'Povinné. Uveďte referenci GDPR žádosti (zapíše se do auditního logu, max. 2000 znaků).',
+  'dashboard.admin.ops.users.inFlightReason':
+    'Uživatele nelze smazat — má rozpracované objednávky. Nejprve je vyřešte.',
+  'dashboard.admin.ops.users.erase.button': 'Trvale smazat uživatele',
+  'dashboard.admin.ops.users.erase.pending': 'Mažu…',
+  'dashboard.admin.ops.users.erase.disabledHint':
+    'Tlačítko se aktivuje po přepsání e-mailu a vyplnění důvodu.',
+  'dashboard.admin.ops.users.erase.success.title': 'Uživatel byl trvale smazán',
+  'dashboard.admin.ops.users.erase.success.body':
+    'Osobní údaje uživatele {userId} byly nevratně odstraněny. Faktury zůstávají zachovány dle GDPR.',
+  'dashboard.admin.ops.users.erase.alreadyDeleted':
+    'Uživatel již byl smazán.',
+  'dashboard.admin.ops.users.reset': 'Zpět na vyhledání',
+
+  // --- Shared route error/loading copy for the ops segments ---
+  'dashboard.admin.ops.error.title': 'Stránku se nepodařilo načíst',
+  'dashboard.admin.ops.error.body':
+    'Při načítání stránky došlo k chybě. Zkuste ji prosím obnovit.',
+  'dashboard.admin.ops.error.retry': 'Zkusit znovu',
 } as const;
 
 export type MessageKey = keyof typeof messages;

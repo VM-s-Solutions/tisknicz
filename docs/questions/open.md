@@ -383,3 +383,17 @@
   - Audit only on a future "admin accessed customer PII" policy bucket (broader than invoices — would also cover the admin order list showing customerEmail).
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0029 — Admin read-side gaps for the dashboard ops/control-plane surfaces
+- **From:** frontend + reviewer + architect (T-0118b/c final review, Gate 4)
+- **Ticket / context:** T-0118c ops surfaces (country-config, payout, outbox, delete-user)
+- **Asked:** 2026-06-15
+- **Blocking:** no — every surface ships degraded-but-functional; the backend gates are authoritative; the country-config full-replace hazard is fenced by a prominent warning banner (folded into T-0118c) until the GET lands.
+- **Question:** Four admin read endpoints don't exist, forcing degraded T-0118c surfaces. Which to build (each a thin S backend read on the admin host)?
+- **Options the agent has considered:**
+  - **GetCountryConfiguration GET** (highest priority — the architect's BLOCKER fence): `GET /api/v1/country-configurations/{code}` returning the current config so the edit form PRE-FILLS instead of starting blank. Removes the full-replace silent-overwrite hazard + lets VAT/fee-only edits skip the provider retype modal (T-0118c AC-4/AC-5 are currently unmet, fenced by a warning banner). Then re-enable form pre-fill.
+  - **GetAdminOrderDetail** (Q-0024, already logged): a real admin order-detail DTO so T-0118b's header isn't a list-row scan + the delete-user in-flight block can pre-disable proactively (per-user-order read).
+  - **Admin stalled-outbox LIST read**: so the outbox triage page browses stalled events instead of count + by-id (the operator currently needs event ids from App Insights). The architect rated this the weakest accept — ship FIRST among the list reads.
+  - **Admin payout-batch LIST read**: so the payout page browses Processing batches instead of count + by-id (lower priority — one batch/week, T-0116 maker list covers visibility).
+- **Status:** open
+- **Answer (filled by user):**
