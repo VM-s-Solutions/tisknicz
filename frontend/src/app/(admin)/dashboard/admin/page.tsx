@@ -1,26 +1,29 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { getAdminOrders, OrderState } from '@/lib/api-client-helpers/admin-client';
+import {
+  getProcessingPayoutsCount,
+  getStalledOutboxCount,
+} from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
 
 /**
- * Admin overview (T-0118a, US-admin-0002). Server Component: KPI tiles
- * each deep-link into a read list or a forward-compat action surface.
+ * Admin overview (T-0118a, US-admin-0002 + T-0118c re-wire). Server
+ * Component: KPI tiles each deep-link into a read list or an action
+ * surface.
  *
  * Order-by-state counts come from the EXISTING all-orders read
  * (T-0105) — a thin `pageSize: 1` request per state reads the
  * server-computed `totalCount` for that state filter (NOT an unpaginated
  * over-fetch; A.2 / Option B rejected). The `Processing`-payout and
- * stalled-outbox counts have no read exposed in THIS slice (the payout +
- * outbox reads are slice c), so those tiles render "—" and link to their
- * forward-compat surface, with the count gap logged as a backend
- * follow-up (A.2 — no backend added here). Any count whose read fails
- * also renders "—" gracefully (AC-4 — never throws).
+ * stalled-outbox tiles are now BACKED by the T-0126 count endpoints
+ * (re-wired in T-0118c — they were "—" placeholders in T-0118a before the
+ * contracts existed) and deep-link to their ops surfaces. Any count whose
+ * read fails renders "—" gracefully (AC-4 — never throws).
  */
 
 export function generateMetadata(): Metadata {
@@ -46,16 +49,31 @@ async function countOrdersInState(state: OrderState): Promise<number | null> {
   return result.value.totalCount;
 }
 
+/** T-0126 ops count → `null` on failure (graceful "—"). */
+async function readCount(
+  fetcher: () => Promise<{ success: true; value: number } | { success: false; error: { type: string } }>,
+): Promise<number | null> {
+  const result = await fetcher();
+  if (!result.success) {
+    if (result.error.type === 'Unauthorized') {
+      redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
+    }
+    return null;
+  }
+  return result.value;
+}
+
 export default async function AdminOverviewPage() {
-  // Parallel count probes (small, per-state) — one round-trip each off the
-  // existing read; no aggregation endpoint is added (A.2). The probes are
-  // independent, so Promise.all collapses the waterfall to ~1 RTT
-  // (Gate 8 fold).
-  const [paid, accepted, shipped, disputed] = await Promise.all([
+  // Parallel count probes — one round-trip each off the existing reads + the
+  // T-0126 ops count endpoints. The probes are independent, so Promise.all
+  // collapses the waterfall to ~1 RTT (Gate 8 fold).
+  const [paid, accepted, shipped, disputed, processingPayouts, stalledOutbox] = await Promise.all([
     countOrdersInState(OrderState.Paid),
     countOrdersInState(OrderState.Accepted),
     countOrdersInState(OrderState.Shipped),
     countOrdersInState(OrderState.Disputed),
+    readCount(getProcessingPayoutsCount),
+    readCount(getStalledOutboxCount),
   ]);
 
   return (
@@ -105,28 +123,21 @@ export default async function AdminOverviewPage() {
           {t('dashboard.admin.overview.ops.heading')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Pending-payout + stalled-outbox counts are not exposed by an
-              existing read in this slice — render "—" + link to the (slice-c)
-              surface, count gap logged as a backend follow-up (A.2). */}
+          {/* T-0126-backed: Processing-payout + stalled-outbox counts now
+              deep-link to their ops surfaces (re-wired in T-0118c). */}
           <KpiTile
             labelKey="dashboard.admin.overview.tile.payouts"
-            count={null}
-            href="/dashboard/admin/orders"
+            count={processingPayouts}
+            href="/dashboard/admin/vyplaty"
             icon="creditCard"
-            pending
           />
           <KpiTile
             labelKey="dashboard.admin.overview.tile.outbox"
-            count={null}
-            href="/dashboard/admin/orders"
+            count={stalledOutbox}
+            href="/dashboard/admin/outbox"
             icon="clock"
-            pending
+            emphasis={stalledOutbox !== null && stalledOutbox > 0}
           />
-        </div>
-        <div className="mt-6">
-          <Alert variant="info">
-            <p className="text-sm">{t('dashboard.admin.overview.countFollowUp')}</p>
-          </Alert>
         </div>
       </div>
     </section>
@@ -140,10 +151,9 @@ interface KpiTileProps {
   readonly href: string;
   readonly icon: 'creditCard' | 'checkCircle' | 'truck' | 'alertCircle' | 'clock';
   readonly emphasis?: boolean;
-  readonly pending?: boolean;
 }
 
-function KpiTile({ labelKey, count, href, icon, emphasis = false, pending = false }: KpiTileProps) {
+function KpiTile({ labelKey, count, href, icon, emphasis = false }: KpiTileProps) {
   const unavailable = count === null;
   return (
     <Link href={href} className="block">
@@ -164,9 +174,7 @@ function KpiTile({ labelKey, count, href, icon, emphasis = false, pending = fals
           {unavailable ? '—' : count}
         </span>
         <span className="text-sm text-brand-400">
-          {pending
-            ? t('dashboard.admin.overview.tile.pendingNote')
-            : t('dashboard.admin.overview.tile.viewList')}
+          {t('dashboard.admin.overview.tile.viewList')}
         </span>
       </Card>
     </Link>
