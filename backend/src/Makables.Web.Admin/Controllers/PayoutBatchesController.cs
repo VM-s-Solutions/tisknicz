@@ -46,6 +46,25 @@ public sealed class PayoutBatchesController(
         HandleResult(await Mediator.Send(new CreatePayoutBatch.Command(), ct));
 
     /// <summary>
+    /// Cross-maker payout-batch list (T-0127 / Q-0029 / US-admin-0007). Paged,
+    /// Unscoped, <c>CreatedAt DESC</c> — the payout page browses
+    /// Processing/Completed batches and completes / downloads CSV by VISIBLE
+    /// id, replacing the count + by-id surface. The verb (GET) disambiguates
+    /// this list from the <c>CreatePayoutBatch</c> POST on the same route.
+    /// Read-only, admin-audience only (ADR 0013); empty set →
+    /// <c>PagedData</c> with <c>TotalCount = 0</c>, never 404.
+    /// </summary>
+    [HttpGet("")]
+    [ProducesResponseType(typeof(GetPayoutBatches.GetPayoutBatchesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetPayoutBatches.Query(page, pageSize), ct));
+
+    /// <summary>
     /// Count payout batches in a given state (T-0126 / Q-0027). Backs the admin
     /// overview's "Processing payouts" KPI tile (default
     /// <see cref="PayoutBatchState.Processing"/>). Read-only, admin-audience only

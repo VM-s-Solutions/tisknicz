@@ -39,6 +39,24 @@ public sealed class OutboxEventsController : MakablesApiController
         HandleResult(await Mediator.Send(new GetStalledOutboxCount.Query(), ct));
 
     /// <summary>
+    /// Paged stalled-outbox triage list (T-0127 / Q-0029). Same EXACT stalled
+    /// predicate as <see cref="StalledCount"/> (<c>ProcessedAt == null AND
+    /// NextRetryAt == null AND LastErrorKind != None</c>) so the list and the
+    /// KPI tile agree. The triage page browses + retries / acknowledges by
+    /// VISIBLE id. Read-only, admin-audience only (ADR 0013); empty set →
+    /// <c>PagedData</c> with <c>TotalCount = 0</c>, never 404.
+    /// </summary>
+    [HttpGet("stalled")]
+    [ProducesResponseType(typeof(GetStalledOutboxEvents.GetStalledOutboxEventsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Stalled(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetStalledOutboxEvents.Query(page, pageSize), ct));
+
+    /// <summary>
     /// Force-retry a stalled event — one-shot "try now". 409
     /// <c>outbox.alreadyProcessed</c> if the row already drained.
     /// </summary>
