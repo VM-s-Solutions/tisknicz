@@ -345,3 +345,28 @@
 - **Question:** The INDEX `depends_on` for T-0118 lists `T-0102, T-0105, T-0106, T-0107, T-0108, T-0109, T-0111` but **OMITS T-0110 (GDPR DeleteUserPermanently — slice c) and T-0103 (MarkPayoutBatchCompleted — slice c payout "complete" action + BankReference capture)**. Both are consumed by T-0118c (ops + control-plane). The split's overall dependency set and T-0118c's `depends_on` must add T-0110 + T-0103.
 - **Status:** resolved (documentation)
 - **Answer (filled by user):** Flagged in the grooming commit. T-0118c (when written) must carry `depends_on: [T-0118a, T-0102, T-0103, T-0108, T-0109, T-0110]`; the INDEX T-0118 aggregate row gains T-0110 + T-0103 when PM splits the row into a/b/c. Recorded here so the gap is not lost between grooming and the slice-c ticket.
+
+## Q-0026 — Admin invoice-PDF download endpoint absent (blocks US-admin-0012 AC-2)
+- **From:** frontend + reviewer (T-0118a slice-a review)
+- **Ticket / context:** T-0118a all-invoices view; US-admin-0012 AC-2 "Stáhnout fakturu"
+- **Asked:** 2026-06-15
+- **Blocking:** no — T-0118a ships the download button disabled-with-tooltip (no guessed path); the feature is degraded, not broken.
+- **Question:** The admin host exposes the 3 read queries + the payout `csv(id)` bank-file stream, but NO invoice-PDF download method. T-0088 shipped invoice streaming on the customer + maker hosts (order-scoped + Fee-scoped), but not the admin host. US-admin-0012 AC-2 needs an admin-scoped invoice download (any invoice by id, `Unscoped()` — admin sees all). T-0118a's faktury "Stáhnout fakturu" button is disabled until it exists.
+- **Options the agent has considered:**
+  - Thin backend ticket: `GET /api/v1/admin-invoices/{invoiceId}/pdf` on Web.Admin, controller-direct streaming per T-0088, `IInvoiceRepository.Unscoped()` lookup (admin sees any invoice), ETag + private/no-store. ~S. Then re-enable the T-0118a button (one helper + remove the disabled state).
+  - Defer until a sprint needs admin invoice download in production.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0027 — Admin overview KPI count reads absent (Processing payouts + stalled outbox)
+- **From:** frontend (T-0118a overview)
+- **Ticket / context:** T-0118a overview KPI tiles; US-admin-0002 AC-2 (outbox health banner)
+- **Asked:** 2026-06-15
+- **Blocking:** no — T-0118a renders the affected tiles as "—" + a forward link + an info banner (no fabricated 0); order-state counts work via existing `pageSize:1` totalCount probes.
+- **Question:** The overview wants a pending-Processing-payouts count + a stalled-outbox-events count, but no read exposes either as a count (the payout + outbox reads live in slice c). The stalled-outbox red banner (US-admin-0002 AC-2) has no source signal in slice a. Should we add thin count endpoints, or let slice c's lists carry the counts?
+- **Options the agent has considered:**
+  - Thin count endpoints (`GET /api/v1/payout-batches/count?state=Processing`, `/outbox-events/stalled/count`) consumed by the overview. ~S backend.
+  - Let slice c ship the payout + outbox LIST views; the overview deep-links to them and shows the count once those reads exist (no dedicated count endpoint; the list's totalCount serves the tile, same pattern as the order-state probes).
+  - Defer the two tiles to slice c entirely (overview ships order-state counts only at PR 1).
+- **Status:** open
+- **Answer (filled by user):**

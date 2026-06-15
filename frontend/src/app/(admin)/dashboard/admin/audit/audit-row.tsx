@@ -1,13 +1,13 @@
-import Link from 'next/link';
 import type { AdminAuditLogItem } from '@/lib/api-client-helpers/admin-client';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils/dates';
 
 /**
  * Presentational admin audit-log rows (T-0118a, US-admin-0015 AC-1).
- * Server-safe: pure formatting + a row `<Link>` to the forward-compat
- * diff-detail page (slice c — the side-by-side before/after JSON diff;
- * the link may 404 until c ships). Two layouts: stacked cards below `md`,
+ * Server-safe: pure formatting. The row is NOT a `<Link>` in slice a —
+ * the diff-detail route (`/dashboard/admin/audit/[id]`) does not exist
+ * until slice c (the side-by-side before/after JSON diff), so a live link
+ * would 404 (review L4). Slice c re-wraps it. Two layouts: stacked cards below `md`,
  * a grid "table" at `md+`. `createdAt` shows Czech short date + time via
  * `formatDateTime`.
  */
@@ -40,9 +40,8 @@ function AuditRow({ item }: { readonly item: AdminAuditLogItem }) {
     : t('dashboard.admin.audit.notesPlaceholder');
 
   return (
-    <Link
-      href={`/dashboard/admin/audit/${encodeURIComponent(item.id)}`}
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
+    <div
+      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
     >
       <div className="flex items-center justify-between gap-3 md:contents">
         <span className="text-sm text-zinc-400">{formatDateTime(item.createdAt)}</span>
@@ -66,6 +65,6 @@ function AuditRow({ item }: { readonly item: AdminAuditLogItem }) {
         </p>
         <p className="truncate text-sm text-zinc-500">{notes}</p>
       </div>
-    </Link>
+    </div>
   );
 }

@@ -47,12 +47,16 @@ async function countOrdersInState(state: OrderState): Promise<number | null> {
 }
 
 export default async function AdminOverviewPage() {
-  // Sequential count probes (small, per-state) — one round-trip each off
-  // the existing read; no aggregation endpoint is added (A.2).
-  const paid = await countOrdersInState(OrderState.Paid);
-  const accepted = await countOrdersInState(OrderState.Accepted);
-  const shipped = await countOrdersInState(OrderState.Shipped);
-  const disputed = await countOrdersInState(OrderState.Disputed);
+  // Parallel count probes (small, per-state) — one round-trip each off the
+  // existing read; no aggregation endpoint is added (A.2). The probes are
+  // independent, so Promise.all collapses the waterfall to ~1 RTT
+  // (Gate 8 fold).
+  const [paid, accepted, shipped, disputed] = await Promise.all([
+    countOrdersInState(OrderState.Paid),
+    countOrdersInState(OrderState.Accepted),
+    countOrdersInState(OrderState.Shipped),
+    countOrdersInState(OrderState.Disputed),
+  ]);
 
   return (
     <section className="py-12 lg:py-16">
