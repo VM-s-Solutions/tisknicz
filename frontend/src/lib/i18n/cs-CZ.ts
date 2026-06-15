@@ -1167,6 +1167,94 @@ export const messages = {
   'dashboard.admin.audit.pagination.previous': 'Předchozí',
   'dashboard.admin.audit.pagination.next': 'Další',
   'dashboard.admin.audit.pagination.page_of': 'Stránka {page} z {total}',
+
+  // T-0118b admin order detail + money/state action surfaces (vykání).
+  // The surfaced error codes (payment.refund.*, order.manualTransition.*,
+  // order.dispute.*, order.invalidTransition) already have keys above —
+  // resolveErrorMessage maps them 1:1. PM/UX to refine copy on PR review.
+  'dashboard.admin.orderActions.metadata.title': 'Detail objednávky — Makables Admin',
+  'dashboard.admin.orderActions.metadata.description':
+    'Detail objednávky, historie auditu a administrátorské akce.',
+  'dashboard.admin.orderActions.backToList': 'Zpět na objednávky',
+  'dashboard.admin.orderActions.section.actions': 'Akce',
+  'dashboard.admin.orderActions.section.dispute': 'Reklamace',
+
+  'dashboard.admin.orderActions.header.idLabel': 'ID objednávky',
+  'dashboard.admin.orderActions.header.total': 'Částka',
+  'dashboard.admin.orderActions.header.country': 'Země',
+  'dashboard.admin.orderActions.header.maker': 'Maker',
+  'dashboard.admin.orderActions.header.customer': 'E-mail zákazníka',
+  'dashboard.admin.orderActions.header.degraded.title': 'Detail objednávky není k dispozici',
+  'dashboard.admin.orderActions.header.degraded.body':
+    'Hlavičku objednávky se nepodařilo načíst, proto nejsou dostupné akce. Historie auditu níže zůstává platná. Zkuste stránku obnovit.',
+
+  'dashboard.admin.orderActions.notFound.title': 'Objednávka nenalezena',
+  'dashboard.admin.orderActions.notFound.body':
+    'Tato objednávka neexistuje nebo k ní nemáme žádný záznam.',
+
+  // Refund modal (A.1) — money path, post-payout ack.
+  'dashboard.admin.orderActions.refund.trigger': 'Refundovat',
+  'dashboard.admin.orderActions.refund.title': 'Refundace objednávky {orderNumber}',
+  'dashboard.admin.orderActions.refund.intro':
+    'Zadejte částku k refundaci a důvod. Plnou částku můžete snížit pro částečnou refundaci.',
+  'dashboard.admin.orderActions.refund.irreversibleNote':
+    'Refundace přesouvá skutečné peníze přes platební bránu a nelze ji z administrace vrátit zpět.',
+  'dashboard.admin.orderActions.refund.amountLabel': 'Částka k refundaci (Kč)',
+  'dashboard.admin.orderActions.refund.amountHint': 'Celková částka objednávky: {total}.',
+  'dashboard.admin.orderActions.refund.reasonLabel': 'Důvod refundace',
+  'dashboard.admin.orderActions.refund.postPayoutAck':
+    'Objednávka už byla vyplacena výrobci. Potvrzuji, že přesto chci provést refundaci.',
+  'dashboard.admin.orderActions.refund.submit': 'Refundovat',
+  'dashboard.admin.orderActions.refund.submitting': 'Refunduji…',
+
+  // Manual state change modal (A.2) — mandatory reason, backend allow-list.
+  'dashboard.admin.orderActions.state.trigger': 'Změnit stav',
+  'dashboard.admin.orderActions.state.title': 'Ruční změna stavu objednávky {orderNumber}',
+  'dashboard.admin.orderActions.state.intro':
+    'Aktuální stav: {current}. Vyberte cílový stav. Povolené přechody vyhodnotí systém.',
+  'dashboard.admin.orderActions.state.targetLabel': 'Cílový stav',
+  'dashboard.admin.orderActions.state.reasonLabel': 'Důvod změny',
+  'dashboard.admin.orderActions.state.reasonHint': 'Důvod musí mít alespoň 10 znaků.',
+  'dashboard.admin.orderActions.state.submit': 'Změnit stav',
+  'dashboard.admin.orderActions.state.submitting': 'Měním stav…',
+
+  // Dispute inline forms (A.3) — open + resolve.
+  'dashboard.admin.orderActions.dispute.categoryLabel': 'Kategorie reklamace',
+  'dashboard.admin.orderActions.dispute.descriptionLabel': 'Popis reklamace',
+  'dashboard.admin.orderActions.dispute.outcomeLabel': 'Výsledek reklamace',
+  'dashboard.admin.orderActions.dispute.resolutionNotesLabel': 'Poznámka k vyřízení',
+  'dashboard.admin.orderActions.dispute.resolutionNotesHint':
+    'Tato poznámka je viditelná pro zákazníka.',
+  'dashboard.admin.orderActions.dispute.open.title': 'Otevřít reklamaci',
+  'dashboard.admin.orderActions.dispute.open.intro':
+    'Zaznamenejte reklamaci nahlášenou zákazníkem (např. telefonicky).',
+  'dashboard.admin.orderActions.dispute.open.submit': 'Otevřít reklamaci',
+  'dashboard.admin.orderActions.dispute.open.submitting': 'Otevírám…',
+  'dashboard.admin.orderActions.dispute.resolve.title': 'Vyřídit reklamaci',
+  'dashboard.admin.orderActions.dispute.resolve.intro':
+    'Po prostudování historie auditu vyberte výsledek a doplňte poznámku.',
+  'dashboard.admin.orderActions.dispute.resolve.submit': 'Vyřídit reklamaci',
+  'dashboard.admin.orderActions.dispute.resolve.submitting': 'Vyřizuji…',
+  'dashboard.admin.orderActions.dispute.category.notDelivered': 'Nedoručeno',
+  'dashboard.admin.orderActions.dispute.category.damagedItem': 'Poškozené zboží',
+  'dashboard.admin.orderActions.dispute.category.notAsDescribed': 'Neodpovídá popisu',
+  'dashboard.admin.orderActions.dispute.category.carrierReturned': 'Vráceno dopravcem',
+  'dashboard.admin.orderActions.dispute.category.carrierFailed': 'Selhání dopravce',
+  'dashboard.admin.orderActions.dispute.category.other': 'Jiné',
+  'dashboard.admin.orderActions.dispute.outcome.refunded': 'Refundováno',
+  'dashboard.admin.orderActions.dispute.outcome.resumed': 'Obnoveno',
+  'dashboard.admin.orderActions.dispute.outcome.cancelled': 'Zrušeno',
+
+  // Audit-trail panel on the detail (load-bearing read — §C.2).
+  'dashboard.admin.orderActions.audit.heading': 'Historie auditu',
+  'dashboard.admin.orderActions.audit.empty':
+    'K této objednávce zatím nejsou žádné záznamy auditu.',
+  'dashboard.admin.orderActions.audit.byAdmin': 'Administrátor: {adminUserId}',
+  'dashboard.admin.orderActions.audit.previous': 'Předchozí',
+  'dashboard.admin.orderActions.audit.next': 'Další',
+  'dashboard.admin.orderActions.audit.error.title': 'Historii auditu se nepodařilo načíst',
+  'dashboard.admin.orderActions.audit.error.body':
+    'Při načítání historie auditu došlo k chybě. Zkuste stránku obnovit.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
