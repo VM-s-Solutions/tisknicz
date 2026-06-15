@@ -17,6 +17,11 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         // One Maker row per User. Partial unique index gates this on
         // active rows so an admin GDPR purge can leave a soft-deleted
         // row behind without blocking a future re-registration.
+        // no-translator: one Maker row per User is a defence-in-depth
+        // invariant — RegisterMaker adds exactly one Maker per call, so a
+        // 23505 here means an unexpected concurrent insert the handler could
+        // not have produced. Translating it to a generic conflict would mask a
+        // real bug; let it rethrow. (T-0033 Copilot review.)
         builder.HasIndex(m => m.UserId)
             .IsUnique()
             .HasDatabaseName("ix_makers_user_id")

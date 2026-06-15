@@ -125,8 +125,12 @@ function stripComments(src) {
               .replace(/\/\/[^\n]*/g, m => m.replace(/[^\n]/g, ' '));
 }
 
-function finding(file, line, ruleId, message) {
-    return { file: toPosix(relative(REPO_ROOT, file)), line, ruleId, message };
+function finding(file, line, ruleId, message, hard = false) {
+    // `hard: true` findings (T8/T9) bypass the baseline entirely — they are
+    // codified recurring defects we refuse to grandfather. A hard finding is
+    // never matched against the baseline and is never written by
+    // --update-baseline; any occurrence breaks the build.
+    return { file: toPosix(relative(REPO_ROOT, file)), line, ruleId, message, hard };
 }
 
 // ---------------------------------------------------------------------------
@@ -365,6 +369,229 @@ function ruleT7(file, src) {
 const RULES = [ruleT1, ruleT2, ruleT3, ruleT4, ruleT5, ruleT6, ruleT7];
 
 // ---------------------------------------------------------------------------
+// aggregate rules (T8, T9) — run ONCE over the whole tree, not per-file.
+//
+// Both emit `hard: true` findings (see `finding`): a hard finding is NEVER
+// suppressible via the baseline file (`--update-baseline` skips it too).
+// These codify two recurring reviewer findings we refuse to grandfather:
+//   #2 → T8 (a BusinessErrorMessage code with no cs-CZ key + no allowlist)
+//   #3 → T9 (a named unique index with no translator entry + no marker)
+// A future violation MUST break the build, not silently inherit a row.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// T8: BusinessErrorMessage code ↔ cs-CZ i18n-key parity (codifies finding #2)
+//
+// A `BusinessErrorMessage` code is *satisfied* iff its dotted VALUE is a
+// `cs-CZ.ts` key OR it is allowlisted in `T8_NO_KEY_REQUIRED`. Allowlisted
+// codes intentionally render the `errors.ts` `resolveErrorMessage`
+// type-fallback (generic `error.<type>` copy) rather than a per-code string —
+// see frontend/src/lib/runtime/errors.ts. Any code NEITHER keyed NOR
+// allowlisted is a real defect (untranslated, silently falls back) and is
+// flagged hard. Seeded from the 70 currently-fallback codes on master.
+// ---------------------------------------------------------------------------
+const T8_NO_KEY_REQUIRED = new Set([
+    // Auth — generic auth.* fallbacks render error.<type> copy (errors.ts).
+    'auth.required',
+    'auth.forbidden',
+    'auth.emailAlreadyExists',
+    'auth.invalidCredentials',
+    'auth.locked',
+    'auth.rateLimited',
+    'auth.passwordTooCommon',
+    'auth.currentPasswordWrong',
+    'auth.oauthNotAllowedForAdmin',
+    'auth.magicLinkInvalid',
+    'auth.emailConfirmationInvalid',
+    'auth.passwordResetInvalid',
+    'auth.oauthInvalidState',
+    'auth.oauthEmailNotVerified',
+    'auth.oauthExchangeFailed',
+    // Validation — field-level codes surfaced inline by the form layer; the
+    // generic error.validation fallback covers the toast path.
+    'validation.required',
+    'validation.minLength',
+    'validation.maxLength',
+    'validation.minValue',
+    'validation.invalidEnumValue',
+    'validation.invalidEmail',
+    'validation.invalidPhone',
+    'validation.invalidZip',
+    'validation.icoFormat',
+    'validation.bankAccountFormat',
+    'validation.failed',
+    // Order
+    'order.alreadyAccepted',
+    'order.notPayableYet',
+    // Product
+    'product.notFound',
+    'product.imageLimitReached',
+    'product.imageNotFound',
+    'product.priceNegative',
+    'product.freeRequiresOnRequest',
+    'product.currencyMismatch',
+    'product.notOrderable',
+    // Category
+    'category.notFound',
+    'category.notActive',
+    'category.slugAlreadyExists',
+    // Blob storage — admin/log-only surfaces.
+    'blob.notFound',
+    'blob.uploadFailed',
+    'blob.downloadFailed',
+    'blob.operationFailed',
+    'blob.invalidContainer',
+    'blob.invalidPath',
+    // Maker
+    'maker.notFound',
+    'maker.notActive',
+    'maker.alreadyVerified',
+    'maker.icoAlreadyRegistered',
+    'maker.companyDissolved',
+    'maker.slugAlreadyExists',
+    // Company registry — surfaced via the generic transient/permanent copy.
+    'company.notFound',
+    'company.registryTransient',
+    'company.registryPermanent',
+    // Country / config — ops-facing.
+    'country.notServiced',
+    'country.configMissing',
+    // Payment — generic gateway/verification fallbacks.
+    'payment.gatewayUnavailable',
+    'payment.verificationFailed',
+    'payment.gatewayMisconfigured',
+    // Email pipeline — outbox/log-only, never user-facing.
+    'email.templateNotFound',
+    'email.translationMissing',
+    'email.providerTransient',
+    'email.providerPermanent',
+    'email.payloadMalformed',
+    'email.payloadMissingFields',
+    'email.eventTypeUnknown',
+    // Outbox processor — admin/log-only.
+    'outbox.queuePublishFailed',
+    // Geocoder — surfaced via the generic transient/permanent copy.
+    'geocoder.invalidInput',
+    'geocoder.noMatch',
+    'geocoder.transientFailure',
+    'geocoder.permanentFailure',
+]);
+
+const BEM_PATH = 'backend/src/Makables.Core.Domain/Common/BusinessErrorMessage.cs';
+const CS_CZ_PATH = 'frontend/src/lib/i18n/cs-CZ.ts';
+
+async function ruleT8(allFiles) {
+    const bemAbs = resolve(REPO_ROOT, BEM_PATH);
+    const csAbs = resolve(REPO_ROOT, CS_CZ_PATH);
+    if (!existsSync(bemAbs) || !existsSync(csAbs)) return [];
+
+    const bemSrc = await readFile(bemAbs, 'utf8');
+    const csSrc = await readFile(csAbs, 'utf8');
+
+    // Parse code VALUES: public const string Name = "dotted.value";  → group 2.
+    const codes = [];
+    for (const m of bemSrc.matchAll(/public const string (\w+) = "([^"]+)";/g)) {
+        codes.push({ name: m[1], value: m[2], index: m.index });
+    }
+
+    // Parse cs-CZ keys:  ^  'some.key' :
+    const keys = new Set();
+    for (const m of csSrc.matchAll(/^\s*'([^']+)'\s*:/gm)) {
+        keys.add(m[1]);
+    }
+
+    const out = [];
+    for (const c of codes) {
+        if (keys.has(c.value)) continue;              // keyed → satisfied
+        if (T8_NO_KEY_REQUIRED.has(c.value)) continue; // allowlisted → satisfied
+        out.push(finding(bemAbs, lineOf(bemSrc, c.index), 'T8',
+            `BusinessErrorMessage.${c.name} ("${c.value}") has no cs-CZ key and is not in ` +
+            `T8_NO_KEY_REQUIRED — add a cs-CZ key or allowlist it (see frontend/src/lib/runtime/errors.ts)`,
+            true));
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// T9: named unique index ↔ UniqueConstraintTranslator parity (finding #3)
+//
+// Walk Infra.Database/Configurations/*.cs for .IsUnique() chained with
+// .HasDatabaseName("..."). A NAMED unique index is satisfied iff its name is
+// a translator dict key OR a `// no-translator: <reason>` marker sits on the
+// index statement (anywhere between the HasIndex( and its terminating `;`).
+// EF-auto-named unique indexes (no HasDatabaseName) are OUT of scope. Flagged
+// hard — an unmapped+unmarked named unique index 500s its concurrent loser.
+// ---------------------------------------------------------------------------
+const TRANSLATOR_PATH = 'backend/src/Makables.Infra.Database/UniqueConstraintTranslator.cs';
+
+async function ruleT9(allFiles) {
+    const translatorAbs = resolve(REPO_ROOT, TRANSLATOR_PATH);
+    if (!existsSync(translatorAbs)) return [];
+
+    const translatorSrc = await readFile(translatorAbs, 'utf8');
+    // Parse dict keys:  ["index_name"] =
+    const translatorKeys = new Set();
+    for (const m of stripComments(translatorSrc).matchAll(/\[\s*"([^"]+)"\s*\]\s*=/g)) {
+        translatorKeys.add(m[1]);
+    }
+
+    const configs = allFiles.filter(f =>
+        matchGlob(toPosix(relative(REPO_ROOT, f)),
+            'backend/src/Makables.Infra.Database/Configurations/*.cs'));
+
+    const out = [];
+    for (const file of configs) {
+        const src = await readFile(file, 'utf8');
+        const lines = src.split(/\r?\n/);
+        // Find each HasIndex( ... ) chain and slice up to its terminating `;`.
+        // We keep comments in the slab so the `// no-translator:` marker is
+        // visible, but only act on chains that carry BOTH .IsUnique() and a
+        // .HasDatabaseName("..."). The body-stripped view is used to confirm
+        // IsUnique/HasDatabaseName are real code (not inside a comment).
+        for (const m of src.matchAll(/\bbuilder\s*\.\s*HasIndex\s*\(/g)) {
+            const start = m.index;
+            const semi = src.indexOf(';', start);
+            if (semi === -1) continue;
+            const slab = src.slice(start, semi + 1);
+            const slabNoComments = stripComments(slab);
+
+            if (!/\.\s*IsUnique\s*\(/.test(slabNoComments)) continue;
+            const nameM = slabNoComments.match(/\.\s*HasDatabaseName\s*\(\s*"([^"]+)"\s*\)/);
+            if (!nameM) continue; // EF-auto-named → out of scope
+            const indexName = nameM[1];
+
+            if (translatorKeys.has(indexName)) continue; // mapped → satisfied
+
+            // The `// no-translator:` marker may sit INSIDE the HasIndex chain
+            // OR on the contiguous comment line(s) immediately ABOVE the
+            // statement (the documented-exclusion convention). Walk upward over
+            // the preceding `//` comment lines (a comment-aware lookback that
+            // is not fooled by a `;` inside the comment prose).
+            let markerAbove = false;
+            const startLineNo = lineOf(src, start); // 1-based
+            for (let ln = startLineNo - 1; ln >= 1; ln--) {
+                const text = lines[ln - 1];
+                const trimmed = text.trim();
+                if (trimmed === '') continue; // tolerate a blank gap line
+                if (!trimmed.startsWith('//')) break; // hit real code → stop
+                if (/no-translator:/.test(trimmed)) { markerAbove = true; break; }
+            }
+            if (markerAbove || /\/\/\s*no-translator:/.test(slab)) {
+                continue; // marker → satisfied
+            }
+
+            out.push(finding(file, lineOf(src, start), 'T9',
+                `unique index "${indexName}" is neither mapped in UniqueConstraintTranslator ` +
+                `nor carries a "// no-translator: <reason>" marker — map it or mark it`,
+                true));
+        }
+    }
+    return out;
+}
+
+const AGGREGATE_RULES = [ruleT8, ruleT9];
+
+// ---------------------------------------------------------------------------
 // baseline I/O
 // ---------------------------------------------------------------------------
 
@@ -388,7 +615,10 @@ async function readBaseline(baselinePath) {
 async function writeBaseline(baselinePath, findings) {
     const abs = resolve(REPO_ROOT, baselinePath);
     await mkdir(dirname(abs), { recursive: true });
-    const sorted = [...findings].sort((a, b) =>
+    // Hard findings (T8/T9) are NEVER baselined — they are codified defects
+    // that must always break the build, never be grandfathered.
+    const baselineable = findings.filter(f => !f.hard);
+    const sorted = [...baselineable].sort((a, b) =>
         a.file.localeCompare(b.file) || a.line - b.line || a.ruleId.localeCompare(b.ruleId));
     const lines = [
         '# Consistency baseline',
@@ -452,15 +682,34 @@ async function main() {
         }
     }
 
+    // Aggregate rules (T8/T9) run ONCE over the whole tree. They read fixed
+    // source-of-truth files (BusinessErrorMessage.cs, cs-CZ.ts, the translator,
+    // every config) regardless of the per-file candidate filter, so they only
+    // run on a full-tree invocation (no --paths narrowing) to avoid a partial
+    // --paths run resurfacing T8/T9 noise out of context.
+    if (!args.paths) {
+        for (const rule of AGGREGATE_RULES) {
+            try { findings.push(...await rule(allFiles)); }
+            catch (err) {
+                process.stderr.write(`check-consistency: rule ${rule.name} crashed: ${err.message}\n`);
+                process.exit(2);
+            }
+        }
+    }
+
     if (args.updateBaseline) {
         await writeBaseline(args.baseline, findings);
-        process.stderr.write(`check-consistency: wrote ${findings.length} findings to ${args.baseline}\n`);
+        const written = findings.filter(f => !f.hard).length;
+        process.stderr.write(`check-consistency: wrote ${written} findings to ${args.baseline}\n`);
         process.exit(0);
     }
 
     const baseline = await readBaseline(args.baseline);
-    const tracked = findings.filter(f => baseline.has(findingKey(f)));
-    const fresh = findings.filter(f => !baseline.has(findingKey(f)));
+    // Hard findings (T8/T9) are never matched against the baseline — every
+    // occurrence is fresh and breaks the build. Soft findings honour the
+    // grandfather baseline as before.
+    const tracked = findings.filter(f => !f.hard && baseline.has(findingKey(f)));
+    const fresh = findings.filter(f => f.hard || !baseline.has(findingKey(f)));
 
     if (args.json) {
         process.stdout.write(JSON.stringify({ new: fresh, tracked }, null, 2) + '\n');

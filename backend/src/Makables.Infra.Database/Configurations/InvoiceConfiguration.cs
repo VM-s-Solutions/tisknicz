@@ -151,6 +151,10 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         // this is a belt-and-braces shield: an accidental duplicate
         // surfaces as a 23505 / UniqueConstraintViolationException rather
         // than corrupting the legal record.
+        // no-translator: the IInvoiceNumberGenerator reserves the number under
+        // a FOR UPDATE lock (ADR 0009) and is monotonic, so two issuances
+        // cannot collide. A 23505 here means the generator was bypassed or
+        // broke — a bug, not a user-facing conflict; let it rethrow. (T-0068a.)
         builder.HasIndex(i => i.InvoiceNumber)
             .IsUnique()
             .HasDatabaseName("ix_invoices_invoice_number")
@@ -161,6 +165,13 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         // (role/invoice.md invariant). Soft-deleted rows free the slot
         // for re-issuance after GDPR anonymisation per T-0068a locked
         // decision absorption.
+        // no-translator: IInvoiceService.IssueAsync pre-checks via
+        // GetByOrderIdAsync and returns the existing row idempotently when an
+        // invoice already exists for the order. A 23505 race here is a webhook
+        // re-delivery the pre-check missed; translating to Error.Conflict would
+        // make the outbox worker fail+retry on a transient that resolves itself
+        // on the next pass. Let it rethrow; the next delivery returns the
+        // existing invoice. (T-0068b.)
         builder.HasIndex(i => i.OrderId)
             .IsUnique()
             .HasDatabaseName("ix_invoices_order_id")

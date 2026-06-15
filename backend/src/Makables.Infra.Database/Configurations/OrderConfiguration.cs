@@ -19,6 +19,10 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         // order frees its number for a future use). In practice the
         // OrderNumber generator never reuses a sequence, so this is a
         // belt-and-braces safety net rather than a design point.
+        // no-translator: the IOrderNumberGenerator reserves the number under
+        // a FOR UPDATE lock (ADR 0009) and is monotonic, so two CreateOrder
+        // runs cannot collide. A 23505 here means the generator was bypassed
+        // or broke — a bug, not a user-facing conflict; let it rethrow.
         builder.HasIndex(o => o.OrderNumber)
             .IsUnique()
             .HasDatabaseName("ix_orders_order_number")
@@ -100,6 +104,12 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         // GetByPaymentProviderRefAsync pre-check and returns 200
         // idempotently. Translating to Error.Conflict here would cause
         // Comgate to retry, which is the wrong resolution.
+        // no-translator: the Comgate webhook pre-checks via
+        // GetByPaymentProviderRefAsync and returns 200 idempotently when the
+        // ref is already known. A 23505 race here is a duplicate delivery the
+        // pre-check missed; translating to Error.Conflict would make Comgate
+        // retry (the wrong resolution). Let it rethrow; the next delivery hits
+        // the pre-check and returns 200. (T-0060 Copilot review M-1.)
         builder.HasIndex(o => o.PaymentProviderRef)
             .IsUnique()
             .HasDatabaseName("ix_orders_payment_provider_ref")
