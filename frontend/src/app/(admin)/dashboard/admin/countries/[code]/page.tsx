@@ -46,7 +46,12 @@ export default async function AdminCountryConfigPage({ params }: PageProps) {
           </p>
         </header>
 
-        <Alert variant="info" className="mb-6">
+        {/* Full-replace hazard banner (review BLOCKER-1 / Gate 4): the PUT is
+            full-replace and the form is not pre-filled, so a partial or
+            mistyped submit silently overwrites the whole country config.
+            warning variant (not info) until the GetCountryConfiguration GET
+            follow-up lands. */}
+        <Alert variant="warning" className="mb-6">
           <p className="text-sm">{t('dashboard.admin.ops.country.noPrefillNote')}</p>
         </Alert>
 

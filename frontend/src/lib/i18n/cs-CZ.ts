@@ -1308,7 +1308,7 @@ export const messages = {
   'dashboard.admin.ops.country.subtitle':
     'Úprava řídicí konfigurace země: sazby DPH, provize platformy, výchozí poskytovatelé a režim fakturace. Změna se projeví u nových objednávek.',
   'dashboard.admin.ops.country.noPrefillNote':
-    'Backend zatím nevystavuje načtení stávající konfigurace — vyplňte prosím celou editovatelnou sadu. Doplnění čtecího endpointu je evidováno jako následný backendový úkol.',
+    'Pozor: uložení přepíše CELOU konfiguraci země (úplná náhrada, ne dílčí úprava). Formulář se zatím nepředvyplňuje, proto musíte zadat VŠECHNY hodnoty — sazby DPH, provizi, cenu dopravy i všechny poskytovatele. Prázdné nebo chybně zadané pole tiše přepíše stávající hodnotu pro všechny budoucí objednávky. Před uložením ověřte každé pole. (Předvyplnění z načítacího endpointu je evidováno jako následný backendový úkol.)',
   'dashboard.admin.ops.country.section.tax': 'Daně a provize',
   'dashboard.admin.ops.country.section.providers': 'Výchozí poskytovatelé',
   'dashboard.admin.ops.country.standardVatLabel': 'Standardní sazba DPH (v bazických bodech)',
