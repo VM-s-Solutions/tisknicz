@@ -21,7 +21,11 @@ export function middleware(request: NextRequest): NextResponse {
   const cookie = request.cookies.get(accessCookieName(audience));
   if (!cookie?.value) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
+    // Admins log in on the dedicated /admin/login (ADR 0013 per-host
+    // audience — a customer token is useless against the admin host).
+    // Customer/maker branches keep the shared /login. T-0118a retargets
+    // ONLY the admin branch.
+    loginUrl.pathname = audience === 'admin' ? '/admin/login' : '/login';
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
