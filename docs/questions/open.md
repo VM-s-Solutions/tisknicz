@@ -370,3 +370,16 @@
   - Defer the two tiles to slice c entirely (overview ships order-state counts only at PR 1).
 - **Status:** answered
 - **Answer (filled by user):** Option a — groomed as **T-0126** (admin-reads-followups bundle, 2026-06-15). Two thin admin-host count endpoints: `GET /api/v1/payout-batches/count?state=Processing` → `{ count }` (new `IPayoutBatchRepository.CountByStateAsync`, AsNoTracking/Unscoped) + `GET /api/v1/outbox-events/stalled/count` → `{ count }` (new `IOutboxConsumerRepository.CountStalledAsync` with the exact stalled-set predicate `ProcessedAt==null AND NextRetryAt==null AND LastErrorKind!=None`, matching T-0109's stalled set — acknowledged rows excluded by `ProcessedAt==null`). Globally-unique Response names; read-only (no new codes). The overview consumes these to replace the "—" tiles + drive the US-admin-0002 AC-2 stalled-outbox banner. Backend-only; the FE wire-up rides a tiny T-0118a follow-up once T-0126 ships + admin NSwag regen.
+
+## Q-0028 — Admin invoice-PDF reads are not audited
+- **From:** secops (T-0126 Gate 3, F1)
+- **Ticket / context:** T-0126 admin invoice-PDF download (`GET /api/v1/admin-invoices/{id}/pdf`)
+- **Asked:** 2026-06-15
+- **Blocking:** no — the read is admin-audience-gated; the question is forensic-trail completeness, not access control.
+- **Question:** The admin invoice-PDF download is controller-direct (not an `IAdminAuditableCommand`), so streaming a customer's invoice as admin leaves NO audit row — unlike T-0110 erasure (audited). Customer invoices carry PII (recipient name/address/line items). Should privileged admin reads of customer financial PII emit an audit row ("admin X downloaded invoice Y")?
+- **Options the agent has considered:**
+  - Audit all admin invoice-PDF reads (a read-side audit hook — the admin-audit pipeline is command-only today; a read needs a thin explicit AppendAsync in the controller, or a read-audit behavior). Strongest forensic trail; one extra write per download.
+  - Audit nothing (status quo) — admin is a 2-person trusted role; access is gated; the invoice already exists as a legal record.
+  - Audit only on a future "admin accessed customer PII" policy bucket (broader than invoices — would also cover the admin order list showing customerEmail).
+- **Status:** open
+- **Answer (filled by user):**
