@@ -49,7 +49,7 @@ export function RegisterForm() {
         <h2 className="text-lg font-semibold">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         <p className="text-sm text-zinc-400">
-          <Link href="/auth/login" className="text-brand-400 hover:underline">
+          <Link href="/login" className="text-brand-400 hover:underline">
             {t('auth.register.login_link')}
           </Link>
         </p>
@@ -96,7 +96,7 @@ export function RegisterForm() {
       </form>
       <p className="text-center text-sm text-zinc-400">
         {t('auth.register.already_have_account')}{' '}
-        <Link href="/auth/login" className="text-brand-400 hover:underline">
+        <Link href="/login" className="text-brand-400 hover:underline">
           {t('auth.register.login_link')}
         </Link>
       </p>

@@ -6,7 +6,7 @@ import { accessCookieName, type Audience } from '@/lib/auth';
  *
  * Phase 1 ships the wiring only — it checks for the presence of the
  * audience-scoped access cookie and redirects unauthenticated requests
- * to `/auth/login`. Full JWT validation (signature, audience, expiry)
+ * to `/login`. Full JWT validation (signature, audience, expiry)
  * lands in T-0027 when the IJwtIssuer ships real signing keys.
  *
  * Routes are matched by the `(customer)`, `(maker)`, `(admin)` route
@@ -21,7 +21,7 @@ export function middleware(request: NextRequest): NextResponse {
   const cookie = request.cookies.get(accessCookieName(audience));
   if (!cookie?.value) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/auth/login';
+    loginUrl.pathname = '/login';
     loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }

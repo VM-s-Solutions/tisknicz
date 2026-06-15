@@ -59,7 +59,7 @@ export function RegisterMakerForm() {
           <Alert variant="warning">{t('auth.register_maker.snapshot_stale_notice')}</Alert>
         )}
         <p className="text-sm text-zinc-400">
-          <Link href="/auth/login" className="text-brand-400 hover:underline">
+          <Link href="/login" className="text-brand-400 hover:underline">
             {t('auth.register.login_link')}
           </Link>
         </p>

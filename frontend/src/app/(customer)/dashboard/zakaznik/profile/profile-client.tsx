@@ -22,7 +22,7 @@ const Host = 'customer' as const;
  * Customer self-service profile page. Three sections:
  *   1. Personal info (name + phone) — editable.
  *   2. Password change — current + new.
- *   3. Logout — clears session cookies, routes to /auth/login.
+ *   3. Logout — clears session cookies, routes to /login.
  *
  * Email is read-only; an email change needs re-confirmation and refresh-
  * family invalidation (separate flow, not in T-0036).
@@ -50,7 +50,7 @@ export function CustomerProfileClient() {
 
   async function handleLogout() {
     await logout(Host);
-    router.push('/auth/login');
+    router.push('/login');
   }
 
   if (loadError) {
