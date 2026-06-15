@@ -19,6 +19,10 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         // order frees its number for a future use). In practice the
         // OrderNumber generator never reuses a sequence, so this is a
         // belt-and-braces safety net rather than a design point.
+        // no-translator: the IOrderNumberGenerator reserves the number under
+        // a FOR UPDATE lock (ADR 0009) and is monotonic, so two CreateOrder
+        // runs cannot collide. A 23505 here means the generator was bypassed
+        // or broke — a bug, not a user-facing conflict; let it rethrow.
         builder.HasIndex(o => o.OrderNumber)
             .IsUnique()
             .HasDatabaseName("ix_orders_order_number")
@@ -100,6 +104,12 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         // GetByPaymentProviderRefAsync pre-check and returns 200
         // idempotently. Translating to Error.Conflict here would cause
         // Comgate to retry, which is the wrong resolution.
+        // no-translator: the Comgate webhook pre-checks via
+        // GetByPaymentProviderRefAsync and returns 200 idempotently when the
+        // ref is already known. A 23505 race here is a duplicate delivery the
+        // pre-check missed; translating to Error.Conflict would make Comgate
+        // retry (the wrong resolution). Let it rethrow; the next delivery hits
+        // the pre-check and returns 200. (T-0060 Copilot review M-1.)
         builder.HasIndex(o => o.PaymentProviderRef)
             .IsUnique()
             .HasDatabaseName("ix_orders_payment_provider_ref")
@@ -210,6 +220,24 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(o => o.PayoutBatchId)
             .HasDatabaseName("ix_orders_payout_batch_id")
             .HasFilter("payout_batch_id IS NOT NULL");
+
+        // Q-0019 (T-0125): partial index backing the weekly payout-batch scan
+        // — "Delivered orders not yet claimed by a batch". Pre-empts the
+        // year-1 payout-scan cliff: the CreatePayoutBatch sweep filters on
+        // exactly (state = 'Delivered' AND payout_batch_id IS NULL) and would
+        // otherwise full-scan a growing orders table every Monday. Partial
+        // WHERE is_active matches the house convention (ix_orders_state /
+        // ix_orders_payout_batch_id); the index stays tiny — only unclaimed
+        // Delivered rows qualify, and a claimed/advanced order drops out. The
+        // `state` column stores the enum as a string (HasConversion<string>),
+        // so the literal is 'Delivered'. The (State, PayoutBatchId) column
+        // tuple keeps this index distinct from the single-column
+        // ix_orders_state (EF would otherwise treat a second state-only index
+        // as a rename) and mirrors the two-column scan predicate. Not unique →
+        // no translator entry (T9 N/A).
+        builder.HasIndex(o => new { o.State, o.PayoutBatchId })
+            .HasDatabaseName("ix_orders_payout_unclaimed")
+            .HasFilter("state = 'Delivered' AND payout_batch_id IS NULL AND is_active");
 
         // T-0101: payout_batch_id → payout_batches(id) ON DELETE RESTRICT.
         // An order references the batch that paid it — legal traceability.

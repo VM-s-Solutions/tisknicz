@@ -60,7 +60,7 @@ export function VerifyClient() {
         <h2 className="text-lg font-semibold">{t('auth.verify.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.verify.success_body')}</p>
         <p className="text-sm">
-          <Link href="/auth/login" className="text-brand-400 hover:underline">
+          <Link href="/login" className="text-brand-400 hover:underline">
             {t('auth.login.submit')}
           </Link>
         </p>

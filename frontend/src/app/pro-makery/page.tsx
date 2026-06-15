@@ -156,7 +156,7 @@ export default function ProMakeryPage() {
 
           <p className="mt-6 text-center text-sm text-zinc-600">
             Už máte účet?{' '}
-            <Link href="/auth/login" className="text-brand-400 transition-colors hover:text-brand-300 hover:underline">
+            <Link href="/login" className="text-brand-400 transition-colors hover:text-brand-300 hover:underline">
               Přihlaste se
             </Link>
           </p>

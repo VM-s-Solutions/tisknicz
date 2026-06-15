@@ -84,6 +84,19 @@ public sealed class UniqueConstraintTranslator : IUniqueConstraintTranslator
             ["ux_reviews_order_active"] =
                 Error.Conflict("orderId", BusinessErrorMessage.ReviewAlreadyExists),
 
+            // OpenDispute pre-checks the order's Disputed state + the open
+            // dispute row (Silent-Success re-open, §C.4). A concurrent
+            // double-open that the read-gate misses commits a second OPEN
+            // dispute row and loses the at-most-one-open-dispute-per-order
+            // race at this partial-unique index. Surface it as the SAME typed
+            // Conflict the handler's own already-Disputed invariant branch
+            // returns (Error.Conflict("orderId", OrderInvalidTransition)),
+            // rather than a raw 500. No DisputeAlreadyOpen code exists; the
+            // race-loser and the read-gate-loser converge on the identical
+            // 409. T-0125 §A.3 (the latent ux_disputes_order_open bug).
+            ["ux_disputes_order_open"] =
+                Error.Conflict("orderId", BusinessErrorMessage.OrderInvalidTransition),
+
             // Intentionally unmapped (T-0033 Copilot review):
             //   ix_makers_user_id — one Maker row per User. The handler
             //   adds exactly one Maker per RegisterMaker call, so a 23505
