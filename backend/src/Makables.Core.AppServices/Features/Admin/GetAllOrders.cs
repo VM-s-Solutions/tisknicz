@@ -27,7 +27,8 @@ public static class GetAllOrders
         OrderState? State,
         string? CountryCode,
         string? MakerId,
-        string? CustomerEmail) : IQuery<GetAllOrdersResponse>;
+        string? CustomerEmail,
+        string? CustomerUserId = null) : IQuery<GetAllOrdersResponse>;
 
     /// <summary>Globally-unique name (NSwag PR #38 convention).</summary>
     public sealed record GetAllOrdersResponse(PagedData<AdminOrderListItemDto> Orders);
@@ -65,7 +66,7 @@ public static class GetAllOrders
             Query query, CancellationToken cancellationToken)
         {
             var filter = new AdminOrderFilter(
-                query.State, query.CountryCode, query.MakerId, query.CustomerEmail);
+                query.State, query.CountryCode, query.MakerId, query.CustomerEmail, query.CustomerUserId);
 
             var page = await adminQueries.GetAllOrdersPagedAsync(
                 filter, query.Page, query.PageSize, cancellationToken);

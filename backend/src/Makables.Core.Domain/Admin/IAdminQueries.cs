@@ -47,4 +47,27 @@ public interface IAdminQueries
     /// </summary>
     Task<PagedData<AdminAuditLogItemDto>> GetAdminAuditLogPagedAsync(
         AdminAuditLogFilter filter, int page, int pageSize, CancellationToken ct);
+
+    /// <summary>
+    /// Single privileged order header (T-0127 / Q-0024). Composes over
+    /// <c>IOrderRepository.Unscoped()</c> + <c>.IgnoreQueryFilters()</c>
+    /// (soft-deleted / anonymised rows surface for reconciliation),
+    /// <c>AsNoTracking</c>, projected to <see cref="AdminOrderDetailDto"/>.
+    /// NO GDPR redaction — admin is privileged (carries
+    /// <c>CustomerEmail</c> + the full contact snapshot). Returns
+    /// <c>null</c> for unknown / inactive ids (the handler maps it to
+    /// <c>order.notFound</c>).
+    /// </summary>
+    Task<AdminOrderDetailDto?> GetOrderDetailAsync(string orderId, CancellationToken ct);
+
+    /// <summary>
+    /// Paged cross-maker payout-batch list (T-0127 / Q-0029). Composes over
+    /// <c>IPayoutBatchRepository.Unscoped()</c> — wait, the batch repo has
+    /// no Unscoped queryable, so this reads the DbSet directly,
+    /// <c>AsNoTracking</c>. Spans every maker (the admin browse list, NOT
+    /// the per-maker T-0112 surface). The global soft-delete filter applies
+    /// (a batch is never destroyed). Sorted <c>CreatedAt DESC</c>.
+    /// </summary>
+    Task<PagedData<AdminPayoutBatchListItemDto>> GetPayoutBatchesPagedAsync(
+        int page, int pageSize, CancellationToken ct);
 }
