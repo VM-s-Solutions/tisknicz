@@ -183,8 +183,8 @@
   - Quick-fix ticket (S): sweep the ~10 references + middleware to `/login`. Recommended.
   - Rename the folder to un-grouped `auth/` so `/auth/login` becomes real — URL churn for an already-live route.
   - Leave until the next auth-area ticket picks it up — latent 404 on every affected link in the meantime.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Fixed in T-0125 (debt-codification bundle, 2026-06-15) — all frontend-nav `/auth/login` refs swept to `/login` (the `(auth)` route group adds no URL segment). API-client `/api/v1/auth/login` refs left untouched (correct backend routes).
 
 ## Q-0014 — i18n dictionary inlined into 17 client chunks
 - **From:** optimizer (checkout-flow-bundle Gate 8, HIGH finding)
@@ -264,8 +264,8 @@
   - Add a partial index now (cheap, recommended — pre-empts the cliff): `ix_orders_payout_unclaimed ON orders(country_code) WHERE state = 'Delivered' AND payout_batch_id IS NULL AND is_active`.
   - Add when volume warrants (defer until the Delivered history is large enough to measure the scan cost).
   - Combine with a future "archive completed orders" policy so claimed/settled orders leave the hot table entirely.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user):** Fixed in T-0125 (debt-codification bundle, 2026-06-15) — added partial composite index `ix_orders_payout_unclaimed ON orders(state, payout_batch_id) WHERE state='Delivered' AND payout_batch_id IS NULL AND is_active`, matching the eligibility-scan predicate exactly. `ix_orders_state` preserved.
 - **Note:** S follow-up.
 
 ## Q-0020 — Year-boundary ISO-week payout batch number
