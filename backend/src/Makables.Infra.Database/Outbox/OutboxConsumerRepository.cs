@@ -1,3 +1,4 @@
+using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Outbox;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,19 +44,45 @@ public sealed class OutboxConsumerRepository(MakablesDbContext db) : IOutboxCons
 
     public Task<int> CountStalledAsync(CancellationToken cancellationToken)
     {
-        // Stalled set (T-0126 / Q-0027) — exactly T-0109's definition: the
-        // retry ladder exhausted (RecordFailure with nextRetryAt: null), not
-        // yet processed, and a real failure recorded. This is the inverse of
-        // LoadDueAsync's due-set narrowed to failed-and-not-rescheduled, and
-        // mirrors OutboxEvent.ParkPendingConsumer's stall guard. An
-        // acknowledged row has ProcessedAt set, so ProcessedAt == null already
-        // excludes it. AsNoTracking — this is a pure count, never an entity.
+        // Stalled set (T-0126 / Q-0027 / T-0127) — exactly T-0109's
+        // definition. The predicate is the SHARED
+        // IOutboxConsumerRepository.StalledPredicate so the count and the
+        // T-0127 list (GetStalledPagedAsync) can never drift. AsNoTracking —
+        // this is a pure count, never an entity.
         return db.Set<OutboxEvent>()
             .AsNoTracking()
-            .CountAsync(
-                e => e.ProcessedAt == null
-                  && e.NextRetryAt == null
-                  && e.LastErrorKind != OutboxErrorKind.None,
-                cancellationToken);
+            .CountAsync(IOutboxConsumerRepository.StalledPredicate, cancellationToken);
+    }
+
+    public async Task<PagedData<StalledOutboxEventDto>> GetStalledPagedAsync(
+        int page, int pageSize, CancellationToken cancellationToken)
+    {
+        // Same SHARED StalledPredicate as CountStalledAsync (T-0127 §A.4 —
+        // byte-identical, so the triage list and the KPI tile agree on the
+        // stalled set). AsNoTracking — projection-only, never an entity. Two
+        // round-trips (count + page) per the T-0080 precedent.
+        var baseQuery = db.Set<OutboxEvent>()
+            .AsNoTracking()
+            .Where(IOutboxConsumerRepository.StalledPredicate);
+
+        var totalCount = await baseQuery.CountAsync(cancellationToken);
+        if (totalCount == 0)
+            return PagedData<StalledOutboxEventDto>.Empty(page, pageSize);
+
+        var items = await baseQuery
+            .OrderByDescending(e => e.CreatedAt)
+            .ThenByDescending(e => e.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new StalledOutboxEventDto(
+                e.Id,
+                e.EventType,
+                e.AggregateId,
+                e.LastErrorCode,
+                e.RetryCount,
+                e.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return new PagedData<StalledOutboxEventDto>(items, page, pageSize, totalCount);
     }
 }

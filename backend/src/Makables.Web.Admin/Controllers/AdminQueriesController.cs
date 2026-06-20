@@ -43,9 +43,25 @@ public sealed class AdminQueriesController : MakablesApiController
         [FromQuery] string? country = null,
         [FromQuery] string? makerId = null,
         [FromQuery] string? customerEmail = null,
+        [FromQuery] string? customerUserId = null,
         CancellationToken ct = default) =>
         HandleResult(await Mediator.Send(
-            new GetAllOrders.Query(page, pageSize, state, country, makerId, customerEmail), ct));
+            new GetAllOrders.Query(page, pageSize, state, country, makerId, customerEmail, customerUserId), ct));
+
+    /// <summary>
+    /// Single privileged order header (T-0127 / Q-0024). Full breakdown +
+    /// <c>customerEmail</c> + contact snapshot, no GDPR redaction; Unscoped
+    /// (cross-tenant). 404 <c>order.notFound</c> for an unknown / inactive id.
+    /// Replaces T-0118b's list-row-scan header.
+    /// </summary>
+    [HttpGet]
+    [Route("api/v{version:apiVersion}/admin-orders/{orderId}")]
+    [ProducesResponseType(typeof(GetAdminOrderDetail.GetAdminOrderDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOrder(string orderId, CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetAdminOrderDetail.Query(orderId), ct));
 
     /// <summary>Cross-tenant invoice list (US-admin-0012).</summary>
     [HttpGet]

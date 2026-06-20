@@ -4,6 +4,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,6 +44,12 @@ public sealed class AdminQueries(
             baseQuery = baseQuery.Where(o => o.CountryCode == filter.CountryCode);
         if (!string.IsNullOrEmpty(filter.MakerId))
             baseQuery = baseQuery.Where(o => o.MakerId == filter.MakerId);
+        // T-0127 per-user in-flight signal (Q-0024): exact FK match on the
+        // order's customer. The delete-user panel filters this + an in-flight
+        // state; a non-empty page proactively pre-disables the destructive
+        // button (the backend T-0110 erase gate stays authoritative).
+        if (!string.IsNullOrEmpty(filter.CustomerUserId))
+            baseQuery = baseQuery.Where(o => o.CustomerUserId == filter.CustomerUserId);
         if (!string.IsNullOrEmpty(filter.CustomerEmail))
         {
             var pattern = $"%{filter.CustomerEmail}%";
@@ -175,5 +182,108 @@ public sealed class AdminQueries(
             .ToListAsync(ct);
 
         return new PagedData<AdminAuditLogItemDto>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<AdminOrderDetailDto?> GetOrderDetailAsync(string orderId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+            return null;
+
+        // Unscoped + IgnoreQueryFilters (admin reconciliation rows surface) +
+        // AsNoTracking (pure read, no mutation). Maker name / product title
+        // resolved via correlated subqueries (Order has no EF navigation to
+        // Maker/Product) — same pattern as GetAllOrdersPagedAsync above. NO
+        // GDPR redaction: admin is privileged (CustomerEmail + full contact
+        // snapshot carried).
+        return await orders.Unscoped()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .IgnoreQueryFilters()
+            .Where(o => o.Id == orderId)
+            .Select(o => new AdminOrderDetailDto(
+                o.Id,
+                o.OrderNumber,
+                o.State,
+                o.CountryCode,
+                o.MakerId,
+                db.Set<Maker>().IgnoreQueryFilters()
+                    .Where(m => m.Id == o.MakerId)
+                    .Select(m => m.CompanyName)
+                    .FirstOrDefault() ?? string.Empty,
+                o.ProductId,
+                o.ProductId == null
+                    ? null
+                    : db.Set<Product>().IgnoreQueryFilters()
+                        .Where(p => p.Id == o.ProductId)
+                        .Select(p => p.Title)
+                        .FirstOrDefault(),
+                o.CustomerUserId,
+                o.ContactEmail,
+                o.ContactName,
+                o.ContactPhone,
+                o.CustomerNotes,
+                o.ProductPriceAmountMinor,
+                o.ShippingPriceAmountMinor,
+                o.PlatformFeeAmountMinor,
+                o.MakerPayoutAmountMinor,
+                o.TotalAmountMinor,
+                o.RefundedAmountMinor,
+                o.Currency,
+                o.VatRateBp,
+                o.ShippingMethod,
+                o.ZasilkovnaPickupPointId,
+                o.ShippingCarrierRef,
+                o.ShippingCarrierTrackingUrl,
+                o.PaymentProviderRef,
+                o.PaymentMethod,
+                o.PayoutBatchId,
+                o.CreatedAt,
+                o.PaidAt,
+                o.AcceptedAt,
+                o.ShippedAt,
+                o.DeliveredAt,
+                o.CompletedAt,
+                o.CancelledAt,
+                o.RefundedAt,
+                o.DisputedAt,
+                o.IsActive))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<PagedData<AdminPayoutBatchListItemDto>> GetPayoutBatchesPagedAsync(
+        int page, int pageSize, CancellationToken ct)
+    {
+        // Cross-maker browse list (T-0127). The batch aggregate has no
+        // Unscoped() queryable on its repo, so read the DbSet directly —
+        // admin-host only per ADR 0013 (the host audience is the security
+        // boundary). AsNoTracking; the global soft-delete filter applies (a
+        // batch is never destroyed, so the count is exact). NO
+        // IgnoreQueryFilters — there are no soft-deleted batches to surface.
+        var baseQuery = db.Set<PayoutBatch>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes();
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount == 0)
+            return PagedData<AdminPayoutBatchListItemDto>.Empty(page, pageSize);
+
+        var items = await baseQuery
+            .OrderByDescending(b => b.CreatedAt)
+            .ThenByDescending(b => b.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(b => new AdminPayoutBatchListItemDto(
+                b.Id,
+                b.BatchNumber,
+                b.State,
+                b.TotalAmountMinor,
+                b.Currency,
+                b.OrderCount,
+                b.MakerCount,
+                b.CreatedAt,
+                b.CompletedAt))
+            .ToListAsync(ct);
+
+        return new PagedData<AdminPayoutBatchListItemDto>(items, page, pageSize, totalCount);
     }
 }

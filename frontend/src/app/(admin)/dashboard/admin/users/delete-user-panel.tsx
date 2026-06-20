@@ -8,14 +8,15 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { eraseUser } from '@/lib/api-client-helpers/admin-ops-client';
+import { userHasInFlightOrders } from '@/lib/api-client-helpers/admin-orders';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 
 /**
- * GDPR delete-user panel (T-0118c §4) — the most carefully-built component
- * in the slice. THREE phases: LOOKUP (enter the user id + email) → CONFIRM
- * (the erase surface) → TERMINAL (a "deleted" confirmation, NOT a refresh
- * into a 404).
+ * GDPR delete-user panel (T-0118c §4 / T-0127 re-wire) — the most carefully-
+ * built component in the slice. THREE phases: LOOKUP (enter the user id +
+ * email) → CONFIRM (the erase surface) → TERMINAL (a "deleted" confirmation,
+ * NOT a refresh into a 404).
  *
  * The double interlock the backend enforces (T-0110) is mirrored
  * PROACTIVELY on the client — the UI ADDS friction and surfaces the
@@ -27,32 +28,61 @@ import { resolveErrorMessage } from '@/lib/runtime/errors';
  *     single strongest friction the admin UI offers and is RESERVED for
  *     this screen (no other admin surface type-to-confirms). The backend
  *     re-checks via `user.deleteConfirmationMismatch`.
- *   - In-flight-order block (A.2b) — server-enforced. With no per-user-order
- *     read on the contract (gap), the block surfaces as the backend's
- *     post-call verdict (`user.cannotDeleteWithInFlightOrders`) rendered
- *     with the inline "resolve in-flight orders first" reason, rather than
- *     a pre-disabled button. The proactive pre-disable lands when the read
- *     endpoint does (flagged follow-up).
+ *   - In-flight-order block (A.2b) — server-enforced. T-0127 added the
+ *     per-user in-flight signal (`userHasInFlightOrders`), so the block is
+ *     now surfaced PROACTIVELY: on lookup-submit the panel probes the
+ *     filtered admin-orders read; if the user has any order in an in-flight
+ *     state the destructive button is disabled PRE-call with the
+ *     `user.cannotDeleteWithInFlightOrders` reason inline (T-0118c AC-12).
+ *     The backend T-0110 gate stays authoritative and re-checks at submit;
+ *     this is the proactive UX layer, replacing the prior post-submit
+ *     reactive verdict.
  *   - Mandatory reason (≤ 2000, GDPR ticket ref) — backend authoritative.
  *
- * The button enable predicate (email-match AND non-empty-reason) is purely
- * presentational; T-0110 re-checks both gates regardless. Disabled-while-
- * pending on the erase. A re-call after a successful erase (or an
- * already-gone user) surfaces `user.notFound` rendered as "uživatel již byl
- * smazán" — NOT a silent success (T-0110's no-Silent-Success rule).
+ * The button enable predicate (email-match AND non-empty-reason AND
+ * not-in-flight) is purely presentational; T-0110 re-checks every gate
+ * regardless. Disabled-while-pending on the erase. A re-call after a
+ * successful erase (or an already-gone user) surfaces `user.notFound`
+ * rendered as "uživatel již byl smazán" — NOT a silent success (T-0110's
+ * no-Silent-Success rule).
  */
 
 const REASON_MAX_LENGTH = 2000;
 
 type Phase = 'lookup' | 'confirm' | 'deleted';
 
+/**
+ * The proactive in-flight verdict resolved at lookup-submit (T-0127):
+ *   - `clear` — no in-flight order; erase is allowed to proceed.
+ *   - `blocked` — the user has an in-flight order; the destructive button is
+ *     pre-disabled with the inline reason.
+ *   - `unknown` — the probe read failed transiently; do NOT pre-disable (the
+ *     backend gate re-checks at submit and stays authoritative).
+ */
+type InFlightVerdict = 'clear' | 'blocked' | 'unknown';
+
 export function DeleteUserPanel() {
   const [phase, setPhase] = useState<Phase>('lookup');
   const [userId, setUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [inFlightVerdict, setInFlightVerdict] = useState<InFlightVerdict>('unknown');
+  const [probing, setProbing] = useState(false);
+  const probeRef = useRef(false);
 
-  function handleLookupSubmit() {
-    if (userId.trim() === '' || userEmail.trim() === '') return;
+  async function handleLookupSubmit() {
+    const id = userId.trim();
+    if (probeRef.current || id === '' || userEmail.trim() === '') return;
+    probeRef.current = true;
+    setProbing(true);
+
+    // Proactive in-flight probe (T-0127 AC-12). A failed read → `unknown`
+    // (do NOT pre-disable on a transient error — the backend gate is
+    // authoritative and re-checks at submit).
+    const result = await userHasInFlightOrders(id);
+    setInFlightVerdict(result.success ? (result.value ? 'blocked' : 'clear') : 'unknown');
+
+    probeRef.current = false;
+    setProbing(false);
     setPhase('confirm');
   }
 
@@ -60,6 +90,7 @@ export function DeleteUserPanel() {
     setPhase('lookup');
     setUserId('');
     setUserEmail('');
+    setInFlightVerdict('unknown');
   }
 
   if (phase === 'deleted') {
@@ -71,6 +102,7 @@ export function DeleteUserPanel() {
       <EraseConfirmation
         userId={userId.trim()}
         userEmail={userEmail.trim()}
+        inFlightVerdict={inFlightVerdict}
         onDeleted={() => setPhase('deleted')}
         onBack={reset}
       />
@@ -92,6 +124,7 @@ export function DeleteUserPanel() {
         label={t('dashboard.admin.ops.users.lookup.idLabel')}
         value={userId}
         onChange={(e) => setUserId(e.target.value)}
+        disabled={probing}
         autoComplete="off"
         spellCheck={false}
       />
@@ -102,6 +135,7 @@ export function DeleteUserPanel() {
         label={t('dashboard.admin.ops.users.lookup.emailLabel')}
         value={userEmail}
         onChange={(e) => setUserEmail(e.target.value)}
+        disabled={probing}
         autoComplete="off"
         spellCheck={false}
       />
@@ -113,10 +147,13 @@ export function DeleteUserPanel() {
         <Button
           type="button"
           variant="danger"
-          disabled={userId.trim() === '' || userEmail.trim() === ''}
-          onClick={handleLookupSubmit}
+          loading={probing}
+          disabled={userId.trim() === '' || userEmail.trim() === '' || probing}
+          onClick={() => void handleLookupSubmit()}
         >
-          {t('dashboard.admin.ops.users.lookup.submit')}
+          {probing
+            ? t('dashboard.admin.ops.users.lookup.checking')
+            : t('dashboard.admin.ops.users.lookup.submit')}
         </Button>
       </div>
     </Card>
@@ -139,11 +176,13 @@ function IrreversibilityBanner() {
 function EraseConfirmation({
   userId,
   userEmail,
+  inFlightVerdict,
   onDeleted,
   onBack,
 }: {
   readonly userId: string;
   readonly userEmail: string;
+  readonly inFlightVerdict: InFlightVerdict;
   readonly onDeleted: () => void;
   readonly onBack: () => void;
 }) {
@@ -155,11 +194,18 @@ function EraseConfirmation({
   const [submitting, setSubmitting] = useState(false);
   const inFlightRef = useRef(false);
 
+  // Proactive pre-disable (T-0127 AC-12): the lookup probe found an in-flight
+  // order → the destructive button is disabled PRE-call with the inline
+  // reason. The backend T-0110 gate stays authoritative; `unknown` (transient
+  // probe failure) does NOT pre-disable.
+  const preBlocked = inFlightVerdict === 'blocked';
+  const showInFlightReason = preBlocked || inFlightBlocked;
+
   const trimmedReason = reason.trim();
-  // Presentational predicate ONLY — the server re-checks both gates (T-0110).
+  // Presentational predicate ONLY — the server re-checks every gate (T-0110).
   const emailMatches = confirmEmail === userEmail;
   const reasonValid = trimmedReason !== '' && trimmedReason.length <= REASON_MAX_LENGTH;
-  const canSubmit = emailMatches && reasonValid && !submitting;
+  const canSubmit = emailMatches && reasonValid && !preBlocked && !submitting;
 
   async function handleErase() {
     if (inFlightRef.current || !canSubmit) return;
@@ -209,15 +255,16 @@ function EraseConfirmation({
         <p className="mt-1 break-all font-mono text-sm text-zinc-100">{userEmail}</p>
       </div>
 
-      {/* In-flight block (A.2b) — surfaced as the backend verdict (gap: no
-          per-user-order read to pre-disable on). */}
-      {inFlightBlocked ? (
+      {/* In-flight block (A.2b) — surfaced PROACTIVELY when the lookup probe
+          found an in-flight order (T-0127 AC-12), or reactively if the
+          backend rejects an `unknown`-probe submit. */}
+      {showInFlightReason ? (
         <Alert variant="warning">
           <p className="text-sm">{t('dashboard.admin.ops.users.inFlightReason')}</p>
         </Alert>
       ) : null}
 
-      {error && !inFlightBlocked ? <Alert variant="error">{error}</Alert> : null}
+      {error && !showInFlightReason ? <Alert variant="error">{error}</Alert> : null}
 
       <div>
         <Input
@@ -249,7 +296,7 @@ function EraseConfirmation({
         <p className="mt-1 text-xs text-zinc-500">{t('dashboard.admin.ops.users.reasonHint')}</p>
       </div>
 
-      {!canSubmit && !submitting ? (
+      {!canSubmit && !submitting && !preBlocked ? (
         <p className="text-xs text-zinc-500">{t('dashboard.admin.ops.users.erase.disabledHint')}</p>
       ) : null}
 

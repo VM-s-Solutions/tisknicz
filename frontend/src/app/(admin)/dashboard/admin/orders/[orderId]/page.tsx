@@ -5,14 +5,12 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import {
-  type AdminOrderListItem,
-  ADMIN_LIST_MAX_PAGE_SIZE,
-  getAdminOrders,
-} from '@/lib/api-client-helpers/admin-client';
+import { ADMIN_LIST_MAX_PAGE_SIZE } from '@/lib/api-client-helpers/admin-client';
 import {
   type AdminAuditPage,
+  type AdminOrderDetail,
   getAdminOrderAuditTrail,
+  getAdminOrderDetail,
 } from '@/lib/api-client-helpers/admin-orders';
 import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
@@ -22,33 +20,28 @@ import { OrderActions } from './order-actions';
 import { DisputeForm } from './dispute-form';
 
 /**
- * Admin order detail (T-0118b, US-admin-0009 AC-2 + the three money/state
- * action surfaces). Server Component throughout — the order header + the
- * order's audit trail are SSR-fetched (cookie forwarding per patterns.md
- * B.14 / ADR 0024); only the refund/state modals (`order-actions.tsx`)
- * and the dispute form (`dispute-form.tsx`) are `'use client'` islands,
- * re-syncing via `router.refresh()` (no optimistic UI).
+ * Admin order detail (T-0118b / T-0127 re-wire, US-admin-0009 AC-2 + the
+ * three money/state action surfaces). Server Component throughout — the
+ * order header + the order's audit trail are SSR-fetched (cookie forwarding
+ * per patterns.md B.14 / ADR 0024); only the refund/state modals
+ * (`order-actions.tsx`) and the dispute form (`dispute-form.tsx`) are
+ * `'use client'` islands, re-syncing via `router.refresh()` (no optimistic
+ * UI).
  *
- * Q-0024 detail-boundary gap (logged backend follow-up): there is NO
- * admin order-detail DTO and NO order-scoped audit-trail endpoint. The
- * header therefore degrades to the cross-tenant list-row fields
- * (`AdminOrderListItemDto`, resolved by scanning the all-orders list for
- * this id) and the audit trail is read from the global audit-log query
- * filtered to `targetEntity:"order"` + this id (§C.2). Line items, the
- * lifecycle timeline, the VAT/payout breakdown, attachments and the
- * message thread are out of scope until the follow-up DTO ships — the
- * page renders the richest view the current contract allows and labels
- * the gap rather than inventing a backend read.
+ * T-0127 closed the Q-0024 detail-boundary gap: the header now consumes the
+ * real privileged `GetAdminOrderDetail` DTO (full header — number, state,
+ * amounts/breakdown, country, maker, `customerEmail`, contact snapshot,
+ * lifecycle timestamps; Unscoped, no GDPR redaction) instead of scanning the
+ * all-orders list for the id. A `404 OrderNotFound` → `notFound()`. The
+ * audit trail still reads from the global audit-log query filtered to
+ * `targetEntity:"order"` + this id (§C.2). Line items + the message thread
+ * stay out of scope (ticket §Out of scope).
  */
 
 export const dynamic = 'force-dynamic';
 
 const ROUTE_BASE = '/dashboard/admin/orders';
 const AUDIT_PAGE_SIZE = ADMIN_LIST_MAX_PAGE_SIZE;
-// The all-orders list carries no id filter (Q-0024). We scan the first
-// page at the maximum window to resolve the header row — bounded, and the
-// follow-up `GetAdminOrderDetail` query closes this cleanly.
-const HEADER_SCAN_PAGE_SIZE = ADMIN_LIST_MAX_PAGE_SIZE;
 
 interface PageProps {
   readonly params: Promise<{ orderId: string }>;
@@ -78,31 +71,30 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
   const sp = await searchParams;
   const auditPage = parsePositiveInt(readString(sp.auditPage), 1);
 
-  // The header row (best-effort, Q-0024) + the audit trail (load-bearing)
-  // are independent reads — neither blocks the other.
-  const [headerRow, auditResult] = await Promise.all([
-    resolveOrderHeader(orderId),
+  // The real privileged header (T-0127) + the audit trail are independent
+  // reads — neither blocks the other.
+  const [detailResult, auditResult] = await Promise.all([
+    getAdminOrderDetail(orderId),
     getAdminOrderAuditTrail(orderId, auditPage, AUDIT_PAGE_SIZE),
   ]);
 
+  const detailUnauthorized =
+    !detailResult.success && detailResult.error.type === 'Unauthorized';
   const auditUnauthorized = !auditResult.success && auditResult.error.type === 'Unauthorized';
-  if (auditUnauthorized || headerRow.kind === 'unauthorized') {
+  if (detailUnauthorized || auditUnauthorized) {
     redirect(
       `/admin/login?redirect=${encodeURIComponent(`${ROUTE_BASE}/${encodeURIComponent(orderId)}`)}`,
     );
   }
 
-  // notFound() only when the order is unresolvable from BOTH reads: no
-  // list row AND a successful audit read with no entry referencing this
-  // id. A transient read failure does NOT 404 (it surfaces the degraded
-  // shell + an alert).
-  const auditTrail = auditResult.success ? auditResult.value : undefined;
-  const hasAnyAudit = (auditTrail?.items.length ?? 0) > 0;
-  if (headerRow.kind === 'notFound' && auditResult.success && !hasAnyAudit) {
+  // An unknown / inactive id is an authoritative 404 from the detail read
+  // (OrderNotFound) — render the not-found page, not a degraded shell.
+  if (!detailResult.success && detailResult.error.code === 'order.notFound') {
     notFound();
   }
 
-  const order = headerRow.kind === 'found' ? headerRow.order : undefined;
+  const order = detailResult.success ? detailResult.value : undefined;
+  const auditTrail = auditResult.success ? auditResult.value : undefined;
 
   return (
     <section className="py-12 lg:py-16">
@@ -167,7 +159,7 @@ function OrderHeader({
   order,
 }: {
   readonly orderId: string;
-  readonly order: AdminOrderListItem | undefined;
+  readonly order: AdminOrderDetail | undefined;
 }) {
   if (!order) {
     return (
@@ -192,6 +184,7 @@ function OrderHeader({
           {t(orderStateLabelKey(order.state))}
         </Badge>
       </div>
+
       <Card padding="md">
         <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
           <HeaderField
@@ -210,6 +203,54 @@ function OrderHeader({
             label={t('dashboard.admin.orderActions.header.customer')}
             value={order.customerEmail}
           />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.contactName')}
+            value={order.contactName}
+          />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.contactPhone')}
+            value={order.contactPhone}
+          />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.createdAt')}
+            value={formatDateTime(order.createdAt)}
+          />
+          {order.productTitle ? (
+            <HeaderField
+              label={t('dashboard.admin.orderActions.header.product')}
+              value={order.productTitle}
+            />
+          ) : null}
+        </dl>
+      </Card>
+
+      <Card padding="md">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          {t('dashboard.admin.orderActions.header.breakdown.heading')}
+        </h2>
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.breakdown.productPrice')}
+            value={formatCzk(order.productPriceAmountMinor, order.currency)}
+          />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.breakdown.shipping')}
+            value={formatCzk(order.shippingPriceAmountMinor, order.currency)}
+          />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.breakdown.platformFee')}
+            value={formatCzk(order.platformFeeAmountMinor, order.currency)}
+          />
+          <HeaderField
+            label={t('dashboard.admin.orderActions.header.breakdown.makerPayout')}
+            value={formatCzk(order.makerPayoutAmountMinor, order.currency)}
+          />
+          {order.refundedAmountMinor > 0 ? (
+            <HeaderField
+              label={t('dashboard.admin.orderActions.header.breakdown.refunded')}
+              value={formatCzk(order.refundedAmountMinor, order.currency)}
+            />
+          ) : null}
         </dl>
       </Card>
     </header>
@@ -339,27 +380,4 @@ function AuditPagination({
       )}
     </nav>
   );
-}
-
-/**
- * Q-0024 header resolution: the all-orders list has no id filter, so the
- * header degrades to a best-effort scan of the first list page for this
- * id. `found` → full header; `notFound` → no row on the scanned window
- * (NOT proof the order is absent — combined with the audit read in the
- * page to decide `notFound()`); `unauthorized` → bounce to login.
- */
-type HeaderResolution =
-  | { readonly kind: 'found'; readonly order: AdminOrderListItem }
-  | { readonly kind: 'notFound' }
-  | { readonly kind: 'unauthorized' };
-
-async function resolveOrderHeader(orderId: string): Promise<HeaderResolution> {
-  const result = await getAdminOrders({ page: 1, pageSize: HEADER_SCAN_PAGE_SIZE });
-  if (!result.success) {
-    return result.error.type === 'Unauthorized'
-      ? { kind: 'unauthorized' }
-      : { kind: 'notFound' };
-  }
-  const order = result.value.items.find((item) => item.orderId === orderId);
-  return order ? { kind: 'found', order } : { kind: 'notFound' };
 }

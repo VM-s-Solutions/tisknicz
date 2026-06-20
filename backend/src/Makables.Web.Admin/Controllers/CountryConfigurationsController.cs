@@ -23,6 +23,20 @@ namespace Makables.Web.Admin.Controllers;
 [Authorize]
 public sealed class CountryConfigurationsController : MakablesApiController
 {
+    /// <summary>
+    /// Read the country configuration for admin pre-fill (T-0127 / Q-0029).
+    /// Returns exactly the editable field set <see cref="Update"/> echoes so
+    /// the admin form round-trips. 404 <c>countryConfiguration.notFound</c>
+    /// for an unseeded code. Read-only, admin-audience only (ADR 0013).
+    /// </summary>
+    [HttpGet("{countryCode}")]
+    [ProducesResponseType(typeof(GetCountryConfiguration.GetCountryConfigurationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Get(string countryCode, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(new GetCountryConfiguration.Query(countryCode), ct));
+
     /// <summary>Request body for <see cref="Update"/>. The country code rides the route.</summary>
     public sealed record UpdateCountryConfigurationRequest(
         int StandardVatRateBp,

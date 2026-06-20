@@ -57,6 +57,14 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <!-- Transitive-pin override (CVE GHSA-2m69-gcr7-jv3q): EFCore.Sqlite 10.0.x pulls
+         SQLitePCLRaw.bundle_e_sqlite3 2.1.11, whose native lib.e_sqlite3 2.1.11 has a
+         known high-severity vuln. NuGetAudit + TreatWarningsAsErrors fail restore on
+         NU1903. Bundle 3.0.3 brings the patched family (config/core/provider 3.0.3 +
+         lib 3.50.3). Used only by the in-memory SQLite test harnesses (Makables.Tests,
+         Makables.IntegrationTests); production runs Postgres. Drop this pin once
+         EFCore.Sqlite ships a release that references the patched bundle directly. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 
     <!-- Azure Blob (Infra.Azure.Storage.Blobs) -->
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
