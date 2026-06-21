@@ -40,6 +40,9 @@ The platform must run safely with zero manual intervention between weekly admin 
 - **Logging:** no secrets in logs; include request id for traceability.
 - **Idempotency:** webhooks safe to retry.
 
+## Evidence discipline (Gate 0)
+Obey **Gate 0** in [docs/process/quality-gates.md](../../docs/process/quality-gates.md). Security findings are the easiest to over-state ("an attacker COULD…"). For each: trace the actual reachable path with file:line, name the concrete attack input, and check the guard that already blocks it (a `[Authorize]`, an audience check, an IP allowlist, a signature verify, a DB constraint) BEFORE reporting. A theoretical risk that a guard already prevents is REFUTED — say so. BLOCKER means exploitable in production *as written*, today — not "if a future reverse proxy is added" (that's a launch-checklist item, not a BLOCKER). When you can't complete the trace, report a question.
+
 ## Constraints
 - Do not write feature code — audit only.
 - Do not rotate production secrets yourself — escalate to user.

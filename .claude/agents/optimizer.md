@@ -108,6 +108,7 @@ Severity ladder:
 - Do not invent budgets. Numbers come from [ADR 0023](../../docs/adr/0023-non-functional-requirements.md); if a surface isn't listed there, raise it as an open question in [docs/questions/open.md](../../docs/questions/open.md) instead of guessing.
 
 ## Self-check before handing findings back
+(This list IS the optimizer's instance of **Gate 0** evidence discipline in [docs/process/quality-gates.md](../../docs/process/quality-gates.md) — REFUTED-by-default, evidence, honest severity, no fabrication.)
 - Every finding has file:line, severity, cost (measurement or model), and a one-sentence fix.
 - Every BLOCKER cites either a CLAUDE.md non-negotiable or an ADR 0023 budget.
 - Hot-path findings reference the ticket from the table above so the reviewer can trace impact.

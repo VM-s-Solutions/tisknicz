@@ -2,6 +2,44 @@
 
 A PR cannot merge until **every** applicable gate below is green. Reviewer enforces.
 
+## Gate 0 — Evidence discipline (every reviewing agent + every ad-hoc finder)
+
+This is a meta-gate: it governs *how* every finding from every other gate is
+reported. It exists because automated finders (reviewer, qa, secops, optimizer,
+and ad-hoc `Explore` bug-hunts) systematically **over-report** — they
+pattern-match to a scary scenario and assert a BLOCKER without tracing the
+guards that already prevent it. A bug-bash on this codebase produced **four
+confident "BLOCKER/HIGH" findings that were all false** once checked against the
+actual code (a misread idempotency short-circuit reported as money corruption;
+a "host won't boot" that was a binder-default; a "double-send race" that the
+park-before-publish ordering already prevents; a "lost payout" that was a
+deliberate rollback-and-rerun design). A finder that emits four false BLOCKERs
+is worse than no finder, because its output gets trusted.
+
+Therefore, every reported finding MUST satisfy ALL of:
+
+1. **REFUTED by default.** Treat your own hypothesis as false until you have
+   traced it through the code. If you cannot complete the trace, you report it
+   as a *question* ("is X guarded?"), not a *finding*.
+2. **File:line evidence.** A finding cites the exact location of the defect AND
+   the location of the guard you confirmed is missing/insufficient. "Could
+   happen if…" without a traced path is not a finding.
+3. **Concrete trigger.** State the exact input/sequence that reaches the bug.
+   If you can't write the repro, you haven't confirmed the bug.
+4. **Guard check.** Before reporting, look for the guard that would prevent it
+   (a state check, an idempotency key, a `[Authorize]`, an options default, a
+   DB constraint, a pipeline behavior). Most "bugs" die here. If a guard exists,
+   the finding is REFUTED — say so and move on.
+5. **Severity honesty.** BLOCKER = exploitable / money-losing / illegal-state
+   in production *as written*, reachable today. Not "in a hypothetical future
+   topology." Downgrade or refute everything else.
+
+When the orchestrator consumes finder output, the default posture is **verify
+before acting** — never "fix" on an unverified finding (you may break working
+code). A clean area reported honestly ("examined X/Y/Z, no defect, guard at
+file:line") is a valid and valuable result; manufacturing findings to look
+thorough is the failure mode this gate prevents.
+
 ## Gate 1 — CLAUDE.md self-check (Reviewer)
 
 Run the full self-check from [CLAUDE.md](../../CLAUDE.md) §Self-Check. Items differ per side of the PR:

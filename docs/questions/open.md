@@ -2,6 +2,35 @@
 
 > Append entries here when an agent needs a decision from the user that cannot be made internally. Reviewed at sprint checkpoints. Once answered, the decision moves into the relevant ADR / user story / ticket, and the entry is marked `answered`.
 
+## Triage discipline (every open question carries a deadline + an owner)
+
+Lesson from the build: questions opened far faster than they closed, and
+silently-deferred ones became launch surprises (Q-0011 / Q-0028 sat open from
+early June until they were finally closed in the secops bundle). To prevent a
+question from drifting to launch unresolved, **every `open` entry MUST carry**:
+
+- **Owner:** who decides — `user` (a business/legal/product call) or an agent
+  (`architect`, `secops`, …) for a technical default the user can ratify.
+- **Resolve-by:** the phase/milestone by which it MUST be answered — one of
+  `pre-launch` (blocks go-live), `v1.1`, or `backlog` (nice-to-have, no date).
+  A question with no Resolve-by is not allowed to stay `open`.
+
+PM reviews this file at every checkpoint and **escalates anything `pre-launch`
+that is still `open`** via AskUserQuestion — a `pre-launch` open question is a
+launch blocker by definition and must also have a line in
+[docs/launch-checklist.md](../launch-checklist.md).
+
+### Launch-blocking index (keep current — the only questions that gate go-live)
+
+| Q | Title | Owner | Status |
+|---|---|---|---|
+| Q-0030 | Approved legal text for /vop + /gdpr | user (legal counsel) | open |
+| Q-0033 | Custom observability metrics not emitted | user (accept docs alt. or wire emission) | open |
+
+Everything else below is `v1.1` or `backlog` unless its entry says otherwise.
+When a `pre-launch` question is added or answered, update this table in the
+same edit.
+
 ## Template
 
 ```
@@ -10,6 +39,8 @@
 - **Ticket / context:** T-NNNN or "general"
 - **Asked:** YYYY-MM-DD
 - **Blocking:** yes | no
+- **Owner:** user | <agent>
+- **Resolve-by:** pre-launch | v1.1 | backlog
 - **Question:** <one or two sentences>
 - **Options the agent has considered:** <bullets, optional>
 - **Status:** open | answered | obsolete
@@ -442,6 +473,8 @@
 - **Ticket / context:** T-0014 observability + the ADR 0023 §4 alert table; surfaced writing monitoring.md
 - **Asked:** 2026-06-21
 - **Blocking:** no — the outbox-stall alert (the highest-value one) has a working DB-backed signal today (GET /outbox-events/stalled/count + the admin UI, T-0126/T-0118c); the monitoring runbook leads with it. But the ADR 0023 §4 metric-based alert rules (outbox_lag_seconds, payment_create_failures_total, webhook_received_total, auto_deliver_count) will read empty until emission ships.
+- **Owner:** user (decide: wire emission pre-launch, or accept the documented DB/log alternatives)
+- **Resolve-by:** pre-launch (in the launch-blocking index + launch-checklist)
 - **Question:** The MakablesMeters meter NAMES are registered (T-0014) but only the makables.payouts.* instruments actually record values. The ADR 0023 §4 alert table (outbox lag/stalled, payment failures, webhook received, auto-deliver) assumes these emit. Add the metric emission (Counter/Gauge.Add/Record calls in the outbox dispatcher, payment provider, webhook controllers, auto-deliver Function) so the Azure Monitor alert rules have signal — pre-launch, or accept the DB-endpoint + log-query alternatives the runbook documents?
 - **Options the agent has considered:**
   - Wire the emission pre-launch (a small instrumentation pass across the dispatcher/providers/webhooks/Function) so all ADR 0023 §4 alerts work as specified. ~M.
@@ -454,6 +487,8 @@
 - **Ticket / context:** T-0136 (rate-limit mount); deferred follow-ups, not blocking launch
 - **Asked:** 2026-06-21
 - **Blocking:** no — the in-memory per-instance limiter is adequate for single-region MVP scale; partitions are reclaimed by the AutoReplenishment idle-sweep (bounded ~1 window), and the limits are deploy-time-fixed per audience.
+- **Owner:** architect (technical default; user ratifies)
+- **Resolve-by:** v1.1 (revisit when the host scales past one instance)
 - **Question:** Two v1.1 items the T-0136 review flagged: (1) the four per-audience limit pairs + the 10/min auth limit are hard-coded in `AddMakablesRateLimiting` ("Tunable later via configuration" — but no knob exists); bind them to a `RateLimitOptions` section so ops can tune without a redeploy. (2) The limiter is in-memory/per-instance; when the host scales past one instance, partition counts and limits diverge per node — needs a distributed (Redis) partition store. Worth doing for v1.1, or leave as-is until scale-out is real?
 - **Options the agent has considered:**
   - Defer both to v1.1 (recommended): single-region single-instance MVP doesn't benefit; the in-memory caveat is documented inline in the class.
@@ -465,6 +500,8 @@
 - **Ticket / context:** T-0137 (`IAdminReadAuditWriter`) + T-0032 (`CompanyRegistryCacheStore`); pattern-catalogue hygiene
 - **Asked:** 2026-06-21
 - **Blocking:** no — bookkeeping for the patterns catalogue.
+- **Owner:** architect
+- **Resolve-by:** backlog (auto-triggers on the 3rd occurrence of the pattern)
 - **Question:** The "own-context side-effect writer — persist a side-effect row OUTSIDE the request UoW via `IDbContextFactory<MakablesDbContext>`" shape now has TWO instances (T-0032 ARES cache, T-0137 read-audit). The recurring-findings codification rule fires at count ≥ 3. Log it in `docs/review/recurring-findings.md` at count 2 now; when a third occurrence lands, promote to a new patterns.md §A.N entry. Also consider an `AuditActionCodes` constants class in `Core.Domain.Auditing` once the action-code set grows (currently ~12, free-string is fine).
 - **Options the agent has considered:**
   - Log at count 2 now, promote at 3 (recommended — matches the existing ≥3 codification threshold).

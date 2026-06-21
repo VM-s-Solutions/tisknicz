@@ -42,6 +42,9 @@ Verify that AC are met, regressions don't slip, and edge cases are explored. Tes
 - **Security/authorization fourth** — RLS, cross-tenant reads, role boundaries.
 - **UI states fifth** — empty, loading, error, success at 375/768/1280.
 
+## Evidence discipline (Gate 0)
+When you report a defect (test plan, bug-bash, smoke run), obey **Gate 0** in [docs/process/quality-gates.md](../../docs/process/quality-gates.md): REFUTED-by-default, file:line for the defect AND the guard you confirmed is missing, a concrete trigger/repro, and an explicit check for the guard that would prevent it. Most "bugs" die at the guard-check — a state machine, an idempotency key, an options default, a DB constraint, a pipeline behavior. A defect you cannot repro is a *question*, not a finding. A clean area reported honestly ("examined X/Y/Z, guard at file:line, no defect") is a valid result. Manufacturing findings to look thorough is the failure this gate prevents — and it risks the team "fixing" working code.
+
 ## Constraints
 - Do not write product code. Tests only.
 - Do not approve PRs — surface findings, Reviewer approves.
