@@ -16,6 +16,34 @@ input that only the operator can supply).
   Q-0030 (incl. the open sub-question on a cookie-consent banner / cookie
   management UI — confirm whether launch needs one).
 
+## Infra hardening — Bicep ↔ ADR 0023 §7 cut-overs (T-0134)
+
+The ops runbooks (`docs/runbooks/`) document the cut-over PROCEDURE for each gap below; the actual
+infra change is the operator's pre-launch task tracked here. Each line names the shipped state, the
+ADR 0023 §7 target, and the runbook that covers it.
+
+- [ ] **Secrets to Key Vault references (BLOCKING):** the Postgres conn string + Comgate / Packeta /
+  SendGrid / Mapbox / JWT secrets currently ship as **plain App Settings** (`app-service.bicep`,
+  `functions.bicep`); ADR 0023 §7 wants `@Microsoft.KeyVault(SecretUri=...)` references. Closes the
+  `TODO(T-0134)` in `infra/bicep/main.bicep`. Procedure: `docs/runbooks/secret-rotation.md` §C.
+- [ ] **`AzureWebJobsStorage` identity-based (BLOCKING):** move the Functions storage connection from
+  an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
+  Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:
+  `docs/runbooks/secret-rotation.md` §7 + §C.
+- [ ] **Postgres Private Endpoint (prod, BLOCKING):** production runs WITHOUT the staging
+  "allow all Azure services" firewall rule (`postgres.bicep` `allowAllAzureServices`); wire a Private
+  Endpoint / VNet rule so the Web + Functions hosts can reach Postgres. A restored server needs this
+  re-wired too. Procedure: `docs/runbooks/backup-restore.md` §1.
+- [ ] **Blob GRS (prod, BLOCKING):** `blob.bicep` ships `Standard_LRS`; ADR 0023 §7 wants
+  `Standard_GRS` in production. Until then, blob data has no geo-failover. Procedure:
+  `docs/runbooks/backup-restore.md` §2b + §C.
+- [ ] **Blob soft-delete 30-day (BLOCKING):** `blob.bicep` configures no soft-delete / versioning
+  policy; ADR 0023 §7 wants 30-day soft-delete. Until then, accidental blob deletes are NOT
+  recoverable. Procedure: `docs/runbooks/backup-restore.md` §2a + §C.
+- [ ] **Key Vault purge-protection (recommended):** `key-vault.bicep` enables 90-day soft-delete but
+  not purge-protection — consider enabling so secrets can't be hard-purged. Procedure:
+  `docs/runbooks/backup-restore.md` §3.
+
 ## SEO (T-0131)
 
 - [ ] **Site URL env:** set `NEXT_PUBLIC_SITE_URL=https://makables.cz` in the
