@@ -44,6 +44,24 @@ ADR 0023 §7 target, and the runbook that covers it.
   not purge-protection — consider enabling so secrets can't be hard-purged. Procedure:
   `docs/runbooks/backup-restore.md` §3.
 
+## Security hardening (T-0136 / secops)
+
+- [ ] **Forwarded-headers prerequisite for rate limiting (BLOCKING IF a reverse
+  proxy is introduced):** the T-0136 rate limiter partitions anonymous traffic
+  by the **raw connection IP** (`AddMakablesRateLimiting.DefaultPartition` /
+  `PartitionAuth`). The current deploy is direct Azure App Service (no Front
+  Door / App Gateway / WAF in `infra/bicep/`), so the connection IP IS the real
+  client and the limiter works correctly. **The moment any reverse proxy / WAF /
+  CDN is placed in front of the hosts, `UseForwardedHeaders` (with a restricted
+  `KnownProxies` / `KnownNetworks` limited to the proxy's ranges) MUST be wired
+  into `UseMakablesPipeline` in the same change, plus a regression test** —
+  otherwise every request collapses to the single proxy IP (one shared
+  bucket = self-DoS of all legitimate anonymous users) or an un-validated
+  `X-Forwarded-For` becomes a trivial bypass. The code intentionally does NOT
+  trust `X-Forwarded-For` today. Same prerequisite already noted in
+  `docs/security/function-key-rotation.md` for the Mapbox anonymous path —
+  this extends it to the global + `auth` limiters.
+
 ## SEO (T-0131)
 
 - [ ] **Site URL env:** set `NEXT_PUBLIC_SITE_URL=https://makables.cz` in the

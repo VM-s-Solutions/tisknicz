@@ -448,3 +448,25 @@
   - Accept the documented alternatives at MVP (the runbook leads with the DB endpoint + ProcessOutboxTimer tick log for outbox; 5xx/DB-CPU come from ASP.NET/Azure Monitor built-ins which DO work; only the custom-metric alerts degrade) — defer emission to v1.1.
   - Partial: emit only the highest-value outbox + payment-failure metrics now, defer the rest.
 - **Status:** open
+
+## Q-0034 — Rate-limit v1.1 hardening: config-bound limits + distributed partition store
+- **From:** optimizer + architect (T-0136 secops-hardening review, Gate-8 / Gate-4)
+- **Ticket / context:** T-0136 (rate-limit mount); deferred follow-ups, not blocking launch
+- **Asked:** 2026-06-21
+- **Blocking:** no — the in-memory per-instance limiter is adequate for single-region MVP scale; partitions are reclaimed by the AutoReplenishment idle-sweep (bounded ~1 window), and the limits are deploy-time-fixed per audience.
+- **Question:** Two v1.1 items the T-0136 review flagged: (1) the four per-audience limit pairs + the 10/min auth limit are hard-coded in `AddMakablesRateLimiting` ("Tunable later via configuration" — but no knob exists); bind them to a `RateLimitOptions` section so ops can tune without a redeploy. (2) The limiter is in-memory/per-instance; when the host scales past one instance, partition counts and limits diverge per node — needs a distributed (Redis) partition store. Worth doing for v1.1, or leave as-is until scale-out is real?
+- **Options the agent has considered:**
+  - Defer both to v1.1 (recommended): single-region single-instance MVP doesn't benefit; the in-memory caveat is documented inline in the class.
+  - Config-bind the limits now (cheap), defer the Redis store (larger).
+- **Status:** open
+
+## Q-0035 — Own-context side-effect-writer pattern: catalogue at the third occurrence
+- **From:** architect (T-0137 secops-hardening review, Gate-4)
+- **Ticket / context:** T-0137 (`IAdminReadAuditWriter`) + T-0032 (`CompanyRegistryCacheStore`); pattern-catalogue hygiene
+- **Asked:** 2026-06-21
+- **Blocking:** no — bookkeeping for the patterns catalogue.
+- **Question:** The "own-context side-effect writer — persist a side-effect row OUTSIDE the request UoW via `IDbContextFactory<MakablesDbContext>`" shape now has TWO instances (T-0032 ARES cache, T-0137 read-audit). The recurring-findings codification rule fires at count ≥ 3. Log it in `docs/review/recurring-findings.md` at count 2 now; when a third occurrence lands, promote to a new patterns.md §A.N entry. Also consider an `AuditActionCodes` constants class in `Core.Domain.Auditing` once the action-code set grows (currently ~12, free-string is fine).
+- **Options the agent has considered:**
+  - Log at count 2 now, promote at 3 (recommended — matches the existing ≥3 codification threshold).
+  - Codify §A.N immediately (premature against the project's own threshold).
+- **Status:** open

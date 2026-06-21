@@ -31,9 +31,14 @@ namespace Makables.Config.Controllers.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth")]
-// T-0136 (Q-0011): tight per-IP rate limit (10/min, no queue) across the whole
-// anonymous auth surface — brute-force / credential-stuffing / enumeration
-// defence. Composes under the global "default" envelope; the stricter wins.
+// T-0136 (Q-0011): tight per-IP rate limit (10/min, no queue) across the
+// brute-force / credential-stuffing / enumeration surface. Class-level so any
+// NEW auth endpoint inherits the limit by default; composes under the global
+// "default" envelope (the stricter wins). The two cookie-bearing,
+// machine-triggered endpoints — `refresh` (the frontend auto-calls it on 401)
+// and `logout` (must never fail-closed) — carry [DisableRateLimiting] so a
+// shared-NAT office or a multi-tab session can't lock itself out; they still
+// fall under the global per-host envelope (secops Gate-3 fold).
 [EnableRateLimiting(MakablesRateLimitingExtensions.AuthPolicyName)]
 public sealed class AuthController(IHostAudience hostAudience) : MakablesApiController
 {
@@ -79,6 +84,9 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
 
     [HttpPost("logout")]
     [AllowAnonymous]
+    // T-0136 secops fold: logout must never fail-closed (a 429 here strands a
+    // user logged-in). Falls under the global per-host envelope only.
+    [DisableRateLimiting]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var refreshToken = AuthCookies.ReadRefreshCookie(Request, hostAudience.Value);
@@ -109,6 +117,12 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
 
     [HttpPost("refresh")]
     [AllowAnonymous]
+    // T-0136 secops fold: refresh is machine-triggered (the frontend auto-calls
+    // it on 401) and carries an HttpOnly refresh cookie — not a credential-
+    // guessing surface. Excluded from the tight per-IP auth bucket so a
+    // multi-tab session / shared-NAT office can't lock itself out on legitimate
+    // token rotation; still covered by the global per-host envelope.
+    [DisableRateLimiting]
     public async Task<IActionResult> Refresh(CancellationToken ct)
     {
         var refreshToken = AuthCookies.ReadRefreshCookie(Request, hostAudience.Value);

@@ -55,10 +55,15 @@ ticket gives that alert a matching enforcement control.
    un-attributed surface in one move.
 2. **Add a tight `"auth"` policy** — per-IP fixed window, **10/min**, `QueueLimit
    = 0` (reject, don't queue, so a stuffer gets an immediate 429). Mount it
-   class-level on `AuthController` via `[EnableRateLimiting("auth")]`. The
-   per-endpoint `auth` limit is intentionally tighter than (and composes under)
-   the global default — ASP.NET applies the endpoint policy AND the global
-   limiter; the stricter wins for the auth surface.
+   class-level on `AuthController` via `[EnableRateLimiting("auth")]` so any new
+   auth endpoint inherits the limit by default. The per-endpoint `auth` limit is
+   intentionally tighter than (and composes under) the global default — ASP.NET
+   applies the endpoint policy AND the global limiter; the stricter wins for the
+   auth surface. **`refresh` + `logout` carry `[DisableRateLimiting]`** (secops
+   Gate-3 fold): `refresh` is machine-triggered (frontend auto-calls on 401) and
+   cookie-bearing — not a credential-guessing surface — and `logout` must never
+   fail-closed; both fall under the global per-host envelope instead, so a
+   shared-NAT office or multi-tab session can't lock itself out.
 3. **Keep the two existing partitioned policies untouched** — they already
    override the global where mounted (`[EnableRateLimiting(...)]` on the
    endpoint takes precedence). Confirm no regression.
@@ -139,3 +144,10 @@ ticket gives that alert a matching enforcement control.
 
 - 2026-06-21 `draft → ready` by PM (groomed in `feat/secops-hardening-bundle`;
   Q-0011 answer locked: global default + tight per-IP auth policy).
+- 2026-06-21 secops Gate-3 folds (same PR): `refresh`/`logout` excluded from the
+  tight auth bucket via `[DisableRateLimiting]` (machine-triggered / never-
+  fail-closed); the misleading "X-Forwarded-For-aware" doc corrected to state
+  the partition uses the RAW connection IP + a reverse-proxy `UseForwardedHeaders`
+  prerequisite (launch-checklist gate). Deferred to v1.1: config-binding the four
+  limit pairs + a distributed (Redis) partition store (in-memory caveat
+  documented inline).

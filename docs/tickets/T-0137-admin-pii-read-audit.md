@@ -163,3 +163,14 @@ command-audit pipeline.
 - 2026-06-21 `draft → ready` by PM (groomed in `feat/secops-hardening-bundle`;
   Q-0028 answer locked: audit downloads + order detail via a dedicated
   own-context `IAdminReadAuditWriter`, skip the list reads).
+- 2026-06-21 impl deviation (intentional, better than the groomed signature):
+  the writer takes `ipAddress`/`userAgent` as method **parameters** from the
+  controller instead of injecting `IHttpContextAccessor`, keeping
+  `Infra.Database` free of an ASP.NET/HTTP dependency. Actor still resolved via
+  `IUserSessionProvider`.
+- 2026-06-21 architect Gate-4 fold (same PR): ADR 0014 amended with the read-side
+  PII-disclosure carve-out (the original ADR says "reads not audited"; the
+  amendment records the narrow 3-read exception so the "per ADR 0014" code
+  citations are accurate). Deferred follow-ups: log the own-context-writer
+  pattern in `recurring-findings.md` at count 2 (ARES + this); an
+  `AuditActionCodes` constants class if the code set grows.

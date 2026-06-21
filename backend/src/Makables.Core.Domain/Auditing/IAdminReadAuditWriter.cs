@@ -18,9 +18,11 @@ namespace Makables.Core.Domain.Auditing;
 ///
 /// <para>
 /// Reads have no before/after state delta, so the entry carries
-/// <c>beforeJson = afterJson = null</c>. Per ADR 0014 this is scoped to the
-/// high-signal single-record / file-download reads (invoice-PDF, payout CSV,
-/// order detail) — NOT the high-volume paginated list reads.
+/// <c>beforeJson = afterJson = null</c>. Per the ADR 0014 read-side
+/// carve-out amendment (T-0137 / Q-0028) this is scoped to the high-signal
+/// single-record / file-download reads (invoice-PDF, payout CSV, order
+/// detail) — NOT the high-volume paginated list reads, which stay un-audited
+/// ("would flood the table").
 /// </para>
 /// </summary>
 public interface IAdminReadAuditWriter

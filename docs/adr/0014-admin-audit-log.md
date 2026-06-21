@@ -150,3 +150,44 @@ If a future per-country admin team appears, we'd scope `admin_audit_log` by addi
 - Patterns: §A.5 MediatR pipeline behaviors, §A.11 Auditable
 - ADR 0007 — Stack pivot
 - ADR 0013 — Data scoping and soft delete (hard-delete `DeleteUserPermanently` is audited)
+
+## Amendment — 2026-06-21 (T-0137 / Q-0028): read-side PII-disclosure carve-out
+
+The original Decision (§"Which commands are audited") audits **writes only** and lists
+"Admin reads (list endpoints, queries)" under *Not audited* ("would flood the table").
+T-0137 adds a deliberately **narrow exception**: three HIGH-SIGNAL privileged reads of
+customer PII are audited as a forensic exfiltration trail ("admin X pulled customer Y's
+data"):
+
+| Action code | Endpoint | PII disclosed |
+|---|---|---|
+| `invoice.pdf.download` | `GET /admin-invoices/{id}/pdf` | recipient name/address/tax-ids/line-items |
+| `payout.csv.download` | `GET /payout-batches/{id}/csv` | per-maker bank-transfer data |
+| `order.detail.view` | `GET /admin-orders/{id}` | un-redacted contact snapshot (email/phone/notes) |
+
+This does **NOT** reverse "no audit on list reads": the high-volume paginated list
+endpoints (`/admin-orders`, `/admin-invoices`, `/payout-batches` list) stay un-audited —
+the original "would flood the table" rationale stands. Only **single-record /
+file-download** reads, on the **200/success path only** (NOT 404 / 304-If-None-Match /
+409), are recorded. The audit row carries `before_json = after_json = null` (a read has
+no state delta); `target_id` points *at* the PII record without copying PII *into* the
+log (no email/name/bank data enters the audit table).
+
+**Mechanism — a SECOND writer.** A read has no `UnitOfWorkPipelineBehavior` commit
+boundary to ride (the command-side `IAdminAuditLogWriter.AppendAsync` only `.Add()`s and
+relies on the UoW behavior, which runs for commands only). So a distinct
+`IAdminReadAuditWriter` (`Core.Domain/Auditing`) owns its **own** `MakablesDbContext` via
+`IDbContextFactory<MakablesDbContext>` (the T-0032 ARES-cache precedent — a side-effect
+commit OUTSIDE the request UoW, so a pure read never opens a write transaction or calls
+`SaveChangesAsync` in a handler) and self-commits one row. The command-audit pipeline is
+unchanged. The two writers are intentionally single-semantic: command-side =
+stage-into-UoW; read-side = self-contained commit.
+
+**Fail-closed (deliberate).** The read-audit is `await`ed BEFORE the PII is streamed and
+is NOT wrapped in a swallowing try/catch — an audit-DB failure faults the request (500)
+and no PII is disclosed. "No audit row" can never coexist with "PII delivered." A future
+resilience refactor must NOT soften this to fire-and-forget.
+
+**Reviewer checklist addition:** any NEW admin-host endpoint that streams or returns a
+single customer PII record must call `IAdminReadAuditWriter.AuditReadAsync` on its
+success path (the list-read exemption is for paginated projections only).

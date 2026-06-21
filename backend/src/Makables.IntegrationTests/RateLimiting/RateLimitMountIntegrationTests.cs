@@ -183,6 +183,34 @@ public sealed class RateLimitMountIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task POST_auth_refresh_is_excluded_from_the_tight_auth_bucket()
+    {
+        // T-0136 secops fold: refresh + logout carry [DisableRateLimiting] —
+        // refresh is machine-triggered (frontend auto-calls on 401) and
+        // cookie-bearing, so it must NOT share the tight 10/min auth bucket
+        // (a multi-tab session / shared-NAT office would lock itself out).
+        // Twelve cookieless refresh calls (each a fast 401) must NOT trip the
+        // auth 429 — they fall under only the per-host global envelope (admin
+        // 30/min), which 12 requests stay safely under.
+        using var client = _factory.CreateClient();
+
+        var sawTooManyRequests = false;
+        for (var i = 0; i < 12; i++)
+        {
+            var response = await client.PostAsync("/api/v1/auth/refresh", content: null);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                sawTooManyRequests = true;
+                break;
+            }
+        }
+
+        sawTooManyRequests.Should().BeFalse(
+            "refresh is [DisableRateLimiting]-excluded from the 10/min auth bucket; " +
+            "12 calls stay under the 30/min admin global envelope");
+    }
+
+    [Fact]
     public async Task GlobalLimiter_is_registered_on_the_host()
     {
         // Belt-and-suspenders, Docker-independent registration proof: the

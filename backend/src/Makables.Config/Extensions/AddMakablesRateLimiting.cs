@@ -142,12 +142,23 @@ public static class MakablesRateLimitingExtensions
 
     /// <summary>
     /// T-0136 (Q-0011) global-limiter partition: per authenticated
-    /// <c>sub</c> claim when present, else per remote IP (X-Forwarded-For-aware
-    /// via <see cref="ConnectionInfo.RemoteIpAddress"/>), with a fixed
-    /// <c>ip:unknown</c> fallback so an attacker can't bypass by dropping the
-    /// header. The per-audience <paramref name="permitLimit"/> /
-    /// <paramref name="window"/> are the envelope computed in
-    /// <see cref="AddMakablesRateLimiting"/>.
+    /// <c>sub</c> claim when present, else per <see cref="ConnectionInfo.RemoteIpAddress"/>,
+    /// with a fixed <c>ip:unknown</c> fallback so a request with no resolvable
+    /// IP lands in one bucket rather than escaping the limit. The per-audience
+    /// <paramref name="permitLimit"/> / <paramref name="window"/> are the
+    /// envelope computed in <see cref="AddMakablesRateLimiting"/>.
+    ///
+    /// <para>
+    /// <b>Reverse-proxy prerequisite (secops):</b> the IP partition is the RAW
+    /// connection IP. In the current deploy (direct Azure App Service, no Front
+    /// Door / App Gateway / WAF) that IS the real client. If a reverse proxy is
+    /// EVER placed in front, <c>UseForwardedHeaders</c> with a restricted
+    /// <c>KnownProxies</c>/<c>KnownNetworks</c> MUST be wired into
+    /// <c>UseMakablesPipeline</c> in the same change (plus a regression test) —
+    /// otherwise every request collapses to the proxy IP (one shared bucket =
+    /// self-DoS) or an un-validated <c>X-Forwarded-For</c> becomes a trivial
+    /// bypass. Tracked in the launch checklist; this code does NOT trust XFF.
+    /// </para>
     /// </summary>
     private static RateLimitPartition<string> DefaultPartition(
         HttpContext http, int permitLimit, TimeSpan window)
@@ -187,8 +198,11 @@ public static class MakablesRateLimitingExtensions
             });
 
     /// <summary>
-    /// Remote-IP partition key with a fixed <c>ip:unknown</c> fallback so a
-    /// dropped <c>X-Forwarded-For</c> can't be used to escape the bucket.
+    /// Raw connection-IP partition key with a fixed <c>ip:unknown</c> fallback
+    /// so a request whose <see cref="ConnectionInfo.RemoteIpAddress"/> is
+    /// unresolvable lands in a single shared bucket rather than escaping the
+    /// limit. Does NOT read <c>X-Forwarded-For</c> — see the reverse-proxy
+    /// prerequisite on <see cref="DefaultPartition"/>.
     /// </summary>
     private static string IpPartitionKey(HttpContext http)
     {
