@@ -411,3 +411,26 @@
 - **Sub-question (flag):** does launch also require a **cookie-consent banner / cookie-management UI** (separate from the GDPR page copy)? If yes, fold it into the legal-text deliverable or groom a distinct ticket.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0031 — Frontend has no test harness (axe-CI + SEO unit tests blocked)
+- **From:** reviewer + qa (public-polish-bundle final review)
+- **Ticket / context:** standing frontend gap; surfaced by T-0131 (SEO unit tests) + T-0133 (axe-core)
+- **Asked:** 2026-06-21
+- **Blocking:** no — frontend slices have shipped throughout via tsc + lint + next build + manual QA plans; no domain logic lives in the frontend.
+- **Question:** The frontend (Next.js) has NO test framework — no vitest/jest, no `test` script, zero `*.test.ts`. T-0131 specced 6 SEO unit tests (e.g. `canonicalUrl` is an unpinned pure predicate) and T-0133 needs axe-core wired into a test/CI step. Both need a harness first. Stand one up (vitest + @testing-library/react + axe-core), or keep relying on tsc/lint/build/manual-QA for the frontend?
+- **Options the agent has considered:**
+  - Stand up vitest now (own infra ticket) — unblocks T-0131 SEO unit tests + T-0133 axe-core-in-CI + pins pure FE predicates (canonicalUrl, resolveErrorMessage, the debounce/poller shapes). The right pre-launch move if FE pure-logic coverage matters.
+  - Keep the status quo (tsc + eslint + next build + manual QA plans) — the FE has no domain logic; the backend carries the test weight. Defer a harness to post-launch.
+  - Minimal: axe-core via a standalone CI script (Playwright-free) for T-0133 only, no general unit harness.
+- **Status:** open
+
+## Q-0032 — og:type=product unsupported by Next 16 Metadata type union
+- **From:** frontend (T-0131 impl) + reviewer
+- **Ticket / context:** T-0131 product-page OG metadata; AC-8
+- **Asked:** 2026-06-21
+- **Blocking:** no — the product page ships a valid `og:type=website` card; T-0131 AC-8's literal `og:type=product` is the only AC not met, type-system-forced.
+- **Question:** Next 16's typed `OpenGraph.type` union excludes `'product'` (only website/article/profile/...). The product page emits `type:'website'` (clean, valid, no duplicate tag) rather than a raw `<meta property="og:type" content="product">` passthrough (which would duplicate the framework's tag). Accept `website` for MVP, or add a raw-meta `og:type=product` (+ `product:price:*` tags) for richer commerce cards?
+- **Options the agent has considered:**
+  - Accept `website` for MVP (recommended) — valid card, no SEO harm; richer product OG is a post-launch enhancement.
+  - Raw-meta passthrough for `og:type=product` + `product:price:amount`/`currency` — richer Google/FB commerce cards, but bypasses the typed API + risks a duplicate og:type tag; needs care.
+- **Status:** open

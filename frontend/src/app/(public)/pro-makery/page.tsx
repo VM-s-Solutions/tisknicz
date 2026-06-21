@@ -91,7 +91,7 @@ export default function ForMakersPage() {
             {t('static.for_makers.cta_heading')}
           </h2>
           <Link
-            href="/auth/register/maker"
+            href="/register/maker"
             className="group inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
           >
             {t('static.for_makers.cta')}
