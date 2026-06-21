@@ -70,3 +70,16 @@ ADR 0023 §7 target, and the runbook that covers it.
   ProcessOutboxTimer tick log; 5xx + DB-CPU alerts use Azure-Monitor
   built-ins (which work). Decide per Q-0033: wire the emission pre-launch,
   or accept the documented alternatives for MVP.
+- [ ] **k6 load test RUN (T-0132, gated manual step):** execute
+  `deploy/load-tests/makables-load.js` (100 VUs, 30-min) against live seeded
+  staging per `deploy/load-tests/README.md`. PASS = the ADR 0023 §1 k6
+  thresholds met (catalog p95<400/p99<1000, product p95<350, order
+  p95<600/p99<1500) + zero 5xx + Postgres CPU <70% (verified out-of-band in
+  the Azure metrics blade). The script + thresholds ship in this repo; the
+  RUN is the pre-launch step (Ops/QA).
+- [ ] **Manual a11y RUN (T-0133, gated manual step):** NVDA + Firefox Czech
+  screen-reader pass + keyboard-only nav + a live-page color-contrast
+  spot-check (the AA leg jsdom can't evaluate) on the critical customer
+  paths, per `docs/test-plans/a11y-manual-checklist.md`. The automated
+  jest-axe gate runs in CI; this manual pass is the pre-launch complement
+  (QA + screen reader).
