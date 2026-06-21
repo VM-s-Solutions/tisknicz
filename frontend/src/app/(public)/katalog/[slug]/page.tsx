@@ -11,6 +11,7 @@ import {
   RATING_BP_PER_STAR,
   type MakerProfile,
 } from '@/lib/api-client-helpers/catalog';
+import { canonicalUrl } from '@/lib/seo/site-url';
 import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { PickupNote } from './pickup-note';
 import { ProductCard } from './product-card';
@@ -24,6 +25,9 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  // Canonical stays the requested URL even on a NotFound — a 404 page is
+  // not indexed, but the canonical is kept consistent (T-0131 C/AC-9).
+  const url = canonicalUrl(`/katalog/${slug}`);
   const result = await getMakerBySlug(slug);
   if (!result.success) {
     // Only branch the title on NotFound — a transient backend error
@@ -33,18 +37,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       result.error.type === 'NotFound'
         ? `${t('catalog.maker.not_found.title')} — ${t('catalog.maker.metadata.title_suffix')}`
         : t('catalog.maker.metadata.title_suffix');
+    const description = t('catalog.maker.metadata.fallback_description');
     return {
       title,
-      description: t('catalog.maker.metadata.fallback_description'),
+      description,
+      alternates: { canonical: url },
+      openGraph: { title, description, url, type: 'profile' },
+      twitter: { card: 'summary', title, description },
     };
   }
   const profile = result.value;
   const description = profile.bio?.trim()
     ? truncateForMeta(profile.bio, 160)
     : t('catalog.maker.metadata.fallback_description');
+  const title = `${profile.companyName} — ${t('catalog.maker.metadata.title_suffix')}`;
   return {
-    title: `${profile.companyName} — ${t('catalog.maker.metadata.title_suffix')}`,
+    title,
     description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: 'profile' },
+    twitter: { card: 'summary', title, description },
   };
 }
 

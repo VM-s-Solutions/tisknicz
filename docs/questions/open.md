@@ -397,3 +397,40 @@
   - **Admin payout-batch LIST read**: so the payout page browses Processing batches instead of count + by-id (lower priority — one batch/week, T-0116 maker list covers visibility).
 - **Status:** answered
 - **Answer (filled by user):** All four — groomed as **T-0127** (admin-read-gaps bundle, 2026-06-15), one cross-stack PR. **(1 PRIORITY) GetCountryConfiguration GET** `GET /api/v1/country-configurations/{code}` returns the **exact** `UpdateCountryConfiguration` Response field set (`StandardVatRateBp, ReducedVatRateBp, InvoicingMode, PlatformFeeRateBp, DefaultShippingPriceMinor, DefaultPaymentProvider, DefaultShippingCarrier, DefaultRegistry, DefaultEmailProvider`) via `ICountryConfigurationRepository.GetByCodeAsync`; 404 reuses `CountryConfigurationNotFound` (no new code) — **removes the PR-2 full-replace fence**: the T-0118c form pre-fills SSR, the warning banner downgrades to an info note, and the provider retype modal gates on an **actual provider-code diff** (T-0118c AC-4/AC-5 now met). **(2) GetAdminOrderDetail** `GET /api/v1/admin-orders/{orderId}` → privileged `AdminOrderDetailDto` (see Q-0024) over `GetByIdUnscopedAsync`; plus a `customerUserId`/`makerId` filter on the admin-orders read = the per-user in-flight signal driving the delete-user proactive pre-disable. **(3) Stalled-outbox LIST** `GET /api/v1/outbox-events/stalled` (paged) reusing the **exact** T-0126/T-0109 predicate `ProcessedAt==null && NextRetryAt==null && LastErrorKind!=None`. **(4) Payout-batch LIST** `GET /api/v1/payout-batches` (paged, Unscoped — the GET on the existing CreatePayoutBatch POST route). All four mirror the T-0111 `IAdminQueries` precedent (AsNoTracking, Unscoped, globally-unique Response, `[Authorize]` admin); the form/order-detail/delete-user/outbox/payout surfaces re-wire in the same PR. NSwag regen admin host (4 methods); zero new codes / migrations / unique indexes.
+
+## Q-0030 — Approved legal text for /vop (obchodní podmínky) + /gdpr (privacy/cookie)
+- **From:** BA/PM
+- **Ticket / context:** T-0130 (static public pages, public-polish bundle); BLOCKING pre-launch
+- **Asked:** 2026-06-20
+- **Blocking:** yes-for-launch-not-for-T-0130-merge — pre-launch. The page SCAFFOLDING (route, nav, i18n keys, visible placeholder banner) ships in T-0130; only the legal TEXT is missing. Go-live must replace the placeholder banner + populate the keys. T-0130 merges without it.
+- **Question:** JVM YORE s.r.o. must supply the approved legal text for the two legal pages: (1) **VOP / obchodní podmínky** (terms of service for the marketplace — customer + maker obligations, escrow/payment terms, commission, shipping, returns/complaints per Czech consumer law), and (2) **GDPR / ochrana osobních údajů** (privacy policy + cookie disclosure — what personal data is collected, lawful basis, processors: Comgate/Zásilkovna/Resend/ARES, retention, data-subject rights). The agent will NOT draft legal text — it is not binding and risks publishing wrong obligations. When will the approved text be available, and who supplies it (in-house / external counsel)?
+- **Options the agent has considered:**
+  - **Ship placeholder shells now (T-0130), block the legal TEXT on this Q (default — user-locked 2026-06-20).** `/vop` + `/gdpr` render a working page with a visible "PLACEHOLDER — awaiting approved legal text (JVM YORE s.r.o.)" `Alert` banner; the `static.terms.*` / `static.privacy.*` i18n keys are wired empty for a drop-in replacement. Logged in `docs/launch-checklist.md` as a blocking line.
+  - Omit the routes until text exists — rejected (T-0131 sitemap + footer nav link these URLs; would yield 404s + a sitemap pointing at missing pages).
+  - Agent drafts best-effort text — rejected (legal liability; not approved/binding).
+- **Sub-question (flag):** does launch also require a **cookie-consent banner / cookie-management UI** (separate from the GDPR page copy)? If yes, fold it into the legal-text deliverable or groom a distinct ticket.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0031 — Frontend has no test harness (axe-CI + SEO unit tests blocked)
+- **From:** reviewer + qa (public-polish-bundle final review)
+- **Ticket / context:** standing frontend gap; surfaced by T-0131 (SEO unit tests) + T-0133 (axe-core)
+- **Asked:** 2026-06-21
+- **Blocking:** no — frontend slices have shipped throughout via tsc + lint + next build + manual QA plans; no domain logic lives in the frontend.
+- **Question:** The frontend (Next.js) has NO test framework — no vitest/jest, no `test` script, zero `*.test.ts`. T-0131 specced 6 SEO unit tests (e.g. `canonicalUrl` is an unpinned pure predicate) and T-0133 needs axe-core wired into a test/CI step. Both need a harness first. Stand one up (vitest + @testing-library/react + axe-core), or keep relying on tsc/lint/build/manual-QA for the frontend?
+- **Options the agent has considered:**
+  - Stand up vitest now (own infra ticket) — unblocks T-0131 SEO unit tests + T-0133 axe-core-in-CI + pins pure FE predicates (canonicalUrl, resolveErrorMessage, the debounce/poller shapes). The right pre-launch move if FE pure-logic coverage matters.
+  - Keep the status quo (tsc + eslint + next build + manual QA plans) — the FE has no domain logic; the backend carries the test weight. Defer a harness to post-launch.
+  - Minimal: axe-core via a standalone CI script (Playwright-free) for T-0133 only, no general unit harness.
+- **Status:** open
+
+## Q-0032 — og:type=product unsupported by Next 16 Metadata type union
+- **From:** frontend (T-0131 impl) + reviewer
+- **Ticket / context:** T-0131 product-page OG metadata; AC-8
+- **Asked:** 2026-06-21
+- **Blocking:** no — the product page ships a valid `og:type=website` card; T-0131 AC-8's literal `og:type=product` is the only AC not met, type-system-forced.
+- **Question:** Next 16's typed `OpenGraph.type` union excludes `'product'` (only website/article/profile/...). The product page emits `type:'website'` (clean, valid, no duplicate tag) rather than a raw `<meta property="og:type" content="product">` passthrough (which would duplicate the framework's tag). Accept `website` for MVP, or add a raw-meta `og:type=product` (+ `product:price:*` tags) for richer commerce cards?
+- **Options the agent has considered:**
+  - Accept `website` for MVP (recommended) — valid card, no SEO harm; richer product OG is a post-launch enhancement.
+  - Raw-meta passthrough for `og:type=product` + `product:price:amount`/`currency` — richer Google/FB commerce cards, but bypasses the typed API + risks a duplicate og:type tag; needs care.
+- **Status:** open

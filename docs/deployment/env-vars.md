@@ -60,7 +60,18 @@ Secrets come from Key Vault references (`@Microsoft.KeyVault(SecretUri=...)`), n
 |---|---|
 | `ADMIN_NOTIFICATION_EMAIL` | Recipient of `order.disputed.adminEmail` (T-0106). Raw env-var override of `Email:AdminNotificationAddress` (`EmailOptions`); set per environment. Consumed at email **send** time, not at boot — a missing value does not stop the host; the outbox row parks `Configuration`-class (visible in admin outbox tooling, retried after the setting is fixed). |
 
+## Operator-set: frontend (`NEXT_PUBLIC_*` — build/runtime, non-secret)
+
+Public env vars baked into the Next.js bundle. `NEXT_PUBLIC_*` is the ONLY frontend
+env prefix permitted (CLAUDE.md §Security — no secrets in the client bundle).
+
+| Key | Notes |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | The public site origin (e.g. `https://makables.cz`), no trailing slash. Drives `metadataBase` + absolute canonical/OG URLs in `sitemap.ts` / per-page `generateMetadata` (T-0131). Distinct from the API host — must be the browser-facing site origin, not `NEXT_PUBLIC_API_PUBLIC_BASE_URL`. A missing value falls back to a relative-URL build (canonical/OG degrade but the site renders). |
+| `NEXT_PUBLIC_API_PUBLIC_BASE_URL` | The Public API host base URL the SSR/browser calls for catalog reads. (Pre-existing — documented here for completeness alongside the SEO addition.) |
+
 ## Maintenance rule
 
-Any PR that adds a `%key%` binding expression, a `ValidateOnStart` options class, or a new
-configuration-bound schedule MUST add the key here in the same PR (Gate 7 docs parity).
+Any PR that adds a `%key%` binding expression, a `ValidateOnStart` options class, a new
+configuration-bound schedule, or a `NEXT_PUBLIC_*` frontend var MUST add the key here in
+the same PR (Gate 7 docs parity).
