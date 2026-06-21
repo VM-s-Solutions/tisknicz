@@ -262,6 +262,118 @@ export const messages = {
   'catalog.product_detail.not_found.body': 'Tento produkt neexistuje nebo už není dostupný.',
   'catalog.product_detail.metadata.fallback_description': 'Detail produktu na Makables.',
 
+  // ------------------------------------------------------------------
+  // Landing-page metadata (T-0131). The landing page had no
+  // generateMetadata; the root-layout default is a literal. These two
+  // keys back the landing-page title/description so OG/Twitter/canonical
+  // reuse keyed copy (no hardcoded literal in the metadata function).
+  // ------------------------------------------------------------------
+  'home.metadata.title': 'Makables — Kde nápady dostávají tvar',
+  'home.metadata.description':
+    'Marketplace pro makery a tiskaře v ČR. Najdi tvůrce, objednej, nech si doručit.',
+
+  // ==================================================================
+  // Static public pages (T-0130). Marketing content on /jak-to-funguje
+  // + /pro-makery is harvested from PROJEKT-VIZE.md (cited per block);
+  // /vop + /gdpr are placeholder shells (legal text is blocking
+  // pre-launch — Q-0030). Vykání (V form) throughout — public surface.
+  // ==================================================================
+
+  // --- /jak-to-funguje (how it works) ---
+  // Source: PROJEKT-VIZE.md §"Co je Tiskni.cz" + §"Jak to funguje —
+  // objednávkový flow" (the customer-visible milestones of the flow
+  // diagram). "Tiskni.cz" → "Makables" per the rename.
+  'static.how_it_works.meta_title': 'Jak to funguje — Makables',
+  'static.how_it_works.meta_description':
+    'Vyberte si makera, objednejte, zaplaťte online a nechte si doručit přes Zásilkovnu. Takhle funguje Makables krok za krokem.',
+  'static.how_it_works.title': 'Jak to funguje',
+  'static.how_it_works.intro':
+    'Makables je marketplace, který propojuje zákazníky s lokálními makery a tiskaři po celé ČR. Najdete si makera ve svém okolí, objednáte, zaplatíte online — a maker vyrobí a odešle přes Zásilkovnu. O platby, fakturaci i doručení se postaráme my.',
+  'static.how_it_works.steps_heading': 'Od nápadu k hotové zakázce',
+  'static.how_it_works.step1_title': 'Vyberte makera a produkt',
+  'static.how_it_works.step1_body':
+    'Projděte si katalog makerů ve svém okolí. Filtrujte podle kategorie, města nebo hodnocení a vyberte si produkt nebo službu na míru.',
+  'static.how_it_works.step2_title': 'Vyplňte objednávku',
+  'static.how_it_works.step2_body':
+    'Zadejte své kontaktní údaje, vyberte výdejní místo Zásilkovny a nahrajte podklady — návrh, fotku nebo soubor pro tisk.',
+  'static.how_it_works.step3_title': 'Zaplaťte online',
+  'static.how_it_works.step3_body':
+    'Zaplaťte bezpečně přes platební bránu Comgate — kartou nebo bankovním převodem. Peníze drží platforma, dokud maker zakázku nepřevezme.',
+  'static.how_it_works.step4_title': 'Maker objednávku přijme a vyrobí',
+  'static.how_it_works.step4_body':
+    'Maker dostane upozornění o nové objednávce, potvrdí ji a pustí se do výroby. Stav objednávky sledujete ve svém účtu.',
+  'static.how_it_works.step5_title': 'Maker odešle přes Zásilkovnu',
+  'static.how_it_works.step5_body':
+    'Jakmile je hotovo, maker zásilku odešle. Dostanete e-mail se sledovacím číslem, takže víte, kde se vaše zakázka nachází.',
+  'static.how_it_works.step6_title': 'Převezmete zásilku',
+  'static.how_it_works.step6_body':
+    'Vyzvednete si zásilku na zvoleném výdejním místě. Po převzetí můžete makera ohodnotit a pomoct tak dalším zákazníkům.',
+  'static.how_it_works.cta_heading': 'Máte nápad? Najděte makera, který ho vyrobí.',
+  'static.how_it_works.cta': 'Prohlédnout katalog',
+
+  // --- /pro-makery (for makers) ---
+  // Source: PROJEKT-VIZE.md §"Proč to děláme" bod 3 + §"6 kategorií
+  // služeb" (intro) and §"Byznys model" (the benefit cards + the
+  // "Příklad kalkulace" illustrative numbers — static keyed copy, NOT
+  // computed client-side; commission math is backend-owned).
+  'static.for_makers.meta_title': 'Pro makery — Makables',
+  'static.for_makers.meta_description':
+    'Prodávejte svou tvorbu bez starostí. Profil, katalog, platby, doprava i fakturace — hotová infrastruktura pro makery. Registrace zdarma, stačí IČO.',
+  'static.for_makers.title': 'Prodávejte, nemarketujte',
+  'static.for_makers.intro':
+    'Chcete vyrábět, ne řešit marketing, platby a logistiku? Makables vám dá hotovou infrastrukturu — profil, katalog, online platby, dopravu přes Zásilkovnu i automatickou fakturaci. Vy se staráte o výrobu, my o zbytek. Pokrýváme šest kategorií: 3D tisk, klasický tisk, potisk textilu, laser a CNC, velkoformát a handmade.',
+  'static.for_makers.benefits_heading': 'Co u nás získáte',
+  'static.for_makers.benefit_free_title': 'Registrace zdarma',
+  'static.for_makers.benefit_free_body':
+    'Založení účtu nic nestojí. Stačí vám IČO — ostatní údaje doplníme z veřejného rejstříku ARES.',
+  'static.for_makers.benefit_commission_title': 'Provize 15 %',
+  'static.for_makers.benefit_commission_body':
+    'Platíte jen 15 % z ceny produktu, a to až z proběhlé objednávky. Z dopravy si neúčtujeme nic.',
+  'static.for_makers.benefit_payouts_title': 'Výplaty každý týden',
+  'static.for_makers.benefit_payouts_body':
+    'Vyplácíme jednou týdně hromadným bankovním převodem. Žádné čekání měsíce na své peníze.',
+  'static.for_makers.benefit_invoicing_title': 'Automatická fakturace',
+  'static.for_makers.benefit_invoicing_body':
+    'Faktury se generují samy — zákazníkovi při platbě, vám při výplatě. Účetnictví máte v pořádku bez papírování.',
+  'static.for_makers.benefit_shipping_title': 'Doprava přes Zásilkovnu',
+  'static.for_makers.benefit_shipping_body':
+    'Dopravu hradí zákazník a jede pod naším účtem u Zásilkovny. Nepotřebujete vlastní smlouvu ani štítky řešit ručně.',
+  'static.for_makers.benefit_no_minimum_title': 'Žádné minimum',
+  'static.for_makers.benefit_no_minimum_body':
+    'Neurčujeme minimální objednávku. Sami si nastavíte, co a za kolik nabízíte.',
+  'static.for_makers.example_heading': 'Příklad kalkulace',
+  'static.for_makers.example_intro':
+    'Jak vypadá výplata u objednávky za 500 Kč s dopravou 79 Kč:',
+  'static.for_makers.example_customer_pays': 'Zákazník zaplatí: produkt 500 Kč + doprava 79 Kč = 579 Kč',
+  'static.for_makers.example_commission': 'Provize platformy: 15 % z 500 Kč = 75 Kč',
+  'static.for_makers.example_maker_gets': 'Vy dostanete: 500 − 75 + 79 = 504 Kč',
+  'static.for_makers.example_note':
+    'Ilustrativní příklad. Konečnou částku vždy spočítá platforma podle aktuální ceny a dopravy.',
+  'static.for_makers.cta_heading': 'Připraveni začít prodávat?',
+  'static.for_makers.cta': 'Registrovat se jako maker',
+
+  // --- /vop (obchodní podmínky / terms) — PLACEHOLDER shell (Q-0030) ---
+  // NO invented legal text. The page renders only the heading, the
+  // shared placeholder banner, and a keyed note. Approved text from
+  // JVM YORE s.r.o. populates these keys before launch.
+  'static.terms.meta_title': 'Obchodní podmínky — Makables',
+  'static.terms.meta_description': 'Obchodní podmínky platformy Makables.',
+  'static.terms.title': 'Obchodní podmínky',
+  'static.terms.placeholder_note':
+    'Znění obchodních podmínek se připravuje a podléhá schválení provozovatelem (JVM YORE s.r.o.). Jakmile bude schválené znění k dispozici, zveřejníme ho zde.',
+
+  // --- /gdpr (ochrana osobních údajů / privacy) — PLACEHOLDER shell ---
+  // NO invented privacy/cookie text.
+  'static.privacy.meta_title': 'Ochrana osobních údajů — Makables',
+  'static.privacy.meta_description': 'Zásady ochrany osobních údajů platformy Makables.',
+  'static.privacy.title': 'Ochrana osobních údajů',
+  'static.privacy.placeholder_note':
+    'Zásady ochrany osobních údajů se připravují a podléhají schválení provozovatelem (JVM YORE s.r.o.). Jakmile bude schválené znění k dispozici, zveřejníme ho zde.',
+
+  // --- Shared legal placeholder banner (reused by /vop + /gdpr) ---
+  'static.legal_placeholder.banner':
+    'PLACEHOLDER — čeká se na schválený právní text (JVM YORE s.r.o.)',
+
   // Dashboard — maker products (T-0049).
   // Plural-neutral phrasing rule from the catalog block above applies
   // here too — every {count} key uses the "Label: N" shape until t()
