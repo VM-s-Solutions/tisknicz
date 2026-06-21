@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Makables.Core.Domain.Admin;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Identity;
@@ -11,6 +12,7 @@ using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Products;
+using Makables.Core.Domain.Storage;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Database;
 using Makables.IntegrationTests.Common;
@@ -42,11 +44,18 @@ public sealed class AdminReadGapsIntegrationTests : IAsyncLifetime
     private const string AdminUserId = "user-admin-1";
 
     private readonly PostgresHarness _harness;
+    private readonly FakeBlobStorageClient _blobs = new();
     private WebApplicationFactory<Makables.Web.Admin.Program> _factory = default!;
 
     public AdminReadGapsIntegrationTests(PostgresHarness harness) => _harness = harness;
 
     private static readonly DateTimeOffset SeedAt = new(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
+
+    // Container-relative CSV path for batch-1 (cc lower-cased, per
+    // PayoutArtifactService). The DownloadCsv controller strips the
+    // "payouts/" prefix off CsvBlobPath, so the blob lives here.
+    private const string Batch1CsvRelativePath = "cz/VYP-CZ-2026-W18.csv";
+    private static readonly byte[] CsvBytes = "iban;amount\nCZ65;504\n"u8.ToArray();
 
     public async Task InitializeAsync()
     {
@@ -99,6 +108,12 @@ public sealed class AdminReadGapsIntegrationTests : IAsyncLifetime
                         d => d.ServiceType == typeof(DbContextOptions<MakablesDbContext>));
                     if (dbContextDescriptor is not null) services.Remove(dbContextDescriptor);
                     services.AddDbContext<MakablesDbContext>(o => o.UseNpgsql(_harness.ConnectionString));
+
+                    // T-0137: the payout-CSV read-audit test streams the CSV
+                    // through the controller, so swap in the in-memory blob.
+                    var blobDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IBlobStorageClient));
+                    if (blobDescriptor is not null) services.Remove(blobDescriptor);
+                    services.AddSingleton<IBlobStorageClient>(_blobs);
                 });
             });
     }
@@ -187,8 +202,14 @@ public sealed class AdminReadGapsIntegrationTests : IAsyncLifetime
         Add(NewOrder("ord-b-deliv", "M-CZ-20260003", "user-cust-b", "bara@example.cz", OrderState.Delivered, SeedAt.AddHours(2)));
 
         // Payout batches: one Processing + one Completed (cross-maker browse).
+        // batch-1 gets a CSV artifact so the T-0137 payout.csv.download read
+        // audit can be exercised on the 200-stream path. The CsvBlobPath mirrors
+        // PayoutArtifactService: "{container}/{cc}/{batchNumber}.csv".
         var b1 = PayoutBatch.Create("batch-1", "VYP-CZ-2026-W18", CountryCode, 50400, Currency, 1, 1, 0, 0, 0);
+        b1.AttachCsvBlobPath($"{BlobContainer.Payouts}/{Batch1CsvRelativePath}");
         b1.MarkCreated(actor, SeedAt);
+        // batch-2 stays Completed WITHOUT a CSV (CsvBlobPath null) — the 409
+        // csvNotReady negative path for the read audit.
         var b2 = PayoutBatch.Create("batch-2", "VYP-CZ-2026-W17", CountryCode, 50400, Currency, 1, 1, 0, 0, 0);
         b2.Complete(new FixedClock(SeedAt.AddDays(7)), "wire-ref-1", null, AdminUserId);
         b2.MarkCreated(actor, SeedAt.AddDays(-7));
@@ -210,6 +231,12 @@ public sealed class AdminReadGapsIntegrationTests : IAsyncLifetime
         Add(processed);
 
         await db.SaveChangesAsync();
+
+        // Upload batch-1's CSV into the in-memory blob so the controller's
+        // DownloadAsync(Payouts, "{cc}/{batchNumber}.csv") succeeds (200).
+        using var content = new MemoryStream(CsvBytes, writable: false);
+        await _blobs.UploadAsync(
+            BlobContainer.Payouts, Batch1CsvRelativePath, content, "text/csv", CancellationToken.None);
     }
 
     private static string IssueToken(string userId, string email, UserRole role, string audience)
@@ -305,6 +332,109 @@ public sealed class AdminReadGapsIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin-orders/does-not-exist");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // === (T-0137) Read-audit on the privileged single-record / file reads ===
+
+    [Fact]
+    public async Task GET_admin_order_detail_writes_one_read_audit_row_on_the_200_path()
+    {
+        await SeedAsync();
+        using var client = CreateAdminClient();
+
+        var response = await client.GetAsync("/api/v1/admin-orders/ord-a-paid");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+        var rows = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .Where(e => e.ActionCode == "order.detail.view")
+            .ToListAsync();
+
+        rows.Should().ContainSingle();
+        var row = rows[0];
+        row.TargetEntity.Should().Be("order");
+        row.TargetId.Should().Be("ord-a-paid");
+        row.AdminUserId.Should().Be(AdminUserId);
+        row.BeforeJson.Should().BeNull();
+        row.AfterJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GET_admin_order_detail_unknown_id_writes_no_read_audit_row()
+    {
+        await SeedAsync();
+        using var client = CreateAdminClient();
+
+        var response = await client.GetAsync("/api/v1/admin-orders/does-not-exist");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await using var db = _harness.CreateDbContext();
+        var count = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .CountAsync(e => e.ActionCode == "order.detail.view");
+
+        count.Should().Be(0, "a 404 is not a disclosure — no read audit");
+    }
+
+    [Fact]
+    public async Task GET_payout_csv_writes_one_read_audit_row_on_the_200_path()
+    {
+        await SeedAsync();
+        using var client = CreateAdminClient();
+
+        var response = await client.GetAsync("/api/v1/payout-batches/batch-1/csv");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("text/csv");
+
+        await using var db = _harness.CreateDbContext();
+        var rows = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .Where(e => e.ActionCode == "payout.csv.download")
+            .ToListAsync();
+
+        rows.Should().ContainSingle();
+        var row = rows[0];
+        row.TargetEntity.Should().Be("payoutbatch");
+        row.TargetId.Should().Be("batch-1");
+        row.AdminUserId.Should().Be(AdminUserId);
+        row.BeforeJson.Should().BeNull();
+        row.AfterJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GET_payout_csv_unknown_id_writes_no_read_audit_row()
+    {
+        await SeedAsync();
+        using var client = CreateAdminClient();
+
+        var response = await client.GetAsync("/api/v1/payout-batches/batch-does-not-exist/csv");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await using var db = _harness.CreateDbContext();
+        var count = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .CountAsync(e => e.ActionCode == "payout.csv.download");
+
+        count.Should().Be(0, "a 404 unknown batch is not a disclosure — no read audit");
+    }
+
+    [Fact]
+    public async Task GET_payout_csv_when_csv_not_ready_writes_no_read_audit_row()
+    {
+        await SeedAsync();
+        using var client = CreateAdminClient();
+
+        // batch-2 is Completed but has a null CsvBlobPath → 409 csvNotReady.
+        var response = await client.GetAsync("/api/v1/payout-batches/batch-2/csv");
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        await using var db = _harness.CreateDbContext();
+        var count = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .CountAsync(e => e.ActionCode == "payout.csv.download");
+
+        count.Should().Be(0, "a 409 csv-not-ready streamed nothing — no read audit");
     }
 
     // === (2b) Per-user in-flight signal ===

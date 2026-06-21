@@ -1,10 +1,12 @@
 using Asp.Versioning;
 using Makables.Config.Auth;
+using Makables.Config.Extensions;
 using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Makables.Config.Controllers.Auth;
 
@@ -29,6 +31,10 @@ namespace Makables.Config.Controllers.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth")]
+// T-0136 (Q-0011): tight per-IP rate limit (10/min, no queue) across the whole
+// anonymous auth surface — brute-force / credential-stuffing / enumeration
+// defence. Composes under the global "default" envelope; the stricter wins.
+[EnableRateLimiting(MakablesRateLimitingExtensions.AuthPolicyName)]
 public sealed class AuthController(IHostAudience hostAudience) : MakablesApiController
 {
     public sealed record RegisterRequest(string Email, string Password, string FullName, string CountryCodePrimary);

@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Storage;
@@ -37,7 +38,8 @@ namespace Makables.Web.Admin.Controllers;
 [Authorize]
 public sealed class AdminInvoicesController(
     IInvoiceRepository invoices,
-    IBlobStorageClient blobs) : MakablesApiController
+    IBlobStorageClient blobs,
+    IAdminReadAuditWriter readAudit) : MakablesApiController
 {
     /// <summary>
     /// Stream the rendered invoice PDF for any invoice by id (T-0126 / Q-0026 /
@@ -97,6 +99,20 @@ public sealed class AdminInvoicesController(
                 return StatusCode(StatusCodes.Status304NotModified);
             }
         }
+
+        // T-0137 (Q-0028): audit the privileged PII read only on the actual
+        // 200-stream path — after the 404 (not-yet-rendered) and 304
+        // (If-None-Match: admin already holds the bytes, no new disclosure)
+        // branches have returned. Recipient name/address/tax-ids/line-items
+        // are leaving the system; record who pulled which invoice.
+        await readAudit.AuditReadAsync(
+            actionCode: "invoice.pdf.download",
+            targetEntity: "invoice",
+            targetId: invoiceId,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
+            notes: null,
+            cancellationToken: ct);
 
         // Range processing off per T-0075/T-0088 rationale: invoices are small
         // platform artifacts; range support is attack surface for zero benefit.

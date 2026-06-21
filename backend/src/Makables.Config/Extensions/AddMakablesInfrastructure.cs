@@ -310,6 +310,10 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<IOutbox, OutboxWriter>();
         services.AddScoped<IOutboxConsumerRepository, OutboxConsumerRepository>();
         services.AddScoped<IAdminAuditLogWriter, AdminAuditLogWriter>();
+        // T-0137 (Q-0028): read-side audit writer. Owns its own DbContext via
+        // the IDbContextFactory above, so a privileged PII read is audited
+        // without opening the request-scoped UoW.
+        services.AddScoped<IAdminReadAuditWriter, AdminReadAuditWriter>();
 
         // === T-0029 outbox queue publisher (used by Makables.Functions
         // ProcessOutboxFunction). The Web hosts don't strictly need this

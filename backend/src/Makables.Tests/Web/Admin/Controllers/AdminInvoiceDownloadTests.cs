@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Invoices;
@@ -28,9 +29,10 @@ public class AdminInvoiceDownloadTests
 
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IBlobStorageClient _blobs = Substitute.For<IBlobStorageClient>();
+    private readonly IAdminReadAuditWriter _readAudit = Substitute.For<IAdminReadAuditWriter>();
 
     private Makables.Web.Admin.Controllers.AdminInvoicesController BuildController() =>
-        new(_invoices, _blobs)
+        new(_invoices, _blobs, _readAudit)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -78,6 +80,12 @@ public class AdminInvoiceDownloadTests
         headers.ContentDisposition.ToString().Should()
             .Be($"attachment; filename=\"faktura-{InvoiceNumber}.pdf\"");
         headers.ETag.ToString().Should().Be("\"etag-admin\"");
+
+        // T-0137: the 200-stream path audits the privileged PII read exactly once.
+        await _readAudit.Received(1).AuditReadAsync(
+            "invoice.pdf.download", "invoice", InvoiceId,
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -94,6 +102,11 @@ public class AdminInvoiceDownloadTests
             .Which.Code.Should().Be(BusinessErrorMessage.InvoiceNotYetRendered);
         await _blobs.Received(0).DownloadAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        // T-0137: a 404 is not a disclosure — no audit row.
+        await _readAudit.Received(0).AuditReadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -146,5 +159,11 @@ public class AdminInvoiceDownloadTests
 
         result.Should().BeOfType<StatusCodeResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status304NotModified);
+        // T-0137: a 304 means the admin already holds the bytes — no NEW
+        // disclosure, so no audit row on the conditional-GET hit.
+        await _readAudit.Received(0).AuditReadAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
     }
 }

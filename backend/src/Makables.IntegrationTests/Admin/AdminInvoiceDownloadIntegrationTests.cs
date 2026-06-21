@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using FluentAssertions;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
@@ -218,5 +219,52 @@ public sealed class AdminInvoiceDownloadIntegrationTests : IAsyncLifetime
         using var makerClient = ClientWith(MakablesAudiences.Maker, UserRole.Maker);
         var makerResp = await makerClient.GetAsync($"/api/v1/admin-invoices/{InvoiceId}/pdf");
         makerResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // The admin token in this file is minted for User.Create($"user-{role}")
+    // (see IssueToken), so the JWT `sub` — and therefore the audited actor —
+    // is "user-Admin", NOT the seeded AdminUserId constant.
+    private const string AdminTokenSub = "user-Admin";
+
+    [Fact]
+    public async Task GET_admin_invoice_writes_one_read_audit_row_on_the_200_path()
+    {
+        await SeedAsync();
+        using var client = ClientWith(MakablesAudiences.Admin, UserRole.Admin);
+
+        var response = await client.GetAsync($"/api/v1/admin-invoices/{InvoiceId}/pdf");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = _harness.CreateDbContext();
+        var rows = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .Where(e => e.ActionCode == "invoice.pdf.download")
+            .ToListAsync();
+
+        rows.Should().ContainSingle();
+        var row = rows[0];
+        row.TargetEntity.Should().Be("invoice");
+        row.TargetId.Should().Be(InvoiceId);
+        row.AdminUserId.Should().Be(AdminTokenSub);
+        row.AdminUserId.Should().NotBe("system");
+        row.BeforeJson.Should().BeNull();
+        row.AfterJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GET_admin_invoice_unknown_id_writes_no_read_audit_row()
+    {
+        await SeedAsync();
+        using var client = ClientWith(MakablesAudiences.Admin, UserRole.Admin);
+
+        var response = await client.GetAsync("/api/v1/admin-invoices/inv-does-not-exist/pdf");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await using var db = _harness.CreateDbContext();
+        var count = await db.Set<AdminAuditLogEntry>()
+            .IgnoreQueryFilters()
+            .CountAsync(e => e.ActionCode == "invoice.pdf.download");
+
+        count.Should().Be(0, "a 404 not-rendered is not a disclosure — no read audit");
     }
 }
