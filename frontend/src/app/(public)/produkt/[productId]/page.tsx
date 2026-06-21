@@ -8,6 +8,7 @@ import { t } from '@/lib/i18n';
 import { getProductById, type ProductDetail } from '@/lib/api-client-helpers/catalog';
 import { formatWeight } from '@/lib/format/weight';
 import { formatCzk } from '@/lib/money/formatter';
+import { canonicalUrl } from '@/lib/seo/site-url';
 import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { ProductGallery } from './product-gallery';
 
@@ -17,6 +18,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { productId } = await params;
+  // Canonical stays the requested URL even on a NotFound (T-0131 AC-9).
+  const url = canonicalUrl(`/produkt/${productId}`);
   const result = await getProductById(productId);
   if (!result.success) {
     // Only branch the title on NotFound — a transient backend error
@@ -26,18 +29,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       result.error.type === 'NotFound'
         ? `${t('catalog.product_detail.not_found.title')} — ${t('catalog.maker.metadata.title_suffix')}`
         : t('catalog.maker.metadata.title_suffix');
+    const description = t('catalog.product_detail.metadata.fallback_description');
     return {
       title,
-      description: t('catalog.product_detail.metadata.fallback_description'),
+      description,
+      alternates: { canonical: url },
+      // Next 16's typed `OpenGraph.type` union does not include the OG
+      // `product` value (it models a subset of the OG protocol). We emit
+      // the framework-supported `website` type — a valid, clean OG card.
+      // Upgrading to `og:type=product` requires either a raw `<meta>`
+      // passthrough (which would duplicate the og:type tag) or a Next
+      // type widening; deferred. (T-0131 deviation flag.)
+      openGraph: { title, description, url, type: 'website' },
+      twitter: { card: 'summary', title, description },
     };
   }
   const product = result.value;
   const description = product.description?.trim()
     ? truncateForMeta(product.description, 160)
     : t('catalog.product_detail.metadata.fallback_description');
+  const title = `${product.title} — ${product.makerCompanyName} — ${t('catalog.maker.metadata.title_suffix')}`;
   return {
-    title: `${product.title} — ${product.makerCompanyName} — ${t('catalog.maker.metadata.title_suffix')}`,
+    title,
     description,
+    alternates: { canonical: url },
+    // Next 16's typed `OpenGraph.type` union has no OG `product` value;
+    // the framework-supported `website` type ships a clean card (see the
+    // NotFound branch above for the deviation rationale).
+    openGraph: { title, description, url, type: 'website' },
+    twitter: { card: 'summary', title, description },
   };
 }
 

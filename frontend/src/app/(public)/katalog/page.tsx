@@ -10,14 +10,24 @@ import {
 } from '@/lib/api-client-helpers/catalog';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t } from '@/lib/i18n';
+import { canonicalUrl } from '@/lib/seo/site-url';
 import { CatalogFilters } from './filters-client';
 import { MakerCard } from './maker-card';
 import { Pagination } from './pagination';
 
 export function generateMetadata(): Metadata {
+  const title = t('catalog.title');
+  const description = t('catalog.subtitle');
+  // Canonical is the UNFILTERED /katalog — filter query params are not
+  // part of the canonical, so every filtered view consolidates onto the
+  // one indexable catalog URL (duplicate-content hygiene, A.6/C.6).
+  const url = canonicalUrl('/katalog');
   return {
-    title: t('catalog.title'),
-    description: t('catalog.subtitle'),
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: 'website' },
+    twitter: { card: 'summary', title, description },
   };
 }
 

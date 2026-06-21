@@ -15,3 +15,21 @@ input that only the operator can supply).
   `static.privacy.*` keys with the approved text. See `docs/questions/open.md`
   Q-0030 (incl. the open sub-question on a cookie-consent banner / cookie
   management UI — confirm whether launch needs one).
+
+## SEO (T-0131)
+
+- [ ] **Site URL env:** set `NEXT_PUBLIC_SITE_URL=https://makables.cz` in the
+  production/staging environment (the canonical-host base for
+  sitemap/robots/canonical/og:url; read only via `lib/seo/site-url.ts`).
+  Defaults to `https://makables.cz` at build time; localhost is the dev
+  default. After deploy, verify `/sitemap.xml` + `/robots.txt` resolve and
+  submit the sitemap to Google Search Console.
+- [ ] **OG image asset (follow-up, non-blocking):** add a brand OG image
+  (`frontend/public/og-default.png`, 1200×630) and wire it into
+  `lib/seo/site-url.ts` so every page inherits a `summary_large_image` card.
+  MVP ships text-only `summary` cards (no image asset exists yet).
+- [ ] **Product sitemap enumeration (deferred):** `/produkt/{productId}` URLs
+  are NOT in the sitemap at MVP — there is no bulk product-id read (products
+  are reachable only through a maker profile). Maker profiles
+  (`/katalog/{slug}`) ARE enumerated. A backend bulk-id feed would enable
+  product enumeration post-MVP.

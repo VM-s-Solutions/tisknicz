@@ -1,6 +1,22 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { Icon } from '@/components/ui/icon';
 import { HeroSceneWrapper } from '@/components/shared/hero-scene-wrapper';
+import { t } from '@/lib/i18n';
+import { canonicalUrl } from '@/lib/seo/site-url';
+
+export function generateMetadata(): Metadata {
+  const title = t('home.metadata.title');
+  const description = t('home.metadata.description');
+  const url = canonicalUrl('/');
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: 'website' },
+    twitter: { card: 'summary', title, description },
+  };
+}
 
 const CATEGORIES = [
   { name: '3D tisk', slug: '3d-tisk', icon: 'printer' as const, description: 'FDM, SLA, resin tisk na zakázku' },
