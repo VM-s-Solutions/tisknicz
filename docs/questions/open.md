@@ -154,8 +154,8 @@
   - Mount "default" globally per host (`RateLimiterOptions.GlobalLimiter` or `[EnableRateLimiting("default")]` on `MakablesApiController`) + add a per-user partition for message posting, mirroring the autocomplete policy shape.
   - Per-endpoint attribute on `PostMessage` only — narrowest change, leaves the rest of the surface unlimited.
   - Defer until traffic data exists — the surface requires a valid JWT and MVP volume is small.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** ANSWERED 2026-06-21 → **T-0136** (`feat/secops-hardening-bundle`).
+- **Answer (filled by user):** Mount the per-audience "default" policy as the per-host `GlobalLimiter` (covers `PostMessage` + the whole un-attributed surface) AND add a tight per-IP `"auth"` policy (10/min, no queue) class-level on `AuthController` (the brute-force/credential-stuffing surface; matches the ADR 0023 §4 "failed login >50/min/IP" alert intent). 429 stays a raw middleware rejection (no `BusinessErrorMessage`, no i18n key).
 - **Note (2026-06-14, admin-ops bundle):** touched but not closed by the admin-ops bundle (T-0108/T-0109/T-0110/T-0111); admin endpoints are admin-JWT-gated (low spam risk); stays open as a standalone secops follow-up against the customer/maker hosts. Flagged for secops Gate 3 re-confirmation of the admin mutation surface; no scope expansion in any bundle ticket.
 
 ## Q-0012 — Email-enrichment collaborator sprawl (ADR 0015 budget)
@@ -382,8 +382,8 @@
   - Audit all admin invoice-PDF reads (a read-side audit hook — the admin-audit pipeline is command-only today; a read needs a thin explicit AppendAsync in the controller, or a read-audit behavior). Strongest forensic trail; one extra write per download.
   - Audit nothing (status quo) — admin is a 2-person trusted role; access is gated; the invoice already exists as a legal record.
   - Audit only on a future "admin accessed customer PII" policy bucket (broader than invoices — would also cover the admin order list showing customerEmail).
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** ANSWERED 2026-06-21 → **T-0137** (`feat/secops-hardening-bundle`).
+- **Answer (filled by user):** Audit the high-signal privileged PII READS — invoice-PDF download (`invoice.pdf.download`), payout CSV download (`payout.csv.download`), and single order-detail view (`order.detail.view`, full contact snapshot) — via a dedicated `IAdminReadAuditWriter` that owns its own DbContext (the T-0032 `IDbContextFactory` precedent) so a read never opens the request UoW. SKIP the paginated list reads (high-volume page-loads, low forensic value). Reuses `admin_audit_log` (no migration); `beforeJson=afterJson=null` for reads.
 
 ## Q-0029 — Admin read-side gaps for the dashboard ops/control-plane surfaces
 - **From:** frontend + reviewer + architect (T-0118b/c final review, Gate 4)
