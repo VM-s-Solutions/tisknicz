@@ -436,3 +436,15 @@
   - Accept `website` for MVP (recommended) — valid card, no SEO harm; richer product OG is a post-launch enhancement.
   - Raw-meta passthrough for `og:type=product` + `product:price:amount`/`currency` — richer Google/FB commerce cards, but bypasses the typed API + risks a duplicate og:type tag; needs care.
 - **Status:** open
+
+## Q-0033 — Custom observability metrics registered but not emitted (outbox/payment/webhook/auto-deliver)
+- **From:** reviewer + secops (T-0134 ops-runbooks review, B-2)
+- **Ticket / context:** T-0014 observability + the ADR 0023 §4 alert table; surfaced writing monitoring.md
+- **Asked:** 2026-06-21
+- **Blocking:** no — the outbox-stall alert (the highest-value one) has a working DB-backed signal today (GET /outbox-events/stalled/count + the admin UI, T-0126/T-0118c); the monitoring runbook leads with it. But the ADR 0023 §4 metric-based alert rules (outbox_lag_seconds, payment_create_failures_total, webhook_received_total, auto_deliver_count) will read empty until emission ships.
+- **Question:** The MakablesMeters meter NAMES are registered (T-0014) but only the makables.payouts.* instruments actually record values. The ADR 0023 §4 alert table (outbox lag/stalled, payment failures, webhook received, auto-deliver) assumes these emit. Add the metric emission (Counter/Gauge.Add/Record calls in the outbox dispatcher, payment provider, webhook controllers, auto-deliver Function) so the Azure Monitor alert rules have signal — pre-launch, or accept the DB-endpoint + log-query alternatives the runbook documents?
+- **Options the agent has considered:**
+  - Wire the emission pre-launch (a small instrumentation pass across the dispatcher/providers/webhooks/Function) so all ADR 0023 §4 alerts work as specified. ~M.
+  - Accept the documented alternatives at MVP (the runbook leads with the DB endpoint + ProcessOutboxTimer tick log for outbox; 5xx/DB-CPU come from ASP.NET/Azure Monitor built-ins which DO work; only the custom-metric alerts degrade) — defer emission to v1.1.
+  - Partial: emit only the highest-value outbox + payment-failure metrics now, defer the rest.
+- **Status:** open

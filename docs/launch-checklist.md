@@ -61,3 +61,12 @@ ADR 0023 §7 target, and the runbook that covers it.
   are reachable only through a maker profile). Maker profiles
   (`/katalog/{slug}`) ARE enumerated. A backend bulk-id feed would enable
   product enumeration post-MVP.
+- [ ] **Custom metric emission (Q-0033, pre-launch decision):** the ADR 0023
+  §4 alert table (outbox lag/stalled, payment failures, webhook received,
+  auto-deliver) assumes custom metrics that are REGISTERED but not yet
+  EMITTED — only `makables.payouts.*` records values today. The
+  `monitoring.md` runbook leads with the working DB-backed outbox-stall
+  signal (`GET /outbox-events/stalled/count` + admin UI) + the
+  ProcessOutboxTimer tick log; 5xx + DB-CPU alerts use Azure-Monitor
+  built-ins (which work). Decide per Q-0033: wire the emission pre-launch,
+  or accept the documented alternatives for MVP.

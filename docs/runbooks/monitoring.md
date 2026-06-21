@@ -15,9 +15,20 @@
 Every log line carries `correlation_id` (from `traceparent`), `user_id`, `country_code`,
 `request_id` (ADR 0023 §4). **Start every investigation from the `correlation_id`** — it stitches the
 request, handler, and outbox/webhook trace together. Secrets are redacted at the logger layer
-(`SensitivePropertyMasker`). Custom metrics (registered in `MakablesMeters`, ADR 0023 §4):
-`outbox_lag_seconds`, `outbox_stalled_count`, `payment_create_failures_total`,
+(`SensitivePropertyMasker`). Custom metrics (the meter NAMES are registered in `MakablesMeters`,
+ADR 0023 §4): `outbox_lag_seconds`, `outbox_stalled_count`, `payment_create_failures_total`,
 `webhook_received_total`, `auto_deliver_count`, `payout_batch_total_minor`.
+
+> ⚠ **EMISSION GAP — read before relying on the metric-based alerts below.** As of MVP, only the
+> `makables.payouts.*` instruments actually emit values; the outbox/payment/webhook/auto-deliver
+> metrics above are **registered meter names, not yet instrumented** (no code records them). The
+> ADR 0023 §4 alert table is therefore the *target* state — SecOps wires the rules, but the
+> outbox/payment/webhook gauges will read empty until the emission is added (logged as a follow-up).
+> **The signal that works TODAY** for the highest-value alert (outbox stall) is DB-backed, not a
+> metric: `GET /api/v1/outbox-events/stalled/count` on the admin host (the count the admin dashboard
+> surfaces, T-0126) + the stalled-event list + the admin retry/ack UI (T-0118c). The outbox sections
+> below lead with that endpoint; treat the `outbox_lag_seconds`/`outbox_stalled_count` charts as
+> pending the emission follow-up.
 
 ## A. Alert table (thresholds verbatim from ADR 0023 §4)
 
@@ -108,14 +119,16 @@ provider + outcome) to see which provider and whether it's a verification reject
 oldest unprocessed `created_at`). Background eventual-consistency is slipping (ADR 0023 §3 names
 this exact alert).
 
-**Confirm:** chart the `outbox_lag_seconds` gauge in the metrics explorer. Cross-check the
-`ProcessOutboxTimer` is firing:
+**Confirm (works today):** check the `ProcessOutboxTimer` is firing — this is the live signal:
 ```kql
 traces
 | where timestamp > ago(30m) and message startswith "ProcessOutboxTimer tick"
 | project timestamp, message
 ```
-(The tick logs `loaded= routed= stalled= failedToPublish=` — see `ProcessOutboxFunction`.)
+(The tick logs `loaded= routed= stalled= failedToPublish=` — see `ProcessOutboxFunction`.) If the
+tick stopped, the host/schedule is the cause (below). ⚠ The `outbox_lag_seconds` gauge is **not
+emitted yet** (see the EMISSION GAP note in §0) — chart it only once the emission follow-up ships;
+until then the tick log + the stalled-count endpoint (§4) are the authoritative outbox signals.
 
 **Likely cause:** the Functions host is down / not scaled, the `ProcessOutbox:Schedule`
 (`*/30 * * * * *`) stopped firing, or the storage/queue conn string broke (no publish target).
@@ -135,7 +148,11 @@ admin dashboard surfaces (T-0109/T-0126), predicate
 `ProcessedAt == null && NextRetryAt == null && LastErrorKind != None`. These will **never** drain on
 their own; they need operator action.
 
-**Confirm:** chart `outbox_stalled_count`, or query the admin tooling. Direct DB peek:
+**Confirm (works today):** the authoritative live signal is `GET /api/v1/outbox-events/stalled/count`
+on the admin host (the count the admin dashboard surfaces, T-0126) + the stalled-event list
+(`GET /api/v1/outbox-events/stalled`) browsable in the admin outbox UI (T-0118c). ⚠ The
+`outbox_stalled_count` metric is **not emitted yet** (§0 EMISSION GAP) — use the endpoint/UI, not the
+chart, until the emission follow-up ships. Direct DB peek (matches the endpoint's predicate exactly):
 ```sql
 SELECT id, event_type, last_error_kind, last_error_code, retry_count
 FROM outbox_event
