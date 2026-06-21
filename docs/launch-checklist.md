@@ -101,3 +101,19 @@ ADR 0023 §7 target, and the runbook that covers it.
   paths, per `docs/test-plans/a11y-manual-checklist.md`. The automated
   jest-axe gate runs in CI; this manual pass is the pre-launch complement
   (QA + screen reader).
+
+## Terminal bug bash (T-0135)
+
+- [ ] **Final smoke RUN (T-0135, gated manual step — MVP close-out):** execute
+  the 40-row end-to-end smoke against seeded staging + provider sandboxes
+  (Comgate / Packeta / SendGrid / ARES / Mapbox), per
+  `docs/test-plans/T-0135-smoke-checklist.md`: public/auth surface, the
+  customer order money-path (place → Zásilkovna → Comgate-sandbox pay →
+  server-verified Paid → invoice), maker fulfilment, admin control-plane +
+  audit rows, Functions/outbox, and cross-cutting (no console errors, no
+  untranslated error codes, responsive, Czech date/currency). The static
+  code-side sweep + the dead-CTA fix + the link-hygiene regression test ship
+  in the T-0135 PR; this RUN is the human pre-launch pass (QA/Ops). A finding
+  becomes a follow-up ticket, not a launch blocker per se — but the
+  money-path rows (place → pay → Paid → invoice → payout) MUST pass before
+  go-live.
