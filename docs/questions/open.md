@@ -212,6 +212,7 @@
   - Reduce the root baseline first (Q-0014 helps materially), then set the absolute line.
 - **Status:** open
 - **Answer (filled by user):**
+- **Note (2026-06-21, quality-gates bundle T-0132):** the k6 load test (T-0132) does **NOT** close this. k6 measures **server-side API/SSR latency** (catalog/product TTFB, order-API), not **client-side JS bundle size** — orthogonal axes. The k6 thresholds bake the ADR 0023 §1 *latency* budgets; the *First-Load-JS bundle budget* this question raises is unaffected and stays a separate **frontend-perf concern, deferred**. Recorded in `deploy/load-tests/README.md` so a reviewer doesn't conflate "we ran load tests" with "we have a JS bundle budget" — we don't, and that's this Q's job (architect input still wanted).
 
 ## Q-0016 — Maker invoice PDF embeds customer email (GDPR-lock conflict)
 - **From:** secops (order-dashboards-bundle Gate 3, F-1)
@@ -422,7 +423,8 @@
   - Stand up vitest now (own infra ticket) — unblocks T-0131 SEO unit tests + T-0133 axe-core-in-CI + pins pure FE predicates (canonicalUrl, resolveErrorMessage, the debounce/poller shapes). The right pre-launch move if FE pure-logic coverage matters.
   - Keep the status quo (tsc + eslint + next build + manual QA plans) — the FE has no domain logic; the backend carries the test weight. Defer a harness to post-launch.
   - Minimal: axe-core via a standalone CI script (Playwright-free) for T-0133 only, no general unit harness.
-- **Status:** open
+- **Status:** answered
+- **Answer (filled by user):** Stand up the harness (option 1) — **vitest + @testing-library/react + jest-axe** as THE frontend harness (the real harness, not a standalone axe-only script), user-locked 2026-06-21 in the **quality-gates bundle** (`feat/quality-gates-bundle`, T-0132 k6 + T-0133 a11y, Bundle B = one PR). The harness lands in T-0133: devDeps in `frontend/package.json` + a real lockfile update + `vitest.config.ts` (excludes the generated `src/lib/api-client/**`) + a `"test"` script; axe-core component/page tests assert zero WCAG 2.1 AA violations (ADR 0023 §5) on the critical customer paths (catalog/product/checkout/static), wired into CI (`.github/workflows/ci.yml` frontend test step) so a11y regressions fail CI. **Retroactive unblock:** the same harness pins the T-0131 SEO predicate tests (`canonicalUrl` etc.) that were blocked for lack of a harness — T-0133 writes those too. The manual NVDA/Firefox Czech screen-reader + keyboard pass is a `manual_step` (human + assistive tech; pre-launch), checklist at `docs/test-plans/a11y-manual-checklist.md`.
 
 ## Q-0032 — og:type=product unsupported by Next 16 Metadata type union
 - **From:** frontend (T-0131 impl) + reviewer
@@ -433,4 +435,16 @@
 - **Options the agent has considered:**
   - Accept `website` for MVP (recommended) — valid card, no SEO harm; richer product OG is a post-launch enhancement.
   - Raw-meta passthrough for `og:type=product` + `product:price:amount`/`currency` — richer Google/FB commerce cards, but bypasses the typed API + risks a duplicate og:type tag; needs care.
+- **Status:** open
+
+## Q-0033 — Custom observability metrics registered but not emitted (outbox/payment/webhook/auto-deliver)
+- **From:** reviewer + secops (T-0134 ops-runbooks review, B-2)
+- **Ticket / context:** T-0014 observability + the ADR 0023 §4 alert table; surfaced writing monitoring.md
+- **Asked:** 2026-06-21
+- **Blocking:** no — the outbox-stall alert (the highest-value one) has a working DB-backed signal today (GET /outbox-events/stalled/count + the admin UI, T-0126/T-0118c); the monitoring runbook leads with it. But the ADR 0023 §4 metric-based alert rules (outbox_lag_seconds, payment_create_failures_total, webhook_received_total, auto_deliver_count) will read empty until emission ships.
+- **Question:** The MakablesMeters meter NAMES are registered (T-0014) but only the makables.payouts.* instruments actually record values. The ADR 0023 §4 alert table (outbox lag/stalled, payment failures, webhook received, auto-deliver) assumes these emit. Add the metric emission (Counter/Gauge.Add/Record calls in the outbox dispatcher, payment provider, webhook controllers, auto-deliver Function) so the Azure Monitor alert rules have signal — pre-launch, or accept the DB-endpoint + log-query alternatives the runbook documents?
+- **Options the agent has considered:**
+  - Wire the emission pre-launch (a small instrumentation pass across the dispatcher/providers/webhooks/Function) so all ADR 0023 §4 alerts work as specified. ~M.
+  - Accept the documented alternatives at MVP (the runbook leads with the DB endpoint + ProcessOutboxTimer tick log for outbox; 5xx/DB-CPU come from ASP.NET/Azure Monitor built-ins which DO work; only the custom-metric alerts degrade) — defer emission to v1.1.
+  - Partial: emit only the highest-value outbox + payment-failure metrics now, defer the rest.
 - **Status:** open

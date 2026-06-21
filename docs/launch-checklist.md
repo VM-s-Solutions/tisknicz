@@ -16,6 +16,34 @@ input that only the operator can supply).
   Q-0030 (incl. the open sub-question on a cookie-consent banner / cookie
   management UI — confirm whether launch needs one).
 
+## Infra hardening — Bicep ↔ ADR 0023 §7 cut-overs (T-0134)
+
+The ops runbooks (`docs/runbooks/`) document the cut-over PROCEDURE for each gap below; the actual
+infra change is the operator's pre-launch task tracked here. Each line names the shipped state, the
+ADR 0023 §7 target, and the runbook that covers it.
+
+- [ ] **Secrets to Key Vault references (BLOCKING):** the Postgres conn string + Comgate / Packeta /
+  SendGrid / Mapbox / JWT secrets currently ship as **plain App Settings** (`app-service.bicep`,
+  `functions.bicep`); ADR 0023 §7 wants `@Microsoft.KeyVault(SecretUri=...)` references. Closes the
+  `TODO(T-0134)` in `infra/bicep/main.bicep`. Procedure: `docs/runbooks/secret-rotation.md` §C.
+- [ ] **`AzureWebJobsStorage` identity-based (BLOCKING):** move the Functions storage connection from
+  an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
+  Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:
+  `docs/runbooks/secret-rotation.md` §7 + §C.
+- [ ] **Postgres Private Endpoint (prod, BLOCKING):** production runs WITHOUT the staging
+  "allow all Azure services" firewall rule (`postgres.bicep` `allowAllAzureServices`); wire a Private
+  Endpoint / VNet rule so the Web + Functions hosts can reach Postgres. A restored server needs this
+  re-wired too. Procedure: `docs/runbooks/backup-restore.md` §1.
+- [ ] **Blob GRS (prod, BLOCKING):** `blob.bicep` ships `Standard_LRS`; ADR 0023 §7 wants
+  `Standard_GRS` in production. Until then, blob data has no geo-failover. Procedure:
+  `docs/runbooks/backup-restore.md` §2b + §C.
+- [ ] **Blob soft-delete 30-day (BLOCKING):** `blob.bicep` configures no soft-delete / versioning
+  policy; ADR 0023 §7 wants 30-day soft-delete. Until then, accidental blob deletes are NOT
+  recoverable. Procedure: `docs/runbooks/backup-restore.md` §2a + §C.
+- [ ] **Key Vault purge-protection (recommended):** `key-vault.bicep` enables 90-day soft-delete but
+  not purge-protection — consider enabling so secrets can't be hard-purged. Procedure:
+  `docs/runbooks/backup-restore.md` §3.
+
 ## SEO (T-0131)
 
 - [ ] **Site URL env:** set `NEXT_PUBLIC_SITE_URL=https://makables.cz` in the
@@ -33,3 +61,25 @@ input that only the operator can supply).
   are reachable only through a maker profile). Maker profiles
   (`/katalog/{slug}`) ARE enumerated. A backend bulk-id feed would enable
   product enumeration post-MVP.
+- [ ] **Custom metric emission (Q-0033, pre-launch decision):** the ADR 0023
+  §4 alert table (outbox lag/stalled, payment failures, webhook received,
+  auto-deliver) assumes custom metrics that are REGISTERED but not yet
+  EMITTED — only `makables.payouts.*` records values today. The
+  `monitoring.md` runbook leads with the working DB-backed outbox-stall
+  signal (`GET /outbox-events/stalled/count` + admin UI) + the
+  ProcessOutboxTimer tick log; 5xx + DB-CPU alerts use Azure-Monitor
+  built-ins (which work). Decide per Q-0033: wire the emission pre-launch,
+  or accept the documented alternatives for MVP.
+- [ ] **k6 load test RUN (T-0132, gated manual step):** execute
+  `deploy/load-tests/makables-load.js` (100 VUs, 30-min) against live seeded
+  staging per `deploy/load-tests/README.md`. PASS = the ADR 0023 §1 k6
+  thresholds met (catalog p95<400/p99<1000, product p95<350, order
+  p95<600/p99<1500) + zero 5xx + Postgres CPU <70% (verified out-of-band in
+  the Azure metrics blade). The script + thresholds ship in this repo; the
+  RUN is the pre-launch step (Ops/QA).
+- [ ] **Manual a11y RUN (T-0133, gated manual step):** NVDA + Firefox Czech
+  screen-reader pass + keyboard-only nav + a live-page color-contrast
+  spot-check (the AA leg jsdom can't evaluate) on the critical customer
+  paths, per `docs/test-plans/a11y-manual-checklist.md`. The automated
+  jest-axe gate runs in CI; this manual pass is the pre-launch complement
+  (QA + screen reader).
