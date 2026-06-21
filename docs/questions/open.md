@@ -154,8 +154,8 @@
   - Mount "default" globally per host (`RateLimiterOptions.GlobalLimiter` or `[EnableRateLimiting("default")]` on `MakablesApiController`) + add a per-user partition for message posting, mirroring the autocomplete policy shape.
   - Per-endpoint attribute on `PostMessage` only — narrowest change, leaves the rest of the surface unlimited.
   - Defer until traffic data exists — the surface requires a valid JWT and MVP volume is small.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** ANSWERED 2026-06-21 → **T-0136** (`feat/secops-hardening-bundle`).
+- **Answer (filled by user):** Mount the per-audience "default" policy as the per-host `GlobalLimiter` (covers `PostMessage` + the whole un-attributed surface) AND add a tight per-IP `"auth"` policy (10/min, no queue) class-level on `AuthController` (the brute-force/credential-stuffing surface; matches the ADR 0023 §4 "failed login >50/min/IP" alert intent). 429 stays a raw middleware rejection (no `BusinessErrorMessage`, no i18n key).
 - **Note (2026-06-14, admin-ops bundle):** touched but not closed by the admin-ops bundle (T-0108/T-0109/T-0110/T-0111); admin endpoints are admin-JWT-gated (low spam risk); stays open as a standalone secops follow-up against the customer/maker hosts. Flagged for secops Gate 3 re-confirmation of the admin mutation surface; no scope expansion in any bundle ticket.
 
 ## Q-0012 — Email-enrichment collaborator sprawl (ADR 0015 budget)
@@ -382,8 +382,8 @@
   - Audit all admin invoice-PDF reads (a read-side audit hook — the admin-audit pipeline is command-only today; a read needs a thin explicit AppendAsync in the controller, or a read-audit behavior). Strongest forensic trail; one extra write per download.
   - Audit nothing (status quo) — admin is a 2-person trusted role; access is gated; the invoice already exists as a legal record.
   - Audit only on a future "admin accessed customer PII" policy bucket (broader than invoices — would also cover the admin order list showing customerEmail).
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** ANSWERED 2026-06-21 → **T-0137** (`feat/secops-hardening-bundle`).
+- **Answer (filled by user):** Audit the high-signal privileged PII READS — invoice-PDF download (`invoice.pdf.download`), payout CSV download (`payout.csv.download`), and single order-detail view (`order.detail.view`, full contact snapshot) — via a dedicated `IAdminReadAuditWriter` that owns its own DbContext (the T-0032 `IDbContextFactory` precedent) so a read never opens the request UoW. SKIP the paginated list reads (high-volume page-loads, low forensic value). Reuses `admin_audit_log` (no migration); `beforeJson=afterJson=null` for reads.
 
 ## Q-0029 — Admin read-side gaps for the dashboard ops/control-plane surfaces
 - **From:** frontend + reviewer + architect (T-0118b/c final review, Gate 4)
@@ -447,4 +447,26 @@
   - Wire the emission pre-launch (a small instrumentation pass across the dispatcher/providers/webhooks/Function) so all ADR 0023 §4 alerts work as specified. ~M.
   - Accept the documented alternatives at MVP (the runbook leads with the DB endpoint + ProcessOutboxTimer tick log for outbox; 5xx/DB-CPU come from ASP.NET/Azure Monitor built-ins which DO work; only the custom-metric alerts degrade) — defer emission to v1.1.
   - Partial: emit only the highest-value outbox + payment-failure metrics now, defer the rest.
+- **Status:** open
+
+## Q-0034 — Rate-limit v1.1 hardening: config-bound limits + distributed partition store
+- **From:** optimizer + architect (T-0136 secops-hardening review, Gate-8 / Gate-4)
+- **Ticket / context:** T-0136 (rate-limit mount); deferred follow-ups, not blocking launch
+- **Asked:** 2026-06-21
+- **Blocking:** no — the in-memory per-instance limiter is adequate for single-region MVP scale; partitions are reclaimed by the AutoReplenishment idle-sweep (bounded ~1 window), and the limits are deploy-time-fixed per audience.
+- **Question:** Two v1.1 items the T-0136 review flagged: (1) the four per-audience limit pairs + the 10/min auth limit are hard-coded in `AddMakablesRateLimiting` ("Tunable later via configuration" — but no knob exists); bind them to a `RateLimitOptions` section so ops can tune without a redeploy. (2) The limiter is in-memory/per-instance; when the host scales past one instance, partition counts and limits diverge per node — needs a distributed (Redis) partition store. Worth doing for v1.1, or leave as-is until scale-out is real?
+- **Options the agent has considered:**
+  - Defer both to v1.1 (recommended): single-region single-instance MVP doesn't benefit; the in-memory caveat is documented inline in the class.
+  - Config-bind the limits now (cheap), defer the Redis store (larger).
+- **Status:** open
+
+## Q-0035 — Own-context side-effect-writer pattern: catalogue at the third occurrence
+- **From:** architect (T-0137 secops-hardening review, Gate-4)
+- **Ticket / context:** T-0137 (`IAdminReadAuditWriter`) + T-0032 (`CompanyRegistryCacheStore`); pattern-catalogue hygiene
+- **Asked:** 2026-06-21
+- **Blocking:** no — bookkeeping for the patterns catalogue.
+- **Question:** The "own-context side-effect writer — persist a side-effect row OUTSIDE the request UoW via `IDbContextFactory<MakablesDbContext>`" shape now has TWO instances (T-0032 ARES cache, T-0137 read-audit). The recurring-findings codification rule fires at count ≥ 3. Log it in `docs/review/recurring-findings.md` at count 2 now; when a third occurrence lands, promote to a new patterns.md §A.N entry. Also consider an `AuditActionCodes` constants class in `Core.Domain.Auditing` once the action-code set grows (currently ~12, free-string is fine).
+- **Options the agent has considered:**
+  - Log at count 2 now, promote at 3 (recommended — matches the existing ≥3 codification threshold).
+  - Codify §A.N immediately (premature against the project's own threshold).
 - **Status:** open

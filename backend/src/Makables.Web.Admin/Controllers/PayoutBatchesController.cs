@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Admin;
 using Makables.Core.AppServices.Features.Payouts;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Payouts;
 using Makables.Core.Domain.Storage;
@@ -24,7 +25,8 @@ namespace Makables.Web.Admin.Controllers;
 [Authorize]
 public sealed class PayoutBatchesController(
     IPayoutBatchRepository payoutBatches,
-    IBlobStorageClient blobs) : MakablesApiController
+    IBlobStorageClient blobs,
+    IAdminReadAuditWriter readAudit) : MakablesApiController
 {
     /// <summary>
     /// Create the weekly payout batch: claim every payout-eligible
@@ -144,6 +146,19 @@ public sealed class PayoutBatchesController(
         }
 
         var download = result.Value!;
+
+        // T-0137 (Q-0028): audit the privileged read on the 200-stream path
+        // only (not the 404/409 branches above). The CSV carries per-maker
+        // bank-transfer payout data.
+        await readAudit.AuditReadAsync(
+            actionCode: "payout.csv.download",
+            targetEntity: "payoutbatch",
+            targetId: id,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
+            notes: null,
+            cancellationToken: ct);
+
         Response.Headers.CacheControl = "private, no-store";
         Response.Headers.ContentDisposition = $"attachment; filename=\"{batch.BatchNumber}.csv\"";
         return File(download.Content, "text/csv", enableRangeProcessing: false);

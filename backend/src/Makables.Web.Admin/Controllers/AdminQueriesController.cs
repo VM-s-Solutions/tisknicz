@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Admin;
+using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Orders;
@@ -18,13 +19,16 @@ namespace Makables.Web.Admin.Controllers;
 /// boundary is the security control for the unscoped reads. Flat resource
 /// routes (<c>/admin-orders</c>, <c>/admin-invoices</c>, <c>/audit-log</c>)
 /// disambiguate the admin cross-tenant view from the owner-scoped
-/// <c>/orders</c> route on the other hosts. Reads carry NO
-/// <c>IAdminAuditableCommand</c> (ADR 0014 audits writes, not reads).
+/// <c>/orders</c> route on the other hosts. The paginated LIST reads carry NO
+/// audit (ADR 0014: list reads would flood the table). The single-record
+/// <c>GetOrder</c> detail read IS audited (<c>order.detail.view</c>) per the
+/// ADR 0014 read-side PII-disclosure carve-out (T-0137 / Q-0028) — it returns
+/// the un-redacted contact snapshot.
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Authorize]
-public sealed class AdminQueriesController : MakablesApiController
+public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : MakablesApiController
 {
     /// <summary>
     /// Cross-tenant order list (US-admin-0009). Privileged row carries
@@ -60,8 +64,28 @@ public sealed class AdminQueriesController : MakablesApiController
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetOrder(string orderId, CancellationToken ct = default) =>
-        HandleResult(await Mediator.Send(new GetAdminOrderDetail.Query(orderId), ct));
+    public async Task<IActionResult> GetOrder(string orderId, CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(new GetAdminOrderDetail.Query(orderId), ct);
+
+        // T-0137 (Q-0028): audit the privileged PII read only when the order
+        // actually resolved (a 404 is not a disclosure). The detail DTO carries
+        // the full contact snapshot (CustomerEmail / ContactName / ContactPhone
+        // / CustomerNotes) with no GDPR redaction — record who viewed whom.
+        if (result.IsSuccess)
+        {
+            await readAudit.AuditReadAsync(
+                actionCode: "order.detail.view",
+                targetEntity: "order",
+                targetId: orderId,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
+                notes: null,
+                cancellationToken: ct);
+        }
+
+        return HandleResult(result);
+    }
 
     /// <summary>Cross-tenant invoice list (US-admin-0012).</summary>
     [HttpGet]

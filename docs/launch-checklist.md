@@ -44,6 +44,24 @@ ADR 0023 §7 target, and the runbook that covers it.
   not purge-protection — consider enabling so secrets can't be hard-purged. Procedure:
   `docs/runbooks/backup-restore.md` §3.
 
+## Security hardening (T-0136 / secops)
+
+- [ ] **Forwarded-headers prerequisite for rate limiting (BLOCKING IF a reverse
+  proxy is introduced):** the T-0136 rate limiter partitions anonymous traffic
+  by the **raw connection IP** (`AddMakablesRateLimiting.DefaultPartition` /
+  `PartitionAuth`). The current deploy is direct Azure App Service (no Front
+  Door / App Gateway / WAF in `infra/bicep/`), so the connection IP IS the real
+  client and the limiter works correctly. **The moment any reverse proxy / WAF /
+  CDN is placed in front of the hosts, `UseForwardedHeaders` (with a restricted
+  `KnownProxies` / `KnownNetworks` limited to the proxy's ranges) MUST be wired
+  into `UseMakablesPipeline` in the same change, plus a regression test** —
+  otherwise every request collapses to the single proxy IP (one shared
+  bucket = self-DoS of all legitimate anonymous users) or an un-validated
+  `X-Forwarded-For` becomes a trivial bypass. The code intentionally does NOT
+  trust `X-Forwarded-For` today. Same prerequisite already noted in
+  `docs/security/function-key-rotation.md` for the Mapbox anonymous path —
+  this extends it to the global + `auth` limiters.
+
 ## SEO (T-0131)
 
 - [ ] **Site URL env:** set `NEXT_PUBLIC_SITE_URL=https://makables.cz` in the
@@ -83,3 +101,19 @@ ADR 0023 §7 target, and the runbook that covers it.
   paths, per `docs/test-plans/a11y-manual-checklist.md`. The automated
   jest-axe gate runs in CI; this manual pass is the pre-launch complement
   (QA + screen reader).
+
+## Terminal bug bash (T-0135)
+
+- [ ] **Final smoke RUN (T-0135, gated manual step — MVP close-out):** execute
+  the 40-row end-to-end smoke against seeded staging + provider sandboxes
+  (Comgate / Packeta / SendGrid / ARES / Mapbox), per
+  `docs/test-plans/T-0135-smoke-checklist.md`: public/auth surface, the
+  customer order money-path (place → Zásilkovna → Comgate-sandbox pay →
+  server-verified Paid → invoice), maker fulfilment, admin control-plane +
+  audit rows, Functions/outbox, and cross-cutting (no console errors, no
+  untranslated error codes, responsive, Czech date/currency). The static
+  code-side sweep + the dead-CTA fix + the link-hygiene regression test ship
+  in the T-0135 PR; this RUN is the human pre-launch pass (QA/Ops). A finding
+  becomes a follow-up ticket, not a launch blocker per se — but the
+  money-path rows (place → pay → Paid → invoice → payout) MUST pass before
+  go-live.

@@ -75,15 +75,15 @@ export function LoginForm() {
         </Button>
       </form>
       <div className="flex flex-col gap-2 text-sm text-zinc-400">
-        <Link href="/auth/reset" className="text-brand-400 hover:underline">
+        <Link href="/reset" className="text-brand-400 hover:underline">
           {t('auth.login.forgot_password')}
         </Link>
-        <Link href="/auth/magic" className="text-brand-400 hover:underline">
+        <Link href="/magic" className="text-brand-400 hover:underline">
           {t('auth.login.magic_link')}
         </Link>
         <p className="mt-2">
           {t('auth.login.no_account')}{' '}
-          <Link href="/auth/register" className="text-brand-400 hover:underline">
+          <Link href="/register" className="text-brand-400 hover:underline">
             {t('auth.login.register_link')}
           </Link>
         </p>
