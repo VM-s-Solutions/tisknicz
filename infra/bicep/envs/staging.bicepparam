@@ -16,7 +16,8 @@ param appServicePlanSku = 'B1'
 // values. No fallback default for the password: missing secret aborts the
 // deploy rather than silently provisioning with an empty password.
 param postgresAdminUser = readEnvironmentVariable('POSTGRES_ADMIN_USER')
-@secure()
+// Secureness is declared by @secure() on the param in main.bicep — decorators
+// are not valid in a .bicepparam file (BCP130).
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
 param customerCorsOrigins = [

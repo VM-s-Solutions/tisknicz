@@ -21,7 +21,8 @@ param appServicePlanSku = 'P1v3'
 // the password — readEnvironmentVariable without a default fails the
 // deployment loudly if the secret is missing, which is what we want.
 param postgresAdminUser = readEnvironmentVariable('POSTGRES_ADMIN_USER')
-@secure()
+// Secureness is declared by @secure() on the param in main.bicep — decorators
+// are not valid in a .bicepparam file (BCP130).
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
 param customerCorsOrigins = [
