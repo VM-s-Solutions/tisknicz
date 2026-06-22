@@ -70,8 +70,24 @@ env prefix permitted (CLAUDE.md §Security — no secrets in the client bundle).
 | `NEXT_PUBLIC_SITE_URL` | The public site origin (e.g. `https://makables.cz`), no trailing slash. Drives `metadataBase` + absolute canonical/OG URLs in `sitemap.ts` / per-page `generateMetadata` (T-0131). Distinct from the API host — must be the browser-facing site origin, not `NEXT_PUBLIC_API_PUBLIC_BASE_URL`. A missing value falls back to a relative-URL build (canonical/OG degrade but the site renders). |
 | `NEXT_PUBLIC_API_PUBLIC_BASE_URL` | The Public API host base URL the SSR/browser calls for catalog reads. (Pre-existing — documented here for completeness alongside the SEO addition.) |
 
+## Web-host + Functions boot settings injected by Bicep (T-0138)
+
+As of T-0138 the Bicep templates inject every `ValidateOnStart` app setting the
+.NET hosts need to boot — so they are NOT a manual operator step on the App
+Service config. The **non-secret** ones (`Jwt:Issuer`, `Comgate:MerchantId`,
+`PublicAppUrls:WebBaseUrl`, the `Cors:AllowedOrigins:<audience>` array,
+`AzureBlobStorage:ServiceUri`, the Functions `*:Schedule` + `OutboxQueues:*`)
+are set from per-env `.bicepparam` values or computed outputs. The **secret**
+ones (`Jwt:SigningKeyBase64`, `SendGrid:ApiKey`, `Comgate:Secret`,
+`Packeta:ApiKey`, `Packeta:PublicWidgetKey`, `Mapbox:AccessToken`) flow as
+`@secure()` params from **GitHub Actions secrets** at deploy time — never
+committed. The full secret list + the operator setup is in
+`docs/deployment/deploy-runbook.md`. (KV-reference relocation is a later
+hardening step — launch-checklist.)
+
 ## Maintenance rule
 
 Any PR that adds a `%key%` binding expression, a `ValidateOnStart` options class, a new
 configuration-bound schedule, or a `NEXT_PUBLIC_*` frontend var MUST add the key here in
-the same PR (Gate 7 docs parity).
+the same PR (Gate 7 docs parity) **and** inject it in the Bicep (`app-service.bicep` /
+`functions.bicep`) so the deployed host can boot — see T-0138.

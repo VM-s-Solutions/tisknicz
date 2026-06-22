@@ -36,3 +36,17 @@ param adminCorsOrigins = [
 param publicCorsOrigins = [
   'https://makables.cz'
 ]
+
+// Per-env non-secret app config.
+param publicWebBaseUrl = 'https://makables.cz'
+param jwtIssuer = 'https://makables.cz'
+param comgateMerchantId = readEnvironmentVariable('COMGATE_MERCHANT_ID')
+
+// Application secrets — GitHub Actions secrets at deploy time; never committed.
+// Missing secret aborts the deploy (fail-closed), like the Postgres password.
+param jwtSigningKeyBase64 = readEnvironmentVariable('JWT_SIGNING_KEY_BASE64')
+param sendGridApiKey = readEnvironmentVariable('SENDGRID_API_KEY')
+param comgateSecret = readEnvironmentVariable('COMGATE_SECRET')
+param packetaApiKey = readEnvironmentVariable('PACKETA_API_KEY')
+param packetaPublicWidgetKey = readEnvironmentVariable('PACKETA_PUBLIC_WIDGET_KEY')
+param mapboxAccessToken = readEnvironmentVariable('MAPBOX_ACCESS_TOKEN')
