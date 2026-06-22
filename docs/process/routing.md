@@ -34,6 +34,49 @@ These are not preferences. Break them and the ticket fails Gate 6 (contract pari
 6. **Quality gates run last.** `quality-gates.md` Gates 1–7 fire at PR-open, after all implementing agents have finished. They are not a substitute for routing — a ticket that routed to the wrong agent fails the gates anyway, just later and more expensively.
 7. **`manual_steps` block PM at a named transition.** If a ticket has a `Manual steps` section (vendor account setup, DNS, secret in Key Vault, Comgate merchant onboarding), PM does not advance the ticket past the named transition until the user signals the step is done. The block goes in `docs/questions/open.md` as a Q-entry with `Blocking: yes`.
 
+## Orchestration shape — fan out for breadth, stay direct for depth
+
+The signal→agent table says *which* agents engage. This section says *whether
+the orchestrator should spawn parallel sub-agents at all, or do the work
+directly in the main loop*. Getting this wrong wastes tokens on ceremony (or
+loses parallelism where it would have helped).
+
+The deciding question is the **shape of the task**, not its size:
+
+- **Fan out (parallel sub-agents) for BREADTH** — work that decomposes into
+  independent pieces with no shared mutable state, where you want the
+  *conclusion* not the file-dumps:
+  - Multi-gate review (reviewer + secops + architect + optimizer, each a lens).
+  - Bug-hunts / audits sweeping many files (each finder a distinct angle).
+  - Broad searches across naming conventions / subsystems (`Explore`).
+  - Independent design attempts to compare (judge panel).
+  Each sub-agent is blind to the others; that independence is the value.
+
+- **Stay direct (main loop) for DEPTH** — one coherent change with internal
+  dependencies, where context must carry from step to step:
+  - Implementing a single feature/fix (groom → code → test is *sequential*; a
+    sub-agent per step just re-loads context and loses the thread).
+  - A focused edit you already hold the context for.
+  - Anything where step N needs the *reasoning* (not just the output) of N−1.
+
+  **Delegating depth work is the common over-orchestration mistake**: spawning
+  an agent to "implement T-0NNN" when you already have the file contents loaded
+  costs a full context re-hydration for no parallelism gain. Do it directly.
+
+- **Hybrid (the usual answer for a substantive task):** scout/decompose
+  directly first (list the files, scope the diff, find the work-list), *then*
+  fan out over that list, *then* fold the results directly. You stay in the
+  loop between phases; each fan-out is one well-scoped breadth step.
+
+Rule of thumb: **if the sub-tasks could run in any order and not see each other,
+fan out. If they form a chain where each needs the last one's reasoning, stay
+direct.** When a task would merely *benefit* from an extra perspective but isn't
+genuinely parallel, a single verification pass beats a fleet.
+
+This composes with **Gate 0 (evidence discipline)** in `quality-gates.md`: the
+wider you fan out a finder swarm, the more false positives you import, so the
+fold step MUST verify each finding before acting on it.
+
 ## Cross-stack ticket — concrete trace
 
 A typical M-sized cross-stack ticket, in routing order:

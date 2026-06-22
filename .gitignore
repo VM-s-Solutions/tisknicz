@@ -50,3 +50,12 @@ backend/**/*.dll.config
 # === IDE ===
 .idea/
 *.swp
+
+# === Claude Code session-managed config ===
+# settings.json is rewritten by the session (model, permissions, etc.) on
+# every run — it is operator-local, not shared project config. Tracking it
+# made it perpetually dirty and blocked git checkout/rebase. The SHARED
+# Claude config lives in CLAUDE.md, .claude/agents/, and .claude/commands/
+# (all still tracked). See .claude/agents/README.md "Session config".
+.claude/settings.json
+.claude/settings.local.json

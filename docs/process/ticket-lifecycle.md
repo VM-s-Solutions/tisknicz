@@ -84,6 +84,33 @@ When the API contract is small and stable (e.g. a read-only list endpoint), `dot
 
 See `docs/tickets/template.md`.
 
+## Documentation weight — tier by importance, not uniformly
+
+Lesson from the build: documentation weight scaled with *every* change rather
+than with its importance — INDEX rows grew to multi-hundred-word paragraphs and
+every fold touched 4–5 docs, so a typo-fix carried the same prose tax as a
+payments decision. Going forward, match the doc weight to the work:
+
+- **INDEX.md row = ONE line.** Title + a short hook (≤~25 words). The full
+  context lives in the ticket file, not the index. (Existing fat rows are
+  grandfathered — don't rewrite them; just don't add new ones.) The index is a
+  ledger you scan, not a place to re-explain the work.
+- **Full ticket file (Context / Scope / Alternatives / AC / Technical notes)
+  is for load-bearing tickets** — anything touching money, state machines,
+  auth/security, schema, a provider seam, or a cross-cutting concern. These earn
+  the deliberation record.
+- **Lightweight tickets** (hygiene, a contained fix, a doc tweak, a single
+  non-load-bearing edit) get a short ticket: Context + Scope + AC, and skip the
+  Alternatives/Defense prose unless a real decision was made. A trivial change
+  does not need a page.
+- **Folds:** update the doc that actually changed. A review fold that's a code
+  tweak updates the review-run doc and the ticket status log — not every doc in
+  the tree. Touch ADRs/patterns/launch-checklist only when the fold genuinely
+  changes those.
+
+The rule is **proportionality**: the audit trail is valuable, but pay for it
+where the decision is load-bearing, not on every mechanical edit.
+
 ## Parallelism rules
 
 - `dotnet-backend` and `frontend` can work in parallel **only after** the API contract (controller + DTO shape) is locked in the ticket or an ADR.

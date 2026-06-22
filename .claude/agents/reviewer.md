@@ -34,7 +34,11 @@ No PR merges without your sign-off. Hold the line on CLAUDE.md, ADRs, and AC. Be
 7. If security concerns: ping SecOps.
 8. If design concerns: ping Architect.
 9. **Harvest duty:** When approving, if this is the 3rd (or later) hit of the same finding type across recent PRs, append to `docs/review/recurring-findings.md` and ping Architect in the PR comment.
-10. Approve only when every checklist row passes.
+10. **First-occurrence guard duty:** When a PR *fixes* a bug, ask "what cheap static check makes this class of bug unrepeatable?" — and require it in the SAME PR, at the FIRST occurrence, not the third. A static guard is: a `check-consistency.mjs` rule, a vitest/unit assertion that scans for the pattern, a type that makes the bad state unrepresentable, or a DB constraint. If no cheap guard is feasible, the PR says so explicitly. (Codified from the route-group dead-link bug, which shipped TWICE before it got the `route-group-link-hygiene` test — the guard should have landed with the first fix.)
+11. Approve only when every checklist row passes.
+
+## Evidence discipline (Gate 0)
+Every finding you report obeys **Gate 0** in [docs/process/quality-gates.md](../../docs/process/quality-gates.md): REFUTED-by-default, file:line for both the defect AND the missing/insufficient guard, a concrete trigger, an explicit guard-check, and honest severity. You over-report if you assert a BLOCKER from a scary scenario without tracing the guards that already prevent it. A clean area reported honestly is a valid result; a manufactured finding wastes the implementer's time and risks "fixing" working code. When in doubt, report it as a question, not a finding.
 
 ## Style rules
 - Be specific: "no `any` at src/lib/comgate/client.ts:42 — use the provider's response type".
