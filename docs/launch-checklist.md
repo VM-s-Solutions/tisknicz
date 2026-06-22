@@ -16,16 +16,46 @@ input that only the operator can supply).
   Q-0030 (incl. the open sub-question on a cookie-consent banner / cookie
   management UI — confirm whether launch needs one).
 
+## Deploy readiness (T-0138 — the 6 blockers are FIXED IN CODE; these are the remaining operator steps)
+
+T-0138 closed the 6 deploy-blockers in the Bicep/CI (makables DB + SSL, boot
+app-settings + CORS fix, payouts container, EF-migration job, Functions deploy
+job, secret wiring) and added a CI `bicep build` lint. A staging deploy now
+yields a *working* app — once the operator does these. Full procedure:
+`docs/deployment/deploy-runbook.md`.
+
+- [ ] **Set the GitHub Actions deploy secrets (BLOCKING):** per environment
+  (`staging` / `production` GitHub environments) set `AZURE_CLIENT_ID`,
+  `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `POSTGRES_ADMIN_USER`,
+  `POSTGRES_ADMIN_PASSWORD`, `JWT_SIGNING_KEY_BASE64`, `SENDGRID_API_KEY`,
+  `COMGATE_MERCHANT_ID`, `COMGATE_SECRET`, `PACKETA_API_KEY`,
+  `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`, `VERCEL_TOKEN`. A missing
+  secret aborts the deploy (fail-closed). No secret value is in the repo.
+- [ ] **Azure RG + OIDC federated credential (BLOCKING):** create the
+  `makables-stg` / `makables-prod` resource group and the Entra app + federated
+  credential bound to the GitHub environment (the workflows use OIDC, no stored
+  password). See deploy-runbook §"One-time operator setup".
+- [ ] **Vercel `NEXT_PUBLIC_*` env vars (BLOCKING for a usable frontend):** set
+  `NEXT_PUBLIC_SITE_URL` + the `NEXT_PUBLIC_API_*_BASE_URL` values in the Vercel
+  project settings, pointing at the deployed Azure App Services (else the
+  frontend points at localhost). (Overlaps the SEO `NEXT_PUBLIC_SITE_URL` line.)
+- [ ] **Prod migration connectivity:** the prod `migrate` job needs a path to
+  the private Postgres — a self-hosted runner inside the VNet or a break-glass
+  temp firewall rule for the migration window (deploy-runbook §"Migration
+  connectivity"). Pairs with the Private Endpoint item below.
+
 ## Infra hardening — Bicep ↔ ADR 0023 §7 cut-overs (T-0134)
 
 The ops runbooks (`docs/runbooks/`) document the cut-over PROCEDURE for each gap below; the actual
 infra change is the operator's pre-launch task tracked here. Each line names the shipped state, the
 ADR 0023 §7 target, and the runbook that covers it.
 
-- [ ] **Secrets to Key Vault references (BLOCKING):** the Postgres conn string + Comgate / Packeta /
-  SendGrid / Mapbox / JWT secrets currently ship as **plain App Settings** (`app-service.bicep`,
-  `functions.bicep`); ADR 0023 §7 wants `@Microsoft.KeyVault(SecretUri=...)` references. Closes the
-  `TODO(T-0134)` in `infra/bicep/main.bicep`. Procedure: `docs/runbooks/secret-rotation.md` §C.
+- [ ] **Secrets to Key Vault references (hardening; not deploy-blocking after T-0138):** the Postgres
+  conn string + Comgate / Packeta / SendGrid / Mapbox / JWT secrets ship as `@secure()` **App
+  Settings** injected from GitHub Actions secrets (T-0138 — the app boots and no value is in the repo).
+  ADR 0023 §7 wants these relocated to `@Microsoft.KeyVault(SecretUri=...)` references so they're not
+  visible as plain settings in the resource group. Closes the `TODO(T-0134)` in
+  `infra/bicep/main.bicep` (the KV-identity ordering cycle). Procedure: `docs/runbooks/secret-rotation.md` §C.
 - [ ] **`AzureWebJobsStorage` identity-based (BLOCKING):** move the Functions storage connection from
   an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
   Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:

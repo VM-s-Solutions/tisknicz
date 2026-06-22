@@ -18,6 +18,56 @@ param appInsightsConnectionString string
 @secure()
 param postgresConnectionString string
 
+@description('Blob storage account service URI (AzureBlobStorage:ServiceUri) for the managed-identity blob path.')
+param blobServiceUri string
+
+// --- Provider secrets the Functions host validates via ValidateOnStart ---
+// Makables.Functions/Program.cs calls AddMakablesClients + AddMakablesBlobStorage,
+// so it shares the Web hosts' provider requirements (it does NOT call
+// AddMakablesAuth, so no Jwt key here). Sourced from GitHub Actions secrets.
+
+@secure()
+@description('SendGrid API key (SendGrid:ApiKey).')
+param sendGridApiKey string
+
+@description('Comgate merchant id (Comgate:MerchantId) — non-secret.')
+param comgateMerchantId string
+
+@secure()
+@description('Comgate webhook secret (Comgate:Secret).')
+param comgateSecret string
+
+@secure()
+@description('Packeta API key (Packeta:ApiKey).')
+param packetaApiKey string
+
+@secure()
+@description('Packeta public widget key (Packeta:PublicWidgetKey).')
+param packetaPublicWidgetKey string
+
+@secure()
+@description('Mapbox access token (Mapbox:AccessToken).')
+param mapboxAccessToken string
+
+// Timer NCRONTAB schedules (6-field). These are %key% binding expressions on
+// the [TimerTrigger] attributes with NO in-code fallback — a missing key fails
+// function INDEXING at host startup. Defaults match the canonical per-ticket
+// values in Makables.Functions/local.settings.json + docs/deployment/env-vars.md.
+@description('ProcessOutbox timer (every 30s). T-0029.')
+param processOutboxSchedule string = '*/30 * * * * *'
+
+@description('AutoDeliverOrders timer (daily 08:00 UTC). T-0077.')
+param autoDeliverOrdersSchedule string = '0 0 8 * * *'
+
+@description('SyncShipmentStatuses timer (every 6h). T-0078.')
+param syncShipmentStatusesSchedule string = '0 0 0,6,12,18 * * *'
+
+@description('CancelExpiredPendingPaymentOrders timer (daily 02:00 UTC). T-0083.')
+param cancelExpiredOrdersSchedule string = '0 0 2 * * *'
+
+@description('RunWeeklyPayoutBatch timer (Monday 02:00 UTC). T-0104.')
+param runWeeklyPayoutBatchSchedule string = '0 0 2 * * 1'
+
 param location string = resourceGroup().location
 
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -76,6 +126,76 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'ConnectionStrings__Postgres'
           value: postgresConnectionString
         }
+        {
+          name: 'AzureBlobStorage__ServiceUri'
+          value: blobServiceUri
+        }
+        // Outbox queues: this Functions storage account doubles as the queue
+        // store (ADR 0020 — Functions + publisher share one account). The
+        // three queue names are %key% bindings on the queue-triggered
+        // functions; a missing one fails indexing.
+        {
+          name: 'OutboxQueues__ConnectionString'
+          value: storageConnectionString
+        }
+        {
+          name: 'OutboxQueues__SendEmailQueueName'
+          value: 'send-email'
+        }
+        {
+          name: 'OutboxQueues__GenerateInvoiceQueueName'
+          value: 'generate-invoice'
+        }
+        {
+          name: 'OutboxQueues__GenerateLabelQueueName'
+          value: 'generate-label'
+        }
+        // Timer schedules (%key% bindings — missing key fails indexing).
+        {
+          name: 'ProcessOutbox__Schedule'
+          value: processOutboxSchedule
+        }
+        {
+          name: 'AutoDeliverOrders__Schedule'
+          value: autoDeliverOrdersSchedule
+        }
+        {
+          name: 'SyncShipmentStatuses__Schedule'
+          value: syncShipmentStatusesSchedule
+        }
+        {
+          name: 'CancelExpiredPendingPaymentOrders__Schedule'
+          value: cancelExpiredOrdersSchedule
+        }
+        {
+          name: 'RunWeeklyPayoutBatch__Schedule'
+          value: runWeeklyPayoutBatchSchedule
+        }
+        // Provider secrets (ValidateOnStart on the Functions host).
+        {
+          name: 'SendGrid__ApiKey'
+          value: sendGridApiKey
+        }
+        {
+          name: 'Comgate__MerchantId'
+          value: comgateMerchantId
+        }
+        {
+          name: 'Comgate__Secret'
+          value: comgateSecret
+        }
+        {
+          name: 'Packeta__ApiKey'
+          value: packetaApiKey
+        }
+        {
+          name: 'Packeta__PublicWidgetKey'
+          value: packetaPublicWidgetKey
+        }
+        {
+          name: 'Mapbox__AccessToken'
+          value: mapboxAccessToken
+        }
       ]
     }
   }
@@ -83,3 +203,9 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
 
 output principalId string = functionsApp.identity.principalId
 output storageAccountName string = storage.name
+
+// Secure: the same storage account is the outbox queue store (ADR 0020 —
+// Functions + the Web-host publisher share one account). The Web hosts need
+// this connection string for OutboxQueues:ConnectionString to enqueue.
+@secure()
+output queuesConnectionString string = storageConnectionString

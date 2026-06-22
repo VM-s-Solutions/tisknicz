@@ -21,7 +21,8 @@ param appServicePlanSku = 'P1v3'
 // the password — readEnvironmentVariable without a default fails the
 // deployment loudly if the secret is missing, which is what we want.
 param postgresAdminUser = readEnvironmentVariable('POSTGRES_ADMIN_USER')
-@secure()
+// Secureness is declared by @secure() on the param in main.bicep — decorators
+// are not valid in a .bicepparam file (BCP130).
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
 param customerCorsOrigins = [
@@ -36,3 +37,17 @@ param adminCorsOrigins = [
 param publicCorsOrigins = [
   'https://makables.cz'
 ]
+
+// Per-env non-secret app config.
+param publicWebBaseUrl = 'https://makables.cz'
+param jwtIssuer = 'https://makables.cz'
+param comgateMerchantId = readEnvironmentVariable('COMGATE_MERCHANT_ID')
+
+// Application secrets — GitHub Actions secrets at deploy time; never committed.
+// Missing secret aborts the deploy (fail-closed), like the Postgres password.
+param jwtSigningKeyBase64 = readEnvironmentVariable('JWT_SIGNING_KEY_BASE64')
+param sendGridApiKey = readEnvironmentVariable('SENDGRID_API_KEY')
+param comgateSecret = readEnvironmentVariable('COMGATE_SECRET')
+param packetaApiKey = readEnvironmentVariable('PACKETA_API_KEY')
+param packetaPublicWidgetKey = readEnvironmentVariable('PACKETA_PUBLIC_WIDGET_KEY')
+param mapboxAccessToken = readEnvironmentVariable('MAPBOX_ACCESS_TOKEN')

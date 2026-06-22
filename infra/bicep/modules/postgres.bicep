@@ -66,6 +66,32 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
+// The application database. The connection string (in main.bicep) targets
+// Database=makables; a fresh Flexible Server only provisions the default
+// `postgres` DB, so without this resource the first app connection fails
+// with 3D000 ("database makables does not exist"). Created empty here; the
+// EF Core migrations are applied by the deploy pipeline's migrate step.
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
+  parent: server
+  name: 'makables'
+  properties: {
+    charset: 'UTF8'
+    collation: 'en_US.utf8'
+  }
+}
+
+// Enforce TLS at the SERVER, not just the client connection string. The app
+// connects with SslMode=Require, but require_secure_transport=on makes the
+// server reject any plaintext connection regardless of client config.
+resource requireSsl 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024-08-01' = {
+  parent: server
+  name: 'require_secure_transport'
+  properties: {
+    value: 'on'
+    source: 'user-override'
+  }
+}
+
 // Staging-only: open to any Azure tenant. Production runs WITHOUT this
 // rule; T-0134 runbook covers the VNet integration that replaces it.
 // Without a connectivity rule, prod App Services cannot reach Postgres
@@ -92,3 +118,4 @@ resource entraAdmins 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2
 
 output serverFqdn string = server.properties.fullyQualifiedDomainName
 output serverName string = server.name
+output databaseName string = database.name

@@ -30,8 +30,17 @@ jobs:
       - name: Deploy Bicep
         uses: azure/cli@v2
         env:
+          # The .bicepparam reads these via readEnvironmentVariable(); a missing
+          # secret aborts the deploy (fail-closed). No secret value is in the repo.
           POSTGRES_ADMIN_USER: ${{ secrets.POSTGRES_ADMIN_USER }}
           POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          JWT_SIGNING_KEY_BASE64: ${{ secrets.JWT_SIGNING_KEY_BASE64 }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          COMGATE_MERCHANT_ID: ${{ secrets.COMGATE_MERCHANT_ID }}
+          COMGATE_SECRET: ${{ secrets.COMGATE_SECRET }}
+          PACKETA_API_KEY: ${{ secrets.PACKETA_API_KEY }}
+          PACKETA_PUBLIC_WIDGET_KEY: ${{ secrets.PACKETA_PUBLIC_WIDGET_KEY }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         with:
           azcliversion: latest
           inlineScript: |
@@ -40,11 +49,72 @@ jobs:
               --template-file infra/bicep/main.bicep \
               --parameters infra/bicep/envs/staging.bicepparam
 
+  migrate:
+    name: EF Core migrations → Postgres
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [bicep]
+    timeout-minutes: 20
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Generate an IDEMPOTENT SQL script from the EF Core migrations (safe to
+      # re-run: each migration is guarded by a check against __EFMigrationsHistory).
+      # The DbContext lives in Infra.Database; the Customer host is the startup
+      # project that wires it. No DB connection needed to GENERATE the script.
+      - name: Generate idempotent migration script
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.*
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations script --idempotent \
+            --project backend/src/Makables.Infra.Database/Makables.Infra.Database.csproj \
+            --startup-project backend/src/Makables.Web.Customer/Makables.Web.Customer.csproj \
+            --output ${{ runner.temp }}/migrate.sql
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # The GitHub runner has a public IP and is NOT an "Azure service", so the
+      # staging allowAllAzureServices rule does not admit it. Open a temporary
+      # firewall rule for the runner IP, apply, then remove it (operator note:
+      # in prod the migrate job runs from inside the VNet via the private
+      # endpoint instead — see docs/deployment/deploy-runbook.md).
+      - name: Apply migration via psql (temp firewall rule)
+        uses: azure/cli@v2
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            RUNNER_IP=$(curl -s https://api.ipify.org)
+            az postgres flexible-server firewall-rule create \
+              --resource-group makables-stg --name makables-stg-pg \
+              --rule-name "ci-migrate-${{ github.run_id }}" \
+              --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+            trap 'az postgres flexible-server firewall-rule delete --yes \
+              --resource-group makables-stg --name makables-stg-pg \
+              --rule-name "ci-migrate-${{ github.run_id }}" || true' EXIT
+            apt-get update && apt-get install -y postgresql-client
+            FQDN="makables-stg-pg.postgres.database.azure.com"
+            psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
+              -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
+
   backend:
     name: Backend (.NET) → App Services
     runs-on: ubuntu-latest
     environment: staging
-    needs: [bicep]
+    needs: [migrate]
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -79,6 +149,35 @@ jobs:
         with:
           app-name: ${{ matrix.host.app }}
           package: ${{ runner.temp }}/publish
+
+  functions:
+    name: Functions (.NET isolated) → Functions App
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [migrate]
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish Functions
+        run: |
+          dotnet publish backend/src/Makables.Functions/Makables.Functions.csproj \
+            --configuration Release \
+            --output ${{ runner.temp }}/functions-publish
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: Azure/functions-action@v1
+        with:
+          app-name: makables-stg-functions
+          package: ${{ runner.temp }}/functions-publish
 
   frontend:
     name: Frontend (Next.js) → Vercel

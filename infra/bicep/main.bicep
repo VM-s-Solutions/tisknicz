@@ -51,6 +51,43 @@ param makerCorsOrigins array
 param adminCorsOrigins array
 param publicCorsOrigins array
 
+@description('Public site origin (https://...) for PublicAppUrls:WebBaseUrl — per env, so staging emails do not link to prod.')
+param publicWebBaseUrl string
+
+// --- Application secrets (sourced from GitHub Actions secrets at deploy time;
+// NO secret value lives in the repo). Each host validates these at boot via
+// ValidateOnStart — a missing one crashes the host. See docs/deployment/env-vars.md.
+
+@description('JWT issuer (Jwt:Issuer) — non-secret, per environment.')
+param jwtIssuer string
+
+@secure()
+@description('JWT signing key, base64, >=32 bytes (Jwt:SigningKeyBase64).')
+param jwtSigningKeyBase64 string
+
+@secure()
+@description('SendGrid API key (SendGrid:ApiKey).')
+param sendGridApiKey string
+
+@description('Comgate merchant id (Comgate:MerchantId) — non-secret.')
+param comgateMerchantId string
+
+@secure()
+@description('Comgate webhook secret (Comgate:Secret).')
+param comgateSecret string
+
+@secure()
+@description('Packeta API key (Packeta:ApiKey).')
+param packetaApiKey string
+
+@secure()
+@description('Packeta public widget key (Packeta:PublicWidgetKey).')
+param packetaPublicWidgetKey string
+
+@secure()
+@description('Mapbox access token (Mapbox:AccessToken).')
+param mapboxAccessToken string
+
 var prefix = 'makables-${envSlug}'
 var storageBaseName = 'makables${envSlug}'
 
@@ -120,6 +157,17 @@ module customerApp 'modules/app-service.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
     corsOrigins: customerCorsOrigins
+    publicWebBaseUrl: publicWebBaseUrl
+    blobServiceUri: blob.outputs.blobServiceUri
+    outboxQueuesConnectionString: functions.outputs.queuesConnectionString
+    jwtIssuer: jwtIssuer
+    jwtSigningKeyBase64: jwtSigningKeyBase64
+    sendGridApiKey: sendGridApiKey
+    comgateMerchantId: comgateMerchantId
+    comgateSecret: comgateSecret
+    packetaApiKey: packetaApiKey
+    packetaPublicWidgetKey: packetaPublicWidgetKey
+    mapboxAccessToken: mapboxAccessToken
   }
 }
 
@@ -133,6 +181,17 @@ module makerApp 'modules/app-service.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
     corsOrigins: makerCorsOrigins
+    publicWebBaseUrl: publicWebBaseUrl
+    blobServiceUri: blob.outputs.blobServiceUri
+    outboxQueuesConnectionString: functions.outputs.queuesConnectionString
+    jwtIssuer: jwtIssuer
+    jwtSigningKeyBase64: jwtSigningKeyBase64
+    sendGridApiKey: sendGridApiKey
+    comgateMerchantId: comgateMerchantId
+    comgateSecret: comgateSecret
+    packetaApiKey: packetaApiKey
+    packetaPublicWidgetKey: packetaPublicWidgetKey
+    mapboxAccessToken: mapboxAccessToken
   }
 }
 
@@ -146,6 +205,17 @@ module adminApp 'modules/app-service.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
     corsOrigins: adminCorsOrigins
+    publicWebBaseUrl: publicWebBaseUrl
+    blobServiceUri: blob.outputs.blobServiceUri
+    outboxQueuesConnectionString: functions.outputs.queuesConnectionString
+    jwtIssuer: jwtIssuer
+    jwtSigningKeyBase64: jwtSigningKeyBase64
+    sendGridApiKey: sendGridApiKey
+    comgateMerchantId: comgateMerchantId
+    comgateSecret: comgateSecret
+    packetaApiKey: packetaApiKey
+    packetaPublicWidgetKey: packetaPublicWidgetKey
+    mapboxAccessToken: mapboxAccessToken
   }
 }
 
@@ -159,6 +229,17 @@ module publicApp 'modules/app-service.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
     corsOrigins: publicCorsOrigins
+    publicWebBaseUrl: publicWebBaseUrl
+    blobServiceUri: blob.outputs.blobServiceUri
+    outboxQueuesConnectionString: functions.outputs.queuesConnectionString
+    jwtIssuer: jwtIssuer
+    jwtSigningKeyBase64: jwtSigningKeyBase64
+    sendGridApiKey: sendGridApiKey
+    comgateMerchantId: comgateMerchantId
+    comgateSecret: comgateSecret
+    packetaApiKey: packetaApiKey
+    packetaPublicWidgetKey: packetaPublicWidgetKey
+    mapboxAccessToken: mapboxAccessToken
   }
 }
 
@@ -170,6 +251,13 @@ module functions 'modules/functions.bicep' = {
     appServicePlanId: appServicePlan.id
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
+    blobServiceUri: blob.outputs.blobServiceUri
+    sendGridApiKey: sendGridApiKey
+    comgateMerchantId: comgateMerchantId
+    comgateSecret: comgateSecret
+    packetaApiKey: packetaApiKey
+    packetaPublicWidgetKey: packetaPublicWidgetKey
+    mapboxAccessToken: mapboxAccessToken
     location: location
   }
 }

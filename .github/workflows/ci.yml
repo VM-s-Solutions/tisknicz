@@ -179,3 +179,34 @@ jobs:
 
       - name: Check API parity
         run: npm run check:api
+
+  bicep:
+    name: Bicep lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # az ships bicep; `bicep build` compiles main.bicep to ARM JSON and runs
+      # the linter. Catches type/reference/param errors in the IaC before a
+      # deploy ever runs them. (This was a gap: the templates were never
+      # validated in CI.)
+      - name: Install Bicep CLI
+        run: az bicep install
+      - name: Build (lint) main.bicep
+        run: az bicep build --file infra/bicep/main.bicep --stdout > /dev/null
+      - name: Validate .bicepparam files compile
+        run: |
+          az bicep build-params --file infra/bicep/envs/staging.bicepparam --stdout > /dev/null
+          az bicep build-params --file infra/bicep/envs/production.bicepparam --stdout > /dev/null
+        env:
+          # build-params evaluates readEnvironmentVariable(); supply stub values
+          # so compilation succeeds (these are NOT real secrets — CI lint only).
+          POSTGRES_ADMIN_USER: ci-lint
+          POSTGRES_ADMIN_PASSWORD: ci-lint
+          JWT_SIGNING_KEY_BASE64: ci-lint
+          SENDGRID_API_KEY: ci-lint
+          COMGATE_MERCHANT_ID: ci-lint
+          COMGATE_SECRET: ci-lint
+          PACKETA_API_KEY: ci-lint
+          PACKETA_PUBLIC_WIDGET_KEY: ci-lint
+          MAPBOX_ACCESS_TOKEN: ci-lint
