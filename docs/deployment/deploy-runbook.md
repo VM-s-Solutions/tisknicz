@@ -5,13 +5,12 @@
 > one-time setup the workflows assume, the order of operations, and how to
 > verify a deploy actually produced a working app. Closes T-0138.
 >
-> **Naming note:** the non-production Azure environment is **dev** — resource
-> group `rg-makables-dev`, resources `makables-dev-*` (Bicep `envSlug = 'dev'`).
-> The deploy workflow file is still `deploy-staging.yml` and its GitHub
-> *environment* is still named `staging` (a GitHub-Actions environment, distinct
-> from the Azure RG) — those names are unchanged. Where this doc says "staging
-> environment" for a GitHub environment, that's the GH environment; the Azure
-> target is `rg-makables-dev`.
+> **Naming note:** the non-production environment is **dev** — Azure resource
+> group `rg-makables-dev`, resources `makables-dev-*` (Bicep `envSlug = 'dev'`),
+> and the GitHub Actions *environment* is named **`dev`**. The only thing still
+> carrying the old "staging" label is the workflow *filename* `deploy-staging.yml`
+> (kept for path stability) and the `staging.bicepparam` *filename* — both
+> describe the dev env.
 
 ## What the pipeline does (per environment)
 
@@ -42,13 +41,14 @@ az group create --name rg-makables-dev --location westeurope   # prod: makables-
 Configure an **OIDC federated credential** so GitHub Actions can `azure/login`
 without a stored password: register an Entra app, grant it Contributor on the
 resource group, and add a federated credential bound to this repo's
-`staging` / `production` GitHub *environment*. (The workflows use
-`id-token: write` + `azure/login` with `client-id`/`tenant-id`/`subscription-id`.)
+`dev` / `production` GitHub *environment* (subject e.g.
+`repo:<org>/tisknicz:environment:dev`). (The workflows use `id-token: write` +
+`azure/login` with `client-id`/`tenant-id`/`subscription-id`.)
 
 ### 2. GitHub Actions secrets (per environment)
 
 The deploy **fails loudly** if any is missing (fail-closed). Set, in the
-`staging` and `production` GitHub environments:
+`dev` and `production` GitHub environments:
 
 | Secret | Used by |
 |---|---|

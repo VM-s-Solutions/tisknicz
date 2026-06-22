@@ -25,7 +25,7 @@ yields a *working* app — once the operator does these. Full procedure:
 `docs/deployment/deploy-runbook.md`.
 
 - [ ] **Set the GitHub Actions deploy secrets (BLOCKING):** per environment
-  (`staging` / `production` GitHub environments) set `AZURE_CLIENT_ID`,
+  (`dev` / `production` GitHub environments) set `AZURE_CLIENT_ID`,
   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `POSTGRES_ADMIN_USER`,
   `POSTGRES_ADMIN_PASSWORD`, `JWT_SIGNING_KEY_BASE64`, `SENDGRID_API_KEY`,
   `COMGATE_MERCHANT_ID`, `COMGATE_SECRET`, `PACKETA_API_KEY`,

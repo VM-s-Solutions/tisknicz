@@ -1,4 +1,7 @@
-name: Deploy → staging
+# Deploys the non-production "dev" environment (Azure RG rg-makables-dev,
+# resources makables-dev-*, GitHub environment "dev"). The file is named
+# deploy-staging.yml for path stability; the env it targets is dev.
+name: Deploy → dev
 
 on:
   push:
@@ -6,14 +9,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-staging
+  group: deploy-dev
   cancel-in-progress: false
 
 jobs:
   bicep:
     name: Bicep infrastructure
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -52,7 +55,7 @@ jobs:
   migrate:
     name: EF Core migrations → Postgres
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [bicep]
     timeout-minutes: 20
     permissions:
@@ -84,7 +87,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # The GitHub runner has a public IP and is NOT an "Azure service", so the
-      # staging allowAllAzureServices rule does not admit it. Open a temporary
+      # dev allowAllAzureServices rule does not admit it. Open a temporary
       # firewall rule for the runner IP, apply, then remove it (operator note:
       # in prod the migrate job runs from inside the VNet via the private
       # endpoint instead — see docs/deployment/deploy-runbook.md).
@@ -113,7 +116,7 @@ jobs:
   backend:
     name: Backend (.NET) → App Services
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -153,7 +156,7 @@ jobs:
   functions:
     name: Functions (.NET isolated) → Functions App
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -182,7 +185,7 @@ jobs:
   frontend:
     name: Frontend (Next.js) → Vercel
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [bicep]
     timeout-minutes: 15
     defaults:
