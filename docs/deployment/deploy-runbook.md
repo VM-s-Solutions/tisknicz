@@ -1,9 +1,17 @@
-# Deploy runbook — staging (and production notes)
+# Deploy runbook — dev (and production notes)
 
 > Operator-facing. The CI/CD workflows (`.github/workflows/deploy-staging.yml`,
 > `deploy-production.yml`) automate the deploy; this runbook covers the
 > one-time setup the workflows assume, the order of operations, and how to
 > verify a deploy actually produced a working app. Closes T-0138.
+>
+> **Naming note:** the non-production Azure environment is **dev** — resource
+> group `rg-makables-dev`, resources `makables-dev-*` (Bicep `envSlug = 'dev'`).
+> The deploy workflow file is still `deploy-staging.yml` and its GitHub
+> *environment* is still named `staging` (a GitHub-Actions environment, distinct
+> from the Azure RG) — those names are unchanged. Where this doc says "staging
+> environment" for a GitHub environment, that's the GH environment; the Azure
+> target is `rg-makables-dev`.
 
 ## What the pipeline does (per environment)
 
@@ -28,7 +36,7 @@
 ```bash
 az login
 az account set --subscription <subscription-id>
-az group create --name makables-stg --location westeurope   # prod: makables-prod
+az group create --name rg-makables-dev --location westeurope   # prod: makables-prod
 ```
 
 Configure an **OIDC federated credential** so GitHub Actions can `azure/login`
@@ -85,7 +93,7 @@ runner once the VNet is wired.
 
 ## Verify a deploy actually worked (not just "az succeeded")
 
-1. **Hosts booted:** `GET https://makables-stg-customer.azurewebsites.net/`
+1. **Hosts booted:** `GET https://makables-dev-customer.azurewebsites.net/`
    returns `Makables Customer API — alive.` (repeat per host). A boot crash =
    a missing app setting (check the App Service log stream for
    `OptionsValidationException`).

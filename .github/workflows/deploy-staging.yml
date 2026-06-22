@@ -45,7 +45,7 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az deployment group create \
-              --resource-group makables-stg \
+              --resource-group rg-makables-dev \
               --template-file infra/bicep/main.bicep \
               --parameters infra/bicep/envs/staging.bicepparam
 
@@ -99,14 +99,14 @@ jobs:
             set -euo pipefail
             RUNNER_IP=$(curl -s https://api.ipify.org)
             az postgres flexible-server firewall-rule create \
-              --resource-group makables-stg --name makables-stg-pg \
+              --resource-group rg-makables-dev --name makables-dev-pg \
               --rule-name "ci-migrate-${{ github.run_id }}" \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
             trap 'az postgres flexible-server firewall-rule delete --yes \
-              --resource-group makables-stg --name makables-stg-pg \
+              --resource-group rg-makables-dev --name makables-dev-pg \
               --rule-name "ci-migrate-${{ github.run_id }}" || true' EXIT
             apt-get update && apt-get install -y postgresql-client
-            FQDN="makables-stg-pg.postgres.database.azure.com"
+            FQDN="makables-dev-pg.postgres.database.azure.com"
             psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
               -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
 
@@ -122,10 +122,10 @@ jobs:
     strategy:
       matrix:
         host:
-          - { project: 'Makables.Web.Customer', app: 'makables-stg-customer' }
-          - { project: 'Makables.Web.Maker',    app: 'makables-stg-maker'    }
-          - { project: 'Makables.Web.Admin',    app: 'makables-stg-admin'    }
-          - { project: 'Makables.Web.Public',   app: 'makables-stg-public'   }
+          - { project: 'Makables.Web.Customer', app: 'makables-dev-customer' }
+          - { project: 'Makables.Web.Maker',    app: 'makables-dev-maker'    }
+          - { project: 'Makables.Web.Admin',    app: 'makables-dev-admin'    }
+          - { project: 'Makables.Web.Public',   app: 'makables-dev-public'   }
     steps:
       - uses: actions/checkout@v4
 
@@ -176,7 +176,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: Azure/functions-action@v1
         with:
-          app-name: makables-stg-functions
+          app-name: makables-dev-functions
           package: ${{ runner.temp }}/functions-publish
 
   frontend:

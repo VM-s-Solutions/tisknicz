@@ -10,9 +10,9 @@
 
 targetScope = 'resourceGroup'
 
-@description('Environment slug — appears in every resource name. e.g. "stg" or "prod".')
+@description('Environment slug — appears in every resource name. e.g. "dev" or "prod".')
 @allowed([
-  'stg'
+  'dev'
   'prod'
 ])
 param envSlug string
@@ -122,10 +122,10 @@ module postgres 'modules/postgres.bicep' = {
     storageGb: postgresStorageGb
     administratorLogin: postgresAdminUser
     administratorLoginPassword: postgresAdminPassword
-    // Staging gets the "any Azure service" firewall rule for convenience;
+    // Dev gets the "any Azure service" firewall rule for convenience;
     // production goes through a Private Endpoint that the operator wires
     // out-of-band per T-0134's runbook.
-    allowAllAzureServices: envSlug == 'stg'
+    allowAllAzureServices: envSlug == 'dev'
   }
 }
 

@@ -32,7 +32,7 @@ yields a *working* app — once the operator does these. Full procedure:
   `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`, `VERCEL_TOKEN`. A missing
   secret aborts the deploy (fail-closed). No secret value is in the repo.
 - [ ] **Azure RG + OIDC federated credential (BLOCKING):** create the
-  `makables-stg` / `makables-prod` resource group and the Entra app + federated
+  `rg-makables-dev` / `makables-prod` resource group and the Entra app + federated
   credential bound to the GitHub environment (the workflows use OIDC, no stored
   password). See deploy-runbook §"One-time operator setup".
 - [ ] **Vercel `NEXT_PUBLIC_*` env vars (BLOCKING for a usable frontend):** set

@@ -4,7 +4,7 @@
 // logs are isolated per ADR 0005. All four share a single App Service Plan
 // to keep the cost ceiling realistic for the MVP.
 
-@description('Logical app name, e.g. makables-stg-customer.')
+@description('Logical app name, e.g. makables-dev-customer.')
 param appName string
 
 @description('Resource ID of the App Service Plan to host on.')

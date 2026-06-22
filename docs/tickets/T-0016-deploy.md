@@ -14,6 +14,12 @@ phase: 1
 
 # T-0016 — Deploy
 
+> **Amendment (2026-06-22):** the non-production environment was later renamed
+> from `stg` to **`dev`** (resource group `rg-makables-dev`, resources
+> `makables-dev-*`, `envSlug = 'dev'`) and T-0138 closed the deploy-blockers.
+> The historical scope below records the original `stg` naming as built; the
+> current state is `dev`. See T-0138 + `docs/deployment/deploy-runbook.md`.
+
 ## Scope
 
 ### Bicep IaC (`infra/bicep/`)
