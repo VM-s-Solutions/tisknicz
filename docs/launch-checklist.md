@@ -29,16 +29,19 @@ yields a *working* app — once the operator does these. Full procedure:
   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `POSTGRES_ADMIN_USER`,
   `POSTGRES_ADMIN_PASSWORD`, `JWT_SIGNING_KEY_BASE64`, `SENDGRID_API_KEY`,
   `COMGATE_MERCHANT_ID`, `COMGATE_SECRET`, `PACKETA_API_KEY`,
-  `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`, `VERCEL_TOKEN`. A missing
+  `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`. A missing
   secret aborts the deploy (fail-closed). No secret value is in the repo.
+  (No `VERCEL_TOKEN` — the frontend deploys to Azure App Service.)
 - [ ] **Azure RG + OIDC federated credential (BLOCKING):** create the
   `rg-makables-dev` / `makables-prod` resource group and the Entra app + federated
   credential bound to the GitHub environment (the workflows use OIDC, no stored
   password). See deploy-runbook §"One-time operator setup".
-- [ ] **Vercel `NEXT_PUBLIC_*` env vars (BLOCKING for a usable frontend):** set
-  `NEXT_PUBLIC_SITE_URL` + the `NEXT_PUBLIC_API_*_BASE_URL` values in the Vercel
-  project settings, pointing at the deployed Azure App Services (else the
-  frontend points at localhost). (Overlaps the SEO `NEXT_PUBLIC_SITE_URL` line.)
+- [ ] **Frontend custom domain (optional for dev):** the frontend runs on the
+  `makables-<env>-web` Azure App Service; its `NEXT_PUBLIC_*` settings are
+  injected by Bicep (pointing at the API hosts). To serve it on
+  `dev.makables.cz` / `makables.cz`, map the custom domain on the web App
+  Service + set `NEXT_PUBLIC_SITE_URL` to it. Until then the
+  `*.azurewebsites.net` hostname works.
 - [ ] **Prod migration connectivity:** the prod `migrate` job needs a path to
   the private Postgres — a self-hosted runner inside the VNet or a break-glass
   temp firewall rule for the migration window (deploy-runbook §"Migration

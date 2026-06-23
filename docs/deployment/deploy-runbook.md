@@ -26,7 +26,9 @@
 3. **backend** — publishes + deploys the 4 .NET Web hosts.
 4. **functions** — publishes + deploys the .NET-isolated Functions app (the
    background jobs).
-5. **frontend** — builds + deploys the Next.js app to Vercel.
+5. **frontend** — builds the Next.js app (`output: 'standalone'`) and deploys it
+   to its own Azure App Service (`makables-<env>-web`, Node, on the shared
+   plan). Everything is on Azure — no Vercel.
 
 ## One-time operator setup (NOT in the templates)
 
@@ -59,17 +61,21 @@ The deploy **fails loudly** if any is missing (fail-closed). Set, in the
 | `COMGATE_MERCHANT_ID` / `COMGATE_SECRET` | app + Functions boot |
 | `PACKETA_API_KEY` / `PACKETA_PUBLIC_WIDGET_KEY` | app + Functions boot |
 | `MAPBOX_ACCESS_TOKEN` | app + Functions boot |
-| `VERCEL_TOKEN` | frontend deploy |
 
 No secret value is in the repo — the `.bicepparam` files read these via
 `readEnvironmentVariable(...)` and the bicep job passes them through `env:`.
 
-### 3. Vercel project env vars (frontend)
+(No `VERCEL_TOKEN` — the frontend deploys to Azure App Service, not Vercel.)
 
-In the Vercel project settings (not in the workflow), set per environment:
-`NEXT_PUBLIC_SITE_URL` (e.g. `https://stg.makables.cz`) and the
-`NEXT_PUBLIC_API_*_BASE_URL` values pointing at the deployed Azure App Services.
-Without these the frontend builds but points at localhost.
+### 3. Frontend config (no operator step)
+
+The frontend runs on its own Azure App Service (`makables-<env>-web`, Node). Its
+`NEXT_PUBLIC_*` settings (`NEXT_PUBLIC_SITE_URL` + the four
+`NEXT_PUBLIC_API_*_BASE_URL`) are injected by the Bicep `web-app` module,
+pointing at the deployed API hosts' default hostnames — so there is no manual
+env-var step. (To use the custom `dev.makables.cz` domain, map it on the web
+App Service + set `NEXT_PUBLIC_SITE_URL` accordingly; until then the
+`*.azurewebsites.net` hostname works.)
 
 ## Migration connectivity (the one non-obvious step)
 
