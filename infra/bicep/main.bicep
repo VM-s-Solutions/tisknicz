@@ -116,9 +116,11 @@ module appInsights 'modules/app-insights.bicep' = {
 }
 
 module postgres 'modules/postgres.bicep' = {
-  name: '${prefix}-pg'
+  // Renamed -pg -> -db to sidestep the soft-deleted/reserved 'makables-dev-pg'
+  // server name that was stuck in westeurope from an earlier failed attempt.
+  name: '${prefix}-db'
   params: {
-    serverName: '${prefix}-pg'
+    serverName: '${prefix}-db'
     location: postgresLocation
     skuName: postgresSku
     skuTier: postgresSkuTier
