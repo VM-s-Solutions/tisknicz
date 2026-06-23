@@ -48,3 +48,12 @@ resource containerResources 'Microsoft.Storage/storageAccounts/blobServices/cont
 
 output storageAccountName string = storage.name
 output blobServiceUri string = storage.properties.primaryEndpoints.blob
+
+// Secure: blob account connection string. The hosts inject this as
+// AzureBlobStorage:ConnectionString (the host prefers it over the
+// managed-identity ServiceUri path). We use the connection string rather than
+// ServiceUri because App Service blocks any app-setting ending in the reserved
+// '__ServiceUri' suffix, and it avoids needing an RBAC role assignment on the
+// blob account for the hosts' managed identities (simpler for dev).
+@secure()
+output connectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'

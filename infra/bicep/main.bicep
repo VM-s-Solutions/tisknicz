@@ -163,7 +163,7 @@ module customerApp 'modules/app-service.bicep' = {
     postgresConnectionString: postgresConnectionString
     corsOrigins: customerCorsOrigins
     publicWebBaseUrl: publicWebBaseUrl
-    blobServiceUri: blob.outputs.blobServiceUri
+    blobConnectionString: blob.outputs.connectionString
     outboxQueuesConnectionString: functions.outputs.queuesConnectionString
     jwtIssuer: jwtIssuer
     jwtSigningKeyBase64: jwtSigningKeyBase64
@@ -187,7 +187,7 @@ module makerApp 'modules/app-service.bicep' = {
     postgresConnectionString: postgresConnectionString
     corsOrigins: makerCorsOrigins
     publicWebBaseUrl: publicWebBaseUrl
-    blobServiceUri: blob.outputs.blobServiceUri
+    blobConnectionString: blob.outputs.connectionString
     outboxQueuesConnectionString: functions.outputs.queuesConnectionString
     jwtIssuer: jwtIssuer
     jwtSigningKeyBase64: jwtSigningKeyBase64
@@ -211,7 +211,7 @@ module adminApp 'modules/app-service.bicep' = {
     postgresConnectionString: postgresConnectionString
     corsOrigins: adminCorsOrigins
     publicWebBaseUrl: publicWebBaseUrl
-    blobServiceUri: blob.outputs.blobServiceUri
+    blobConnectionString: blob.outputs.connectionString
     outboxQueuesConnectionString: functions.outputs.queuesConnectionString
     jwtIssuer: jwtIssuer
     jwtSigningKeyBase64: jwtSigningKeyBase64
@@ -235,7 +235,7 @@ module publicApp 'modules/app-service.bicep' = {
     postgresConnectionString: postgresConnectionString
     corsOrigins: publicCorsOrigins
     publicWebBaseUrl: publicWebBaseUrl
-    blobServiceUri: blob.outputs.blobServiceUri
+    blobConnectionString: blob.outputs.connectionString
     outboxQueuesConnectionString: functions.outputs.queuesConnectionString
     jwtIssuer: jwtIssuer
     jwtSigningKeyBase64: jwtSigningKeyBase64
@@ -256,7 +256,7 @@ module functions 'modules/functions.bicep' = {
     appServicePlanId: appServicePlan.id
     appInsightsConnectionString: appInsights.outputs.connectionString
     postgresConnectionString: postgresConnectionString
-    blobServiceUri: blob.outputs.blobServiceUri
+    blobConnectionString: blob.outputs.connectionString
     sendGridApiKey: sendGridApiKey
     comgateMerchantId: comgateMerchantId
     comgateSecret: comgateSecret

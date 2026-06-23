@@ -18,8 +18,9 @@ param appInsightsConnectionString string
 @secure()
 param postgresConnectionString string
 
-@description('Blob storage account service URI (AzureBlobStorage:ServiceUri) for the managed-identity blob path.')
-param blobServiceUri string
+@description('Blob storage account connection string (AzureBlobStorage:ConnectionString). NOT ServiceUri — App Service/Functions blocks app settings ending in the reserved __ServiceUri suffix.')
+@secure()
+param blobConnectionString string
 
 // --- Provider secrets the Functions host validates via ValidateOnStart ---
 // Makables.Functions/Program.cs calls AddMakablesClients + AddMakablesBlobStorage,
@@ -127,8 +128,8 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
           value: postgresConnectionString
         }
         {
-          name: 'AzureBlobStorage__ServiceUri'
-          value: blobServiceUri
+          name: 'AzureBlobStorage__ConnectionString'
+          value: blobConnectionString
         }
         // Outbox queues: this Functions storage account doubles as the queue
         // store (ADR 0020 — Functions + publisher share one account). The
