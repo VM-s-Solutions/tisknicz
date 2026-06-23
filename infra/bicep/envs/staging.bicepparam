@@ -8,6 +8,12 @@ using '../main.bicep'
 param envSlug = 'dev'
 param location = 'westeurope'
 
+// Postgres goes in northeurope: this subscription is offer-restricted for
+// Postgres Flexible Server in westeurope (LocationIsOfferRestricted). Everything
+// else stays in westeurope. northeurope + francecentral are confirmed open;
+// westeurope + germanywestcentral are blocked on this sub.
+param postgresLocation = 'northeurope'
+
 param postgresSku = 'Standard_B1ms'
 param postgresSkuTier = 'Burstable'
 param postgresStorageGb = 32
