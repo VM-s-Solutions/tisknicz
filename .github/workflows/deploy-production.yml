@@ -103,11 +103,8 @@ jobs:
       # runner IP as a break-glass step. Documented in docs/deployment/deploy-runbook.md.
       # The temp-firewall approach below mirrors staging and works ONLY if a
       # public path is intentionally opened for the migration window.
-      - name: Apply migration via psql (temp firewall rule)
+      - name: Open temp firewall rule for the runner IP
         uses: azure/cli@v2
-        env:
-          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
-          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
         with:
           azcliversion: latest
           inlineScript: |
@@ -118,13 +115,27 @@ jobs:
               --name ci-migrate-${{ github.run_id }} \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" \
               --output none
-            trap 'az postgres flexible-server firewall-rule delete --yes \
+
+      - name: Apply migration via psql (on the runner)
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          FQDN="makables-prod-pg.postgres.database.azure.com"
+          psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
+            -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
+
+      - name: Remove temp firewall rule
+        if: always()
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az postgres flexible-server firewall-rule delete --yes \
               --resource-group makables-prod --server-name makables-prod-pg \
-              --name ci-migrate-${{ github.run_id }} --output none || true' EXIT
-            apt-get update && apt-get install -y postgresql-client
-            FQDN="makables-prod-pg.postgres.database.azure.com"
-            psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
-              -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
+              --name ci-migrate-${{ github.run_id }} --output none || true
 
   functions:
     name: Functions (.NET isolated) → Functions App

@@ -96,14 +96,13 @@ jobs:
 
       # The GitHub runner has a public IP and is NOT an "Azure service", so the
       # dev allowAllAzureServices rule does not admit it. Open a temporary
-      # firewall rule for the runner IP, apply, then remove it (operator note:
-      # in prod the migrate job runs from inside the VNet via the private
-      # endpoint instead — see docs/deployment/deploy-runbook.md).
-      - name: Apply migration via psql (temp firewall rule)
+      # firewall rule for the runner IP (az step), apply the SQL with psql ON
+      # THE RUNNER (the azure-cli action's container is Alpine — no apt-get/psql),
+      # then always remove the rule. (Operator note: in prod the migrate job runs
+      # from inside the VNet via the private endpoint instead — see
+      # docs/deployment/deploy-runbook.md.)
+      - name: Open temp firewall rule for the runner IP
         uses: azure/cli@v2
-        env:
-          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
-          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
         with:
           azcliversion: latest
           inlineScript: |
@@ -114,13 +113,27 @@ jobs:
               --name ci-migrate-${{ github.run_id }} \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" \
               --output none
-            trap 'az postgres flexible-server firewall-rule delete --yes \
+
+      - name: Apply migration via psql (on the runner)
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          FQDN="makables-dev-db.postgres.database.azure.com"
+          psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
+            -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
+
+      - name: Remove temp firewall rule
+        if: always()
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az postgres flexible-server firewall-rule delete --yes \
               --resource-group rg-makables-dev --server-name makables-dev-db \
-              --name ci-migrate-${{ github.run_id }} --output none || true' EXIT
-            apt-get update && apt-get install -y postgresql-client
-            FQDN="makables-dev-db.postgres.database.azure.com"
-            psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
-              -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
+              --name ci-migrate-${{ github.run_id }} --output none || true
 
   backend:
     name: Backend (.NET) → App Services
