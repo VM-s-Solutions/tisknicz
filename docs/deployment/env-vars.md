@@ -75,9 +75,13 @@ env prefix permitted (CLAUDE.md §Security — no secrets in the client bundle).
 As of T-0138 the Bicep templates inject every `ValidateOnStart` app setting the
 .NET hosts need to boot — so they are NOT a manual operator step on the App
 Service config. The **non-secret** ones (`Jwt:Issuer`, `Comgate:MerchantId`,
-`PublicAppUrls:WebBaseUrl`, the `Cors:AllowedOrigins:<audience>` array,
-`AzureBlobStorage:ServiceUri`, the Functions `*:Schedule` + `OutboxQueues:*`)
-are set from per-env `.bicepparam` values or computed outputs. The **secret**
+`PublicAppUrls:WebBaseUrl`, the `Cors:AllowedOrigins:<audience>` array, the
+Functions `*:Schedule` + `OutboxQueues:*`) are set from per-env `.bicepparam`
+values or computed outputs. Blob access is injected as
+`AzureBlobStorage:ConnectionString` (the blob account key) — **NOT**
+`AzureBlobStorage:ServiceUri`: App Service/Functions rejects any app-setting
+name ending in the reserved `__ServiceUri` suffix (error 04072). The host code
+still supports both modes; the deploy just uses the connection string. The **secret**
 ones (`Jwt:SigningKeyBase64`, `SendGrid:ApiKey`, `Comgate:Secret`,
 `Packeta:ApiKey`, `Packeta:PublicWidgetKey`, `Mapbox:AccessToken`) flow as
 `@secure()` params from **GitHub Actions secrets** at deploy time — never

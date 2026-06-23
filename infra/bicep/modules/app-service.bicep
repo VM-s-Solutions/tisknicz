@@ -36,8 +36,9 @@ param corsOrigins array = []
 @description('Public site origin for links in emails etc. (PublicAppUrls:WebBaseUrl). Per-env so staging emails do not link to prod.')
 param publicWebBaseUrl string
 
-@description('Blob storage account service URI (AzureBlobStorage:ServiceUri) for the managed-identity blob path.')
-param blobServiceUri string
+@description('Blob storage account connection string (AzureBlobStorage:ConnectionString). NOT ServiceUri — App Service blocks app settings ending in the reserved __ServiceUri suffix.')
+@secure()
+param blobConnectionString string
 
 @description('Storage queue connection string for the outbox publisher (OutboxQueues:ConnectionString).')
 @secure()
@@ -112,8 +113,8 @@ var baseAppSettings = [
     value: publicWebBaseUrl
   }
   {
-    name: 'AzureBlobStorage__ServiceUri'
-    value: blobServiceUri
+    name: 'AzureBlobStorage__ConnectionString'
+    value: blobConnectionString
   }
   {
     name: 'OutboxQueues__ConnectionString'
