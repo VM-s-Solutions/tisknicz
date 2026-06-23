@@ -14,11 +14,15 @@ param location = 'westeurope'
 // westeurope + germanywestcentral are blocked on this sub.
 param postgresLocation = 'northeurope'
 
-param postgresSku = 'Standard_B1ms'
+// Dev "modest bump" (2026-06-23): one shared plan hosts 4 web apps + Functions,
+// so B1 (1 core / 1.75GB) was tight -> B2 (2 core / 3.5GB). Postgres B1ms -> B2s
+// (still Burstable; B2s confirmed available in northeurope). Storage 32 -> 64GB.
+// Stays single-instance / no HA — this is dev, not prod.
+param postgresSku = 'Standard_B2s'
 param postgresSkuTier = 'Burstable'
-param postgresStorageGb = 32
+param postgresStorageGb = 64
 
-param appServicePlanSku = 'B1'
+param appServicePlanSku = 'B2'
 
 // Sourced from GitHub Actions secrets at deploy time — never commit real
 // values. No fallback default for the password: missing secret aborts the
