@@ -20,6 +20,9 @@ param envSlug string
 @description('Region for every resource. Defaults to West Europe per ADR 0023.')
 param location string = 'westeurope'
 
+@description('Region for Postgres specifically. Defaults to the main location, but can differ when a subscription is offer-restricted for Postgres Flexible Server in the main region (e.g. a new/trial sub blocks westeurope — use northeurope/francecentral). The DB connection string uses the server FQDN, so a cross-region Postgres works; expect a few ms extra latency.')
+param postgresLocation string = location
+
 @description('Postgres SKU name. Burstable B1ms in staging, B2s in production.')
 param postgresSku string = 'Standard_B1ms'
 
@@ -116,7 +119,7 @@ module postgres 'modules/postgres.bicep' = {
   name: '${prefix}-pg'
   params: {
     serverName: '${prefix}-pg'
-    location: location
+    location: postgresLocation
     skuName: postgresSku
     skuTier: postgresSkuTier
     storageGb: postgresStorageGb
