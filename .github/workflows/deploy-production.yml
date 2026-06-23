@@ -115,11 +115,12 @@ jobs:
             RUNNER_IP=$(curl -s https://api.ipify.org)
             az postgres flexible-server firewall-rule create \
               --resource-group makables-prod --server-name makables-prod-pg \
-              --rule-name "ci-migrate-${{ github.run_id }}" \
-              --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+              --name ci-migrate-${{ github.run_id }} \
+              --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" \
+              --output none
             trap 'az postgres flexible-server firewall-rule delete --yes \
               --resource-group makables-prod --server-name makables-prod-pg \
-              --rule-name "ci-migrate-${{ github.run_id }}" || true' EXIT
+              --name ci-migrate-${{ github.run_id }} --output none || true' EXIT
             apt-get update && apt-get install -y postgresql-client
             FQDN="makables-prod-pg.postgres.database.azure.com"
             psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
