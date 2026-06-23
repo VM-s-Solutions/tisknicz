@@ -128,7 +128,7 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
           value: postgresConnectionString
         }
         {
-          name: 'AzureBlobStorage__ConnectionString'
+          name: 'BlobStorage__ConnectionString'
           value: blobConnectionString
         }
         // Outbox queues: this Functions storage account doubles as the queue

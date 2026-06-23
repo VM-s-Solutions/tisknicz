@@ -113,7 +113,7 @@ var baseAppSettings = [
     value: publicWebBaseUrl
   }
   {
-    name: 'AzureBlobStorage__ConnectionString'
+    name: 'BlobStorage__ConnectionString'
     value: blobConnectionString
   }
   {
