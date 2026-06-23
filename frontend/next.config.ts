@@ -34,6 +34,11 @@ function publicHostRemotePattern() {
 }
 
 const nextConfig: NextConfig = {
+  // Self-host on Azure App Service (Linux/Node) — `standalone` emits a
+  // minimal `.next/standalone` server (server.js + traced node_modules) that
+  // runs with `node server.js`, no full install needed at runtime. The CI
+  // deploy job assembles standalone + .next/static + public into the package.
+  output: 'standalone',
   images: {
     remotePatterns: [publicHostRemotePattern()],
   },

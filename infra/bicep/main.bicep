@@ -290,6 +290,23 @@ module keyVault 'modules/key-vault.bicep' = {
   }
 }
 
+// Next.js frontend on its own Linux App Service (Node), on the shared plan.
+// Everything stays in Azure (no Vercel). The NEXT_PUBLIC_* API base URLs point
+// at the deployed API hosts' default hostnames.
+module webApp 'modules/web-app.bicep' = {
+  name: '${prefix}-web'
+  params: {
+    appName: '${prefix}-web'
+    appServicePlanId: appServicePlan.id
+    location: location
+    siteUrl: publicWebBaseUrl
+    customerApiBaseUrl: 'https://${customerApp.outputs.defaultHostName}'
+    makerApiBaseUrl: 'https://${makerApp.outputs.defaultHostName}'
+    adminApiBaseUrl: 'https://${adminApp.outputs.defaultHostName}'
+    publicApiBaseUrl: 'https://${publicApp.outputs.defaultHostName}'
+  }
+}
+
 output customerAppName string = customerApp.outputs.appName
 output makerAppName string = makerApp.outputs.appName
 output adminAppName string = adminApp.outputs.appName
@@ -297,3 +314,5 @@ output publicAppName string = publicApp.outputs.appName
 output postgresFqdn string = postgres.outputs.serverFqdn
 output appInsightsConnectionString string = appInsights.outputs.connectionString
 output keyVaultUri string = keyVault.outputs.keyVaultUri
+output webAppName string = webApp.outputs.appName
+output webAppHostName string = webApp.outputs.defaultHostName
