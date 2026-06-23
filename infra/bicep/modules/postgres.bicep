@@ -5,7 +5,7 @@
 // database) — staging stays on B1ms, production on B2s. Both expose the
 // admin user; the password is supplied by the parent template from Key Vault.
 
-@description('Logical name of the Postgres server, e.g. makables-dev-pg.')
+@description('Logical name of the Postgres server, e.g. makables-dev-db.')
 param serverName string
 
 @description('Azure region — defaults to West Europe per ADR 0023.')

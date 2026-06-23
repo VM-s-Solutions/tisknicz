@@ -102,14 +102,14 @@ jobs:
             set -euo pipefail
             RUNNER_IP=$(curl -s https://api.ipify.org)
             az postgres flexible-server firewall-rule create \
-              --resource-group rg-makables-dev --name makables-dev-pg \
+              --resource-group rg-makables-dev --name makables-dev-db \
               --rule-name "ci-migrate-${{ github.run_id }}" \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
             trap 'az postgres flexible-server firewall-rule delete --yes \
-              --resource-group rg-makables-dev --name makables-dev-pg \
+              --resource-group rg-makables-dev --name makables-dev-db \
               --rule-name "ci-migrate-${{ github.run_id }}" || true' EXIT
             apt-get update && apt-get install -y postgresql-client
-            FQDN="makables-dev-pg.postgres.database.azure.com"
+            FQDN="makables-dev-db.postgres.database.azure.com"
             psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
               -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
 
