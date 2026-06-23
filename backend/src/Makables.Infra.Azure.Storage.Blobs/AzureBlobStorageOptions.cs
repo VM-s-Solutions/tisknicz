@@ -19,7 +19,11 @@ namespace Makables.Infra.Azure.Storage.Blobs;
 /// </summary>
 public sealed class AzureBlobStorageOptions
 {
-    public const string SectionName = "AzureBlobStorage";
+    // NOT "AzureBlobStorage": Azure Functions/App Service reserves that prefix
+    // for its storage-binding connection convention and rejects any app setting
+    // named AzureBlobStorage__* (error 04072). "BlobStorage" is safe and maps to
+    // the BlobStorage__ConnectionString app setting the Bicep injects.
+    public const string SectionName = "BlobStorage";
 
     /// <summary>
     /// Azure storage connection string. Local dev only — points at

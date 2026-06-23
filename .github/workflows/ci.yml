@@ -119,7 +119,7 @@ jobs:
           # ConnectionString or ServiceUri. The spec-parity host never
           # touches blob storage at startup — supply the dev-storage stub
           # so the validator passes and /openapi/v1.json becomes reachable.
-          AzureBlobStorage__ConnectionString: 'UseDevelopmentStorage=true'
+          BlobStorage__ConnectionString: 'UseDevelopmentStorage=true'
           # T-0065: ComgateOptions.ValidateOnStart requires MerchantId +
           # Secret non-empty and BaseUrl absolute HTTPS. The spec-parity
           # host never calls Comgate at startup; stub values pass the

@@ -31,12 +31,12 @@ public static class MakablesBlobStorageExtensions
             .Validate(o =>
                 !string.IsNullOrWhiteSpace(o.ConnectionString)
                 || !string.IsNullOrWhiteSpace(o.ServiceUri),
-                "AzureBlobStorage requires either ConnectionString (dev/CI) or ServiceUri (Managed Identity).")
+                "BlobStorage requires either ConnectionString (dev/CI) or ServiceUri (Managed Identity).")
             .Validate(o =>
                 string.IsNullOrWhiteSpace(o.ServiceUri)
                 || Uri.TryCreate(o.ServiceUri, UriKind.Absolute, out var u)
                    && u.Scheme == Uri.UriSchemeHttps,
-                "AzureBlobStorage:ServiceUri must be an absolute https URI when set.")
+                "BlobStorage:ServiceUri must be an absolute https URI when set.")
             .ValidateOnStart();
 
         services.AddSingleton(sp =>

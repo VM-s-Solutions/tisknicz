@@ -78,7 +78,7 @@ public sealed class JwtAuthMiddlewareTests
                     ["Packeta:WidgetScriptUrl"] = "https://widget.packeta.test/v6/library.js",
                     ["Packeta:SenderLabel"] = "makables-test",
                     // T-0042: AddMakablesBlobStorage stub.
-                    ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
+                    ["BlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
                     // T-0035 sec reviewer B1: CORS fail-closed outside Development.
                     ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
                     ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",
@@ -348,7 +348,7 @@ public sealed class JwtAuthMiddlewareTests
                         ["Packeta:BaseUrl"] = "https://api.packeta.test",
                         ["Packeta:WidgetScriptUrl"] = "https://widget.packeta.test/v6/library.js",
                         ["Packeta:SenderLabel"] = "makables-test",
-                        ["AzureBlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
+                        ["BlobStorage:ConnectionString"] = "UseDevelopmentStorage=true",
                         ["Cors:AllowedOrigins:customer:0"] = "https://customer.makables.test",
                         ["Cors:AllowedOrigins:maker:0"] = "https://maker.makables.test",
                         ["Cors:AllowedOrigins:admin:0"] = "https://admin.makables.test",
