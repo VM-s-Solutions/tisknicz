@@ -1,7 +1,7 @@
 // Azure Functions module — hosts the outbox processor, timer jobs, and
 // queue-triggered work per ADR 0020. Single Functions app for the MVP.
 
-@description('Functions app name, e.g. makables-stg-functions.')
+@description('Functions app name, e.g. makables-dev-functions.')
 param functionsAppName string
 
 @description('Storage account used by the Functions runtime + outbox queues.')

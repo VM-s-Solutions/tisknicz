@@ -1,9 +1,11 @@
 using '../main.bicep'
 
-// Staging environment — single-region West Europe, Burstable SKUs, narrow CORS
-// allowlist pointing at the staging frontend URL.
+// Dev environment (resource group rg-makables-dev) — single-region West Europe,
+// Burstable SKUs, narrow CORS allowlist pointing at the dev frontend URL.
+// (This file is still named staging.bicepparam for path stability; the env it
+// describes is the non-production "dev" environment, envSlug = 'dev'.)
 
-param envSlug = 'stg'
+param envSlug = 'dev'
 param location = 'westeurope'
 
 param postgresSku = 'Standard_B1ms'
@@ -21,22 +23,22 @@ param postgresAdminUser = readEnvironmentVariable('POSTGRES_ADMIN_USER')
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
 param customerCorsOrigins = [
-  'https://stg.makables.cz'
+  'https://dev.makables.cz'
 ]
 param makerCorsOrigins = [
-  'https://stg.makables.cz'
+  'https://dev.makables.cz'
 ]
 param adminCorsOrigins = [
-  'https://stg-admin.makables.cz'
+  'https://dev-admin.makables.cz'
 ]
 param publicCorsOrigins = [
-  'https://stg.makables.cz'
+  'https://dev.makables.cz'
   'https://makables.cz'
 ]
 
 // Per-env non-secret app config.
-param publicWebBaseUrl = 'https://stg.makables.cz'
-param jwtIssuer = 'https://stg.makables.cz'
+param publicWebBaseUrl = 'https://dev.makables.cz'
+param jwtIssuer = 'https://dev.makables.cz'
 param comgateMerchantId = readEnvironmentVariable('COMGATE_MERCHANT_ID')
 
 // Application secrets — sourced from GitHub Actions secrets at deploy time;

@@ -1,9 +1,16 @@
-# Deploy runbook — staging (and production notes)
+# Deploy runbook — dev (and production notes)
 
 > Operator-facing. The CI/CD workflows (`.github/workflows/deploy-staging.yml`,
 > `deploy-production.yml`) automate the deploy; this runbook covers the
 > one-time setup the workflows assume, the order of operations, and how to
 > verify a deploy actually produced a working app. Closes T-0138.
+>
+> **Naming note:** the non-production environment is **dev** — Azure resource
+> group `rg-makables-dev`, resources `makables-dev-*` (Bicep `envSlug = 'dev'`),
+> and the GitHub Actions *environment* is named **`dev`**. The only thing still
+> carrying the old "staging" label is the workflow *filename* `deploy-staging.yml`
+> (kept for path stability) and the `staging.bicepparam` *filename* — both
+> describe the dev env.
 
 ## What the pipeline does (per environment)
 
@@ -28,19 +35,20 @@
 ```bash
 az login
 az account set --subscription <subscription-id>
-az group create --name makables-stg --location westeurope   # prod: makables-prod
+az group create --name rg-makables-dev --location westeurope   # prod: makables-prod
 ```
 
 Configure an **OIDC federated credential** so GitHub Actions can `azure/login`
 without a stored password: register an Entra app, grant it Contributor on the
 resource group, and add a federated credential bound to this repo's
-`staging` / `production` GitHub *environment*. (The workflows use
-`id-token: write` + `azure/login` with `client-id`/`tenant-id`/`subscription-id`.)
+`dev` / `production` GitHub *environment* (subject e.g.
+`repo:<org>/tisknicz:environment:dev`). (The workflows use `id-token: write` +
+`azure/login` with `client-id`/`tenant-id`/`subscription-id`.)
 
 ### 2. GitHub Actions secrets (per environment)
 
 The deploy **fails loudly** if any is missing (fail-closed). Set, in the
-`staging` and `production` GitHub environments:
+`dev` and `production` GitHub environments:
 
 | Secret | Used by |
 |---|---|
@@ -85,7 +93,7 @@ runner once the VNet is wired.
 
 ## Verify a deploy actually worked (not just "az succeeded")
 
-1. **Hosts booted:** `GET https://makables-stg-customer.azurewebsites.net/`
+1. **Hosts booted:** `GET https://makables-dev-customer.azurewebsites.net/`
    returns `Makables Customer API — alive.` (repeat per host). A boot crash =
    a missing app setting (check the App Service log stream for
    `OptionsValidationException`).

@@ -1,4 +1,7 @@
-name: Deploy → staging
+# Deploys the non-production "dev" environment (Azure RG rg-makables-dev,
+# resources makables-dev-*, GitHub environment "dev"). The file is named
+# deploy-staging.yml for path stability; the env it targets is dev.
+name: Deploy → dev
 
 on:
   push:
@@ -6,14 +9,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-staging
+  group: deploy-dev
   cancel-in-progress: false
 
 jobs:
   bicep:
     name: Bicep infrastructure
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -45,14 +48,14 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az deployment group create \
-              --resource-group makables-stg \
+              --resource-group rg-makables-dev \
               --template-file infra/bicep/main.bicep \
               --parameters infra/bicep/envs/staging.bicepparam
 
   migrate:
     name: EF Core migrations → Postgres
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [bicep]
     timeout-minutes: 20
     permissions:
@@ -84,7 +87,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # The GitHub runner has a public IP and is NOT an "Azure service", so the
-      # staging allowAllAzureServices rule does not admit it. Open a temporary
+      # dev allowAllAzureServices rule does not admit it. Open a temporary
       # firewall rule for the runner IP, apply, then remove it (operator note:
       # in prod the migrate job runs from inside the VNet via the private
       # endpoint instead — see docs/deployment/deploy-runbook.md).
@@ -99,21 +102,21 @@ jobs:
             set -euo pipefail
             RUNNER_IP=$(curl -s https://api.ipify.org)
             az postgres flexible-server firewall-rule create \
-              --resource-group makables-stg --name makables-stg-pg \
+              --resource-group rg-makables-dev --name makables-dev-pg \
               --rule-name "ci-migrate-${{ github.run_id }}" \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
             trap 'az postgres flexible-server firewall-rule delete --yes \
-              --resource-group makables-stg --name makables-stg-pg \
+              --resource-group rg-makables-dev --name makables-dev-pg \
               --rule-name "ci-migrate-${{ github.run_id }}" || true' EXIT
             apt-get update && apt-get install -y postgresql-client
-            FQDN="makables-stg-pg.postgres.database.azure.com"
+            FQDN="makables-dev-pg.postgres.database.azure.com"
             psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
               -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
 
   backend:
     name: Backend (.NET) → App Services
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -122,10 +125,10 @@ jobs:
     strategy:
       matrix:
         host:
-          - { project: 'Makables.Web.Customer', app: 'makables-stg-customer' }
-          - { project: 'Makables.Web.Maker',    app: 'makables-stg-maker'    }
-          - { project: 'Makables.Web.Admin',    app: 'makables-stg-admin'    }
-          - { project: 'Makables.Web.Public',   app: 'makables-stg-public'   }
+          - { project: 'Makables.Web.Customer', app: 'makables-dev-customer' }
+          - { project: 'Makables.Web.Maker',    app: 'makables-dev-maker'    }
+          - { project: 'Makables.Web.Admin',    app: 'makables-dev-admin'    }
+          - { project: 'Makables.Web.Public',   app: 'makables-dev-public'   }
     steps:
       - uses: actions/checkout@v4
 
@@ -153,7 +156,7 @@ jobs:
   functions:
     name: Functions (.NET isolated) → Functions App
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -176,13 +179,13 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: Azure/functions-action@v1
         with:
-          app-name: makables-stg-functions
+          app-name: makables-dev-functions
           package: ${{ runner.temp }}/functions-publish
 
   frontend:
     name: Frontend (Next.js) → Vercel
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     needs: [bicep]
     timeout-minutes: 15
     defaults:
