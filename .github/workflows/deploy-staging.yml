@@ -71,6 +71,13 @@ jobs:
       # re-run: each migration is guarded by a check against __EFMigrationsHistory).
       # The DbContext lives in Infra.Database; the Customer host is the startup
       # project that wires it. No DB connection needed to GENERATE the script.
+      # `dotnet ef` loads the COMPILED startup assembly, so the project must be
+      # restored + built first (NETSDK1004 = missing project.assets.json = no restore).
+      - name: Restore + build the startup project
+        run: |
+          dotnet restore backend/src/Makables.Web.Customer/Makables.Web.Customer.csproj
+          dotnet build backend/src/Makables.Web.Customer/Makables.Web.Customer.csproj \
+            --configuration Release --no-restore
       - name: Generate idempotent migration script
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.*
@@ -78,6 +85,7 @@ jobs:
           dotnet ef migrations script --idempotent \
             --project backend/src/Makables.Infra.Database/Makables.Infra.Database.csproj \
             --startup-project backend/src/Makables.Web.Customer/Makables.Web.Customer.csproj \
+            --configuration Release --no-build \
             --output ${{ runner.temp }}/migrate.sql
 
       - uses: azure/login@v2

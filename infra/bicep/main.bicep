@@ -91,6 +91,9 @@ param packetaPublicWidgetKey string
 @description('Mapbox access token (Mapbox:AccessToken).')
 param mapboxAccessToken string
 
+@description('Grant the host identities Key Vault Secrets User on the vault. Requires the DEPLOY identity to have roleAssignments/write (User Access Administrator/Owner). Default false — secrets are direct app settings today (T-0138), KV is empty, no read role needed. Flip true when KV references land + the deployer has the rights.')
+param grantKeyVaultReaderRoles bool = false
+
 var prefix = 'makables-${envSlug}'
 var storageBaseName = 'makables${envSlug}'
 
@@ -279,6 +282,11 @@ module keyVault 'modules/key-vault.bicep' = {
       publicApp.outputs.principalId
       functions.outputs.principalId
     ]
+    // Off by default: secrets are injected as direct app settings today
+    // (T-0138), so the Key Vault is empty and the hosts need no read role —
+    // and granting it requires the deployer to hold roleAssignments/write.
+    // Flip true (per env) when secrets move to Key Vault references.
+    grantReaderRoles: grantKeyVaultReaderRoles
   }
 }
 

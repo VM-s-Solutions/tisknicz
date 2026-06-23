@@ -56,6 +56,10 @@ ADR 0023 §7 target, and the runbook that covers it.
   ADR 0023 §7 wants these relocated to `@Microsoft.KeyVault(SecretUri=...)` references so they're not
   visible as plain settings in the resource group. Closes the `TODO(T-0134)` in
   `infra/bicep/main.bicep` (the KV-identity ordering cycle). Procedure: `docs/runbooks/secret-rotation.md` §C.
+  **When this lands:** set Bicep param `grantKeyVaultReaderRoles = true` (it defaults `false` so the
+  hosts get the "Key Vault Secrets User" role) **and** ensure the deploy identity has
+  `roleAssignments/write` (User Access Administrator / Owner on the RG) — the default Contributor cannot
+  create role assignments. Until then the KV is empty and the hosts read secrets as direct app settings.
 - [ ] **`AzureWebJobsStorage` identity-based (BLOCKING):** move the Functions storage connection from
   an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
   Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:

@@ -7,6 +7,9 @@ param keyVaultName string
 @description('Object IDs (App Services + Functions managed identities) that need read access.')
 param readerPrincipalIds array
 
+@description('When true, grant the reader principals the Key Vault Secrets User role. Requires the DEPLOYER to have Microsoft.Authorization/roleAssignments/write (User Access Administrator / Owner) on the scope. Default false: the hosts inject secrets as direct app settings today (T-0138), so KV is empty and no read role is needed. Flip true when secrets move to Key Vault references AND the deploy identity has role-assignment rights.')
+param grantReaderRoles bool = false
+
 param location string = resourceGroup().location
 
 resource keyVault 'Microsoft.KeyVault/vaults@2024-12-01-preview' = {
@@ -27,8 +30,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2024-12-01-preview' = {
 
 // Key Vault Secrets User role — lets App Services and Functions read secrets.
 // Role definition ID is well-known: 4633458b-17de-408a-b874-0445c86b69e6.
-@description('Role assignments for the reader principals.')
-resource readerRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (pid, idx) in readerPrincipalIds: if (!empty(pid)) {
+@description('Role assignments for the reader principals (gated on grantReaderRoles — see param).')
+resource readerRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (pid, idx) in readerPrincipalIds: if (grantReaderRoles && !empty(pid)) {
   name: guid(keyVault.id, pid, 'kv-secrets-user')
   scope: keyVault
   properties: {
