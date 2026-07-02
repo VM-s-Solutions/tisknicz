@@ -142,7 +142,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="bg-surface-secondary py-16 sm:py-20">
+      <section className="mt-16 bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 text-center sm:px-6 lg:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-400/80">{t('static.how_it_works.steps_heading')}</p>
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{t('static.how_it_works.cta_heading')}</h2>

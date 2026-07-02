@@ -22,8 +22,12 @@ export function PublicNavbar() {
   return (
     <header className="relative sticky top-0 z-50 border-b border-zinc-800 bg-surface-primary/95 backdrop-blur supports-[backdrop-filter]:bg-surface-primary/80">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="transition-opacity hover:opacity-90" aria-label="Makables">
-          <MakablesLogo />
+        <Link
+          href="/"
+          className="inline-flex items-center transition-opacity hover:opacity-90"
+          aria-label="Makables"
+        >
+          <MakablesLogo textClassName="text-lg font-semibold tracking-tight text-zinc-100 leading-none" />
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex" aria-label={t('nav.public_aria')}>

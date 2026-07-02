@@ -383,7 +383,7 @@ export const messages = {
   'static.for_makers.benefit_free_title': 'Registrace zdarma',
   'static.for_makers.benefit_free_body':
     'Začneš zdarma. Vyplníš IČO a zbytek firemních údajů doplníme z ARES.',
-  'static.for_makers.benefit_commission_title': 'Provize od 7 %',
+  'static.for_makers.benefit_commission_title': 'Provize 7 % > 3,5 %',
   'static.for_makers.benefit_commission_body':
     'Základní provize je 7 % z ceny produktu. Čím víc prodáváš a čím déle jsi s námi, tím níž můžeš jít až na 3,5 %. Loajalitu odměňujeme.',
   'static.for_makers.benefit_payouts_title': 'Výplaty každý týden',

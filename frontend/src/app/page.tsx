@@ -49,7 +49,7 @@ export default function HomePage() {
               Kde nápady dostávají tvar
             </h1>
             <p className="reveal-up reveal-delay-2 mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
-              Marketplace pro makery a tiskaře v ČR. Vyberete si tvůrce, odešlete poptávku nebo objednávku a my zajistíme bezpečnou platbu i doručení.
+              Marketplace pro makery a tiskaře v ČR. Vybereš si tvůrce, odešleš poptávku nebo objednávku a my zajistíme bezpečnou platbu i doručení.
             </p>
             <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-6">
               <Link
@@ -72,7 +72,7 @@ export default function HomePage() {
           <div className="reveal-up reveal-delay-4 mt-12 grid grid-cols-1 border-y border-zinc-800 sm:grid-cols-3">
             <Metric value="250+" label="Ověřených makerů" />
             <Metric value="6" label="Hlavních kategorií" />
-            <Metric value="15 %" label="Provize platformy" />
+            <Metric value="7 % > 3,5 %" label="Provize platformy" />
           </div>
         </div>
       </section>
@@ -90,20 +90,20 @@ export default function HomePage() {
             <StepLine
               step={1}
               icon="search"
-              title="Vyberete makera"
-              description="V katalogu si najdete tvůrce podle kategorie, lokality a hodnocení."
+              title="Vybereš makera"
+              description="V katalogu si najdeš tvůrce podle kategorie, lokality a hodnocení."
             />
             <StepLine
               step={2}
               icon="creditCard"
-              title="Objednáte a zaplatíte"
-              description="Zadáte parametry zakázky a zaplatíte bezpečně online kartou nebo převodem."
+              title="Objednáš a zaplatíš"
+              description="Zadáš parametry zakázky a zaplatíš bezpečně online kartou nebo převodem."
             />
             <StepLine
               step={3}
               icon="package"
-              title="Převezmete zásilku"
-              description="Maker vyrobí objednávku a odešle ji přes Zásilkovnu na vámi zvolené místo."
+              title="Převezmeš zásilku"
+              description="Maker vyrobí objednávku a odešle ji přes Zásilkovnu na tebou zvolené místo."
             />
           </ol>
 
@@ -124,7 +124,7 @@ export default function HomePage() {
           <p className="reveal-up text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Kategorie</p>
           <h2 className="reveal-up reveal-delay-1 mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
 
-          <div className="reveal-up reveal-delay-2 mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+          <div className="reveal-up reveal-delay-2 mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-y-0">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}
@@ -151,7 +151,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center sm:px-6 lg:px-8 reveal-up">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Pro makery</h2>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-zinc-300">
-            Máte vlastní výrobu a chcete získávat nové zakázky bez budování vlastního e-shopu? Přidejte se na Makables.
+            Máš vlastní výrobu a chceš získávat nové zakázky bez budování vlastního e-shopu? Přidej se na Makables.
           </p>
           <Link
             href="/pro-makery"
