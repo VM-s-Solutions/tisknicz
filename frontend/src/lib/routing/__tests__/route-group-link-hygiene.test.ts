@@ -26,6 +26,10 @@ import { describe, expect, it } from 'vitest';
 const FORBIDDEN_PREFIXES = ['/auth/', '/public/'] as const;
 // A bare group leak with no trailing path, e.g. href="/auth" or "/public".
 const FORBIDDEN_EXACT = ['/auth', '/public'] as const;
+// Legacy maker-registration URL kept only as a redirect shim route
+// (`app/(auth)/register/maker/page.tsx`). Navigation targets should point
+// directly at the canonical unified register page with query selection.
+const LEGACY_MAKER_REGISTER = '/register/maker';
 
 // Matches the path string inside href="...", href={'...'}, router.push('...'),
 // redirect('...'), permanentRedirect('...'), and template literals that start
@@ -66,7 +70,9 @@ describe('route-group link hygiene', () => {
         const leaks =
           FORBIDDEN_PREFIXES.some((p) => target.startsWith(p)) ||
           FORBIDDEN_EXACT.includes(target as (typeof FORBIDDEN_EXACT)[number]);
-        if (leaks) {
+        const legacyMakerRegister =
+          target === LEGACY_MAKER_REGISTER || target.startsWith(`${LEGACY_MAKER_REGISTER}?`);
+        if (leaks || legacyMakerRegister) {
           offenders.push(`${file.replace(SRC_ROOT, 'src')} → "${target}"`);
         }
       }
@@ -74,7 +80,7 @@ describe('route-group link hygiene', () => {
 
     expect(
       offenders,
-      `Route-group segments (auth)/(public) are stripped from URLs — these targets 404:\n${offenders.join('\n')}`,
+      `Route-group segments (auth)/(public) are stripped from URLs, and maker registration should use /register?type=maker — offending targets:\n${offenders.join('\n')}`,
     ).toEqual([]);
   });
 });

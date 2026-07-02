@@ -42,7 +42,8 @@ export function ProductCard({ item }: ProductCardProps) {
               alt={t('catalog.product.image_alt', { title: item.title })}
               width={IMAGE_WIDTH}
               height={IMAGE_HEIGHT}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 400px"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-sm text-zinc-500">

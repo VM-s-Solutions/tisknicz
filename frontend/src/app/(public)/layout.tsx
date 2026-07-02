@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { PublicFooter } from '@/components/shared/public-footer';
+import { PublicNavbar } from '@/components/shared/public-navbar';
 
 /**
  * Layout for the unauthenticated public surfaces: landing, /katalog,
@@ -9,5 +11,11 @@ import type { ReactNode } from 'react';
  * components are added under `components/layout/` by T-0035 / T-0046+.
  */
 export default function PublicLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen bg-surface-primary">
+      <PublicNavbar />
+      <main>{children}</main>
+      <PublicFooter />
+    </div>
+  );
 }

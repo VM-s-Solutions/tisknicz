@@ -61,6 +61,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
               alt={t('dashboard.maker.products.card.image_alt', { title: item.title })}
               width={IMAGE_WIDTH}
               height={IMAGE_HEIGHT}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (

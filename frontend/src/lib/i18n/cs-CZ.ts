@@ -36,6 +36,7 @@ export const messages = {
 
   // Auth — login
   'auth.login.title': 'Přihlášení',
+  'auth.login.subtitle': 'Přihlaste se a pokračujte v objednávkách, komunikaci s makerem i sledování zásilek na jednom místě.',
   'auth.login.email': 'E-mail',
   'auth.login.password': 'Heslo',
   'auth.login.submit': 'Přihlásit se',
@@ -44,12 +45,33 @@ export const messages = {
   'auth.login.magic_link': 'Přihlásit se odkazem v e-mailu',
   'auth.login.no_account': 'Ještě nemáte účet?',
   'auth.login.register_link': 'Vytvořit účet',
+  'auth.login.register_customer_link': 'Registrovat zákaznický účet',
+  'auth.login.register_maker_link': 'Registrovat se jako maker',
   'auth.login.invalid_credentials': 'Nesprávný e-mail nebo heslo.',
   'auth.login.account_locked': 'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to za chvíli.',
   'auth.login.email_not_confirmed': 'E-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
 
+  // Auth — shared shell
+  'auth.shared.eyebrow': 'Makables marketplace',
+  'auth.shared.point_verified': 'Ověření makeři a transparentní hodnocení na jednom místě.',
+  'auth.shared.point_shipping': 'Doručení přes Zásilkovnu a průběžné sledování objednávky.',
+  'auth.shared.point_support': 'Rychlá podpora při objednávce i registraci.',
+  'auth.shared.stat_makers_label': 'Ověření makeři',
+  'auth.shared.stat_makers_value': '250+',
+  'auth.shared.stat_categories_label': 'Kategorie služeb',
+  'auth.shared.stat_categories_value': '6',
+  'auth.shared.stat_orders_label': 'Průměrné hodnocení',
+  'auth.shared.stat_orders_value': '4,9/5',
+
   // Auth — register (shared)
   'auth.register.title': 'Vytvořit zákaznický účet',
+  'auth.register.page_title': 'Registrace',
+  'auth.register.page_intro':
+    'Vyberte si typ účtu a během pár minut budete připraveni zadat první objednávku nebo začít prodávat.',
+  'auth.register.type_customer': 'Zákazník',
+  'auth.register.type_maker': 'Maker',
+  'auth.register.customer_description': 'Pro zákazníky, kteří chtějí objednávat výrobky a služby od ověřených makerů.',
+  'auth.register.maker_description': 'Pro tvůrce s IČO. Firemní údaje doplníme z ARES, ať můžete rychle začít prodávat.',
   'auth.register.full_name': 'Jméno a příjmení',
   'auth.register.email': 'E-mail',
   'auth.register.password': 'Heslo',
@@ -62,6 +84,9 @@ export const messages = {
   'auth.register.success_body': 'Poslali jsme vám potvrzovací e-mail. Klikněte na odkaz pro aktivaci účtu.',
   'auth.register.email_already_exists': 'Tento e-mail je již zaregistrován.',
   'auth.register.maker_link': 'Jste výrobce? Zaregistrujte se zde.',
+  'auth.register.modal_close': 'Zavřít registraci',
+  'auth.register.modal_how_it_works_question': 'Want to know how it works?',
+  'auth.register.modal_how_it_works_link': 'Pro Makery',
 
   // Auth — register maker
   'auth.register_maker.title': 'Registrace výrobce',
@@ -73,6 +98,8 @@ export const messages = {
   'auth.register_maker.ico_already_registered': 'Tento výrobce už má u nás účet.',
   'auth.register_maker.company_dissolved': 'Tato firma je v ARES vedena jako zaniklá. Nelze ji registrovat.',
   'auth.register_maker.snapshot_stale_notice': 'Údaje z ARES jsou starší. Administrátor je obnoví při ověření.',
+  'auth.register_maker.how_it_works_question': 'Nevíte, jak to funguje?',
+  'auth.register_maker.how_it_works_link': 'Přečíst více',
 
   // Auth — verify
   'auth.verify.title': 'Potvrzení e-mailu',
@@ -159,11 +186,29 @@ export const messages = {
   'dashboard.maker.profile.saved': 'Změny uloženy.',
 
   // Navigation
+  'nav.home': 'Domů',
   'nav.catalog': 'Katalog',
   'nav.how_it_works': 'Jak to funguje',
   'nav.for_makers': 'Pro makery',
+  'nav.login': 'Přihlášení',
+  'nav.start_selling': 'Začít prodávat',
+  'nav.open_menu': 'Menu',
+  'nav.close_menu': 'Zavřít menu',
+  'nav.public_aria': 'Hlavní navigace',
   'nav.dashboard': 'Přehled',
   'nav.logout': 'Odhlásit se',
+
+  // Footer
+  'footer.customers': 'Pro zákazníky',
+  'footer.makers': 'Pro makery',
+  'footer.information': 'Informace',
+  'footer.link.catalog': 'Katalog',
+  'footer.link.how_it_works': 'Jak to funguje',
+  'footer.link.for_makers': 'Jak začít prodávat',
+  'footer.link.maker_registration': 'Registrace',
+  'footer.link.terms': 'Obchodní podmínky',
+  'footer.link.privacy': 'Ochrana údajů',
+  'footer.copyright': '© {year} Makables. Všechna práva vyhrazena.',
 
   // Catalog — page
   'catalog.title': 'Katalog výrobců',
@@ -285,30 +330,42 @@ export const messages = {
   // diagram). "Tiskni.cz" → "Makables" per the rename.
   'static.how_it_works.meta_title': 'Jak to funguje — Makables',
   'static.how_it_works.meta_description':
-    'Vyberte si makera, objednejte, zaplaťte online a nechte si doručit přes Zásilkovnu. Takhle funguje Makables krok za krokem.',
+    'Vyber si makera, pošli objednávku, zaplať online a nech si zásilku doručit přes Zásilkovnu. Takhle funguje Makables krok za krokem.',
   'static.how_it_works.title': 'Jak to funguje',
   'static.how_it_works.intro':
-    'Makables je marketplace, který propojuje zákazníky s lokálními makery a tiskaři po celé ČR. Najdete si makera ve svém okolí, objednáte, zaplatíte online — a maker vyrobí a odešle přes Zásilkovnu. O platby, fakturaci i doručení se postaráme my.',
+    'Makables propojuje zákazníky s lokálními makery a tiskaři po celé ČR. Vybereš si tvůrce, pošleš objednávku, zaplatíš online a maker vše vyrobí i odešle přes Zásilkovnu. Celý průběh máš přehledně na jednom místě.',
   'static.how_it_works.steps_heading': 'Od nápadu k hotové zakázce',
-  'static.how_it_works.step1_title': 'Vyberte makera a produkt',
+  'static.how_it_works.step1_title': 'Vybereš makera a produkt',
   'static.how_it_works.step1_body':
-    'Projděte si katalog makerů ve svém okolí. Filtrujte podle kategorie, města nebo hodnocení a vyberte si produkt nebo službu na míru.',
-  'static.how_it_works.step2_title': 'Vyplňte objednávku',
+    'Projdeš si katalog makerů ve svém okolí, mrkneš na hodnocení a vybereš produkt nebo službu na míru.',
+  'static.how_it_works.step1_detail1': 'Filtruj podle kategorie: 3D tisk, laser, potisk textilu a další.',
+  'static.how_it_works.step1_detail2': 'Vyhledávej podle města nebo PSČ.',
+  'static.how_it_works.step1_detail3': 'Porovnej hodnocení a recenze od ostatních zákazníků.',
+  'static.how_it_works.step1_detail4': 'Prohlédni si portfolio a nabídku produktů.',
+  'static.how_it_works.step2_title': 'Vyplníš objednávku',
   'static.how_it_works.step2_body':
-    'Zadejte své kontaktní údaje, vyberte výdejní místo Zásilkovny a nahrajte podklady — návrh, fotku nebo soubor pro tisk.',
-  'static.how_it_works.step3_title': 'Zaplaťte online',
+    'Doplníš kontaktní údaje, zvolíš výdejní místo Zásilkovny a přiložíš podklady, které maker potřebuje.',
+  'static.how_it_works.step2_detail1': 'Vyber produkt nebo pošli poptávku na míru.',
+  'static.how_it_works.step2_detail2': 'Zvol doručení přes Zásilkovnu nebo osobní odběr.',
+  'static.how_it_works.step2_detail3': 'Zaplať bezpečně kartou nebo bankovním převodem.',
+  'static.how_it_works.step2_detail4': 'Platba je chráněná: maker dostane peníze až po doručení.',
+  'static.how_it_works.step3_title': 'Zaplatíš online',
   'static.how_it_works.step3_body':
-    'Zaplaťte bezpečně přes platební bránu Comgate — kartou nebo bankovním převodem. Peníze drží platforma, dokud maker zakázku nepřevezme.',
-  'static.how_it_works.step4_title': 'Maker objednávku přijme a vyrobí',
+    'Zaplatíš bezpečně přes Comgate kartou nebo převodem. Jakmile je platba potvrzená, maker může hned začít vyrábět.',
+  'static.how_it_works.step4_title': 'Maker objednávku potvrdí a vyrobí',
   'static.how_it_works.step4_body':
-    'Maker dostane upozornění o nové objednávce, potvrdí ji a pustí se do výroby. Stav objednávky sledujete ve svém účtu.',
-  'static.how_it_works.step5_title': 'Maker odešle přes Zásilkovnu',
+    'Maker dostane upozornění na novou objednávku, potvrdí ji a pustí se do práce. Stav vidíš průběžně ve svém účtu.',
+  'static.how_it_works.step5_title': 'Maker odešle zásilku',
   'static.how_it_works.step5_body':
-    'Jakmile je hotovo, maker zásilku odešle. Dostanete e-mail se sledovacím číslem, takže víte, kde se vaše zakázka nachází.',
-  'static.how_it_works.step6_title': 'Převezmete zásilku',
+    'Po dokončení maker balík odešle přes Zásilkovnu. Dostaneš sledovací číslo a víš, kde se zásilka právě nachází.',
+  'static.how_it_works.step6_title': 'Převezmeš a ohodnotíš',
   'static.how_it_works.step6_body':
-    'Vyzvednete si zásilku na zvoleném výdejním místě. Po převzetí můžete makera ohodnotit a pomoct tak dalším zákazníkům.',
-  'static.how_it_works.cta_heading': 'Máte nápad? Najděte makera, který ho vyrobí.',
+    'Zásilku si vyzvedneš na zvoleném místě a po převzetí můžeš makera ohodnotit, aby měli další zákazníci jasno.',
+  'static.how_it_works.step6_detail1': 'Sleduj stav objednávky v reálném čase.',
+  'static.how_it_works.step6_detail2': 'Komunikuj s makerem přímo přes platformu.',
+  'static.how_it_works.step6_detail3': 'Vyzvedni si balíček na Zásilkovně nebo u makera.',
+  'static.how_it_works.step6_detail4': 'Po převzetí ohodnoť makera a pomoz ostatním.',
+  'static.how_it_works.cta_heading': 'Máš nápad? Najdi makera, který ho promění v hotový produkt.',
   'static.how_it_works.cta': 'Prohlédnout katalog',
 
   // --- /pro-makery (for makers) ---
@@ -318,61 +375,104 @@ export const messages = {
   // computed client-side; commission math is backend-owned).
   'static.for_makers.meta_title': 'Pro makery — Makables',
   'static.for_makers.meta_description':
-    'Prodávejte svou tvorbu bez starostí. Profil, katalog, platby, doprava i fakturace — hotová infrastruktura pro makery. Registrace zdarma, stačí IČO.',
-  'static.for_makers.title': 'Prodávejte, nemarketujte',
+    'Prodávej svou tvorbu bez zbytečné administrativy. Profil, katalog, platby, doprava i fakturace na jednom místě. Registrace zdarma, stačí IČO.',
+  'static.for_makers.title': 'Prodávej, nemarketuj',
   'static.for_makers.intro':
-    'Chcete vyrábět, ne řešit marketing, platby a logistiku? Makables vám dá hotovou infrastrukturu — profil, katalog, online platby, dopravu přes Zásilkovnu i automatickou fakturaci. Vy se staráte o výrobu, my o zbytek. Pokrýváme šest kategorií: 3D tisk, klasický tisk, potisk textilu, laser a CNC, velkoformát a handmade.',
-  'static.for_makers.benefits_heading': 'Co u nás získáte',
+    'Chceš hlavně vyrábět a neřešit okolo toho deset dalších nástrojů? Makables ti dá hotové zázemí: profil, katalog, online platby, dopravu přes Zásilkovnu i automatickou fakturaci. Ty řešíš výrobu, my řešíme provoz.',
+  'static.for_makers.benefits_heading': 'Jak vypadá prodej na Makables',
   'static.for_makers.benefit_free_title': 'Registrace zdarma',
   'static.for_makers.benefit_free_body':
-    'Založení účtu nic nestojí. Stačí vám IČO — ostatní údaje doplníme z veřejného rejstříku ARES.',
-  'static.for_makers.benefit_commission_title': 'Provize 15 %',
+    'Začneš zdarma. Vyplníš IČO a zbytek firemních údajů doplníme z ARES.',
+  'static.for_makers.benefit_commission_title': 'Provize od 7 %',
   'static.for_makers.benefit_commission_body':
-    'Platíte jen 15 % z ceny produktu, a to až z proběhlé objednávky. Z dopravy si neúčtujeme nic.',
+    'Základní provize je 7 % z ceny produktu. Čím víc prodáváš a čím déle jsi s námi, tím níž můžeš jít až na 3,5 %. Loajalitu odměňujeme.',
   'static.for_makers.benefit_payouts_title': 'Výplaty každý týden',
   'static.for_makers.benefit_payouts_body':
-    'Vyplácíme jednou týdně hromadným bankovním převodem. Žádné čekání měsíce na své peníze.',
+    'Výplaty posíláme jednou týdně bankovním převodem, takže na peníze nečekáš zbytečně dlouho.',
   'static.for_makers.benefit_invoicing_title': 'Automatická fakturace',
   'static.for_makers.benefit_invoicing_body':
-    'Faktury se generují samy — zákazníkovi při platbě, vám při výplatě. Účetnictví máte v pořádku bez papírování.',
+    'Faktury se generují automaticky. Nemusíš tak řešit ruční přepisování dokladů.',
   'static.for_makers.benefit_shipping_title': 'Doprava přes Zásilkovnu',
   'static.for_makers.benefit_shipping_body':
-    'Dopravu hradí zákazník a jede pod naším účtem u Zásilkovny. Nepotřebujete vlastní smlouvu ani štítky řešit ručně.',
+    'Dopravu platí zákazník a jede pod naším účtem u Zásilkovny. Nemusíš řešit vlastní smlouvu ani složité nastavování.',
   'static.for_makers.benefit_no_minimum_title': 'Žádné minimum',
   'static.for_makers.benefit_no_minimum_body':
-    'Neurčujeme minimální objednávku. Sami si nastavíte, co a za kolik nabízíte.',
+    'Nenutíme tě do minimální objednávky. Sám nebo sama si nastavíš, co nabízíš a za kolik.',
   'static.for_makers.example_heading': 'Příklad kalkulace',
   'static.for_makers.example_intro':
-    'Jak vypadá výplata u objednávky za 500 Kč s dopravou 79 Kč:',
-  'static.for_makers.example_customer_pays': 'Zákazník zaplatí: produkt 500 Kč + doprava 79 Kč = 579 Kč',
-  'static.for_makers.example_commission': 'Provize platformy: 15 % z 500 Kč = 75 Kč',
-  'static.for_makers.example_maker_gets': 'Vy dostanete: 500 − 75 + 79 = 504 Kč',
+    'Jak může vypadat výplata u objednávky za 1 000 Kč + doprava 79 Kč:',
+  'static.for_makers.example_customer_pays': 'Zákazník zaplatí: produkt 1 000 Kč + doprava 79 Kč = 1 079 Kč',
+  'static.for_makers.example_commission': 'Standardní provize: 7 % z 1 000 Kč = 70 Kč',
+  'static.for_makers.example_loyal_commission': 'Loyalty provize: 3,5 % z 1 000 Kč = 35 Kč',
+  'static.for_makers.example_maker_gets': 'Výplata makerovi: při 7 % je to 1 009 Kč, při 3,5 % je to 1 044 Kč',
   'static.for_makers.example_note':
-    'Ilustrativní příklad. Konečnou částku vždy spočítá platforma podle aktuální ceny a dopravy.',
-  'static.for_makers.cta_heading': 'Připraveni začít prodávat?',
+    'Doprava jde makerovi v plné výši. Jde o orientační příklad, přesnou částku vždy spočítá platforma podle konkrétní objednávky.',
+  'static.for_makers.cta_heading': 'Chceš začít prodávat?',
   'static.for_makers.cta': 'Registrovat se jako maker',
 
-  // --- /vop (obchodní podmínky / terms) — PLACEHOLDER shell (Q-0030) ---
-  // NO invented legal text. The page renders only the heading, the
-  // shared placeholder banner, and a keyed note. Approved text from
-  // JVM YORE s.r.o. populates these keys before launch.
+  // --- /vop (obchodní podmínky / terms) ---
   'static.terms.meta_title': 'Obchodní podmínky — Makables',
-  'static.terms.meta_description': 'Obchodní podmínky platformy Makables.',
+  'static.terms.meta_description': 'Pravidla používání platformy Makables pro B2C provoz včetně navazujících českých a evropských předpisů.',
   'static.terms.title': 'Obchodní podmínky',
-  'static.terms.placeholder_note':
-    'Znění obchodních podmínek se připravuje a podléhá schválení provozovatelem (JVM YORE s.r.o.). Jakmile bude schválené znění k dispozici, zveřejníme ho zde.',
+  'static.terms.disclaimer':
+    'Tady najdete stručný přehled, jak fungují objednávky na Makables v B2C režimu. Tento text není individuální právní poradenství.',
+  'static.terms.section_operator_title': '1. Provozovatel platformy',
+  'static.terms.section_operator_body':
+    'Makables provozuje JVM YORE s.r.o. jako online tržiště, kde se propojují zákazníci a nezávislí makeři. Aktuální identifikační údaje provozovatele najdete vždy v kontaktní sekci.',
+  'static.terms.section_scope_title': '2. B2C model a role stran',
+  'static.terms.section_scope_body':
+    'Makables poskytuje technické prostředí pro nabídky, objednávky, platby a doručení. V B2C režimu je prodávajícím vůči zákazníkovi konkrétní maker. Smlouva o dodání zboží nebo služby vzniká mezi zákazníkem a makerem, pokud není u nabídky uvedeno jinak.',
+  'static.terms.section_contracts_title': '3. Uzavření smlouvy a objednávky',
+  'static.terms.section_contracts_body':
+    'Odesláním objednávky zákazník potvrzuje správnost údajů a souhlas s podmínkami. Maker odpovídá za dostupnost nabídky, správnost popisu a splnění potvrzené objednávky. Platforma může objednávku pozastavit nebo zrušit při podezření na podvod, porušení práva nebo technickou chybu.',
+  'static.terms.section_payments_title': '4. Ceny, platby a vyúčtování',
+  'static.terms.section_payments_body':
+    'Ceny se zobrazují podle platných zákonných pravidel. Platba probíhá přes podporované platební metody v rámci platformy. Makables zajišťuje evidenci transakcí, výpočet provize a navazující vyúčtování.',
+  'static.terms.section_withdrawal_title': '5. Odstoupení spotřebitele',
+  'static.terms.section_withdrawal_body':
+    'Pokud je zákazník spotřebitel, právo na odstoupení se řídí občanským zákoníkem a evropskou spotřebitelskou legislativou. U zakázek na míru nebo personalizované výroby mohou platit zákonné výjimky.',
+  'static.terms.section_claims_title': '6. Reklamace a odpovědnost',
+  'static.terms.section_claims_body':
+    'Reklamaci zákazník řeší přes platformu přímo s makerem, který je za plnění odpovědný. Makables poskytuje komunikační kanál, historii objednávky a související podklady. V rozsahu dovoleném zákonem Makables nenese odpovědnost za kvalitu, vlastnosti ani vady plnění dodaného makerem.',
+  'static.terms.section_law_title': '7. Relevantní právní předpisy (CZ/EU)',
+  'static.terms.section_law_intro':
+    'Používání platformy a smluvní vztahy se řídí zejména těmito předpisy:',
+  'static.terms.law_cz_civil': 'Zákon č. 89/2012 Sb., občanský zákoník.',
+  'static.terms.law_cz_consumer': 'Zákon č. 634/1992 Sb., o ochraně spotřebitele.',
+  'static.terms.law_cz_info_society': 'Zákon č. 480/2004 Sb., o některých službách informační společnosti.',
+  'static.terms.law_eu_consumer_rights': 'Směrnice Evropského parlamentu a Rady 2011/83/EU o právech spotřebitelů.',
+  'static.terms.law_eu_dsa': 'Nařízení Evropského parlamentu a Rady (EU) 2022/2065 (Digital Services Act).',
 
-  // --- /gdpr (ochrana osobních údajů / privacy) — PLACEHOLDER shell ---
-  // NO invented privacy/cookie text.
+  // --- /gdpr (ochrana osobních údajů / privacy) ---
   'static.privacy.meta_title': 'Ochrana osobních údajů — Makables',
-  'static.privacy.meta_description': 'Zásady ochrany osobních údajů platformy Makables.',
+  'static.privacy.meta_description': 'Informace o zpracování osobních údajů na platformě Makables podle českého práva a GDPR.',
   'static.privacy.title': 'Ochrana osobních údajů',
-  'static.privacy.placeholder_note':
-    'Zásady ochrany osobních údajů se připravují a podléhají schválení provozovatelem (JVM YORE s.r.o.). Jakmile bude schválené znění k dispozici, zveřejníme ho zde.',
-
-  // --- Shared legal placeholder banner (reused by /vop + /gdpr) ---
-  'static.legal_placeholder.banner':
-    'PLACEHOLDER — čeká se na schválený právní text (JVM YORE s.r.o.)',
+  'static.privacy.disclaimer':
+    'Tento dokument shrnuje, jak Makables zpracovává osobní údaje. Nejde o individuální právní poradenství.',
+  'static.privacy.section_controller_title': '1. Správce osobních údajů',
+  'static.privacy.section_controller_body':
+    'Správcem osobních údajů je provozovatel platformy JVM YORE s.r.o. Kontaktní údaje správce a kanály pro výkon práv subjektů údajů jsou uvedeny v kontaktní části služby.',
+  'static.privacy.section_data_title': '2. Jaké údaje zpracováváme',
+  'static.privacy.section_data_body':
+    'Zpracováváme identifikační a kontaktní údaje, údaje o objednávkách, platbách, komunikaci mezi účastníky a technické provozní záznamy nutné pro bezpečnost, audit a plnění zákonných povinností.',
+  'static.privacy.section_legal_basis_title': '3. Právní základy zpracování',
+  'static.privacy.section_legal_basis_body':
+    'Údaje zpracováváme zejména pro plnění smlouvy, splnění právních povinností, ochranu oprávněných zájmů (bezpečnost, prevence podvodů) a v relevantních případech na základě souhlasu (např. některé marketingové nebo analytické účely).',
+  'static.privacy.section_retention_title': '4. Doba uchování a příjemci',
+  'static.privacy.section_retention_body':
+    'Údaje uchováváme po dobu nezbytnou pro plnění smlouvy, zákonné účetní a daňové povinnosti a ochranu právních nároků. K údajům mohou mít přístup smluvní zpracovatelé (např. platební a logističtí partneři) pouze v rozsahu nezbytném pro poskytování služby.',
+  'static.privacy.section_rights_title': '5. Vaše práva',
+  'static.privacy.section_rights_body':
+    'Máte právo na přístup, opravu, výmaz, omezení zpracování, přenositelnost a námitku. Pokud se domníváte, že s údaji nakládáme v rozporu s právem, můžete podat stížnost u Úřadu pro ochranu osobních údajů.',
+  'static.privacy.section_cookies_title': '6. Cookies a podobné technologie',
+  'static.privacy.section_cookies_body':
+    'Používáme nezbytné technické cookies pro fungování platformy. Volitelné analytické nebo marketingové cookies nasazujeme pouze v rozsahu odpovídajícím platné legislativě a nastavení uživatelského souhlasu.',
+  'static.privacy.section_law_title': '7. Relevantní právní předpisy (CZ/EU)',
+  'static.privacy.section_law_intro': 'Zpracování osobních údajů se řídí zejména těmito předpisy:',
+  'static.privacy.law_gdpr': 'Nařízení Evropského parlamentu a Rady (EU) 2016/679 (GDPR).',
+  'static.privacy.law_cz_processing': 'Zákon č. 110/2019 Sb., o zpracování osobních údajů.',
+  'static.privacy.law_eprivacy': 'Směrnice 2002/58/ES o soukromí a elektronických komunikacích (ePrivacy).',
+  'static.privacy.law_cz_electronic': 'Zákon č. 480/2004 Sb., o některých službách informační společnosti.',
 
   // Dashboard — maker products (T-0049).
   // Plural-neutral phrasing rule from the catalog block above applies

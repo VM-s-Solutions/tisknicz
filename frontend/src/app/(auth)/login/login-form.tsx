@@ -49,46 +49,54 @@ export function LoginForm() {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-        {serverError && <Alert variant="error">{serverError}</Alert>}
-        <Input
-          type="email"
-          label={t('auth.login.email')}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-          disabled={submitting}
-        />
-        <Input
-          type="password"
-          label={t('auth.login.password')}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-          disabled={submitting}
-        />
-        <Button type="submit" loading={submitting} className="mt-2">
-          {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
-        </Button>
-      </form>
-      <div className="flex flex-col gap-2 text-sm text-zinc-400">
-        <Link href="/reset" className="text-brand-400 hover:underline">
-          {t('auth.login.forgot_password')}
-        </Link>
-        <Link href="/magic" className="text-brand-400 hover:underline">
-          {t('auth.login.magic_link')}
-        </Link>
-        <p className="mt-2">
-          {t('auth.login.no_account')}{' '}
-          <Link href="/register" className="text-brand-400 hover:underline">
-            {t('auth.login.register_link')}
+    <>
+      <Card padding="lg" className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          {serverError && <Alert variant="error">{serverError}</Alert>}
+          <Input
+            type="email"
+            label={t('auth.login.email')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+            disabled={submitting}
+          />
+          <Input
+            type="password"
+            label={t('auth.login.password')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            disabled={submitting}
+          />
+          <Button type="submit" loading={submitting} className="mt-2">
+            {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
+          </Button>
+        </form>
+        <div className="flex flex-col gap-2 text-sm text-zinc-400">
+          <Link href="/reset" className="text-brand-400 hover:underline">
+            {t('auth.login.forgot_password')}
           </Link>
-        </p>
-      </div>
-    </Card>
+          <Link href="/magic" className="text-brand-400 hover:underline">
+            {t('auth.login.magic_link')}
+          </Link>
+          <div className="mt-2 border-t border-zinc-800 pt-3">
+            <p>{t('auth.login.no_account')}</p>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              <Link href="/register?type=customer" className="text-brand-400 hover:underline">
+                {t('auth.login.register_customer_link')}
+              </Link>
+              <span aria-hidden="true">•</span>
+              <Link href="/register?type=maker" className="text-brand-400 hover:underline">
+                {t('auth.login.register_maker_link')}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </>
   );
 }
 

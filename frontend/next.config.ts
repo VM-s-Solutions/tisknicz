@@ -39,7 +39,10 @@ const nextConfig: NextConfig = {
   // runs with `node server.js`, no full install needed at runtime. The CI
   // deploy job assembles standalone + .next/static + public into the package.
   output: 'standalone',
+  compress: true,
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [publicHostRemotePattern()],
   },
 };

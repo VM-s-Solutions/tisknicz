@@ -116,6 +116,7 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
                       alt={t('dashboard.maker.products.images.image_alt', { n: index + 1 })}
                       width={THUMB_WIDTH}
                       height={THUMB_HEIGHT}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 280px"
                       className="h-full w-full object-cover"
                     />
                   ) : (

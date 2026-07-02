@@ -1,21 +1,60 @@
 import Link from 'next/link';
+import { AuthBackButton } from '../auth-back-button';
+import { AuthShell } from '../auth-shell';
 import { RegisterForm } from './register-form';
+import { RegisterMakerForm } from './maker/register-maker-form';
 import { t } from '@/lib/i18n';
 
 export const metadata = {
-  title: 'Vytvořit účet — Makables',
+  title: 'Registrace — Makables',
 };
 
-export default function RegisterPage() {
+interface RegisterPageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function readString(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const sp = await searchParams;
+  const selectedType = readString(sp.type) === 'maker' ? 'maker' : 'customer';
+
   return (
     <>
-      <h1 className="text-2xl font-semibold">{t('auth.register.title')}</h1>
-      <RegisterForm />
-      <p className="text-center text-sm text-zinc-400">
-        <Link href="/register/maker" className="text-brand-400 hover:underline">
-          {t('auth.register.maker_link')}
-        </Link>
-      </p>
+      <AuthBackButton />
+      <AuthShell title={t('auth.register.page_title')} subtitle={t('auth.register.page_intro')}>
+        <div className="mb-5 space-y-3">
+          <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950/80 p-1 text-sm">
+            <Link
+              href="/register?type=customer"
+              className={`rounded-md px-3 py-1.5 transition-colors ${
+                selectedType === 'customer' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              aria-current={selectedType === 'customer' ? 'page' : undefined}
+            >
+              {t('auth.register.type_customer')}
+            </Link>
+            <Link
+              href="/register?type=maker"
+              className={`rounded-md px-3 py-1.5 transition-colors ${
+                selectedType === 'maker' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              aria-current={selectedType === 'maker' ? 'page' : undefined}
+            >
+              {t('auth.register.type_maker')}
+            </Link>
+          </div>
+
+          <p className="text-sm text-zinc-400">
+            {selectedType === 'maker' ? t('auth.register.maker_description') : t('auth.register.customer_description')}
+          </p>
+        </div>
+
+        {selectedType === 'maker' ? <RegisterMakerForm /> : <RegisterForm />}
+      </AuthShell>
     </>
   );
 }

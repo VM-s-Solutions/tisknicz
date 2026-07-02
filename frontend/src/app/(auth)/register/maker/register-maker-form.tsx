@@ -115,6 +115,12 @@ export function RegisterMakerForm() {
           {submitting ? t('auth.register.submitting') : t('auth.register_maker.submit')}
         </Button>
       </form>
+      <p className="text-center text-sm text-zinc-400">
+        {t('auth.register.already_have_account')}{' '}
+        <Link href="/login" className="text-brand-400 hover:underline">
+          {t('auth.register.login_link')}
+        </Link>
+      </p>
     </Card>
   );
 }

@@ -139,7 +139,7 @@ function ProductInfo({ product }: { readonly product: ProductDetail }) {
 
       <Link
         href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
-        className="inline-flex flex-wrap items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary rounded"
+        className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
       >
         <span>
           {t('catalog.product_detail.heading.by_maker', { maker: product.makerCompanyName })}
@@ -159,7 +159,7 @@ function ProductInfo({ product }: { readonly product: ProductDetail }) {
       <div className="pt-2">
         <Link
           href={`/objednavka?productId=${encodeURIComponent(product.productId)}`}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-400 px-6 py-3 text-base font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-base font-semibold text-zinc-950 transition-colors hover:bg-brand-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary sm:w-auto"
         >
           {t('catalog.product_detail.cta.order')}
           <Icon name="arrowRight" size={16} />

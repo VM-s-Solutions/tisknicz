@@ -10,12 +10,12 @@ export const metadata = {
 
 export default function VerifyPage() {
   return (
-    <>
+    <div className="mx-auto w-full max-w-md">
       <h1 className="text-2xl font-semibold">{t('auth.verify.title')}</h1>
       <Suspense fallback={<ConfirmingSkeleton />}>
         <VerifyClient />
       </Suspense>
-    </>
+    </div>
   );
 }
 

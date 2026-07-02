@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { RATING_BP_PER_STAR, type MakerListItem } from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
@@ -22,38 +21,37 @@ export function MakerCard({ item }: MakerCardProps) {
   const ratingDisplay = hasRating ? ratingValue.toFixed(1) : null;
 
   return (
-    <Link href={`/katalog/${item.slug}`} className="group block focus:outline-none">
-      <Card
-        padding="md"
-        hover
-        className="flex h-full flex-col gap-4 focus-visible:ring-2 focus-visible:ring-brand-400/40"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold text-zinc-100 group-hover:text-brand-400">
+    <Link
+      href={`/katalog/${item.slug}`}
+      className="group block px-4 py-5 transition-colors hover:bg-zinc-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40 sm:px-6"
+    >
+      <article className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h3 className="text-lg font-semibold text-zinc-100 group-hover:text-white">
               {item.companyName}
             </h3>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
-              <Icon name="mapPin" size={14} />
-              <span className="truncate">{item.city}</span>
-            </p>
+            {item.isVerified && (
+              <Badge variant="brand" className="shrink-0">
+                <Icon name="verified" size={12} />
+                {t('catalog.card.verified')}
+              </Badge>
+            )}
           </div>
-          {item.isVerified && (
-            <Badge variant="brand" className="shrink-0">
-              <Icon name="verified" size={12} />
-              {t('catalog.card.verified')}
-            </Badge>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">
+            <Icon name="mapPin" size={14} />
+            <span className="truncate">{item.city}</span>
+          </p>
+
+          {item.bio && (
+            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-400">
+              {item.bio}
+            </p>
           )}
         </div>
 
-        {item.bio && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-zinc-400">
-            {item.bio}
-          </p>
-        )}
-
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-zinc-800 pt-4">
-          <div className="flex items-center gap-1.5 text-sm">
+        <div className="flex items-center justify-between gap-4 lg:min-w-72 lg:justify-end">
+          <div className="flex items-center gap-1.5 text-sm whitespace-nowrap">
             {hasRating ? (
               <>
                 <Icon name="star" size={14} className="text-amber-400" />
@@ -69,12 +67,17 @@ export function MakerCard({ item }: MakerCardProps) {
               </>
             )}
           </div>
-          <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+
+          <p className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
             <Icon name="shoppingBag" size={12} />
             {t('catalog.card.orders', { count: item.totalOrders })}
           </p>
+
+          <span className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-brand-300">
+            <Icon name="arrowRight" size={16} />
+          </span>
         </div>
-      </Card>
+      </article>
     </Link>
   );
 }

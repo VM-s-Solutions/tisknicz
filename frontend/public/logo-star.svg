@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Makables tunnel logo" fill="none">
+  <path d="M8.2 12c0-3.55 1.7-6 3.8-6s3.8 2.45 3.8 6-1.7 6-3.8 6-3.8-2.45-3.8-6z" stroke="#2dd4bf" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 8.2c3.55 0 6 1.7 6 3.8s-2.45 3.8-6 3.8-6-1.7-6-3.8 2.45-3.8 6-3.8z" stroke="#2dd4bf" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12" cy="12" r="1.05" fill="#2dd4bf"/>
+</svg>

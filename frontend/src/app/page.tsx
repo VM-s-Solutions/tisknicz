@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Icon } from '@/components/ui/icon';
+import { PublicFooter } from '@/components/shared/public-footer';
 import { HeroSceneWrapper } from '@/components/shared/hero-scene-wrapper';
+import { PublicNavbar } from '@/components/shared/public-navbar';
 import { t } from '@/lib/i18n';
 import { canonicalUrl } from '@/lib/seo/site-url';
 
@@ -29,171 +31,153 @@ const CATEGORIES = [
 
 export default function HomePage() {
   return (
-    <>
-      {/* Hero — dark premium */}
-      <section className="relative overflow-hidden bg-surface-primary">
-        {/* 3D Scene */}
-        <HeroSceneWrapper />
-        {/* Vignette */}
-        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-surface-primary/80 via-transparent to-surface-primary/40 pointer-events-none" />
+    <div className="min-h-screen bg-surface-primary">
+      <PublicNavbar />
 
-        <div className="relative z-[2] mx-auto max-w-7xl px-4 py-28 sm:px-6 lg:px-8 lg:py-40">
-          <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-6xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
-              Where Ideas
-              <br />
-              <span className="text-gradient">Take Shape.</span>
+      <section className="hero-section relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
+        <div className="pointer-events-none absolute inset-0 z-0 hidden lg:block motion-reduce:hidden" aria-hidden="true">
+          <HeroSceneWrapper />
+        </div>
+
+        <div className="hero-glow hero-glow-left" aria-hidden="true" />
+        <div className="hero-glow hero-glow-right" aria-hidden="true" />
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl">
+            <p className="reveal-up text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Makables</p>
+            <h1 className="reveal-up reveal-delay-1 mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              Kde nápady dostávají tvar
             </h1>
-
-            <p className="mt-8 text-xl font-light tracking-wide text-zinc-400 sm:text-2xl">
-              Tvůj nápad. Náš maker. Hotovo.
+            <p className="reveal-up reveal-delay-2 mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
+              Marketplace pro makery a tiskaře v ČR. Vyberete si tvůrce, odešlete poptávku nebo objednávku a my zajistíme bezpečnou platbu i doručení.
             </p>
-
-            <p className="mt-4 text-base text-zinc-500 max-w-xl mx-auto leading-relaxed">
-              Marketplace pro makery a tiskaře v ČR. Najdi tvůrce, objednej, nech si doručit.
-            </p>
-
-            <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/katalog"
-                className="group inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/10 hover:border-brand-400"
+                className="hero-cta-glow inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
               >
                 Prohlédnout katalog
-                <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
+                <Icon name="arrowRight" size={16} />
               </Link>
               <Link
-                href="/pro-makery"
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-8 py-4 text-base font-semibold text-zinc-400 transition-all duration-200 hover:border-zinc-500 hover:text-white"
+                href="/jak-to-funguje"
+                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
               >
-                Začít prodávat
+                Jak to funguje
+                <Icon name="arrowRight" size={16} />
               </Link>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="mt-20 flex items-center justify-center gap-8 sm:gap-16">
-              <Stat value="250+" label="Makerů" />
-              <div className="h-8 w-px bg-zinc-800" />
-              <Stat value="6" label="Kategorií" />
-              <div className="h-8 w-px bg-zinc-800" />
-              <Stat value="15%" label="Provize" />
-            </div>
+          <div className="reveal-up reveal-delay-4 mt-12 grid grid-cols-1 border-y border-zinc-800 sm:grid-cols-3">
+            <Metric value="250+" label="Ověřených makerů" />
+            <Metric value="6" label="Hlavních kategorií" />
+            <Metric value="15 %" label="Provize platformy" />
           </div>
         </div>
       </section>
 
-      {/* Jak to funguje — dark */}
-      <section className="bg-surface-secondary py-28">
+      <section className="bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Jednoduché jako 1-2-3</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Jak to funguje
-            </h2>
+          <div className="max-w-3xl reveal-up">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Jak to funguje</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Od zadání po doručení</h2>
+            </div>
           </div>
 
-          <div className="relative mt-16">
-            {/* Connecting line */}
-            <div className="absolute top-12 left-0 right-0 hidden h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent lg:block" />
+          <ol className="reveal-up reveal-delay-1 mt-10 border-y border-zinc-800">
+            <StepLine
+              step={1}
+              icon="search"
+              title="Vyberete makera"
+              description="V katalogu si najdete tvůrce podle kategorie, lokality a hodnocení."
+            />
+            <StepLine
+              step={2}
+              icon="creditCard"
+              title="Objednáte a zaplatíte"
+              description="Zadáte parametry zakázky a zaplatíte bezpečně online kartou nebo převodem."
+            />
+            <StepLine
+              step={3}
+              icon="package"
+              title="Převezmete zásilku"
+              description="Maker vyrobí objednávku a odešle ji přes Zásilkovnu na vámi zvolené místo."
+            />
+          </ol>
 
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <StepCard
-                step={1}
-                icon="search"
-                title="Vyber si makera"
-                description="Prohlédni si katalog makerů ve tvém okolí. Filtruj podle kategorie, města nebo hodnocení."
-              />
-              <StepCard
-                step={2}
-                icon="creditCard"
-                title="Objednej a zaplať"
-                description="Vyber produkt nebo napiš vlastní požadavek. Zaplať bezpečně kartou nebo převodem."
-              />
-              <StepCard
-                step={3}
-                icon="package"
-                title="Vyzvedni si"
-                description="Maker vyrobí a odešle přes Zásilkovnu. Sleduj stav objednávky v reálném čase."
-              />
-            </div>
+          <div className="reveal-up reveal-delay-2 mt-8">
+            <Link
+              href="/jak-to-funguje"
+              className="group inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            >
+              Zobrazit celý postup
+              <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Kategorie — dark */}
-      <section className="bg-surface-primary py-28">
+      <section className="bg-surface-primary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">Služby</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Co tu najdeš
-            </h2>
-          </div>
+          <p className="reveal-up text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Kategorie</p>
+          <h2 className="reveal-up reveal-delay-1 mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="reveal-up reveal-delay-2 mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}
-                href={`/katalog?kategorie=${cat.slug}`}
-                className="hover-glow group flex flex-col items-center gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6 text-center transition-all duration-300 hover:-translate-y-1"
+                href={`/katalog?category=${cat.slug}`}
+                className="group flex items-start gap-4 p-5 text-left transition-colors hover:bg-zinc-900/50"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-brand-400 transition-colors group-hover:bg-brand-400/10">
-                  <Icon name={cat.icon} size={24} />
-                </div>
-                <div>
-                  <span className="text-sm font-semibold text-zinc-200">{cat.name}</span>
-                  <p className="mt-1 text-xs text-zinc-500 hidden sm:block">{cat.description}</p>
-                </div>
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center text-brand-400">
+                  <Icon name={cat.icon} size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-zinc-100">{cat.name}</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{cat.description}</span>
+                </span>
+                <span className="mt-0.5 text-zinc-500 transition-transform group-hover:translate-x-1 group-hover:text-brand-300">
+                  <Icon name="arrowRight" size={16} />
+                </span>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA pro makery — dark gradient */}
-      <section className="relative overflow-hidden bg-surface-secondary py-28">
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950" />
-        <div className="absolute inset-0 bg-dot-pattern opacity-5" />
-        <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-brand-400/5 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-brand-400/5 blur-3xl" />
-
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Jsi maker?
-          </h2>
-          <p className="mt-4 text-lg text-zinc-400">
-            Zaregistruj se a začni prodávat svou tvorbu. Stačí ti IČO a pár minut.
+      <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center sm:px-6 lg:px-8 reveal-up">
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Pro makery</h2>
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-zinc-300">
+            Máte vlastní výrobu a chcete získávat nové zakázky bez budování vlastního e-shopu? Přidejte se na Makables.
           </p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              href="/register?role=maker"
-              className="group inline-flex items-center gap-2 rounded-xl border border-brand-400 bg-brand-400/10 px-8 py-4 text-base font-semibold text-brand-400 transition-all duration-200 hover:bg-brand-400/20"
-            >
-              Registrovat se jako maker
-              <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
-            </Link>
-            <Link
-              href="/pro-makery"
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-8 py-4 text-base font-semibold text-zinc-400 transition-all duration-200 hover:border-zinc-500 hover:text-white"
-            >
-              Zjistit více
-            </Link>
-          </div>
+          <Link
+            href="/pro-makery"
+            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+          >
+            Více informací pro makery
+            <Icon name="arrowRight" size={18} />
+          </Link>
         </div>
       </section>
-    </>
-  );
-}
 
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-2xl font-bold text-white sm:text-3xl">{value}</p>
-      <p className="mt-1 text-sm text-zinc-500">{label}</p>
+      <PublicFooter />
     </div>
   );
 }
 
-function StepCard({
+function Metric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="px-5 py-6 text-left sm:px-6 sm:py-7 [&:not(:first-child)]:sm:border-l [&:not(:first-child)]:sm:border-zinc-800">
+      <p className="text-2xl font-bold text-white sm:text-3xl">{value}</p>
+      <p className="mt-1 text-sm text-zinc-400">{label}</p>
+    </div>
+  );
+}
+
+function StepLine({
   step,
   icon,
   title,
@@ -205,15 +189,21 @@ function StepCard({
   description: string;
 }) {
   return (
-    <div className="hover-glow relative rounded-2xl border border-zinc-800 bg-surface-card p-8 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-brand-400">
-        <Icon name={icon} size={28} />
+    <li className="px-4 py-5 first:border-t-0 sm:px-6 sm:py-6 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-zinc-800">
+      <div className="flex items-start gap-4">
+        <span className="mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-zinc-800 px-2 text-xs font-bold text-brand-400">
+          {step}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 items-center justify-center text-brand-400">
+              <Icon name={icon} size={16} />
+            </span>
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">{description}</p>
+        </div>
       </div>
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-        <span className="text-3xl font-bold text-brand-400">{step}</span>
-      </div>
-      <h3 className="mt-5 text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-500">{description}</p>
-    </div>
+    </li>
   );
 }

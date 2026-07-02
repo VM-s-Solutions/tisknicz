@@ -89,41 +89,39 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   if (initialMinRating) baseParams.minRating = initialMinRating;
 
   return (
-    <section className="bg-surface-primary py-16 lg:py-24">
+    <section className="bg-surface-primary py-20 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <header className="max-w-4xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             {t('catalog.title')}
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-zinc-400">
+          <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
             {t('catalog.subtitle')}
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside>
-            <CatalogFilters
-              initialCategory={category}
-              initialCity={rawCity}
-              initialMinRating={initialMinRating}
-            />
-          </aside>
+        <div className="mt-14">
+          <CatalogFilters
+            initialCategory={category}
+            initialCity={rawCity}
+            initialMinRating={initialMinRating}
+          />
+        </div>
 
-          <div>
-            {result.success ? (
-              <CatalogResults
-                items={result.value.items}
-                page={result.value.page}
-                totalPages={result.value.totalPages}
-                hasNext={result.value.hasNext}
-                hasPrevious={result.value.hasPrevious}
-                totalCount={result.value.totalCount}
-                baseParams={baseParams}
-              />
-            ) : (
-              <CatalogError />
-            )}
-          </div>
+        <div className="mt-10">
+          {result.success ? (
+            <CatalogResults
+              items={result.value.items}
+              page={result.value.page}
+              totalPages={result.value.totalPages}
+              hasNext={result.value.hasNext}
+              hasPrevious={result.value.hasPrevious}
+              totalCount={result.value.totalCount}
+              baseParams={baseParams}
+            />
+          ) : (
+            <CatalogError />
+          )}
         </div>
       </div>
     </section>
@@ -155,14 +153,16 @@ function CatalogResults({
 
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
+      <p className="mb-5 text-sm text-zinc-500">
         {t('catalog.pagination.results', { count: totalCount })}
       </p>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <ul className="divide-y divide-zinc-800 border-y border-zinc-800">
         {items.map((item) => (
-          <MakerCard key={item.makerId} item={item} />
+          <li key={item.makerId}>
+            <MakerCard item={item} />
+          </li>
         ))}
-      </div>
+      </ul>
       <Pagination
         page={page}
         totalPages={totalPages}
@@ -176,8 +176,8 @@ function CatalogResults({
 
 function CatalogEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+    <div className="flex flex-col items-center justify-center gap-4 border-y border-dashed border-zinc-800 px-6 py-16 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500">
         <Icon name="search" size={28} />
       </div>
       <div>
@@ -190,7 +190,7 @@ function CatalogEmpty() {
       </div>
       <Link
         href="/katalog"
-        className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-400/10"
+        className="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
       >
         {t('catalog.empty.reset')}
       </Link>
@@ -200,7 +200,7 @@ function CatalogEmpty() {
 
 function CatalogError() {
   return (
-    <Alert variant="error">
+    <Alert variant="error" className="border border-red-900/50 bg-red-950/20">
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-semibold">{t('catalog.error.title')}</p>
@@ -208,7 +208,7 @@ function CatalogError() {
         </div>
         <Link
           href="/katalog"
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-100 transition-colors hover:bg-red-700"
         >
           {t('catalog.error.retry')}
         </Link>

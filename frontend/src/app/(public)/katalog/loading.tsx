@@ -6,32 +6,32 @@ import { t } from '@/lib/i18n';
  */
 export default function CatalogLoading() {
   return (
-    <section className="bg-surface-primary py-16 lg:py-24">
+    <section className="bg-surface-primary py-20 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <header className="max-w-4xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             {t('catalog.title')}
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-zinc-400">
+          <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
             {t('catalog.subtitle')}
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside>
-            <div className="h-96 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
-          </aside>
+        <div className="mt-14 border-y border-zinc-800 py-5">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
+            <div className="h-10 animate-pulse rounded-lg bg-zinc-800" />
+            <div className="h-10 animate-pulse rounded-lg bg-zinc-800" />
+            <div className="h-10 animate-pulse rounded-lg bg-zinc-800" />
+            <div className="h-10 animate-pulse rounded-lg bg-zinc-800 lg:w-52" />
+          </div>
+        </div>
 
-          <div>
-            <div className="mb-6 h-4 w-32 animate-pulse rounded bg-zinc-800" />
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="h-52 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card"
-                />
-              ))}
-            </div>
+        <div className="mt-10">
+          <div className="mb-5 h-4 w-40 animate-pulse rounded bg-zinc-800" />
+          <div className="border-y border-zinc-800">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="h-28 animate-pulse border-b border-zinc-800 bg-zinc-900/20 last:border-b-0" />
+            ))}
           </div>
         </div>
       </div>

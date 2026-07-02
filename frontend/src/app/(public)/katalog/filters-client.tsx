@@ -98,44 +98,49 @@ export function CatalogFilters({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6"
+      className="border-y border-zinc-800 py-5"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">
         {t('catalog.filter.heading')}
       </h2>
 
-      <Select
-        label={t('catalog.filter.category')}
-        value={category}
-        onChange={(e) => handleCategoryChange(e.target.value)}
-        options={categoryOptions}
-        placeholder={t('catalog.filter.category_any')}
-      />
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
+        <Select
+          label={t('catalog.filter.category')}
+          value={category}
+          onChange={(e) => handleCategoryChange(e.target.value)}
+          options={categoryOptions}
+          placeholder={t('catalog.filter.category_any')}
+          className="h-11"
+        />
 
-      <Input
-        label={t('catalog.filter.city')}
-        type="text"
-        value={city}
-        onChange={(e) => handleCityChange(e.target.value)}
-        placeholder={t('catalog.filter.city_placeholder')}
-        autoComplete="off"
-      />
+        <Input
+          label={t('catalog.filter.city')}
+          type="text"
+          value={city}
+          onChange={(e) => handleCityChange(e.target.value)}
+          placeholder={t('catalog.filter.city_placeholder')}
+          autoComplete="off"
+          className="h-11"
+        />
 
-      <Select
-        label={t('catalog.filter.min_rating')}
-        value={minRating}
-        onChange={(e) => handleMinRatingChange(e.target.value)}
-        options={ratingOptions}
-        placeholder={t('catalog.filter.min_rating_any')}
-      />
+        <Select
+          label={t('catalog.filter.min_rating')}
+          value={minRating}
+          onChange={(e) => handleMinRatingChange(e.target.value)}
+          options={ratingOptions}
+          placeholder={t('catalog.filter.min_rating_any')}
+          className="h-11"
+        />
 
-      <div className="flex flex-col gap-2 pt-2">
-        <Button type="submit" variant="primary">
-          {t('catalog.filter.apply')}
-        </Button>
-        <Button type="button" variant="ghost" onClick={handleReset}>
-          {t('catalog.filter.reset')}
-        </Button>
+        <div className="flex flex-row gap-2 pt-1 lg:justify-end lg:pt-0">
+          <Button type="submit" variant="primary" className="w-full lg:w-auto">
+            {t('catalog.filter.apply')}
+          </Button>
+          <Button type="button" variant="ghost" onClick={handleReset} className="w-full lg:w-auto">
+            {t('catalog.filter.reset')}
+          </Button>
+        </div>
       </div>
     </form>
   );

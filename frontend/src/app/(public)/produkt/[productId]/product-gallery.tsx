@@ -62,8 +62,9 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
             alt={t('catalog.product.image_alt', { title })}
             width={PRIMARY_WIDTH}
             height={PRIMARY_HEIGHT}
+            sizes="(max-width: 1024px) 100vw, 600px"
             className="h-full w-full object-cover"
-            priority
+            preload
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-zinc-500">
@@ -102,6 +103,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
                       alt=""
                       width={THUMB_WIDTH}
                       height={THUMB_HEIGHT}
+                      sizes="80px"
                       className="h-full w-full object-cover"
                     />
                   ) : (

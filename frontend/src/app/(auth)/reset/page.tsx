@@ -10,9 +10,11 @@ export const metadata = {
 
 export default function ResetPage() {
   return (
-    <Suspense fallback={<Skeleton />}>
-      <ResetClient />
-    </Suspense>
+    <div className="mx-auto w-full max-w-md">
+      <Suspense fallback={<Skeleton />}>
+        <ResetClient />
+      </Suspense>
+    </div>
   );
 }
 

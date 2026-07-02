@@ -3,8 +3,23 @@ import { Inter } from 'next/font/google';
 import { SITE_URL } from '@/lib/seo/site-url';
 import './globals.css';
 
+function publicApiOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
+  display: 'swap',
+  fallback: ['system-ui', 'arial'],
   variable: '--font-inter',
 });
 
@@ -25,8 +40,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const apiOrigin = publicApiOrigin();
+
   return (
     <html lang="cs" className={`${inter.variable} h-full antialiased`}>
+      <head>
+        {apiOrigin ? <link rel="preconnect" href={apiOrigin} crossOrigin="" /> : null}
+      </head>
       <body className="flex min-h-full flex-col bg-surface-primary font-sans">
         <main className="flex-1">{children}</main>
       </body>

@@ -32,6 +32,7 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
               alt={t('catalog.product.image_alt', { title: product.title })}
               width={IMAGE_WIDTH}
               height={IMAGE_HEIGHT}
+              sizes="96px"
               className="h-full w-full object-cover"
             />
           ) : (
