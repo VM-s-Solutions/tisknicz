@@ -15,26 +15,48 @@ import { t } from '@/lib/i18n';
  */
 
 const STEPS = [
-  { icon: 'search', titleKey: 'static.how_it_works.step1_title', bodyKey: 'static.how_it_works.step1_body' },
-  { icon: 'upload', titleKey: 'static.how_it_works.step2_title', bodyKey: 'static.how_it_works.step2_body' },
-  { icon: 'creditCard', titleKey: 'static.how_it_works.step3_title', bodyKey: 'static.how_it_works.step3_body' },
-  { icon: 'check', titleKey: 'static.how_it_works.step4_title', bodyKey: 'static.how_it_works.step4_body' },
+  {
+    icon: 'search',
+    titleKey: 'static.how_it_works.step1_title',
+    bodyKey: 'static.how_it_works.step1_body',
+    detailKeys: [
+      'static.how_it_works.step1_detail1',
+      'static.how_it_works.step1_detail2',
+      'static.how_it_works.step1_detail3',
+      'static.how_it_works.step1_detail4',
+    ],
+  },
+  {
+    icon: 'upload',
+    titleKey: 'static.how_it_works.step2_title',
+    bodyKey: 'static.how_it_works.step2_body',
+    detailKeys: [
+      'static.how_it_works.step2_detail1',
+      'static.how_it_works.step2_detail2',
+    ],
+  },
+  {
+    icon: 'creditCard',
+    titleKey: 'static.how_it_works.step3_title',
+    bodyKey: 'static.how_it_works.step3_body',
+    detailKeys: ['static.how_it_works.step2_detail4'],
+  },
+  {
+    icon: 'check',
+    titleKey: 'static.how_it_works.step4_title',
+    bodyKey: 'static.how_it_works.step4_body',
+    detailKeys: ['static.how_it_works.step6_detail1', 'static.how_it_works.step6_detail2'],
+  },
   { icon: 'truck', titleKey: 'static.how_it_works.step5_title', bodyKey: 'static.how_it_works.step5_body' },
-  { icon: 'package', titleKey: 'static.how_it_works.step6_title', bodyKey: 'static.how_it_works.step6_body' },
-] as const;
-
-const STEP_NOTES = [
-  'static.how_it_works.step1_detail1',
-  'static.how_it_works.step1_detail2',
-  'static.how_it_works.step1_detail3',
-  'static.how_it_works.step1_detail4',
-  'static.how_it_works.step2_detail1',
-  'static.how_it_works.step2_detail2',
-  'static.how_it_works.step2_detail4',
-  'static.how_it_works.step6_detail1',
-  'static.how_it_works.step6_detail2',
-  'static.how_it_works.step6_detail3',
-  'static.how_it_works.step6_detail4',
+  {
+    icon: 'package',
+    titleKey: 'static.how_it_works.step6_title',
+    bodyKey: 'static.how_it_works.step6_body',
+    detailKeys: [
+      'static.how_it_works.step6_detail3',
+      'static.how_it_works.step6_detail4',
+    ],
+  },
 ] as const;
 
 export function generateMetadata(): Metadata {
@@ -99,6 +121,18 @@ export default function HowItWorksPage() {
                         <h3 className="text-lg font-semibold text-white">{t(step.titleKey)}</h3>
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t(step.bodyKey)}</p>
+                      {'detailKeys' in step ? (
+                        <ul className="mt-3 space-y-1.5">
+                          {step.detailKeys.map((detailKey) => (
+                            <li key={detailKey} className="flex items-start gap-2 text-sm leading-relaxed text-zinc-300">
+                              <span className="mt-0.5 text-brand-400">
+                                <Icon name="check" size={14} />
+                              </span>
+                              {t(detailKey)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                   </div>
                 </li>
@@ -108,29 +142,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="bg-surface-primary py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <h2 className="text-xl font-semibold text-white">{t('static.how_it_works.steps_heading')}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{t('static.how_it_works.intro')}</p>
-            <ul className="mt-6 border-y border-zinc-800">
-              {STEP_NOTES.map((lineKey) => (
-                <li
-                  key={lineKey}
-                  className="flex items-start gap-3 px-1 py-3 text-sm text-zinc-300 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-zinc-800"
-                >
-                  <span className="mt-0.5 text-brand-400">
-                    <Icon name="arrowRight" size={16} />
-                  </span>
-                  {t(lineKey)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
+      <section className="bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 text-center sm:px-6 lg:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-400/80">{t('static.how_it_works.steps_heading')}</p>
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{t('static.how_it_works.cta_heading')}</h2>
