@@ -1,19 +1,17 @@
 'use client';
 
 import { useRef, useMemo } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Float } from '@react-three/drei';
 import * as THREE from 'three';
 
 function CameraRig() {
-  const { camera, pointer } = useThree();
-
-  useFrame(() => {
-    const targetX = pointer.x * 0.45;
-    const targetY = pointer.y * 0.28;
-    camera.position.x += (targetX - camera.position.x) * 0.03;
-    camera.position.y += (targetY - camera.position.y) * 0.03;
-    camera.lookAt(0, 0, 0);
+  useFrame((state) => {
+    const targetX = state.pointer.x * 0.45;
+    const targetY = state.pointer.y * 0.28;
+    state.camera.position.x += (targetX - state.camera.position.x) * 0.03;
+    state.camera.position.y += (targetY - state.camera.position.y) * 0.03;
+    state.camera.lookAt(0, 0, 0);
   });
 
   return null;
