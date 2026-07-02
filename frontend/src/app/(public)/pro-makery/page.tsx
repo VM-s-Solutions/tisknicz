@@ -49,7 +49,7 @@ export default function ForMakersPage() {
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">{t('static.for_makers.intro')}</p>
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <Link
-                href="/register/maker"
+                href="/register?type=maker"
                 className="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
               >
                 {t('static.for_makers.cta')}
@@ -128,7 +128,7 @@ export default function ForMakersPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-400/80">{t('static.for_makers.benefits_heading')}</p>
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{t('static.for_makers.cta_heading')}</h2>
           <Link
-            href="/register/maker"
+            href="/register?type=maker"
             className="group mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             {t('static.for_makers.cta')}
