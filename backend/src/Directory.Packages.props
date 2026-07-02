@@ -30,6 +30,10 @@
          Microsoft.OpenApi 2.x (which Microsoft.AspNetCore.OpenApi 10.0.0 depends on).
          OpenAPI generation goes through Microsoft.AspNetCore.OpenApi natively. -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <!-- Transitive-pin override for GHSA-v5pm-xwqc-g5wc:
+         Microsoft.AspNetCore.OpenApi 10.0.0 currently restores Microsoft.OpenApi 2.0.0,
+         which fails NuGetAudit when warnings are treated as errors. -->
+     <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
 
     <!-- Observability: Serilog + OpenTelemetry + Azure Monitor (Config + Web hosts).
