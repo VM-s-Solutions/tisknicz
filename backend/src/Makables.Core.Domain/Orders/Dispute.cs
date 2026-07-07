@@ -31,6 +31,18 @@ public sealed class Dispute : Auditable
     /// <summary>Customer-VISIBLE — rendered in the resolve email (§C.7).</summary>
     public const int MaxResolutionNotesLength = 2000;
 
+    /// <summary>
+    /// T-0145 (dopady §2.5 Q6–Q9 / Alternatives Considered Option C): the
+    /// maker's SLA to reply on the order-message thread after a
+    /// customer-sourced dispute opens, anchored to <c>CreatedAt</c> (never
+    /// "last customer message" — that would let a chatty customer reset
+    /// the maker's clock). Past this window with no maker reply, the daily
+    /// sweep fires the escalation notification — it never auto-resolves.
+    /// Owned here (not in the repository/Function) so the invariant has
+    /// one source of truth.
+    /// </summary>
+    public const int ResponseWindowDays = 7;
+
     /// <summary>FK to the disputed order. Immutable.</summary>
     public string OrderId { get; private set; } = default!;
 
@@ -49,6 +61,16 @@ public sealed class Dispute : Auditable
     public DateTimeOffset? ResolvedAt { get; private set; }
 
     public DisputeResolutionOutcome? ResolutionOutcome { get; private set; }
+
+    /// <summary>
+    /// Null until the T-0145 7-day maker-response sweep fires the
+    /// <c>dispute.autoEscalated.adminEmail</c> notification for this
+    /// dispute. Set exactly once by <see cref="TryMarkAutoEscalated"/> —
+    /// the idempotency guard so a re-run of the sweep never double-sends
+    /// (AC-8). Notification-only: this never resolves the dispute or
+    /// sanctions the maker.
+    /// </summary>
+    public DateTimeOffset? AutoEscalatedAt { get; private set; }
 
     // EF Core needs a parameterless ctor.
     private Dispute() { }
@@ -122,5 +144,24 @@ public sealed class Dispute : Auditable
         ResolutionNotes = trimmedNotes;
         ResolvedAt = clock.UtcNow;
         return BusinessResult.Success();
+    }
+
+    /// <summary>
+    /// Idempotency guard for the T-0145 auto-escalation sweep: stamps
+    /// <see cref="AutoEscalatedAt"/> and returns <c>true</c> the FIRST
+    /// time it is called; returns <c>false</c> (no mutation) on every
+    /// subsequent call, so a re-run against an already-escalated dispute
+    /// never re-enqueues the admin email (AC-8).
+    /// </summary>
+    public bool TryMarkAutoEscalated(IClock clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (AutoEscalatedAt is not null)
+        {
+            return false;
+        }
+
+        AutoEscalatedAt = clock.UtcNow;
+        return true;
     }
 }

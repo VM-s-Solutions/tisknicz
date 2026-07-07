@@ -32,6 +32,14 @@ namespace Makables.Core.AppServices.Features.Orders;
 /// </summary>
 public static class OpenCustomerDispute
 {
+    /// <summary>
+    /// T-0145 (dopady §2.5 Q6–Q9): the customer's platform dispute button
+    /// only works within this many days of <c>Order.DeliveredAt</c>.
+    /// Applies ONLY here — see the Handler guard + the ticket's Alternatives
+    /// Considered Option A for why the other three openers are untouched.
+    /// </summary>
+    public const int OpenWindowDays = 14;
+
     public sealed record Command(string OrderId, DisputeCategory Category, string Description)
         : ICommand<OpenCustomerDisputeResponse>;
 
@@ -100,6 +108,19 @@ public static class OpenCustomerDispute
             if (order.State == OrderState.Disputed)
             {
                 return await ExistingOpenDisputeAsync(order, disputes, logger, cancellationToken);
+            }
+
+            // Step 3.5: T-0145 14-day open-window guard — ONLY meaningful
+            // once the order has actually been delivered (AC-1/2). Paid /
+            // Accepted / Shipped have no DeliveredAt anchor yet and sail
+            // through unchanged (AC-3); the other three openers never call
+            // this handler (AC-4).
+            if (order.State == OrderState.Delivered
+                && order.DeliveredAt is not null
+                && clock.UtcNow > order.DeliveredAt.Value.AddDays(OpenWindowDays))
+            {
+                return BusinessResult.Failure<OpenCustomerDisputeResponse>(
+                    Error.Conflict("orderId", BusinessErrorMessage.OrderDisputeWindowExpired));
             }
 
             // Step 4: Parenthesis-state flip (stamps PreDisputeState).

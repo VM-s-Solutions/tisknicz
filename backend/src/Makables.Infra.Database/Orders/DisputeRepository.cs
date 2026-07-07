@@ -29,4 +29,28 @@ public sealed class DisputeRepository(MakablesDbContext db) : IDisputeRepository
                 d => d.OrderId == orderId && d.ResolvedAt == null,
                 cancellationToken);
     }
+
+    public Task<Dispute?> GetByIdUnscopedAsync(string disputeId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(disputeId))
+            return Task.FromResult<Dispute?>(null);
+
+        return db.Set<Dispute>()
+            .FirstOrDefaultAsync(d => d.Id == disputeId, cancellationToken);
+    }
+
+    public IAsyncEnumerable<string> GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(
+        DateTimeOffset asOf, CancellationToken cancellationToken)
+    {
+        var cutoff = asOf.AddDays(-Dispute.ResponseWindowDays);
+        return db.Set<Dispute>()
+            .AsNoTracking()
+            .Where(d => d.ResolvedAt == null
+                     && d.Source == DisputeSource.Customer
+                     && d.AutoEscalatedAt == null
+                     && d.CreatedAt < cutoff)
+            .OrderBy(d => d.CreatedAt)
+            .Select(d => d.Id)
+            .AsAsyncEnumerable();
+    }
 }

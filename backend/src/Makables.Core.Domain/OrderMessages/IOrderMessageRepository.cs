@@ -47,4 +47,19 @@ public interface IOrderMessageRepository
         string makerId,
         DateTimeOffset asOf,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// True when a <see cref="OrderMessageAuthorRole.Maker"/>-authored
+    /// message exists on <paramref name="orderId"/> with
+    /// <see cref="Common.Auditable.CreatedAt"/> strictly after
+    /// <paramref name="sinceUtc"/>. Backs the T-0145 7-day auto-escalation
+    /// sweep's "did the maker reply?" check — a targeted <c>EXISTS</c>
+    /// rather than loading the whole thread (Technical notes). The caller
+    /// passes <c>Dispute.CreatedAt</c> as <paramref name="sinceUtc"/> per
+    /// the locked anchor (Alternatives Considered Option C).
+    /// </summary>
+    Task<bool> HasMakerReplySinceAsync(
+        string orderId,
+        DateTimeOffset sinceUtc,
+        CancellationToken cancellationToken);
 }

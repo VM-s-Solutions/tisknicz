@@ -158,6 +158,17 @@ public static class OutboxEventTypes
     public const string PayoutBatchPayoutSentMakerEmail = "payout.payoutSent.makerEmail";
 
     /// <summary>
+    /// "Maker missed the 7-day response window" admin notification, fired
+    /// by the daily <c>DisputeAutoEscalationFunction</c> sweep's
+    /// <c>EscalateDispute</c> handler for a customer-sourced dispute past
+    /// <c>Dispute.CreatedAt + 7 days</c> with no maker reply. Recipient
+    /// resolves at SEND time from <c>EmailOptions.AdminNotificationAddress</c>
+    /// — same as <see cref="OrderDisputedAdminEmail"/>. Notification only —
+    /// never resolves the dispute or sanctions the maker. T-0145.
+    /// </summary>
+    public const string DisputeAutoEscalatedAdminEmail = "dispute.autoEscalated.adminEmail";
+
+    /// <summary>
     /// True when <paramref name="eventType"/> routes to the
     /// <c>send-email</c> queue per T-0029 <c>OutboxDispatcher</c>. The
     /// routing table is one place — adding a new email event type
@@ -186,7 +197,8 @@ public static class OutboxEventTypes
                   or OrderDisputedAdminEmail
                   or OrderDisputeResolvedCustomerEmail
                   or PayoutFeeInvoiceMakerEmail
-                  or PayoutBatchPayoutSentMakerEmail;
+                  or PayoutBatchPayoutSentMakerEmail
+                  or DisputeAutoEscalatedAdminEmail;
 
     /// <summary>
     /// True when <paramref name="eventType"/> routes to the

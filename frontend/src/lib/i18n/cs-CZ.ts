@@ -684,6 +684,10 @@ export const messages = {
     'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
   'order.dispute.notOpen':
     'K této objednávce není otevřená žádná reklamace.',
+  // T-0145 — the customer's platform dispute button is time-boxed to 14
+  // days from delivery (admin channel stays unlimited).
+  'order.dispute.windowExpired':
+    'Lhůta pro podání reklamace přes platformu (14 dní od doručení) už vypršela.',
 
   // T-0100 review error codes (parity with BusinessErrorMessage —
   // resolveErrorMessage maps the dotted code 1:1). Vykání on the customer
@@ -949,6 +953,26 @@ export const messages = {
 
   'customer.orderDetail.invoice.heading': 'Faktura',
   'customer.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  // T-0145 — "Reklamovat" routes into the message thread (not a standalone
+  // dispute form): a category selector + an "Eskalovat na Makables" action
+  // that only appears while the 14-day window (when applicable) hasn't
+  // elapsed. Vykání throughout.
+  'customer.orderDetail.dispute.heading': 'Reklamace',
+  'customer.orderDetail.dispute.intro':
+    'Nejdřív napište výrobci do vlákna zpráv níže. Pokud se do 7 dní neozve nebo řešení nevyhovuje, můžete reklamaci eskalovat na Makables.',
+  'customer.orderDetail.dispute.categoryLabel': 'Kategorie reklamace',
+  'customer.orderDetail.dispute.category.notDelivered': 'Nedoručeno',
+  'customer.orderDetail.dispute.category.damagedItem': 'Poškozené zboží',
+  'customer.orderDetail.dispute.category.notAsDescribed': 'Neodpovídá popisu',
+  'customer.orderDetail.dispute.category.other': 'Jiné',
+  'customer.orderDetail.dispute.descriptionLabel': 'Popis reklamace',
+  'customer.orderDetail.dispute.escalateButton': 'Eskalovat na Makables',
+  'customer.orderDetail.dispute.escalateSubmitting': 'Odesílám…',
+  'customer.orderDetail.dispute.windowExpiredNote':
+    'Lhůta pro eskalaci přes platformu (14 dní od doručení) už vypršela — kontaktujte prosím podporu přímo.',
+  'customer.orderDetail.dispute.alreadyOpenNote':
+    'Reklamace k této objednávce je otevřená a čeká na vyřízení.',
 
   // Caption key reserved by T-0076 (supersedes the US draft wording
   // "Potvrdit doručení" — final copy belongs to l10n).

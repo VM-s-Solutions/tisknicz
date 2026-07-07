@@ -78,4 +78,20 @@ public sealed class OrderMessageRepository(MakablesDbContext db) : IOrderMessage
                 setters => setters.SetProperty(m => m.ReadByCounterpartyAt, asOf),
                 cancellationToken);
     }
+
+    public Task<bool> HasMakerReplySinceAsync(
+        string orderId, DateTimeOffset sinceUtc, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(orderId))
+            return Task.FromResult(false);
+
+        // Targeted EXISTS — the T-0145 sweep needs a boolean, not the
+        // thread contents.
+        return db.Set<OrderMessage>()
+            .AnyAsync(
+                m => m.OrderId == orderId
+                  && m.AuthorRole == OrderMessageAuthorRole.Maker
+                  && m.CreatedAt > sinceUtc,
+                cancellationToken);
+    }
 }

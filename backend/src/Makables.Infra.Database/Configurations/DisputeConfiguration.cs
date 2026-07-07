@@ -37,6 +37,7 @@ internal sealed class DisputeEntityConfiguration : IEntityTypeConfiguration<Disp
             .HasColumnName("resolution_notes")
             .HasMaxLength(Dispute.MaxResolutionNotesLength);
         builder.Property(d => d.ResolvedAt).HasColumnName("resolved_at");
+        builder.Property(d => d.AutoEscalatedAt).HasColumnName("auto_escalated_at");
 
         // FK declared as a shadow relationship (no navigation on Order —
         // the aggregate stays lightweight per ADR 0013): CASCADE per the
@@ -56,6 +57,13 @@ internal sealed class DisputeEntityConfiguration : IEntityTypeConfiguration<Disp
             .IsUnique()
             .HasDatabaseName("ux_disputes_order_open")
             .HasFilter("resolved_at IS NULL");
+
+        // T-0145 sweep predicate: ResolvedAt IS NULL AND Source = Customer
+        // AND AutoEscalatedAt IS NULL AND CreatedAt < cutoff. Partial index
+        // keeps the daily scan to the (small) open-customer-sourced subset.
+        builder.HasIndex(d => d.CreatedAt)
+            .HasDatabaseName("ix_disputes_auto_escalation_candidates")
+            .HasFilter("resolved_at IS NULL AND source = 0 AND auto_escalated_at IS NULL");
 
         ConfigureAuditable(builder);
     }

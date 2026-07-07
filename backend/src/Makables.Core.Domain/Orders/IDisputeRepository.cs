@@ -26,4 +26,29 @@ public interface IDisputeRepository
     /// the resolve handler mutates the returned entity.
     /// </summary>
     Task<Dispute?> GetOpenByOrderIdAsync(string orderId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load a single dispute by id, unscoped. Tracked — the T-0145
+    /// <c>EscalateDispute.Handler</c> (Function-dispatched, no caller
+    /// principal) mutates the returned entity via
+    /// <see cref="Dispute.TryMarkAutoEscalated"/>.
+    /// </summary>
+    Task<Dispute?> GetByIdUnscopedAsync(string disputeId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Projection-only stream of <see cref="Dispute.Id"/> values past the
+    /// T-0145 7-day maker-response window: <c>ResolvedAt IS NULL AND
+    /// Source == Customer AND AutoEscalatedAt IS NULL AND CreatedAt &lt;
+    /// asOf - 7 days</c>. Unscoped + read-only (<c>AsNoTracking</c>) — the
+    /// daily sweep Function has no user identity and only needs the id to
+    /// dispatch <c>EscalateDispute.Command</c> per row, which re-checks
+    /// the maker-reply-since guard (Technical notes) and the idempotency
+    /// flag against a freshly tracked read. Mirrors
+    /// <see cref="IOrderRepository.GetAutoDeliverableUnscopedReadOnlyAsync"/>
+    /// (T-0077) — the predicate IS the claim, so a partial-run failure
+    /// simply retries next sweep.
+    /// </summary>
+    IAsyncEnumerable<string> GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(
+        DateTimeOffset asOf,
+        CancellationToken cancellationToken);
 }

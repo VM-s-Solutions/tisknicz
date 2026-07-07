@@ -133,4 +133,16 @@ public enum EmailTemplateType
     /// Tykání (maker audience). T-0103.
     /// </summary>
     PayoutSentMaker = 16,
+
+    /// <summary>
+    /// "Maker missed the 7-day response window" admin digest fired by the
+    /// T-0145 daily <c>DisputeAutoEscalationFunction</c> sweep for a
+    /// customer-sourced dispute past its response SLA with no maker
+    /// reply. Outbox event:
+    /// <see cref="Outbox.OutboxEventTypes.DisputeAutoEscalatedAdminEmail"/>.
+    /// Recipient = <c>EmailOptions.AdminNotificationAddress</c>, resolved
+    /// at send time — same pattern as <see cref="OrderDisputedAdmin"/>.
+    /// Notification only; never resolves the dispute. T-0145.
+    /// </summary>
+    DisputeAutoEscalatedAdmin = 17,
 }
