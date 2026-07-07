@@ -6,10 +6,12 @@ namespace Makables.Core.AppServices.Services;
 /// <summary>
 /// Orchestrates a one-line order's pricing snapshot per
 /// role/order-pricing.md + T-0061. Loads the
-/// <see cref="Products.Product"/> + <see cref="Configuration.CountryConfiguration"/>
-/// (the I/O side), resolves the shipping price for the chosen
-/// <see cref="ShippingMethod"/>, and delegates the math to the pure
-/// <c>OrderPricing.Compute</c> helper.
+/// <see cref="Products.Product"/> + <see cref="Makers.Maker"/> +
+/// <see cref="Configuration.CountryConfiguration"/> (the I/O side),
+/// resolves the effective platform-fee rate (T-0140:
+/// <c>maker.FeeRateOverrideBp ?? config.PlatformFeeRateBp</c>) and the
+/// shipping price for the chosen <see cref="ShippingMethod"/>, and
+/// delegates the math to the pure <c>OrderPricing.Compute</c> helper.
 ///
 /// <para>
 /// <b>Single source of truth.</b> Every Phase-4 consumer goes through
@@ -43,6 +45,9 @@ public interface IPricingService
     ///   <item>CountryConfiguration missing →
     ///   <see cref="ErrorType.NotFound"/>,
     ///   <see cref="BusinessErrorMessage.CountryConfigurationNotFound"/>.</item>
+    ///   <item>Maker missing (T-0140, resolving the fee-rate override) →
+    ///   <see cref="ErrorType.NotFound"/>,
+    ///   <see cref="BusinessErrorMessage.MakerNotFound"/>.</item>
     /// </list>
     ///
     /// <para>

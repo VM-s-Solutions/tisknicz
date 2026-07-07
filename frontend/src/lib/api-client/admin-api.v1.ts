@@ -68,6 +68,11 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    feeOverride(makerId: string, body: SetMakerFeeOverrideRequest): Promise<void>;
+
+    /**
+     * @return OK
+     */
     refund(orderId: string, body: RefundOrderRequest): Promise<RefundOrderResponse>;
 
     /**
@@ -737,6 +742,67 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<UpdateCountryConfigurationResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    feeOverride(makerId: string, body: SetMakerFeeOverrideRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/makers/{makerId}/fee-override";
+        if (makerId === undefined || makerId === null)
+            throw new globalThis.Error("The parameter 'makerId' must be defined.");
+        url_ = url_.replace("{makerId}", encodeURIComponent("" + makerId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processFeeOverride(_response);
+        });
+    }
+
+    protected processFeeOverride(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 
     /**
@@ -2906,158 +2972,6 @@ export interface IAdminPayoutBatchListItemDto {
     [key: string]: any;
 }
 
-export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
-    state!: OrderState;
-
-    [key: string]: any;
-
-    constructor(data?: IChangeOrderStateManuallyResponse) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.state = _data["state"];
-        }
-    }
-
-    static fromJS(data: any): ChangeOrderStateManuallyResponse {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangeOrderStateManuallyResponse();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["state"] = this.state;
-        return data;
-    }
-}
-
-export interface IChangeOrderStateManuallyResponse {
-    state: OrderState;
-
-    [key: string]: any;
-}
-
-export class ChangeOrderStateRequest implements IChangeOrderStateRequest {
-    targetState!: OrderState;
-    reason!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangeOrderStateRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.targetState = _data["targetState"];
-            this.reason = _data["reason"];
-        }
-    }
-
-    static fromJS(data: any): ChangeOrderStateRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangeOrderStateRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["targetState"] = this.targetState;
-        data["reason"] = this.reason;
-        return data;
-    }
-}
-
-export interface IChangeOrderStateRequest {
-    targetState: OrderState;
-    reason: string;
-
-    [key: string]: any;
-}
-
-export class ChangePasswordRequest implements IChangePasswordRequest {
-    currentPassword!: string;
-    newPassword!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangePasswordRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.currentPassword = _data["currentPassword"];
-            this.newPassword = _data["newPassword"];
-        }
-    }
-
-    static fromJS(data: any): ChangePasswordRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangePasswordRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["currentPassword"] = this.currentPassword;
-        data["newPassword"] = this.newPassword;
-        return data;
-    }
-}
-
-export interface IChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
-
-    [key: string]: any;
-}
-
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
     token!: string;
 
@@ -3975,6 +3889,158 @@ export class GetStalledOutboxEventsResponse implements IGetStalledOutboxEventsRe
 
 export interface IGetStalledOutboxEventsResponse {
     events: PagedDataOfStalledOutboxEventDto;
+
+    [key: string]: any;
+}
+
+export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
+    state!: OrderState;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateManuallyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.state = _data["state"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateManuallyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateManuallyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["state"] = this.state;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateManuallyResponse {
+    state: OrderState;
+
+    [key: string]: any;
+}
+
+export class ChangeOrderStateRequest implements IChangeOrderStateRequest {
+    targetState!: OrderState;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.targetState = _data["targetState"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["targetState"] = this.targetState;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateRequest {
+    targetState: OrderState;
+    reason: string;
+
+    [key: string]: any;
+}
+
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
 
     [key: string]: any;
 }
@@ -5142,6 +5208,58 @@ export interface IRetryOutboxEventResponse {
     outboxEventId: string;
     retryCount: number;
     nextRetryAt: Date;
+
+    [key: string]: any;
+}
+
+export class SetMakerFeeOverrideRequest implements ISetMakerFeeOverrideRequest {
+    feeRateOverrideBp!: number | undefined;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: ISetMakerFeeOverrideRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.feeRateOverrideBp = _data["feeRateOverrideBp"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): SetMakerFeeOverrideRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new SetMakerFeeOverrideRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["feeRateOverrideBp"] = this.feeRateOverrideBp;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface ISetMakerFeeOverrideRequest {
+    feeRateOverrideBp: number | undefined;
+    reason: string;
 
     [key: string]: any;
 }

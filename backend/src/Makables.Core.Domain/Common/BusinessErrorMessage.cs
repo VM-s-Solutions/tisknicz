@@ -238,6 +238,16 @@ public static class BusinessErrorMessage
     public const string MakerSlugAlreadyExists = "maker.slugAlreadyExists";
 
     /// <summary>
+    /// Admin submitted a <c>SetMakerFeeOverride</c> value greater than the
+    /// maker's <c>CountryConfiguration.PlatformFeeRateBp</c>. Per T-0140 /
+    /// US-admin-0018 locked decision, the override is a loyalty DISCOUNT
+    /// only — it can never exceed the advertised country default. Negative
+    /// values are rejected by the Validator directly with
+    /// <see cref="MinValue"/>; this code is specifically the ceiling check.
+    /// </summary>
+    public const string MakerFeeOverrideExceedsCountryDefault = "maker.feeOverrideExceedsCountryDefault";
+
+    /// <summary>
     /// FK invariant violation: a <see cref="Makers.Maker"/> aggregate exists
     /// for the given id but its linked <c>UserId</c> resolves to no row in
     /// <c>users</c>. Distinct from <see cref="MakerNotFound"/> so the T-0029
