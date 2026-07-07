@@ -4,17 +4,25 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Approved hero design (2026-07-05): zig-zag wireframe torus knot facing the
-// viewer, spinning right around a vertical axis tilted to the right.
-// The values mirror the interactive design widget the knot was tuned in.
-const KNOT_P = 2;
-const KNOT_Q = 5;
+// Approved hero design (2026-07-06): zig-zag wireframe (3,4) torus knot facing
+// the viewer like the Makables logo, spinning right around a vertical axis
+// ((3,4) is invariant under a 180deg turn, so front and back views match),
+// gently breathing, with an Interstellar-style black hole in its center:
+// lensed glow ring, flat accretion disk, and light motes spiralling in.
+// The values mirror the interactive design widget the scene was tuned in.
+const KNOT_P = 3;
+const KNOT_Q = 4;
 const TUBE_RADIUS = 0.5;
 const SPREAD = 1.15;
 const SCALE = 1.5;
 const MESH_DENSITY = 1.6;
-const SPIN_SPEED = 0.3;
-const AXIS_TILT_DEG = 23;
+const SPIN_RATE = 0.4 * 0.35;
+const BREATHE_AMPLITUDE = 0.035;
+const HOLE_RADIUS = 0.36;
+const HOLE_BRIGHTNESS = 1;
+const HOLE_WARM_MIX = 0.8;
+const ABSORB_RATE = 0.7;
+const SCENE_CENTER: [number, number, number] = [0.25, 0.2, -1.2];
 
 function CameraRig() {
   useFrame((state) => {
@@ -57,14 +65,13 @@ function WireKnot() {
 
   useFrame((state) => {
     if (!spinRef.current) return;
-    spinRef.current.rotation.y = state.clock.elapsedTime * SPIN_SPEED * 0.35;
+    const t = state.clock.elapsedTime * SPIN_RATE;
+    spinRef.current.rotation.y = t;
+    spinRef.current.scale.setScalar(1 + BREATHE_AMPLITUDE * Math.sin(t * 2.4));
   });
 
   return (
-    <group
-      position={[0.25, 0.2, -1.2]}
-      rotation={[0, 0, (-AXIS_TILT_DEG * Math.PI) / 180]}
-    >
+    <group position={SCENE_CENTER}>
       <group ref={spinRef}>
         <lineSegments geometry={geometry}>
           <lineBasicMaterial color="#14b8a6" transparent opacity={0.6} />
@@ -101,6 +108,204 @@ function createStarTexture(): THREE.CanvasTexture {
     ctx.fillRect(0, 0, 64, 64);
   }
   return new THREE.CanvasTexture(canvas);
+}
+
+// Teal-to-white blends matching the approved design widget (mix 0..1).
+function holeColor(alpha: number): string {
+  const r = Math.round(45 + (255 - 45) * HOLE_WARM_MIX);
+  const g = Math.round(212 + (234 - 212) * HOLE_WARM_MIX);
+  const b = Math.round(191 + (210 - 191) * HOLE_WARM_MIX);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function holeColorBright(alpha: number): string {
+  const r = Math.round(204 + (255 - 204) * HOLE_WARM_MIX);
+  const g = Math.round(251 + (248 - 251) * HOLE_WARM_MIX);
+  const b = Math.round(241 + (235 - 241) * HOLE_WARM_MIX);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Halo, lensed ring, and photon rings in one billboard texture. 256px half
+// width maps to 3.2x the hole radius, so the hole rim sits at 80px.
+function createHoleGlowTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const rim = 80;
+    const b = HOLE_BRIGHTNESS;
+    const halo = ctx.createRadialGradient(256, 256, rim, 256, 256, 256);
+    halo.addColorStop(0, holeColor(0.28 * b));
+    halo.addColorStop(0.5, holeColor(0.08 * b));
+    halo.addColorStop(1, holeColor(0));
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, 512, 512);
+
+    const lens = ctx.createRadialGradient(
+      256,
+      256,
+      rim * 1.05,
+      256,
+      256,
+      rim * 1.75
+    );
+    lens.addColorStop(0, holeColorBright(0.55 * b));
+    lens.addColorStop(0.45, holeColor(0.22 * b));
+    lens.addColorStop(1, holeColor(0));
+    ctx.fillStyle = lens;
+    ctx.beginPath();
+    ctx.arc(256, 256, rim * 1.75, 0, Math.PI * 2);
+    ctx.arc(256, 256, rim * 1.02, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    ctx.strokeStyle = holeColorBright(Math.min(1, 0.95 * b));
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(256, 256, rim * 1.02, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = holeColor(0.35 * b);
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(256, 256, rim * 1.09, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+const MOTE_COUNT = 24;
+
+type Mote = {
+  angle: number;
+  radius: number;
+  delay: number;
+};
+
+function BlackHole() {
+  const glowRef = useRef<THREE.Sprite>(null);
+  const positionAttrRef = useRef<THREE.BufferAttribute>(null);
+  const colorAttrRef = useRef<THREE.BufferAttribute>(null);
+
+  const buffers = useMemo(
+    () => ({
+      positions: new Float32Array(MOTE_COUNT * 3),
+      colors: new Float32Array(MOTE_COUNT * 3),
+    }),
+    []
+  );
+
+  const motes = useRef<Mote[] | null>(null);
+
+  const glowTexture = useMemo(() => createHoleGlowTexture(), []);
+  const moteTexture = useMemo(() => createStarTexture(), []);
+
+  useEffect(
+    () => () => {
+      glowTexture.dispose();
+      moteTexture.dispose();
+    },
+    [glowTexture, moteTexture]
+  );
+
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime * SPIN_RATE;
+    const dt = Math.min(delta, 0.05);
+    const pulse = 0.8 + 0.2 * Math.sin(t * 2.2);
+
+    if (glowRef.current) glowRef.current.material.opacity = pulse;
+
+    if (!motes.current) {
+      motes.current = Array.from({ length: MOTE_COUNT }, () => ({
+        angle: Math.random() * Math.PI * 2,
+        radius: HOLE_RADIUS * (2.6 + Math.random() * 2.2),
+        delay: Math.random() * 4,
+      }));
+    }
+
+    const posAttr = positionAttrRef.current;
+    const colorAttr = colorAttrRef.current;
+    if (!posAttr || !colorAttr) return;
+    const pos = posAttr.array as Float32Array;
+    const col = colorAttr.array as Float32Array;
+
+    for (let i = 0; i < MOTE_COUNT; i++) {
+      const mote = motes.current[i];
+      let brightness = 0;
+
+      if (mote.delay > 0) {
+        mote.delay -= dt * ABSORB_RATE;
+      } else {
+        const pull = 0.2 + 1.2 * Math.pow(HOLE_RADIUS / mote.radius, 2);
+        mote.radius -= dt * pull * HOLE_RADIUS * 2.6;
+        mote.angle += dt * (1.6 * HOLE_RADIUS / mote.radius) * 3.4;
+        if (mote.radius <= HOLE_RADIUS * 1.04) {
+          mote.angle = Math.random() * Math.PI * 2;
+          mote.radius = HOLE_RADIUS * (2.6 + Math.random() * 2.2);
+          mote.delay = Math.random() * 2;
+        } else {
+          const closeness = Math.min(
+            1,
+            1 - (mote.radius - HOLE_RADIUS) / (HOLE_RADIUS * 3.4)
+          );
+          brightness = 0.2 + 0.8 * closeness;
+        }
+      }
+
+      pos[i * 3] = Math.cos(mote.angle) * mote.radius;
+      pos[i * 3 + 1] = Math.sin(mote.angle) * mote.radius * 0.32;
+      pos[i * 3 + 2] = 0;
+      col[i * 3] = brightness * 0.9;
+      col[i * 3 + 1] = brightness;
+      col[i * 3 + 2] = brightness * 0.95;
+    }
+    posAttr.needsUpdate = true;
+    colorAttr.needsUpdate = true;
+  });
+
+  return (
+    <group position={SCENE_CENTER}>
+      <mesh>
+        <sphereGeometry args={[HOLE_RADIUS, 32, 16]} />
+        <meshBasicMaterial color="#010102" />
+      </mesh>
+      <sprite
+        ref={glowRef}
+        scale={[HOLE_RADIUS * 6.4, HOLE_RADIUS * 6.4, 1]}
+      >
+        <spriteMaterial
+          map={glowTexture}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          fog={false}
+        />
+      </sprite>
+      <points>
+        <bufferGeometry>
+          <bufferAttribute
+            ref={positionAttrRef}
+            attach="attributes-position"
+            args={[buffers.positions, 3]}
+          />
+          <bufferAttribute
+            ref={colorAttrRef}
+            attach="attributes-color"
+            args={[buffers.colors, 3]}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          size={0.08}
+          map={moteTexture}
+          vertexColors
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          sizeAttenuation
+          fog={false}
+        />
+      </points>
+    </group>
+  );
 }
 
 type StarsProps = {
@@ -284,6 +489,7 @@ export function HeroScene() {
         <fog attach="fog" args={['#09090b', 6, 13.5]} />
 
         <WireKnot />
+        <BlackHole />
         <Stars count={140} size={0.07} seed={0x9e3779b9} />
         <Stars count={35} size={0.14} seed={0x85ebca6b} />
         <ShootingStar initialDelay={3} />
