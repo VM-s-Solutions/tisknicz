@@ -72,6 +72,13 @@ for (const doc of documents) {
 
   console.log(`[gen] ${doc.host} ${doc.url} → ${doc.output} (sha256 ${hash.slice(0, 12)}…)`);
 
+  // T-0139: the nswag npm CLI only reads `config.runtime` when the config
+  // JSON itself is passed as a CLI argument (e.g. `nswag run config.json`)
+  // — this script instead calls `openapi2tsclient` directly with discrete
+  // flags, so `config.runtime` was previously dead configuration and the
+  // CLI silently fell back to its own hardcoded "Net80" default. Passing
+  // `/runtime:` explicitly makes the documented config value actually
+  // take effect (matches the installed .NET 10 SDK per CLAUDE.md stack).
   const result = spawnSync('npx', [
     'nswag', 'openapi2tsclient',
     `/input:${doc.url}`,
@@ -82,6 +89,7 @@ for (const doc of documents) {
     '/withCredentials:true',
     '/generateClientInterfaces:true',
     '/typeScriptVersion:5.0',
+    `/runtime:${config.runtime ?? 'Net100'}`,
   ], { stdio: 'inherit', shell: true });
 
   if (result.status !== 0) {

@@ -25,6 +25,7 @@ public sealed class User : Auditable
     public string? Phone { get; private set; }
     public string CountryCodePrimary { get; private set; } = default!;
     public string? GoogleSub { get; private set; }
+    public string? AppleSub { get; private set; }
     public int FailedLoginCount { get; private set; }
     public DateTimeOffset? LockedUntil { get; private set; }
 
@@ -116,6 +117,21 @@ public sealed class User : Auditable
         if (GoogleSub is not null && GoogleSub != googleSub)
             throw new InvalidOperationException("User already has a different GoogleSub linked.");
         GoogleSub = googleSub;
+        return this;
+    }
+
+    /// <summary>
+    /// Links Apple's <c>sub</c> claim to this user. Mirrors
+    /// <see cref="LinkGoogleSub"/> exactly: idempotent when re-linking the
+    /// same sub, rejects relinking to a different existing sub (per ADR 0026
+    /// / T-0139 — account merging semantics match Google's).
+    /// </summary>
+    public User LinkAppleSub(string appleSub)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appleSub);
+        if (AppleSub is not null && AppleSub != appleSub)
+            throw new InvalidOperationException("User already has a different AppleSub linked.");
+        AppleSub = appleSub;
         return this;
     }
 

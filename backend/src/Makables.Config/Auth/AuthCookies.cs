@@ -22,6 +22,14 @@ public static class AuthCookies
     public const string AccessCookiePrefix = "makables_access_";
     public const string RefreshCookiePrefix = "makables_refresh_";
 
+    /// <summary>
+    /// Anti-CSRF cookie name for the OAuth start/callback round trip
+    /// (Google T-0026/T-0035, Apple T-0139). The <c>__Host-</c> prefix
+    /// requires <c>Secure=true</c>, <c>Path=/</c>, and no <c>Domain</c>
+    /// attribute — enforced by <see cref="SetOAuthCsrfCookie"/> below.
+    /// </summary>
+    public const string OAuthCsrfCookieName = "__Host-makables_oauth_csrf";
+
     public static string AccessCookieName(string audience) => $"{AccessCookiePrefix}{audience}";
     public static string RefreshCookieName(string audience) => $"{RefreshCookiePrefix}{audience}";
 
@@ -60,6 +68,47 @@ public static class AuthCookies
     {
         ArgumentNullException.ThrowIfNull(request);
         return request.Cookies.TryGetValue(RefreshCookieName(audience), out var v) ? v : null;
+    }
+
+    /// <summary>
+    /// Sets the OAuth anti-CSRF cookie minted by <c>StartGoogleOAuth</c> /
+    /// <c>StartAppleOAuth</c>. Short-lived (10 minutes — matches
+    /// <c>OAuthStateSigner.StateLifetime</c>); <c>SameSite=Lax</c> so the
+    /// cookie rides along on the top-level GET/POST navigation back from
+    /// the provider (Strict would drop it on the callback redirect).
+    /// </summary>
+    public static void SetOAuthCsrfCookie(HttpResponse response, string csrfCookieValue)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentException.ThrowIfNullOrWhiteSpace(csrfCookieValue);
+
+        response.Cookies.Append(OAuthCsrfCookieName, csrfCookieValue, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.AddMinutes(10),
+        });
+    }
+
+    public static string? ReadOAuthCsrfCookie(HttpRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Cookies.TryGetValue(OAuthCsrfCookieName, out var v) ? v : null;
+    }
+
+    public static void ClearOAuthCsrfCookie(HttpResponse response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+        response.Cookies.Append(OAuthCsrfCookieName, string.Empty, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = DateTimeOffset.UnixEpoch,
+        });
     }
 
     private static CookieOptions BuildOptions(DateTimeOffset expiresAt) => new()
