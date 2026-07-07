@@ -246,7 +246,17 @@ public sealed class AdminQueries(
                 o.CancelledAt,
                 o.RefundedAt,
                 o.DisputedAt,
-                o.IsActive))
+                o.IsActive,
+                db.Set<Dispute>()
+                    .Where(d => d.OrderId == o.Id && d.ResolvedAt == null)
+                    .Select(d => d.Id)
+                    .FirstOrDefault(),
+                db.Set<Dispute>()
+                    .Where(d => d.OrderId == o.Id && d.ResolvedAt == null)
+                    .Select(d => (DisputeCategory?)d.Category)
+                    .FirstOrDefault(),
+                db.Set<Dispute>()
+                    .Any(d => d.OrderId == o.Id && d.ResolvedAt == null && d.ReturnCarrierRef != null)))
             .FirstOrDefaultAsync(ct);
     }
 

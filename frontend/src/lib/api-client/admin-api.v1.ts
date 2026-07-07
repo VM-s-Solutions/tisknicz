@@ -68,6 +68,16 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    returnLabel(disputeId: string): Promise<GenerateReturnLabelResponse>;
+
+    /**
+     * @return OK
+     */
+    markReceived(disputeId: string): Promise<MarkDisputeReturnReceivedByAdminResponse>;
+
+    /**
+     * @return OK
+     */
     refund(orderId: string, body: RefundOrderRequest): Promise<RefundOrderResponse>;
 
     /**
@@ -737,6 +747,163 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<UpdateCountryConfigurationResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    returnLabel(disputeId: string): Promise<GenerateReturnLabelResponse> {
+        let url_ = this.baseUrl + "/api/v1/disputes/{disputeId}/return-label";
+        if (disputeId === undefined || disputeId === null)
+            throw new globalThis.Error("The parameter 'disputeId' must be defined.");
+        url_ = url_.replace("{disputeId}", encodeURIComponent("" + disputeId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReturnLabel(_response);
+        });
+    }
+
+    protected processReturnLabel(response: Response): Promise<GenerateReturnLabelResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GenerateReturnLabelResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status === 422) {
+            return response.text().then((_responseText) => {
+            let result422: any = null;
+            let resultData422 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result422 = ErrorDto.fromJS(resultData422);
+            return throwException("Unprocessable Entity", status, _responseText, _headers, result422);
+            });
+        } else if (status === 500) {
+            return response.text().then((_responseText) => {
+            let result500: any = null;
+            let resultData500 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result500 = ErrorDto.fromJS(resultData500);
+            return throwException("Internal Server Error", status, _responseText, _headers, result500);
+            });
+        } else if (status === 503) {
+            return response.text().then((_responseText) => {
+            let result503: any = null;
+            let resultData503 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result503 = ErrorDto.fromJS(resultData503);
+            return throwException("Service Unavailable", status, _responseText, _headers, result503);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GenerateReturnLabelResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    markReceived(disputeId: string): Promise<MarkDisputeReturnReceivedByAdminResponse> {
+        let url_ = this.baseUrl + "/api/v1/disputes/{disputeId}/return-label/mark-received";
+        if (disputeId === undefined || disputeId === null)
+            throw new globalThis.Error("The parameter 'disputeId' must be defined.");
+        url_ = url_.replace("{disputeId}", encodeURIComponent("" + disputeId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMarkReceived(_response);
+        });
+    }
+
+    protected processMarkReceived(response: Response): Promise<MarkDisputeReturnReceivedByAdminResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = MarkDisputeReturnReceivedByAdminResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<MarkDisputeReturnReceivedByAdminResponse>(null as any);
     }
 
     /**
@@ -2577,6 +2744,9 @@ export class AdminOrderDetailDto implements IAdminOrderDetailDto {
     refundedAt!: Date | undefined;
     disputedAt!: Date | undefined;
     isActive!: boolean;
+    openDisputeId!: string | undefined;
+    openDisputeCategory!: DisputeCategory | undefined;
+    returnLabelGenerated!: boolean;
 
     [key: string]: any;
 
@@ -2633,6 +2803,9 @@ export class AdminOrderDetailDto implements IAdminOrderDetailDto {
             this.refundedAt = _data["refundedAt"] ? new Date(_data["refundedAt"].toString()) : undefined as any;
             this.disputedAt = _data["disputedAt"] ? new Date(_data["disputedAt"].toString()) : undefined as any;
             this.isActive = _data["isActive"];
+            this.openDisputeId = _data["openDisputeId"];
+            this.openDisputeCategory = _data["openDisputeCategory"];
+            this.returnLabelGenerated = _data["returnLabelGenerated"];
         }
     }
 
@@ -2687,6 +2860,9 @@ export class AdminOrderDetailDto implements IAdminOrderDetailDto {
         data["refundedAt"] = this.refundedAt ? this.refundedAt.toISOString() : undefined as any;
         data["disputedAt"] = this.disputedAt ? this.disputedAt.toISOString() : undefined as any;
         data["isActive"] = this.isActive;
+        data["openDisputeId"] = this.openDisputeId;
+        data["openDisputeCategory"] = this.openDisputeCategory;
+        data["returnLabelGenerated"] = this.returnLabelGenerated;
         return data;
     }
 }
@@ -2730,6 +2906,9 @@ export interface IAdminOrderDetailDto {
     refundedAt: Date | undefined;
     disputedAt: Date | undefined;
     isActive: boolean;
+    openDisputeId: string | undefined;
+    openDisputeCategory: DisputeCategory | undefined;
+    returnLabelGenerated: boolean;
 
     [key: string]: any;
 }
@@ -2906,158 +3085,6 @@ export interface IAdminPayoutBatchListItemDto {
     [key: string]: any;
 }
 
-export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
-    state!: OrderState;
-
-    [key: string]: any;
-
-    constructor(data?: IChangeOrderStateManuallyResponse) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.state = _data["state"];
-        }
-    }
-
-    static fromJS(data: any): ChangeOrderStateManuallyResponse {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangeOrderStateManuallyResponse();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["state"] = this.state;
-        return data;
-    }
-}
-
-export interface IChangeOrderStateManuallyResponse {
-    state: OrderState;
-
-    [key: string]: any;
-}
-
-export class ChangeOrderStateRequest implements IChangeOrderStateRequest {
-    targetState!: OrderState;
-    reason!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangeOrderStateRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.targetState = _data["targetState"];
-            this.reason = _data["reason"];
-        }
-    }
-
-    static fromJS(data: any): ChangeOrderStateRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangeOrderStateRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["targetState"] = this.targetState;
-        data["reason"] = this.reason;
-        return data;
-    }
-}
-
-export interface IChangeOrderStateRequest {
-    targetState: OrderState;
-    reason: string;
-
-    [key: string]: any;
-}
-
-export class ChangePasswordRequest implements IChangePasswordRequest {
-    currentPassword!: string;
-    newPassword!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangePasswordRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.currentPassword = _data["currentPassword"];
-            this.newPassword = _data["newPassword"];
-        }
-    }
-
-    static fromJS(data: any): ChangePasswordRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangePasswordRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["currentPassword"] = this.currentPassword;
-        data["newPassword"] = this.newPassword;
-        return data;
-    }
-}
-
-export interface IChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
-
-    [key: string]: any;
-}
-
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
     token!: string;
 
@@ -3221,6 +3248,8 @@ export class CreatePayoutBatchResponse implements ICreatePayoutBatchResponse {
     artifactsComplete!: boolean;
     feeInvoiceCount!: number;
     csvReady!: boolean;
+    deductionsAppliedMinor!: number;
+    deductionCount!: number;
 
     [key: string]: any;
 
@@ -3253,6 +3282,8 @@ export class CreatePayoutBatchResponse implements ICreatePayoutBatchResponse {
             this.artifactsComplete = _data["artifactsComplete"];
             this.feeInvoiceCount = _data["feeInvoiceCount"];
             this.csvReady = _data["csvReady"];
+            this.deductionsAppliedMinor = _data["deductionsAppliedMinor"];
+            this.deductionCount = _data["deductionCount"];
         }
     }
 
@@ -3283,6 +3314,8 @@ export class CreatePayoutBatchResponse implements ICreatePayoutBatchResponse {
         data["artifactsComplete"] = this.artifactsComplete;
         data["feeInvoiceCount"] = this.feeInvoiceCount;
         data["csvReady"] = this.csvReady;
+        data["deductionsAppliedMinor"] = this.deductionsAppliedMinor;
+        data["deductionCount"] = this.deductionCount;
         return data;
     }
 }
@@ -3302,6 +3335,8 @@ export interface ICreatePayoutBatchResponse {
     artifactsComplete: boolean;
     feeInvoiceCount: number;
     csvReady: boolean;
+    deductionsAppliedMinor: number;
+    deductionCount: number;
 
     [key: string]: any;
 }
@@ -3491,6 +3526,66 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export class GenerateReturnLabelResponse implements IGenerateReturnLabelResponse {
+    disputeId!: string;
+    carrierRef!: string;
+    trackingUrl!: string;
+    alreadyExisted!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IGenerateReturnLabelResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.disputeId = _data["disputeId"];
+            this.carrierRef = _data["carrierRef"];
+            this.trackingUrl = _data["trackingUrl"];
+            this.alreadyExisted = _data["alreadyExisted"];
+        }
+    }
+
+    static fromJS(data: any): GenerateReturnLabelResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GenerateReturnLabelResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["disputeId"] = this.disputeId;
+        data["carrierRef"] = this.carrierRef;
+        data["trackingUrl"] = this.trackingUrl;
+        data["alreadyExisted"] = this.alreadyExisted;
+        return data;
+    }
+}
+
+export interface IGenerateReturnLabelResponse {
+    disputeId: string;
+    carrierRef: string;
+    trackingUrl: string;
+    alreadyExisted: boolean;
+
+    [key: string]: any;
 }
 
 export class GetAdminAuditLogResponse implements IGetAdminAuditLogResponse {
@@ -3979,6 +4074,158 @@ export interface IGetStalledOutboxEventsResponse {
     [key: string]: any;
 }
 
+export class ChangeOrderStateManuallyResponse implements IChangeOrderStateManuallyResponse {
+    state!: OrderState;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateManuallyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.state = _data["state"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateManuallyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateManuallyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["state"] = this.state;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateManuallyResponse {
+    state: OrderState;
+
+    [key: string]: any;
+}
+
+export class ChangeOrderStateRequest implements IChangeOrderStateRequest {
+    targetState!: OrderState;
+    reason!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangeOrderStateRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.targetState = _data["targetState"];
+            this.reason = _data["reason"];
+        }
+    }
+
+    static fromJS(data: any): ChangeOrderStateRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeOrderStateRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["targetState"] = this.targetState;
+        data["reason"] = this.reason;
+        return data;
+    }
+}
+
+export interface IChangeOrderStateRequest {
+    targetState: OrderState;
+    reason: string;
+
+    [key: string]: any;
+}
+
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+
+    [key: string]: any;
+}
+
 export enum InvoicingMode {
     None = "None",
     StandardVat = "StandardVat",
@@ -4034,6 +4281,58 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class MarkDisputeReturnReceivedByAdminResponse implements IMarkDisputeReturnReceivedByAdminResponse {
+    disputeId!: string;
+    returnReceivedAt!: Date;
+
+    [key: string]: any;
+
+    constructor(data?: IMarkDisputeReturnReceivedByAdminResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.disputeId = _data["disputeId"];
+            this.returnReceivedAt = _data["returnReceivedAt"] ? new Date(_data["returnReceivedAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): MarkDisputeReturnReceivedByAdminResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new MarkDisputeReturnReceivedByAdminResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["disputeId"] = this.disputeId;
+        data["returnReceivedAt"] = this.returnReceivedAt ? this.returnReceivedAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IMarkDisputeReturnReceivedByAdminResponse {
+    disputeId: string;
+    returnReceivedAt: Date;
 
     [key: string]: any;
 }

@@ -38,6 +38,19 @@ internal sealed class DisputeEntityConfiguration : IEntityTypeConfiguration<Disp
             .HasMaxLength(Dispute.MaxResolutionNotesLength);
         builder.Property(d => d.ResolvedAt).HasColumnName("resolved_at");
 
+        // T-0146 reverse-shipment columns — nullable, set once by
+        // Dispute.SetReturnShipment / Dispute.MarkReturnReceived.
+        builder.Property(d => d.ReturnCarrierRef)
+            .HasColumnName("return_carrier_ref")
+            .HasMaxLength(Dispute.MaxReturnCarrierRefLength);
+        builder.Property(d => d.ReturnTrackingUrl)
+            .HasColumnName("return_tracking_url")
+            .HasMaxLength(Dispute.MaxReturnTrackingUrlLength);
+        builder.Property(d => d.ReturnReceivedAt).HasColumnName("return_received_at");
+        builder.Property(d => d.ReturnReceivedBy)
+            .HasColumnName("return_received_by")
+            .HasMaxLength(Dispute.MaxReturnReceivedByLength);
+
         // FK declared as a shadow relationship (no navigation on Order —
         // the aggregate stays lightweight per ADR 0013): CASCADE per the
         // order_attachments / order_messages precedent. Soft delete never
