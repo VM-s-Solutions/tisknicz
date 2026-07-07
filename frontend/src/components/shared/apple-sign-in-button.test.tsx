@@ -5,8 +5,7 @@ import { AppleSignInButton } from './apple-sign-in-button';
 /**
  * Component test for the "Sign in with Apple" trigger (T-0139, AC-10).
  * `startAppleOAuth` is mocked — this is a UI test, not an integration test
- * against the .NET backend. Mirrors the mocking convention established in
- * `maker-fee-override-form.test.tsx`.
+ * against the .NET backend.
  */
 
 const startAppleOAuth = vi.fn();

@@ -73,9 +73,17 @@ public static class AuthCookies
     /// <summary>
     /// Sets the OAuth anti-CSRF cookie minted by <c>StartGoogleOAuth</c> /
     /// <c>StartAppleOAuth</c>. Short-lived (10 minutes — matches
-    /// <c>OAuthStateSigner.StateLifetime</c>); <c>SameSite=Lax</c> so the
-    /// cookie rides along on the top-level GET/POST navigation back from
-    /// the provider (Strict would drop it on the callback redirect).
+    /// <c>OAuthStateSigner.StateLifetime</c>). <c>SameSite=None</c> (with
+    /// <c>Secure=true</c>, required by the spec for <c>None</c>) —
+    /// Apple's callback is a cross-site top-level <b>POST</b>
+    /// (<c>response_mode=form_post</c>), and browsers do not send
+    /// <c>Lax</c> cookies on cross-site POST navigations (Safari never
+    /// applies Chrome's temporary "Lax+POST" grace-period shim). Reviewer
+    /// T-0139 finding: with <c>Lax</c>, this cookie silently fails to
+    /// arrive at <c>/apple/callback</c>, and every Apple login would fail
+    /// closed with <c>AuthOAuthInvalidState</c>. Do not revert this to
+    /// <c>Lax</c> — it looks like the "safer default" but breaks the
+    /// exact browser (Safari) this feature exists for.
     /// </summary>
     public static void SetOAuthCsrfCookie(HttpResponse response, string csrfCookieValue)
     {
@@ -86,7 +94,7 @@ public static class AuthCookies
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Lax,
+            SameSite = SameSiteMode.None,
             Path = "/",
             Expires = DateTimeOffset.UtcNow.AddMinutes(10),
         });
