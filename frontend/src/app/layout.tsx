@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { CookieConsentBanner } from '@/components/shared/cookie-consent-banner';
 import { SITE_URL } from '@/lib/seo/site-url';
 import './globals.css';
 
@@ -49,6 +50,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-full flex-col bg-surface-primary font-sans">
         <main className="flex-1">{children}</main>
+        <CookieConsentBanner />
       </body>
     </html>
   );
