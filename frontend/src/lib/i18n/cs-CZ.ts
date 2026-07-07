@@ -769,6 +769,12 @@ export const messages = {
   'countryConfiguration.notFound':
     'Konfigurace pro tuto zemi nebyla nalezena.',
 
+  // T-0140 admin maker fee-rate override codes (parity with
+  // BusinessErrorMessage). Admin-surface only (maker fee-override UI).
+  'maker.feeOverrideExceedsCountryDefault':
+    'Zadaná sazba přesahuje výchozí provizi pro danou zemi — override může být pouze slevou.',
+  'maker.notFound': 'Výrobce s tímto ID nebyl nalezen.',
+
   // T-0110 admin GDPR-erasure codes (parity with BusinessErrorMessage).
   // Admin-surface only (T-0118 erase UI).
   'user.notFound': 'Uživatel nebyl nalezen.',
@@ -1677,6 +1683,44 @@ export const messages = {
   'dashboard.admin.ops.users.erase.alreadyDeleted':
     'Uživatel již byl smazán.',
   'dashboard.admin.ops.users.reset': 'Zpět na vyhledání',
+
+  // --- Maker fee-rate override (T-0140, US-admin-0018) ---
+  'dashboard.admin.ops.makers.metadata.title': 'Výrobce — Makables Admin',
+  'dashboard.admin.ops.makers.metadata.description':
+    'Nastavení nebo zrušení individuální slevy na provizi platformy pro výrobce.',
+  'dashboard.admin.ops.makers.lookup.title': 'Výrobci',
+  'dashboard.admin.ops.makers.lookup.subtitle':
+    'Zadejte ID výrobce, kterému chcete nastavit nebo zrušit individuální sazbu provize (věrnostní slevu).',
+  'dashboard.admin.ops.makers.lookup.idLabel': 'ID výrobce',
+  'dashboard.admin.ops.makers.lookup.idHint': 'Identifikátor výrobce (GUID).',
+  'dashboard.admin.ops.makers.lookup.submit': 'Pokračovat',
+  'dashboard.admin.ops.makers.detail.title': 'Provize výrobce {makerId}',
+  'dashboard.admin.ops.makers.detail.subtitle':
+    'Nastavení individuální slevy na provizi platformy (věrnostní sazba). Sleva nesmí přesáhnout výchozí provizi země a nikdy se nedotkne již vytvořených objednávek.',
+  'dashboard.admin.ops.makers.detail.readGapNote':
+    'Backend zatím nevystavuje čtení aktuálního nastavení výrobce (jméno, země, aktivní override), proto zde nelze zobrazit aktuálně platnou sazbu. Formulář níže odešle nové nastavení naslepo — před odesláním si prosím ověřte ID výrobce a hodnotu jinde (např. v auditním logu). Doplnění čtecího endpointu je evidováno jako následný backendový úkol.',
+  'dashboard.admin.ops.makers.detail.countryDefaultLabel': 'Výchozí provize země {country}',
+  'dashboard.admin.ops.makers.detail.countryDefaultUnavailable':
+    'Výchozí provizi země se nepodařilo načíst.',
+  'dashboard.admin.ops.makers.feeOverride.modeLabel': 'Akce',
+  'dashboard.admin.ops.makers.feeOverride.modeSet': 'Nastavit override',
+  'dashboard.admin.ops.makers.feeOverride.modeClear': 'Zrušit override',
+  'dashboard.admin.ops.makers.feeOverride.percentLabel': 'Sazba provize (%)',
+  'dashboard.admin.ops.makers.feeOverride.percentHint':
+    'Zadejte procenta, např. 3,5. Hodnota nesmí být záporná ani přesáhnout výchozí provizi země.',
+  'dashboard.admin.ops.makers.feeOverride.percentInvalid': 'Zadejte platné nezáporné procento.',
+  'dashboard.admin.ops.makers.feeOverride.exceedsDefault':
+    'Zadaná sazba přesahuje výchozí provizi země — override může být pouze slevou.',
+  'dashboard.admin.ops.makers.feeOverride.reasonLabel': 'Důvod',
+  'dashboard.admin.ops.makers.feeOverride.reasonHint':
+    'Povinné. Zapíše se do auditního logu (max. 2000 znaků).',
+  'dashboard.admin.ops.makers.feeOverride.submitSet': 'Uložit override',
+  'dashboard.admin.ops.makers.feeOverride.submitClear': 'Zrušit override',
+  'dashboard.admin.ops.makers.feeOverride.submitting': 'Ukládám…',
+  'dashboard.admin.ops.makers.feeOverride.successSet':
+    'Individuální sazba provize byla nastavena na {percent} %.',
+  'dashboard.admin.ops.makers.feeOverride.successClear':
+    'Individuální sazba provize byla zrušena — platí výchozí sazba země.',
 
   // --- Shared paginations + route error/loading copy for the ops segments ---
   'dashboard.admin.ops.pagination.previous': 'Předchozí',

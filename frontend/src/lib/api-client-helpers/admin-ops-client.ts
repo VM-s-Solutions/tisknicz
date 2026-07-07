@@ -57,6 +57,7 @@ const CountryBase = '/api/v1/country-configurations';
 const PayoutBase = '/api/v1/payout-batches';
 const UsersBase = '/api/v1/users';
 const InvoicesBase = '/api/v1/admin-invoices';
+const MakersBase = '/api/v1/makers';
 
 /**
  * Streaming-download budget (payouts-client.ts precedent): the operator
@@ -406,6 +407,43 @@ export async function downloadAdminInvoice(invoiceId: string): Promise<Result<Bl
     method: 'GET',
     parse: 'blob',
     timeoutMs: DOWNLOAD_TIMEOUT_MS,
+  });
+}
+
+// ---- Maker fee-rate override (T-0140 POST /makers/{id}/fee-override) ----
+
+/**
+ * Mirror of the backend <c>MakersController.SetMakerFeeOverrideRequest</c>
+ * (T-0140, US-admin-0018). <c>feeRateOverrideBp</c> is <c>null</c> to clear
+ * the override (reverts pricing to the country default); a non-null value
+ * sets it. The discount-only ceiling (must not exceed the maker's
+ * <c>CountryConfiguration.PlatformFeeRateBp</c>) and the non-negative floor
+ * are backend-authoritative (<c>SetMakerFeeOverride.Validator</c> /
+ * <c>Handler</c>) — this input type carries whatever the caller already
+ * validated client-side as UX-only defense in depth.
+ */
+export interface SetMakerFeeOverrideInput {
+  readonly feeRateOverrideBp: number | null;
+  /** Mandatory audit-log note (&le; 2000 chars, backend authoritative). */
+  readonly reason: string;
+}
+
+/**
+ * Set or clear a maker's per-maker loyalty fee-rate override (T-0140). The
+ * endpoint returns <c>200 OK</c> with an empty body (no DTO — the resolved
+ * state isn't echoed back because there is, as of this ticket, no admin
+ * maker-detail READ endpoint to refresh from; see the read-gap note on the
+ * admin maker page). Failure codes: `maker.notFound` (404),
+ * `maker.feeOverrideExceedsCountryDefault` / `error.validation` (400/422),
+ * `error.unauthorized` (401, fail-closed per AC-7).
+ */
+export async function setMakerFeeOverride(
+  makerId: string,
+  input: SetMakerFeeOverrideInput,
+): Promise<Result<void, ApiError>> {
+  return apiFetch<void>('admin', `${MakersBase}/${encodeURIComponent(makerId)}/fee-override`, {
+    method: 'POST',
+    json: { feeRateOverrideBp: input.feeRateOverrideBp, reason: input.reason },
   });
 }
 
