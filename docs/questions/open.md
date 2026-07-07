@@ -26,6 +26,7 @@ launch blocker by definition and must also have a line in
 |---|---|---|---|
 | Q-0030 | Approved legal text for /vop + /gdpr | user (legal counsel) | open |
 | Q-0033 | Custom observability metrics not emitted | user (accept docs alt. or wire emission) | open |
+| Q-0036 | Stripe Connect fee/hold/KYC/ČNB verification (blocks T-0142) | user (Stripe contact + legal counsel) | open |
 
 Everything else below is `v1.1` or `backlog` unless its entry says otherwise.
 When a `pre-launch` question is added or answered, update this table in the
@@ -495,6 +496,26 @@ same edit.
   - Config-bind the limits now (cheap), defer the Redis store (larger).
 - **Status:** open
 
+## Q-0036 — Stripe Connect Express: fee/hold-mechanics/KYC-pass-rate/ČNB-duty verification (blocks T-0142)
+- **From:** architect (T-0141 spike / ADR 0027)
+- **Ticket / context:** T-0141 (delivered [ADR 0027](../adr/0027-marketplace-escrow-payments-stripe-connect.md)); hard-blocks T-0142
+- **Asked:** 2026-07-07
+- **Blocking:** yes — T-0142 (Stripe adapter + KYC onboarding + payout release rework) must not start against a live Stripe account until these land
+- **Owner:** user (external: a Stripe partner/sales contact for items 1, 2, 5; legal counsel for items 3, 4)
+- **Resolve-by:** pre-launch (§2.1 in dopady-rozhodnuti-na-platformu.md is marked ✅ launch-blocking)
+- **Question:** ADR 0027 picks Stripe Connect Express (separate charges and transfers) as the marketplace-escrow payment gateway, but carries forward five items this architect cannot verify without live account access or a legal opinion:
+  1. **CZ card-acceptance fees** — Stripe's actual published/negotiated rate vs. Comgate's, to confirm unit economics still work at the locked 7%/3.5% commission (Q11).
+  2. **Hold-until-delivery mechanics** — confirm in a live/sandbox Stripe account that separate-charges-and-transfers genuinely supports an arbitrary delay between capture and `Transfer` creation with no forced platform-side payout timer.
+  3. **Express-account KYC pass rate for small Czech IČO sole traders** — risk that Stripe's automated identity checks reject a meaningful fraction of one-person Czech businesses (Q4: makers will be a mix of VAT-payers and non-payers, many likely first-time online sellers).
+  4. **ČNB registration duty** — whether JVM YORE issuing release *instructions* to a licensed gateway (rather than itself holding client funds) avoids any Czech National Bank payment-institution registration duty. Highest legal-risk item in ADR 0027; needs a written legal opinion, not an architect's inference.
+  5. **Unverified/newly-onboarded connected-account transfer limits** — whether Stripe's payout caps on brand-new connected accounts could stall week-one payouts for early makers.
+- **Options the agent has considered:**
+  - Confirm all five before T-0142 starts (recommended — matches the dopady §5.4 "verify before building" instruction; T-0142 is XL and money-moving, the highest-cost surface to get wrong).
+  - Start T-0142's lowest-risk slice (the Stripe payment adapter + webhooks, which mirrors the already-shipped Comgate shape) while items 3/4/5 are still pending, and gate only the KYC-onboarding + payout-release slices on this question. Rejected by the architect as the *default* — but flagged as an option if the user wants partial progress; the architect's recommendation is to hold the whole ticket per dopady's own instruction.
+  - If Stripe fails verification (especially item 3 or 4), fall back to Mangopay or Adyen for Platforms (both named acceptable in Q17/§2.1) — would require a new ADR, not a patch to ADR 0027.
+- **Status:** open
+- **Answer (filled by user):**
+
 ## Q-0035 — Own-context side-effect-writer pattern: catalogue at the third occurrence
 - **From:** architect (T-0137 secops-hardening review, Gate-4)
 - **Ticket / context:** T-0137 (`IAdminReadAuditWriter`) + T-0032 (`CompanyRegistryCacheStore`); pattern-catalogue hygiene
@@ -507,3 +528,33 @@ same edit.
   - Log at count 2 now, promote at 3 (recommended — matches the existing ≥3 codification threshold).
   - Codify §A.N immediately (premature against the project's own threshold).
 - **Status:** open
+
+## Q-0037 — Return-label trigger point + maker-cost accounting mechanism (T-0146)
+- **From:** BA (T-0146 grooming)
+- **Ticket / context:** T-0146 (reverse Zásilkovna return-to-maker label); does not block the ticket reaching `ready` — BA locked defensible defaults documented in the ticket's Alternatives Considered
+- **Asked:** 2026-07-07
+- **Blocking:** no — T-0146 ships against the BA defaults below; this question refines the accounting mechanism before the "charge the maker" step is implemented precisely
+- **Owner:** user (business/accounting call)
+- **Resolve-by:** pre-launch (dopady §6 marks the reklamace package item 8 as 🟡 — a minimal window+escalation variant is launch-viable without this, but the return-cost mechanism should be settled before real disputes reach this stage)
+- **Question:** dopady §2.5 (Q8/Q9) says the customer ships the item back to the maker via Zásilkovna once a complaint is confirmed eligible, and the maker bears the return cost ("účtovat proti výplatě nebo fee faktuře"), but doesn't specify: (1) **who/what triggers label generation** — an admin judgment call during dispute review (T-0146's locked default, mirroring `RefundOrder`'s admin-gated posture), or an earlier trigger once the customer/maker message thread agrees a return is warranted, before any formal admin resolution; (2) **the accounting mechanism** for the maker-borne cost — a negative line item deducted from the maker's next payout batch, or a line item on their next fee invoice.
+- **Options the agent has considered:**
+  - Admin-gated trigger (BA default, locked in T-0146) + payout-batch negative line item (simplest single ledger to reconcile against, mirrors how the platform fee itself is already deducted from payout).
+  - Admin-gated trigger + fee-invoice line item (keeps the payout batch a pure "money owed to maker" number; the return cost shows as a separate commercial-document line the maker's accountant can categorize).
+  - Earlier (thread-agreed) trigger, with the eventual dispute resolution only formalizing what already happened — faster for the customer, but weakens the "admin gates every money/logistics outcome" invariant the rest of the dispute model relies on (dispute.md).
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0038 — Does the made-to-order withdrawal-exemption notice need a blocking acknowledgement (checkbox) rather than a visible notice? (T-0144)
+- **From:** BA (T-0144 grooming)
+- **Ticket / context:** T-0144 (product fulfillment-type + checkout withdrawal-right copy); does not block the ticket reaching `ready` — BA locked a defensible default (visible notice, no checkbox)
+- **Asked:** 2026-07-07
+- **Blocking:** no — T-0144 ships with a clearly-placed, unmissable notice per § 1837 písm. d) OZ's "must be informed before ordering" requirement; this question only matters if the eventual legal reviewer (Q-0030) wants a stronger evidentiary gesture
+- **Owner:** user (legal counsel, alongside the broader Q-0030 VOP/GDPR text approval)
+- **Resolve-by:** pre-launch (folds into the same Q-0030 legal-text approval pass)
+- **Question:** § 1837 písm. d) OZ requires the consumer be informed, before ordering, that made-to-order goods are exempt from the 14-day withdrawal right. Is a visible, unmissable notice on the checkout page sufficient, or does the external legal reviewer want a forced acknowledgement gesture (e.g. a checkbox the customer must tick before the order can submit) as stronger evidence the notice was actually seen?
+- **Options the agent has considered:**
+  - Visible notice only (BA default, locked in T-0144) — satisfies the statutory wording without the heavier UX of a forced checkbox.
+  - Blocking checkbox/acknowledgement — stronger evidentiary trail if a withdrawal dispute ever goes to ČOI/court, at the cost of one more click in checkout.
+- **Status:** open
+- **Answer (filled by user):**
+- **Answer (filled by user):**

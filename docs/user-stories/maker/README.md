@@ -324,6 +324,65 @@ As a maker, I want to log out.
 
 ---
 
+## US-maker-0018 — Set a product's fulfillment type ("na zakázku" vs. "skladem")
+
+### Narrative
+As a maker, I want to mark each product as made-to-order or in-stock so the customer sees the correct legal notice about their right to withdraw before they pay.
+
+### Roles in play
+- **Product** — extended with `FulfillmentType` (`MadeToOrder | InStock`; default `MadeToOrder`). `CreateProduct.Command` / `UpdateProduct.Command` gain the new field.
+
+### Acceptance criteria
+- **AC-1** Given the maker fills the product form, when they submit, then they choose `FulfillmentType` from a two-option control (defaulting to "Na zakázku"); the product is created with that value.
+- **AC-2** Given an existing product created before this ticket shipped, when the migration runs, then it defaults to `MadeToOrder` (the safer legal default — most maker catalog items today are custom production, per personas.md).
+- **AC-3** Given the maker edits an existing product, when they change `FulfillmentType` from `MadeToOrder` to `InStock` (or back), then the change is persisted and takes effect for all *future* checkouts of that product; it does not retroactively alter any notice already shown for past orders (checkout copy is a point-in-time display concern, not a stored order field — see US-customer-0021).
+- **AC-4** Given the product detail page renders, when the customer views it, then a badge shows "Na zakázku" or "Skladem" matching the stored value (US-customer-0009 detail page, US-customer-0021 checkout copy).
+
+### Out of scope
+- Per-category default (all products default to `MadeToOrder` regardless of category, even for categories like `cat-handmade` where "skladem" might be common — maker sets it explicitly).
+- Any inventory/stock-count tracking for `InStock` products (the flag only toggles the legal notice; stock quantity management is out of scope per personas.md "Stock / inventory (out of scope at MVP)").
+
+### Alternatives considered
+- **Option A — Derive fulfillment type from `PriceType` (e.g. `OnRequest` ⇒ made-to-order, `Fixed`/`From` ⇒ in-stock) instead of a new independent field.** *Rejected* — `PriceType` describes *pricing* certainty (fixed price vs. quote-based), not *fulfillment* timing; a `Fixed`-priced 3D print is still made-to-order (it just has a known price upfront). Conflating the two would produce wrong legal notices for the platform's dominant use case (personas.md: "products are made-to-order" for most makers). A dedicated field keeps the two concerns independent.
+
+### Related
+- ADRs: 0003 (money/pricing — unaffected), none new
+- Ticket: T-0144
+- Roles: `product`, `maker`
+
+---
+
+## US-maker-0019 — Respond to a customer dispute within 7 days
+
+### Narrative
+As a maker, I want a clear deadline to respond when a customer opens a complaint, so unresolved issues don't stall indefinitely and I don't risk an automatic escalation to Makables.
+
+### Roles in play
+- **Dispute** (read; existing aggregate per [dispute.md](../../architecture/roles/dispute.md)) — a new response-timer concept is layered on top of the existing `Source=Customer` open disputes; the Dispute row itself is unchanged.
+- **OrderMessage** — the maker's reply lands in the existing order-scoped thread (US-maker-0011); a reply after the dispute opened counts as "responded".
+- **Outbox** — a new `dispute.autoEscalated.adminEmail` event fires if the maker doesn't reply in time.
+- A new Function (mirrors the T-0077 `AutoDeliverOrdersFunction` shape) sweeps open, customer-sourced disputes daily.
+
+### Acceptance criteria
+- **AC-1** Given a customer-opened `Dispute` (`Source = Customer`, still unresolved), when 7 days pass since `Dispute.CreatedAt` with no `OrderMessage` from the maker on that order posted after the dispute opened, then the sweep enqueues an admin-notification outbox event flagging the dispute as maker-unresponsive; the dispute itself stays `Disputed` (admin still resolves it via the existing `ResolveDispute.Command` — the escalation only surfaces it more urgently, it doesn't auto-resolve anything).
+- **AC-2** Given the maker posts a reply on the order thread within 7 days of the dispute opening, when the daily sweep runs, then no escalation fires for that dispute.
+- **AC-3** Given the dispute is resolved by admin before day 7, when the sweep runs, then it's excluded (the sweep predicate matches `ResolvedAt IS NULL`, the same idiom as the auto-deliver / auto-cancel sweeps).
+- **AC-4** Given a maker-opened or admin-opened dispute (`Source = Maker | Admin`), then the 7-day maker-response timer does not apply (it is specifically the customer's escalation-path SLA on the maker).
+
+### Out of scope
+- Any automatic sanction against the maker for missing the 7-day window (three-tier warning/suspend/deactivate sanctions are T-0148, explicitly separate and blocked on its own open question).
+- A visible countdown/nudge to the maker before day 7 (T-0148's SLA-timer nudges are the broader pattern; this ticket ships only the auto-escalation email at day 7, not earlier reminders).
+
+### Alternatives considered
+- **Option A — Auto-resolve the dispute in the customer's favor (e.g. auto-refund) if the maker doesn't respond in 7 days.** *Rejected* — dopady §2.5 / Q7 only specifies a response-time SLA that triggers *escalation to admin*, not an automatic money-moving outcome. `Dispute.Resolve` always requires an admin decision (per dispute.md's resolution-outcome dispatch to `RefundOrder`/`Cancel`); auto-refunding on a timer would bypass that safeguard and risk incorrect refunds on legitimate maker delays (e.g. maker on holiday, genuinely investigating).
+
+### Related
+- ADRs: 0014, 0017, 0020
+- Ticket: T-0145
+- Roles: `dispute`, `order-message`, `outbox`
+
+---
+
 ## US-maker-0017 — Track outbox events for my orders (audit trail)
 
 ### Narrative

@@ -31,6 +31,8 @@ Represent a registered Czech business that produces goods for sale on the platfo
 - Denormalized stats: rating average + count, total orders, total revenue (haléře)
 - `IsVerified` (admin badge), `IsActive` (`Auditable`)
 - `IsRetainedForLegal` (T-0110) — `boolean NOT NULL DEFAULT false`; `true` once this maker row has been anonymized-but-legally-retained by a GDPR erasure
+- `PayoutAccountRef` (nullable) + `PayoutAccountStatus` (`NotStarted | PendingRequirements | Enabled | Disabled`) — ADR 0027, T-0142. Set once at first onboarding-link creation (ref) / only via the gateway's account-status webhook (status), never client-settable. Stripe-active countries only.
+- `FeeRateOverrideBp` (nullable `int`, T-0140) — admin-set per-maker loyalty platform-fee override in basis points. `null` means "no override — use `CountryConfiguration.PlatformFeeRateBp`". Discount-only: never exceeds the maker's country's `PlatformFeeRateBp` (enforced by `SetMakerFeeOverride`'s handler, which loads both aggregates). `PricingService.ComputeForProductAsync` resolves `maker.FeeRateOverrideBp ?? config.PlatformFeeRateBp` at order-creation time — the resolved rate is snapshotted onto the order and is never re-read retroactively, so changing/clearing the override never touches historical orders.
 
 ## Does NOT know
 
@@ -46,6 +48,7 @@ Represent a registered Czech business that produces goods for sale on the platfo
   - `UpdateMakerProfile.Command` — maker action (bio, pickup, bank account, categories)
   - `VerifyMaker.Command` — admin action (audited)
   - `DeactivateMaker.Command` — admin action (audited)
+  - `SetMakerFeeOverride.Command` — admin action (audited, T-0140) — sets/clears `FeeRateOverrideBp`, a loyalty discount on the platform commission
   - `AnonymizeForErasure()` — invoked ONLY by the `IUserDataDeletionService` seam during a GDPR erasure of the owning user (T-0110); see below
 - **Persisted by:** `IMakerRepository`
 - **Destroyed by:** never (soft delete only via `Deactivated()`; under GDPR erasure the row is ANONYMIZED-AND-RETAINED, never hard-deleted — tax records reference it)
@@ -62,6 +65,7 @@ When the owning user is erased (`DeleteUserPermanently` → `IUserDataDeletionSe
 - A maker's snapshot of `CompanyName` / `RegisteredAddress` / `LegalForm` at registration is the source for invoicing. ARES updates do not auto-propagate; admin can trigger a re-fetch via a dedicated command.
 - `BankAccount` must pass Czech format validation (`123456789/0100`).
 - A maker is active for customer-facing listings only if `IsActive AND User.IsActive AND User.EmailConfirmedAt IS NOT NULL`.
+- **ADR 0027 (Stripe-active countries, T-0142):** a maker may not publish products or accept new orders unless `PayoutAccountStatus == Enabled`, in addition to the existing `IsVerified` gate — the exact publish-vs-accept boundary is a T-0142 design decision, not fixed here.
 
 ## Implementation pointer
 
@@ -73,8 +77,8 @@ When the owning user is erased (`DeleteUserPermanently` → `IUserDataDeletionSe
 
 ## Related
 
-- ADRs: 0004, 0010, 0012, 0013, 0014, 0018, 0023
+- ADRs: 0004, 0010, 0012, 0013, 0014, 0018, 0023, 0027 (amends — payout-account fields + the new publish/accept-orders gate)
 - Patterns: §A.23 (GDPR erasure seam — `AnonymizeForErasure` is invoked here)
 - Extension points: §14 (erasure matrix — Maker = ANONYMIZE + flag)
 - Stories: maker registration, maker profile update, admin verify, respond to a review
-- Roles: `user`, `company-registry`, `address`, `product`, `payout-batch`, `review`
+- Roles: `user`, `company-registry`, `address`, `product`, `payout-batch`, `review`, `payout-account-provider` (new, ADR 0027)

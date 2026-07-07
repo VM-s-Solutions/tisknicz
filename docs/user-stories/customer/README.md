@@ -401,6 +401,131 @@ As a customer, I want to download the PDF invoice for any of my orders so I can 
 
 ---
 
+## US-customer-0021 — See the withdrawal-right notice at checkout
+
+### Narrative
+As a customer, I want to be told clearly, before I pay, whether I have a legal right to change my mind about this purchase, so I know what happens if I want to return it.
+
+### Roles in play
+- **Product** (read) — reads the new `FulfillmentType` field (US-maker-0018).
+- **Order** — no schema change; the notice is a checkout-time display concern, not a stored order field.
+
+### Acceptance criteria
+- **AC-1** Given the product has `FulfillmentType = MadeToOrder`, when the customer reaches the checkout form (`/objednavka`), then a mandatory notice is shown, before the "Objednat a zaplatit" action, stating that made-to-order goods are exempt from the 14-day right of withdrawal (§ 1837 písm. d) občanského zákoníku).
+- **AC-2** Given the product has `FulfillmentType = InStock`, when the customer reaches checkout, then the notice instead informs them of their standard 14-day right of withdrawal.
+- **AC-3** Given the product detail page (`/produkt/<id>`) renders, when the customer views it, then a badge reads "Na zakázku" or "Skladem" matching `Product.FulfillmentType` (US-maker-0018 AC-4).
+- **AC-4** Given the final legal wording of the two notices has not yet been approved (dopady §5.6 / Q-0030, the pre-existing VOP/GDPR launch-blocker), then the notice ships using the **legal-placeholder-lock pattern** established by T-0130: a visible, clearly-marked interim copy plus keyed i18n strings, so a legal-text swap later doesn't require a new ticket — only a content update.
+- **AC-5** Given the VOP page is later finalized, when it references withdrawal rights, then it cross-references both the made-to-order exemption and the in-stock right (dopady §2.4).
+
+### Out of scope
+- A blocking checkbox/acknowledgement forcing the customer to confirm they read the notice (BA default: a clearly-placed, unmissable notice satisfies "the consumer must be informed before ordering" per § 1837 písm. d) OZ; a forced checkbox is a heavier UX pattern not requested by the business decision. Flagged in `docs/questions/open.md` in case legal review later requires an explicit acknowledgement).
+- Any change to the order-placement flow's validation rules — the notice is informational only, it does not block order submission for either fulfillment type.
+- Retroactive display of the notice on past orders (no notice history is stored; if a legal dispute needs proof of what was shown at order time, that is a future ticket).
+
+### Alternatives considered
+- **Option A — Store the resolved notice text (or its enum) on the `Order` at creation time, so the exact wording shown is provably reconstructable later.** *Rejected for MVP* — no other checkout-time display concern is snapshotted this way today (e.g. the Zásilkovna widget copy isn't either), and the interim legal-placeholder-lock text is going to change anyway before launch (Q-0030). Revisit once the final VOP text lands and if the legal advisor asks for provable notice records — the `FulfillmentType` + `CreatedAt` combination on the order already lets an auditor reconstruct which notice class applied, even without storing the literal string.
+
+### Related
+- ADRs: none new
+- Ticket: T-0144
+- Roles: `product`, `order`
+
+---
+
+## US-customer-0022 — Open a complaint about a delivered order (dispute)
+
+### Narrative
+As a customer, I want to report a problem with an order within 14 days of delivery — starting with a message to the maker — so we can resolve it directly, and only escalate to Makables if the maker doesn't help.
+
+### Roles in play
+- **OrderMessage** (existing, US-customer-0014) — first point of contact; "Reklamovat" opens the thread pre-filled with a complaint category.
+- **Dispute** (existing aggregate per [dispute.md](../../architecture/roles/dispute.md)) — extended with a customer-facing 14-day-from-delivery open window; `OpenCustomerDispute.Command` gains the window check.
+- **Order** (read; `DeliveredAt`) — the anchor for the 14-day window.
+
+### Acceptance criteria
+- **AC-1** Given an order is `Delivered` and `DeliveredAt + 14 days` has not yet passed, when the customer clicks "Reklamovat" on the order page, then they land in the existing order message thread (US-customer-0014) with a category selector pre-filled (matching `DisputeCategory`: `NotDelivered`, `DamagedItem`, `NotAsDescribed`, `Other` — the two carrier-reserved categories are not customer-selectable) — this does NOT yet create a formal `Dispute` row.
+- **AC-2** Given the customer is unsatisfied with the maker's reply in the thread, when they click "Eskalovat na Makables" inside the thread, then `OpenCustomerDispute.Command` runs, creating the `Dispute` (`Source = Customer`) with the chosen category + a description, and admin is notified (existing `order.disputed.adminEmail` per dispute.md).
+- **AC-3** Given `DeliveredAt + 14 days` has already passed, when the customer attempts to open a dispute via the platform button, then the button is hidden or the command returns a new time-window error (`order.dispute.windowExpired`); the page instead points the customer to their statutory rights via off-platform contact (24-month legal warranty per dopady §2.5 footnote — VOP copy, not a platform flow).
+- **AC-4** Given the order is `Paid`, `Accepted`, or `Shipped` (not yet `Delivered` — e.g. reporting a non-arrival), when the customer opens a dispute, then no 14-day window applies (there is no `DeliveredAt` yet); the existing unlimited-while-in-flight behavior is unchanged.
+- **AC-5** Given an admin opens a dispute directly on behalf of a customer (phone/email contact), then the 14-day window does not apply — admin-opened disputes remain unlimited per statutory rights (dispute.md: admin channel unaffected).
+
+### Out of scope
+- Photo/evidence upload dedicated to the complaint (the existing order message thread is the evidence channel per dispute.md; no new upload surface ships).
+- Any change to admin's resolution process (`ResolveDispute.Command` is unchanged — this story only gates *when the customer, specifically, can open* the dispute).
+- A customer-facing "reklamace" list/dashboard separate from the existing order detail page.
+
+### Alternatives considered
+- **Option A — Enforce the 14-day window inside the generic `Dispute.Open` factory (all four opener commands), rather than only in `OpenCustomerDispute`.** *Rejected* — dispute.md documents the admin channel as explicitly unlimited ("admin bez limitu — zákonná práva běží dál") and the carrier-sourced `DisputeShipment` command fires automatically off carrier signals with no concept of a customer-initiated window. Scoping the check to the customer-opener command keeps the other three openers' existing behavior untouched and matches the business rule, which is specifically about the *customer's platform button*, not the dispute mechanism as a whole.
+
+### Related
+- ADRs: 0013, 0014, 0017, 0020
+- Ticket: T-0145
+- Roles: `dispute`, `order-message`, `order`
+
+---
+
+## US-customer-0023 — Return an item to the maker via a prepaid Zásilkovna label
+
+### Narrative
+As a customer whose complaint has been confirmed as valid, I want a prepaid return-shipping label so I can send the item back to the maker without paying for postage myself.
+
+### Roles in play
+- **ShippingCarrier** (extend; existing adapter per [shipping-carrier.md](../../architecture/roles/shipping-carrier.md)) — new reverse-direction shipment creation (customer → maker), mirroring the existing forward `CreateShipmentAsync` shape.
+- **Dispute** (read; existing) — the return is generated in the context of an open, customer-sourced dispute in a return-warranting category.
+- **Maker** — the return shipping cost is charged against the maker (dopady §2.5 Q9), never the customer.
+- **BlobStorage** — the label PDF is cached the same way the forward label is (T-0074/T-0075 pattern).
+
+### Acceptance criteria
+- **AC-1** Given an open `Dispute` in a category that plausibly warrants a physical return (`DamagedItem` or `NotAsDescribed`), when an admin confirms the return is needed (a new admin action reviewed alongside `ResolveDispute`), then a reverse Zásilkovna label (customer's address → maker's registered/pickup address) is generated and made available to the customer for download from the order/dispute page.
+- **AC-2** Given the return label is generated, when its carrier cost is computed, then it is recorded against the maker — deducted from the maker's next payout batch or reflected on their next fee invoice (dopady §2.5 Q9) — never charged to the customer.
+- **AC-3** Given the customer downloads the label and ships the item, when the maker (or admin, on the maker's behalf) confirms the item was received, then that confirmation is recorded manually (no automated carrier-delivery sync for the reverse leg at MVP — mirrors the forward label's cache-then-fallback pattern, but confirmation of *receipt* is manual, since Packeta's return-tracking granularity isn't wired at this ticket's scope).
+- **AC-4** Given the reverse-label generation call to Packeta fails (carrier error), when it happens, then admin sees the error and can retry — mirroring the existing T-0074/T-0075 error classification (`Transient`/`Permanent`/`Configuration`).
+
+### Out of scope
+- Automatic carrier-status sync confirming the reverse shipment was delivered to the maker (manual admin/maker acknowledgement only at MVP).
+- A self-service "start a return" button the customer can click without an admin having reviewed the dispute first — return-label generation is gated on an admin's eligibility judgment (mirrors how `RefundOrder` already requires an admin decision, not an automatic customer trigger). **BA default — flagged in `docs/questions/open.md`** since the meeting notes ("zákazník odešle zboží zpět makerovi přes Zásilkovnu") don't explicitly say whether the customer or admin triggers label generation.
+- Partial-item / partial-quantity returns (the platform's Order is single-product at MVP; the return is all-or-nothing).
+
+### Alternatives considered
+- **Option A — Auto-generate the return label the moment the customer opens a dispute in a return-warranting category, with no admin gate.** *Rejected as the MVP default* — eligibility for a physical return is a judgment call (is the claim credible? does the category actually need the item back, e.g. `NotDelivered` never does) that the existing dispute-resolution model reserves for admin (dispute.md: every money-moving or state-changing outcome is admin-triggered). Auto-generating labels for every complaint would create needless carrier cost exposure for the maker on illegitimate claims. This is recorded as a BA default, not a final ruling — see the open question.
+
+### Related
+- ADRs: 0016 (error classification pattern), 0017
+- Ticket: T-0146
+- Roles: `shipping-carrier`, `dispute`, `maker`, `blob-storage`
+
+---
+
+## US-customer-0024 — Manage cookie consent
+
+### Narrative
+As a website visitor (whether or not I've registered), I want to choose which categories of cookies the site may use — necessary only, or also analytics/marketing — so nothing beyond what's strictly needed loads before I've agreed to it.
+
+### Roles in play
+- No backend domain role applies — this is a frontend-only capability. There is no `Core.Domain` entity, no NSwag contract change, and no database table; the consent choice is stored client-side (first-party, e.g. a cookie or `localStorage` key) exactly as the GDPR page already promises ("nastavení souhlasu").
+
+### Acceptance criteria
+- **AC-1** Given a visitor loads any page for the first time (no consent choice recorded yet), when the page renders, then a consent banner appears offering at least: "Pouze nezbytné" (necessary only) and "Přijmout vše" (accept all), plus a way to open granular category toggles (necessary — always on and non-togglable; analytics; marketing).
+- **AC-2** Given the visitor has not yet made a choice, when any script tagged as analytics or marketing would otherwise load, then it does not load — the mechanism blocks by default until explicit consent for that category is recorded. (At today's code state, no analytics/marketing script is wired yet per dopady §2.8/Q16 — this ticket ships the gate so the *first* such script, whichever tool is chosen later, plugs into an existing consent check instead of reopening this ticket.)
+- **AC-3** Given the visitor makes a choice (accept all / necessary only / a custom per-category selection), when they confirm, then the choice is persisted first-party and the banner does not reappear on subsequent visits until the choice expires or is revoked.
+- **AC-4** Given the visitor wants to change their mind later, when they use the "cookie settings" link the GDPR page already references, then the same category-toggle UI reopens pre-filled with their current choices, and saving updates the stored consent.
+- **AC-5** Given the consent mechanism is provider-agnostic (dopady §2.8: "nástroje zatím neurčeny"), when a specific analytics or marketing tool is chosen later, then wiring it requires only gating its script tag behind the existing consent check — no change to the banner, storage shape, or this ticket's contract.
+
+### Out of scope
+- Choosing or integrating any specific analytics/marketing tool (Q16 leaves the tool choice open; this ticket ships the mechanism only).
+- Server-side consent logging / an auditable consent trail for legal defense (first-party client storage is the MVP mechanism; a server-recorded consent log is a possible future hardening, not requested here).
+- Geo-detection / different consent regimes per visitor country (Czech-only launch per CLAUDE.md; no CCPA/other-regime branching).
+
+### Alternatives considered
+- **Option A — Do nothing until a specific analytics tool is picked, then build tool-specific consent gating at that time.** *Rejected* — the GDPR page already published text promising a consent-settings mechanism ("nastavení souhlasu"), and building the gate provider-agnostically now means the first tool pick doesn't need to reopen a consent-mechanism ticket; it only needs its script tag wired behind the existing check. Waiting also risks shipping analytics before consent exists, which is the exact ČOI/GDPR risk the dopady doc flags.
+
+### Related
+- ADRs: none (frontend-only; no backend contract)
+- Ticket: T-0147
+- Roles: none (see Roles in play note)
+
+---
+
 ## US-customer-0018 — Update profile (name, phone)
 
 ### Narrative

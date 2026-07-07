@@ -2,6 +2,8 @@
 
 Authoritative ADR: [0003 — Money as integer minor units, currency-aware](../adr/0003-money-and-currency.md).
 
+**Escrow/realization note (ADR 0027, T-0142, not yet built):** for countries on the Stripe-active marketplace-escrow model, the platform fee is realized by transferring less than the full order total (`Order.MakerPayoutAmountMinor`, the existing snapshot field) to the maker's connected account — there is no separate "application fee" concept to compute. `OrderPricing` and every field/rounding rule below are unchanged by that migration; only *which entity ends up holding the money, and when* changes. See ADR 0027 for the full money-flow decision.
+
 ## Principles
 
 - **`long` minor units.** Every money value is `long AmountMinor` plus `string Currency` (ISO 4217). CZK uses haléře (×100); EUR uses cents (×100); HUF stores whole forint with currency `HUF` (HUF minor unit defunct).
