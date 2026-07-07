@@ -35,7 +35,7 @@ export default function HomePage() {
       <PublicNavbar />
 
       <section className="hero-section relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
-        <div className="pointer-events-none absolute inset-0 z-0 hidden lg:block motion-reduce:hidden" aria-hidden="true">
+        <div className="pointer-events-none absolute inset-0 z-0 motion-reduce:hidden" aria-hidden="true">
           <HeroSceneWrapper />
         </div>
 
@@ -70,7 +70,7 @@ export default function HomePage() {
           </div>
 
           <div className="reveal-up reveal-delay-4 mt-12 grid grid-cols-1 border-y border-zinc-800 sm:grid-cols-3">
-            <Metric value="250+" label="Ověřených makerů" />
+            <Metric value="Nová platforma" label="Buď mezi prvními makery" />
             <Metric value="6" label="Hlavních kategorií" />
             <Metric value="7 % > 3,5 %" label="Provize platformy" />
           </div>

@@ -56,12 +56,12 @@ export const messages = {
   'auth.shared.point_verified': 'Ověření makeři a transparentní hodnocení na jednom místě.',
   'auth.shared.point_shipping': 'Doručení přes Zásilkovnu a průběžné sledování objednávky.',
   'auth.shared.point_support': 'Rychlá podpora při objednávce i registraci.',
-  'auth.shared.stat_makers_label': 'Ověření makeři',
-  'auth.shared.stat_makers_value': '250+',
+  'auth.shared.stat_makers_label': 'Platba',
+  'auth.shared.stat_makers_value': 'Až po doručení',
   'auth.shared.stat_categories_label': 'Kategorie služeb',
   'auth.shared.stat_categories_value': '6',
-  'auth.shared.stat_orders_label': 'Průměrné hodnocení',
-  'auth.shared.stat_orders_value': '4,9/5',
+  'auth.shared.stat_orders_label': 'Provize platformy',
+  'auth.shared.stat_orders_value': '7 % → 3,5 %',
 
   // Auth — register (shared)
   'auth.register.title': 'Vytvořit zákaznický účet',
@@ -208,6 +208,7 @@ export const messages = {
   'footer.link.maker_registration': 'Registrace',
   'footer.link.terms': 'Obchodní podmínky',
   'footer.link.privacy': 'Ochrana údajů',
+  'footer.link.contact': 'Kontakt',
   'footer.copyright': '© {year} Makables. Všechna práva vyhrazena.',
 
   // Catalog — page
@@ -460,7 +461,7 @@ export const messages = {
     'Údaje zpracováváme zejména pro plnění smlouvy, splnění právních povinností, ochranu oprávněných zájmů (bezpečnost, prevence podvodů) a v relevantních případech na základě souhlasu (např. některé marketingové nebo analytické účely).',
   'static.privacy.section_retention_title': '4. Doba uchování a příjemci',
   'static.privacy.section_retention_body':
-    'Údaje uchováváme po dobu nezbytnou pro plnění smlouvy, zákonné účetní a daňové povinnosti a ochranu právních nároků. K údajům mohou mít přístup smluvní zpracovatelé (např. platební a logističtí partneři) pouze v rozsahu nezbytném pro poskytování služby.',
+    'Údaje uchováváme po dobu nezbytnou pro plnění smlouvy, zákonné účetní a daňové povinnosti a ochranu právních nároků. K údajům mohou mít přístup tito smluvní zpracovatelé, a to pouze v rozsahu nezbytném pro poskytování služby: Stripe (platby), Zásilkovna (doručení), Resend (e-mailová komunikace), ARES (ověření identifikačních údajů), Mapbox (mapové podklady) a Microsoft Azure (cloudová infrastruktura).',
   'static.privacy.section_rights_title': '5. Vaše práva',
   'static.privacy.section_rights_body':
     'Máte právo na přístup, opravu, výmaz, omezení zpracování, přenositelnost a námitku. Pokud se domníváte, že s údaji nakládáme v rozporu s právem, můžete podat stížnost u Úřadu pro ochranu osobních údajů.',
@@ -473,6 +474,22 @@ export const messages = {
   'static.privacy.law_cz_processing': 'Zákon č. 110/2019 Sb., o zpracování osobních údajů.',
   'static.privacy.law_eprivacy': 'Směrnice 2002/58/ES o soukromí a elektronických komunikacích (ePrivacy).',
   'static.privacy.law_cz_electronic': 'Zákon č. 480/2004 Sb., o některých službách informační společnosti.',
+
+  // --- /kontakt (identifikace provozovatele) ---
+  'static.contact.meta_title': 'Kontakt — Makables',
+  'static.contact.meta_description': 'Identifikační a kontaktní údaje provozovatele platformy Makables, JVM YORE s.r.o.',
+  'static.contact.title': 'Kontakt',
+  'static.contact.disclaimer':
+    'PLACEHOLDER — čekáme na doplnění závazných identifikačních údajů (IČO, sídlo, DIČ) provozovatelem. Text níže nesmí jít do produkčního nasazení bez doplnění.',
+  'static.contact.section_operator_title': 'Provozovatel platformy',
+  'static.contact.operator_name': 'JVM YORE s.r.o.',
+  'static.contact.operator_ico_label': 'IČO',
+  'static.contact.operator_ico_value': 'doplní se před spuštěním',
+  'static.contact.operator_address_label': 'Sídlo',
+  'static.contact.operator_address_value': 'doplní se před spuštěním',
+  'static.contact.section_contact_title': 'Kontaktní údaje',
+  'static.contact.operator_email_label': 'E-mail',
+  'static.contact.operator_email_value': 'doplní se před spuštěním',
 
   // Dashboard — maker products (T-0049).
   // Plural-neutral phrasing rule from the catalog block above applies

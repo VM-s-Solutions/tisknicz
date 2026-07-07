@@ -14,6 +14,7 @@ const MAKER_LINKS = [
 const INFO_LINKS = [
   { href: '/vop', key: 'footer.link.terms' as const },
   { href: '/gdpr', key: 'footer.link.privacy' as const },
+  { href: '/kontakt', key: 'footer.link.contact' as const },
 ];
 
 function FooterColumn({

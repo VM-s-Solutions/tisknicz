@@ -37,7 +37,7 @@ public static class CountrySeed
                 standardVatRateBp: 2100,  // 21%
                 reducedVatRateBp: 1200,   // 12%
                 invoicingMode: InvoicingMode.None,  // platform not yet VAT-registered at MVP launch
-                platformFeeRateBp: 1500,  // 15%
+                platformFeeRateBp: 700,   // 7% (loyalty-discounted rate of 3.5% is a separate feature)
                 taxIdLabel: "DIČ",
                 taxIdFormat: @"^CZ\d{8,10}$",
                 vatIdLabel: "DIČ",
