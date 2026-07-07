@@ -383,6 +383,7 @@ const METEOR_TRAIL_POINTS = 12;
 const METEOR_TRAIL_LENGTH = 2.2;
 
 function ShootingStar({ initialDelay }: { initialDelay: number }) {
+  const lineRef = useRef<THREE.Line>(null);
   const flight = useRef({
     active: false,
     nextAt: initialDelay,
@@ -403,8 +404,7 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
       colors[i * 3 + 2] = fade * 0.97;
     }
     const geometry = new THREE.BufferGeometry();
-    const positionAttr = new THREE.BufferAttribute(positions, 3);
-    geometry.setAttribute('position', positionAttr);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const material = new THREE.LineBasicMaterial({
       vertexColors: true,
@@ -416,18 +416,24 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
     });
     const line = new THREE.Line(geometry, material);
     line.frustumCulled = false;
-    return { line, geometry, material, positionAttr };
+    return line;
   }, []);
 
   useEffect(
     () => () => {
       meteor.geometry.dispose();
-      meteor.material.dispose();
+      (meteor.material as THREE.LineBasicMaterial).dispose();
     },
     [meteor]
   );
 
   useFrame((state) => {
+    const line = lineRef.current;
+    if (!line) return;
+    const material = line.material as THREE.LineBasicMaterial;
+    const positionAttr = line.geometry.getAttribute(
+      'position'
+    ) as THREE.BufferAttribute;
     const t = state.clock.elapsedTime;
     const s = flight.current;
 
@@ -451,7 +457,7 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
     if (progress >= 1) {
       s.active = false;
       s.nextAt = t + 4 + Math.random() * 8;
-      meteor.material.opacity = 0;
+      material.opacity = 0;
       return;
     }
 
@@ -461,7 +467,7 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
         ? progress / 0.18
         : Math.pow(1 - (progress - 0.18) / 0.82, 1.6);
 
-    const arr = meteor.positionAttr.array as Float32Array;
+    const arr = positionAttr.array as Float32Array;
     for (let i = 0; i < METEOR_TRAIL_POINTS; i++) {
       const back = (METEOR_TRAIL_LENGTH * i) / (METEOR_TRAIL_POINTS - 1);
       const along = progress * s.distance - back;
@@ -469,11 +475,11 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
       arr[i * 3 + 1] = s.start.y + s.direction.y * along;
       arr[i * 3 + 2] = s.start.z;
     }
-    meteor.positionAttr.needsUpdate = true;
-    meteor.material.opacity = brightness * 0.9;
+    positionAttr.needsUpdate = true;
+    material.opacity = brightness * 0.9;
   });
 
-  return <primitive object={meteor.line} />;
+  return <primitive ref={lineRef} object={meteor} />;
 }
 
 export function HeroScene() {
