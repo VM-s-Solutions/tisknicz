@@ -36,6 +36,17 @@ internal sealed class ProductEntityConfiguration : IEntityTypeConfiguration<Prod
             .HasMaxLength(20)
             .IsRequired();
 
+        // T-0144: "na zakázku" vs. "skladem". String-storage, same
+        // convention as PriceType. DEFAULT 'MadeToOrder' so the
+        // migration backfills every pre-existing row to the safer
+        // legal posture with no manual data fix (AC-6).
+        builder.Property(p => p.FulfillmentType)
+            .HasColumnName("fulfillment_type")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(FulfillmentType.MadeToOrder)
+            .IsRequired();
+
         builder.Property(p => p.WeightGrams).HasColumnName("weight_grams").IsRequired();
 
         // Owned collection: product_images in a separate table. The DB

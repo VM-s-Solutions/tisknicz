@@ -1070,58 +1070,6 @@ export class PublicApi implements IPublicApi {
     }
 }
 
-export class ChangePasswordRequest implements IChangePasswordRequest {
-    currentPassword!: string;
-    newPassword!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangePasswordRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.currentPassword = _data["currentPassword"];
-            this.newPassword = _data["newPassword"];
-        }
-    }
-
-    static fromJS(data: any): ChangePasswordRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangePasswordRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["currentPassword"] = this.currentPassword;
-        data["newPassword"] = this.newPassword;
-        return data;
-    }
-}
-
-export interface IChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
-
-    [key: string]: any;
-}
-
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
     token!: string;
 
@@ -1342,6 +1290,58 @@ export enum ErrorType {
     Unknown = "Unknown",
 }
 
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+
+    [key: string]: any;
+}
+
 export class LoginRequest implements ILoginRequest {
     email!: string;
     password!: string;
@@ -1480,6 +1480,7 @@ export class MakerProductItem implements IMakerProductItem {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     primaryImageBlobPath!: string | undefined;
 
     [key: string]: any;
@@ -1504,6 +1505,7 @@ export class MakerProductItem implements IMakerProductItem {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.primaryImageBlobPath = _data["primaryImageBlobPath"];
         }
     }
@@ -1526,6 +1528,7 @@ export class MakerProductItem implements IMakerProductItem {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["primaryImageBlobPath"] = this.primaryImageBlobPath;
         return data;
     }
@@ -1537,6 +1540,7 @@ export interface IMakerProductItem {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     primaryImageBlobPath: string | undefined;
 
     [key: string]: any;
@@ -1947,6 +1951,7 @@ export class ProductDetail implements IProductDetail {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     makerId!: string;
@@ -1981,6 +1986,7 @@ export class ProductDetail implements IProductDetail {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.makerId = _data["makerId"];
@@ -2014,6 +2020,7 @@ export class ProductDetail implements IProductDetail {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["makerId"] = this.makerId;
@@ -2036,6 +2043,7 @@ export interface IProductDetail {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     makerId: string;

@@ -41,6 +41,7 @@ public static class CreateProduct
         string? Description,
         long PriceAmountMinor,
         PriceType PriceType,
+        FulfillmentType FulfillmentType,
         int WeightGrams)
         : ICommand<Response>;
 
@@ -66,6 +67,9 @@ public static class CreateProduct
 
             RuleFor(c => c.PriceAmountMinor)
                 .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.ProductPriceNegative);
+
+            RuleFor(c => c.FulfillmentType)
+                .IsInEnum().WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
 
             RuleFor(c => c.WeightGrams)
                 .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.MinValue);
@@ -131,6 +135,7 @@ public static class CreateProduct
                 description: command.Description,
                 price: new DomainMoney(command.PriceAmountMinor, config.DefaultCurrencyCode),
                 priceType: command.PriceType,
+                fulfillmentType: command.FulfillmentType,
                 weightGrams: command.WeightGrams,
                 countryCode: maker.CountryCode);
 

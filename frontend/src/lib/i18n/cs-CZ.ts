@@ -291,6 +291,11 @@ export const messages = {
   'catalog.product.image_alt': 'Fotografie produktu {title}',
   'catalog.product.no_image': 'Bez fotografie',
 
+  // Fulfillment-type badge + maker-form option labels (T-0144). Shared
+  // across the product detail badge and the maker create/edit form.
+  'product.fulfillmentType.MadeToOrder': 'Na zakázku',
+  'product.fulfillmentType.InStock': 'Skladem',
+
   // Catalog — product detail page (T-0048, US-customer-0009).
   // Plural-neutral phrasing rule from the catalog card block above
   // applies here too — keep any future {count} keys in the "Label: N"
@@ -524,6 +529,7 @@ export const messages = {
   'dashboard.maker.products.form.field.description_help': 'Volitelný popis. Krátký, výstižný — co produkt umí a komu se hodí.',
   'dashboard.maker.products.form.field.category': 'Kategorie',
   'dashboard.maker.products.form.field.category_placeholder': 'Vyberte kategorii',
+  'dashboard.maker.products.form.field.fulfillment_type': 'Způsob výroby',
   'dashboard.maker.products.form.field.price_type': 'Typ ceny',
   'dashboard.maker.products.form.field.price_amount': 'Cena',
   'dashboard.maker.products.form.field.price_amount_help': 'Částka v Kč. U "Na poptávku" je pole nepovinné — odešle se 0 Kč jako informační údaj, finální cenu doladíte se zákazníkem.',
@@ -838,6 +844,19 @@ export const messages = {
     'Cena dopravy bude vyčíslena v souhrnu objednávky po odeslání.',
   'checkout.summary.totalNote':
     'Konečnou cenu včetně dopravy uvidíte před platbou.',
+
+  // Withdrawal-right notice (T-0144, § 1837 písm. d) OZ). Branches on
+  // the ordered product's fulfillmentType; both variants are interim
+  // placeholder copy per the T-0130 legal-placeholder-lock pattern
+  // (final wording gated behind Q-0030 — see static.terms.disclaimer /
+  // static.privacy.disclaimer for the same pattern on /vop and /gdpr).
+  'checkout.withdrawalNotice.interimLabel': 'Předběžné znění — čeká na právní kontrolu',
+  'checkout.withdrawalNotice.madeToOrder.title': 'Zboží vyrobené na míru',
+  'checkout.withdrawalNotice.madeToOrder.body':
+    'Tento produkt je vyráběn na zakázku podle vašich požadavků. U zboží upraveného podle přání spotřebitele nebo pro jeho osobu zákon nepřiznává právo na odstoupení od smlouvy do 14 dnů (§ 1837 písm. d) občanského zákoníku).',
+  'checkout.withdrawalNotice.inStock.title': 'Právo na odstoupení do 14 dnů',
+  'checkout.withdrawalNotice.inStock.body':
+    'Tento produkt je skladem. Jako spotřebitel máte právo odstoupit od smlouvy bez udání důvodu do 14 dnů od převzetí zboží, v souladu s občanským zákoníkem.',
 
   'checkout.submit': 'Odeslat objednávku',
   'checkout.submitting': 'Odesílám…',

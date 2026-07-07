@@ -31,6 +31,7 @@ public static class UpdateProduct
         string? Description,
         long PriceAmountMinor,
         PriceType PriceType,
+        FulfillmentType FulfillmentType,
         int WeightGrams)
         : ICommand;
 
@@ -58,6 +59,9 @@ public static class UpdateProduct
 
             RuleFor(c => c.PriceAmountMinor)
                 .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.ProductPriceNegative);
+
+            RuleFor(c => c.FulfillmentType)
+                .IsInEnum().WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
 
             RuleFor(c => c.WeightGrams)
                 .GreaterThanOrEqualTo(0).WithErrorCode(BusinessErrorMessage.MinValue);
@@ -112,6 +116,7 @@ public static class UpdateProduct
                 description: command.Description,
                 price: new DomainMoney(command.PriceAmountMinor, product.PriceCurrency),
                 priceType: command.PriceType,
+                fulfillmentType: command.FulfillmentType,
                 weightGrams: command.WeightGrams);
 
             return BusinessResult.Success();

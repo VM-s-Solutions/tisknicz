@@ -21,6 +21,7 @@ const baseProduct: ProductDetail = {
   priceAmountMinor: 29900,
   priceCurrency: 'CZK',
   priceType: 'Fixed',
+  fulfillmentType: 'MadeToOrder',
   weightGrams: 120,
   categoryId: 'cat-1',
   makerId: 'm1',

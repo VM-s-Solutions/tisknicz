@@ -2477,58 +2477,6 @@ export interface IAcceptOrderResponse {
     [key: string]: any;
 }
 
-export class ChangePasswordRequest implements IChangePasswordRequest {
-    currentPassword!: string;
-    newPassword!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangePasswordRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.currentPassword = _data["currentPassword"];
-            this.newPassword = _data["newPassword"];
-        }
-    }
-
-    static fromJS(data: any): ChangePasswordRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangePasswordRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["currentPassword"] = this.currentPassword;
-        data["newPassword"] = this.newPassword;
-        return data;
-    }
-}
-
-export interface IChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
-
-    [key: string]: any;
-}
-
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
     token!: string;
 
@@ -2683,6 +2631,7 @@ export class CreateProductRequest implements ICreateProductRequest {
     description!: string | undefined;
     priceAmountMinor!: number;
     priceType!: PriceType;
+    fulfillmentType!: FulfillmentType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -2707,6 +2656,7 @@ export class CreateProductRequest implements ICreateProductRequest {
             this.description = _data["description"];
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
         }
     }
@@ -2729,6 +2679,7 @@ export class CreateProductRequest implements ICreateProductRequest {
         data["description"] = this.description;
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         return data;
     }
@@ -2740,6 +2691,7 @@ export interface ICreateProductRequest {
     description: string | undefined;
     priceAmountMinor: number;
     priceType: PriceType;
+    fulfillmentType: FulfillmentType;
     weightGrams: number;
 
     [key: string]: any;
@@ -2872,6 +2824,11 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export enum FulfillmentType {
+    MadeToOrder = "MadeToOrder",
+    InStock = "InStock",
 }
 
 export class GetMakerOrderDetailsResponse implements IGetMakerOrderDetailsResponse {
@@ -3283,6 +3240,58 @@ export class HandOverOrderResponse implements IHandOverOrderResponse {
 
 export interface IHandOverOrderResponse {
     orderId: string;
+
+    [key: string]: any;
+}
+
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
 
     [key: string]: any;
 }
@@ -3884,6 +3893,7 @@ export class MakerProductDetail implements IMakerProductDetail {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     isActive!: boolean;
@@ -3916,6 +3926,7 @@ export class MakerProductDetail implements IMakerProductDetail {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.isActive = _data["isActive"];
@@ -3947,6 +3958,7 @@ export class MakerProductDetail implements IMakerProductDetail {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["isActive"] = this.isActive;
@@ -3967,6 +3979,7 @@ export interface IMakerProductDetail {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     isActive: boolean;
@@ -3982,6 +3995,7 @@ export class MakerProductListItem implements IMakerProductListItem {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     isActive!: boolean;
@@ -4011,6 +4025,7 @@ export class MakerProductListItem implements IMakerProductListItem {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.isActive = _data["isActive"];
@@ -4038,6 +4053,7 @@ export class MakerProductListItem implements IMakerProductListItem {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["isActive"] = this.isActive;
@@ -4054,6 +4070,7 @@ export interface IMakerProductListItem {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     isActive: boolean;
@@ -5511,6 +5528,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
     description!: string | undefined;
     priceAmountMinor!: number;
     priceType!: PriceType;
+    fulfillmentType!: FulfillmentType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -5535,6 +5553,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
             this.description = _data["description"];
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
         }
     }
@@ -5557,6 +5576,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
         data["description"] = this.description;
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         return data;
     }
@@ -5568,6 +5588,7 @@ export interface IUpdateProductRequest {
     description: string | undefined;
     priceAmountMinor: number;
     priceType: PriceType;
+    fulfillmentType: FulfillmentType;
     weightGrams: number;
 
     [key: string]: any;

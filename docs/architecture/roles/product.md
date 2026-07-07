@@ -21,6 +21,7 @@ Represent a catalog entry a maker offers for sale, with the pricing, media, and 
 
 - Title, description
 - Price (Money: `base_price_minor + currency`) and `PriceType` (`Fixed | From | OnRequest`)
+- `FulfillmentType` (`MadeToOrder | InStock`, default `MadeToOrder`) — "na zakázku" vs. "skladem" (T-0144). Drives the product-detail badge and the checkout withdrawal-right notice (§ 1837 písm. d) OZ exempts made-to-order goods from the standard 14-day right of withdrawal; in-stock goods carry the normal 14-day right). Maker-set, independent of `PriceType` (pricing certainty vs. production timing are orthogonal — see T-0144 Alternatives Considered).
 - Category
 - Images (list of blob paths)
 - Weight (grams) for Zásilkovna
@@ -29,7 +30,7 @@ Represent a catalog entry a maker offers for sale, with the pricing, media, and 
 ## Does NOT know
 
 - Order history involving it (queries the Order side)
-- Stock / inventory (out of scope at MVP — products are made-to-order)
+- Stock quantity / inventory count (out of scope at MVP — `FulfillmentType` only drives the legal notice, not stock-count tracking)
 - Price history (we don't track it; the order carries the price snapshot from order time)
 - Whether the maker is verified or active (catalog query joins on Maker)
 
@@ -47,6 +48,7 @@ Represent a catalog entry a maker offers for sale, with the pricing, media, and 
 - A product belongs to exactly one maker; reassignment is not supported (delete + recreate).
 - `PriceType = OnRequest` ⇒ price field is informational only; orders aren't placeable until custom-quote flow ships (post-MVP).
 - Up to N images per product (N defined in config; default 10).
+- `FulfillmentType` enum membership only (no cross-field invariant with `PriceType`); the migration column default is `MadeToOrder` so every pre-existing row backfills to the safer legal posture with no manual data fix (T-0144 AC-6). Not snapshotted on `Order` — the checkout notice resolves it from the product at render time.
 
 ## Implementation pointer
 

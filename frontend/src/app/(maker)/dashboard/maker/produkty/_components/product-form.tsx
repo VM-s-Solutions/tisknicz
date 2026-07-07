@@ -10,6 +10,9 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createProduct,
+  FULFILLMENT_TYPES,
+  type FulfillmentType,
+  FulfillmentTypeValues,
   type MakerProductDetail,
   PRICE_TYPES,
   type PriceType,
@@ -29,6 +32,12 @@ const PRICE_TYPE_LABEL_KEYS: Record<PriceType, MessageKey> = {
   [PriceTypeValues.Fixed]: 'dashboard.maker.products.form.price_type.Fixed',
   [PriceTypeValues.From]: 'dashboard.maker.products.form.price_type.From',
   [PriceTypeValues.OnRequest]: 'dashboard.maker.products.form.price_type.OnRequest',
+};
+
+// Shared with the product-detail badge and checkout notice (T-0144).
+const FULFILLMENT_TYPE_LABEL_KEYS: Record<FulfillmentType, MessageKey> = {
+  [FulfillmentTypeValues.MadeToOrder]: 'product.fulfillmentType.MadeToOrder',
+  [FulfillmentTypeValues.InStock]: 'product.fulfillmentType.InStock',
 };
 
 /**
@@ -56,6 +65,11 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   const [priceType, setPriceType] = useState<PriceType>(
     (initial?.priceType as PriceType | undefined) ?? PriceTypeValues.Fixed,
   );
+  // Defaults to "Na zakázku" — the form's explicit default selection
+  // (AC-1), matching the platform's dominant use case (T-0144).
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(
+    (initial?.fulfillmentType as FulfillmentType | undefined) ?? FulfillmentTypeValues.MadeToOrder,
+  );
   // Initial Kč uses Math.trunc to mirror lib/money/formatter.ts's
   // formatCzk (whole-CZK display, haléře dropped). Math.round here
   // would silently bump prices ending in ≥50 haléř upward — and an
@@ -81,6 +95,11 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   const priceTypeOptions = PRICE_TYPES.map((value) => ({
     value,
     label: t(PRICE_TYPE_LABEL_KEYS[value]),
+  }));
+
+  const fulfillmentTypeOptions = FULFILLMENT_TYPES.map((value) => ({
+    value,
+    label: t(FULFILLMENT_TYPE_LABEL_KEYS[value]),
   }));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -118,6 +137,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
       description: description.trim() === '' ? undefined : description,
       priceAmountMinor,
       priceType,
+      fulfillmentType,
       weightGrams: weight,
     };
 
@@ -219,6 +239,16 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
             disabled={submitting}
             required
             error={fieldErrors.categoryId}
+          />
+          <Select
+            id="product-fulfillment-type"
+            label={t('dashboard.maker.products.form.field.fulfillment_type')}
+            value={fulfillmentType}
+            onChange={(e) => setFulfillmentType(e.target.value as FulfillmentType)}
+            options={fulfillmentTypeOptions}
+            disabled={submitting}
+            required
+            error={fieldErrors.fulfillmentType}
           />
           <div className="flex flex-col gap-1.5">
             <Textarea
