@@ -885,6 +885,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("id");
 
+                    b.Property<string>("AppleSub")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("apple_sub");
+
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -986,6 +991,10 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnName("updated_by");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppleSub")
+                        .IsUnique()
+                        .HasFilter("apple_sub IS NOT NULL");
 
                     b.HasIndex("EmailNormalized")
                         .IsUnique()

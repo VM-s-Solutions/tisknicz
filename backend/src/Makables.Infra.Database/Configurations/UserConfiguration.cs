@@ -43,6 +43,11 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.GoogleSub).HasColumnName("google_sub").HasMaxLength(255);
         builder.HasIndex(u => u.GoogleSub).IsUnique().HasFilter("google_sub IS NOT NULL");
 
+        // Apple's `sub` claim mirrors Google's shape exactly (up to 255 chars
+        // per Apple's docs). Nullable, unique-if-present. ADR 0026 / T-0139.
+        builder.Property(u => u.AppleSub).HasColumnName("apple_sub").HasMaxLength(255);
+        builder.HasIndex(u => u.AppleSub).IsUnique().HasFilter("apple_sub IS NOT NULL");
+
         builder.Property(u => u.FailedLoginCount).HasColumnName("failed_login_count").IsRequired();
         builder.Property(u => u.LockedUntil).HasColumnName("locked_until");
 
