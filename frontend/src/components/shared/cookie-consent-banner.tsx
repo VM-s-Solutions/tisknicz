@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   ACCEPT_ALL_CHOICES,
@@ -16,9 +16,6 @@ import {
 import { t } from '@/lib/i18n';
 
 type BannerMode = 'summary' | 'customize' | 'closed';
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function noopSubscribe(): () => void {
   return () => {};
@@ -40,25 +37,28 @@ function useHasMounted(): boolean {
 }
 
 /**
- * Cookie consent banner + customize view (T-0147, dopady §2.8).
+ * Cookie consent popup + customize view (T-0147, dopady §2.8).
  *
  * Mounted once from the root layout so it renders across every route
- * group (AC-1). First visit (no valid stored choice) shows the
- * "summary" view offering "Pouze nezbytné" / "Přijmout vše" / a
- * "Nastavit předvolby" expand into the "customize" view with
- * individual analytics/marketing toggles (`necessary` is always-on,
- * not a toggle). Once a choice is made it is persisted first-party
- * (`writeStoredConsent`) and the banner does not reappear (AC-2/AC-3)
- * until `CONSENT_VERSION` is bumped or storage is cleared.
+ * group (AC-1). Rendered as a non-blocking popup anchored to the
+ * bottom of the viewport — no backdrop, no scroll lock, no focus
+ * trap — so the page stays fully usable while the choice is pending.
+ * First visit (no valid stored choice) shows the "summary" view
+ * offering "Pouze nezbytné" / "Přijmout vše" / a "Nastavit předvolby"
+ * expand into the "customize" view with individual analytics/marketing
+ * toggles (`necessary` is always-on, not a toggle). Once a choice is
+ * made it is persisted first-party (`writeStoredConsent`) and the
+ * popup does not reappear (AC-2/AC-3) until `CONSENT_VERSION` is
+ * bumped or storage is cleared.
  *
  * The `CookieSettingsLink` (footer / GDPR page) dispatches
  * `OPEN_CONSENT_SETTINGS_EVENT`, which reopens this component's
  * customize view pre-filled with the current choices (AC-6), even
  * after the initial choice has been made.
  *
- * A Client Component: the banner is inherently interactive (buttons,
- * toggles, a focus trap) — mounting it from the (Server Component)
- * root layout keeps the rest of the tree server-rendered.
+ * A Client Component: the popup is inherently interactive (buttons,
+ * toggles) — mounting it from the (Server Component) root layout
+ * keeps the rest of the tree server-rendered.
  */
 export function CookieConsentBanner() {
   const stored = useStoredConsent();
@@ -67,9 +67,9 @@ export function CookieConsentBanner() {
   // Consent lives in client-only storage; the server (and the very
   // first client render, per `useStoredConsent`'s server snapshot)
   // has no way to know a returning visitor already decided. Gating on
-  // a post-mount flag — rather than rendering the banner on the
-  // server and hiding it after hydration — avoids a visible flash of
-  // the dialog for every returning visitor on every page load.
+  // a post-mount flag — rather than rendering the popup on the
+  // server and hiding it after hydration — avoids a visible flash
+  // for every returning visitor on every page load.
   const mounted = useHasMounted();
 
   const [manualMode, setManualMode] = useState<BannerMode | null>(null);
@@ -79,7 +79,6 @@ export function CookieConsentBanner() {
   const mode: BannerMode = manualMode ?? (alreadyDecided ? 'closed' : 'summary');
   const dismissable = alreadyDecided;
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
 
@@ -132,51 +131,17 @@ export function CookieConsentBanner() {
     return () => window.removeEventListener(OPEN_CONSENT_SETTINGS_EVENT, onOpenSettings);
   }, []);
 
-  // Body scroll lock + keyboard focus trap while the banner is open
-  // (AC-8): Tab/Shift+Tab cycle within the panel, Escape closes it
-  // only once a choice already exists (first-visit cannot be
-  // dismissed without a choice).
+  // Escape dismisses the popup once a choice already exists
+  // (first-visit stays open until a choice is made).
   useEffect(() => {
-    if (!mounted || mode === 'closed') return;
-
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const focusables = () =>
-      containerRef.current
-        ? Array.from(containerRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-        : [];
-
-    focusables()[0]?.focus();
+    if (!mounted || mode === 'closed' || !dismissable) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        if (dismissable) close();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-
-      const nodes = focusables();
-      if (nodes.length === 0) return;
-      const firstEl = nodes[0];
-      const lastEl = nodes[nodes.length - 1];
-
-      if (event.shiftKey && document.activeElement === firstEl) {
-        event.preventDefault();
-        lastEl.focus();
-      } else if (!event.shiftKey && document.activeElement === lastEl) {
-        event.preventDefault();
-        firstEl.focus();
-      }
+      if (event.key === 'Escape') close();
     }
 
     window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus();
-    };
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [mounted, mode, dismissable]);
 
   if (!mounted || mode === 'closed') {
@@ -184,58 +149,52 @@ export function CookieConsentBanner() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-4 sm:px-6 sm:pb-6">
       <div
-        aria-hidden="true"
-        onClick={() => {
-          if (dismissable) close();
-        }}
-        className="absolute inset-0 bg-black/70"
-      />
-
-      <div
-        ref={containerRef}
         role="dialog"
-        aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl"
+        className="glass pointer-events-auto mx-auto w-full max-w-3xl rounded-2xl border border-zinc-800 p-5 shadow-2xl motion-safe:animate-slide-up sm:p-6"
       >
         {mode === 'summary' ? (
-          <div className="flex flex-col gap-4">
-            <h2 id={titleId} className="text-lg font-semibold text-white">
-              {t('cookieConsent.title')}
-            </h2>
-            <p id={descriptionId} className="text-sm leading-relaxed text-zinc-300">
-              {t('cookieConsent.description')}{' '}
-              <Link href="/gdpr" className="underline hover:text-white">
-                {t('cookieConsent.privacyLinkText')}
-              </Link>
-              .
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <div className="min-w-0 flex-1">
+              <h2 id={titleId} className="text-sm font-semibold text-white">
+                {t('cookieConsent.title')}
+              </h2>
+              <p id={descriptionId} className="mt-1 text-xs leading-relaxed text-zinc-400">
+                {t('cookieConsent.description')}{' '}
+                <Link href="/gdpr" className="underline hover:text-white">
+                  {t('cookieConsent.privacyLinkText')}
+                </Link>
+                .
+              </p>
+            </div>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-              <Button type="button" variant="ghost" onClick={openCustomize}>
+            <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center">
+              <Button type="button" variant="ghost" size="sm" onClick={openCustomize}>
                 {t('cookieConsent.customize')}
               </Button>
-              <Button type="button" variant="outline" onClick={necessaryOnly}>
+              <Button type="button" variant="outline" size="sm" onClick={necessaryOnly}>
                 {t('cookieConsent.necessaryOnly')}
               </Button>
-              <Button type="button" variant="primary" onClick={acceptAll}>
+              <Button type="button" variant="primary" size="sm" onClick={acceptAll}>
                 {t('cookieConsent.acceptAll')}
               </Button>
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <h2 id={titleId} className="text-lg font-semibold text-white">
-              {t('cookieConsent.customizeTitle')}
-            </h2>
-            <p id={descriptionId} className="text-sm leading-relaxed text-zinc-300">
-              {t('cookieConsent.customizeDescription')}
-            </p>
+            <div>
+              <h2 id={titleId} className="text-sm font-semibold text-white">
+                {t('cookieConsent.customizeTitle')}
+              </h2>
+              <p id={descriptionId} className="mt-1 text-xs leading-relaxed text-zinc-400">
+                {t('cookieConsent.customizeDescription')}
+              </p>
+            </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               <ConsentCategoryRow
                 label={t('cookieConsent.categoryNecessaryLabel')}
                 description={t('cookieConsent.categoryNecessaryDescription')}
@@ -256,11 +215,11 @@ export function CookieConsentBanner() {
               />
             </div>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <Button type="button" variant="ghost" onClick={backOrClose}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Button type="button" variant="ghost" size="sm" onClick={backOrClose}>
                 {dismissable ? t('cookieConsent.close') : t('cookieConsent.back')}
               </Button>
-              <Button type="button" variant="primary" onClick={saveCustomChoices}>
+              <Button type="button" variant="primary" size="sm" onClick={saveCustomChoices}>
                 {t('cookieConsent.save')}
               </Button>
             </div>
@@ -285,13 +244,13 @@ function ConsentCategoryRow({
   readonly onChange?: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-zinc-800 bg-surface-secondary p-4">
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-white">{label}</span>
-        <span className="text-xs leading-relaxed text-zinc-400">{description}</span>
+    <div className="flex items-start justify-between gap-4 border-b border-zinc-800/60 pb-2 last:border-b-0 last:pb-0">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-semibold text-white">{label}</span>
+        <span className="text-xs leading-relaxed text-zinc-500">{description}</span>
       </div>
       {alwaysOn ? (
-        <span className="shrink-0 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-300">
+        <span className="shrink-0 rounded-full border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400">
           {t('cookieConsent.alwaysOn')}
         </span>
       ) : (

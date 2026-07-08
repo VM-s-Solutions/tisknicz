@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   // deploy job assembles standalone + .next/static + public into the package.
   output: 'standalone',
   compress: true,
+  poweredByHeader: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,

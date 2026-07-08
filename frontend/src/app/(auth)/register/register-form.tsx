@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AppleSignInButton } from '@/components/shared/apple-sign-in-button';
 import { registerCustomer } from '@/lib/api-client-helpers/auth';
@@ -46,7 +45,7 @@ export function RegisterForm() {
 
   if (done) {
     return (
-      <Card padding="lg" className="flex flex-col gap-3">
+      <div className="flex flex-col items-center gap-3 text-center">
         <h2 className="text-lg font-semibold">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         <p className="text-sm text-zinc-400">
@@ -54,12 +53,12 @@ export function RegisterForm() {
             {t('auth.register.login_link')}
           </Link>
         </p>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
@@ -107,7 +106,7 @@ export function RegisterForm() {
           {t('auth.register.login_link')}
         </Link>
       </p>
-    </Card>
+    </div>
   );
 }
 

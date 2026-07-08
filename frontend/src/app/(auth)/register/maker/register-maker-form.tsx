@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { registerMaker } from '@/lib/api-client-helpers/auth';
 import { t } from '@/lib/i18n';
@@ -52,7 +51,7 @@ export function RegisterMakerForm() {
 
   if (doneState) {
     return (
-      <Card padding="lg" className="flex flex-col gap-3">
+      <div className="flex flex-col items-center gap-3 text-center">
         <h2 className="text-lg font-semibold">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         {doneState.stale && (
@@ -63,12 +62,12 @@ export function RegisterMakerForm() {
             {t('auth.register.login_link')}
           </Link>
         </p>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
@@ -121,7 +120,7 @@ export function RegisterMakerForm() {
           {t('auth.register.login_link')}
         </Link>
       </p>
-    </Card>
+    </div>
   );
 }
 

@@ -26,12 +26,14 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
     <>
       <AuthBackButton />
       <AuthShell title={t('auth.register.page_title')} subtitle={t('auth.register.page_intro')}>
-        <div className="mb-5 space-y-3">
-          <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950/80 p-1 text-sm">
+        <div className="mb-6 space-y-4">
+          <div className="flex justify-center gap-8 border-b border-zinc-800 text-sm">
             <Link
               href="/register?type=customer"
-              className={`rounded-md px-3 py-1.5 transition-colors ${
-                selectedType === 'customer' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`-mb-px border-b pb-2.5 transition-colors ${
+                selectedType === 'customer'
+                  ? 'border-brand-400 font-semibold text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
               aria-current={selectedType === 'customer' ? 'page' : undefined}
             >
@@ -39,8 +41,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
             </Link>
             <Link
               href="/register?type=maker"
-              className={`rounded-md px-3 py-1.5 transition-colors ${
-                selectedType === 'maker' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              className={`-mb-px border-b pb-2.5 transition-colors ${
+                selectedType === 'maker'
+                  ? 'border-brand-400 font-semibold text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
               aria-current={selectedType === 'maker' ? 'page' : undefined}
             >
@@ -48,7 +52,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
             </Link>
           </div>
 
-          <p className="text-sm text-zinc-400">
+          <p className="text-center text-sm text-zinc-400">
             {selectedType === 'maker' ? t('auth.register.maker_description') : t('auth.register.customer_description')}
           </p>
         </div>

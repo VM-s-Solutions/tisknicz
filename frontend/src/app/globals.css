@@ -161,6 +161,34 @@ body {
   background-size: 24px 24px;
 }
 
+/* Animated underline — nav links + text buttons. Grows from the left
+   on hover/focus and stays visible on the active (aria-current) link. */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: var(--color-brand-400);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after,
+.link-underline[aria-current]::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .link-underline::after {
+    transition: none;
+  }
+}
+
 /* Subtle border emphasis on hover */
 .hover-glow {
   transition: border-color 0.2s ease, background-color 0.2s ease;

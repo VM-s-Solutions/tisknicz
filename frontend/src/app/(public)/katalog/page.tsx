@@ -190,7 +190,7 @@ function CatalogEmpty() {
       </div>
       <Link
         href="/katalog"
-        className="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
+        className="inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-5 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
       >
         {t('catalog.empty.reset')}
       </Link>
@@ -208,7 +208,7 @@ function CatalogError() {
         </div>
         <Link
           href="/katalog"
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-100 transition-colors hover:bg-red-700"
+          className="inline-flex w-fit items-center gap-2 rounded-full border border-red-500/50 px-4 py-2 text-sm font-medium text-red-300 transition-all duration-200 hover:border-red-400 hover:text-red-200"
         >
           {t('catalog.error.retry')}
         </Link>

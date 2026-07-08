@@ -50,10 +50,10 @@ export default function ForMakersPage() {
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
+                className="group inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-6 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
               >
                 {t('static.for_makers.cta')}
-                <Icon name="arrowRight" size={16} />
+                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/jak-to-funguje"

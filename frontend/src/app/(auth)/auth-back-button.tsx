@@ -26,7 +26,7 @@ export function AuthBackButton() {
       variant="ghost"
       size="sm"
       onClick={handleBack}
-      className="w-fit px-1 text-sky-400 hover:bg-transparent hover:text-sky-300"
+      className="mb-4 w-fit px-1 text-brand-300 hover:text-brand-200"
     >
       <span aria-hidden="true">←</span>
       <span>{t('common.back')}</span>
