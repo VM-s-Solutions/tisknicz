@@ -28,10 +28,12 @@ public interface IDisputeRepository
     Task<Dispute?> GetOpenByOrderIdAsync(string orderId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Load a single dispute by id, unscoped. Tracked — the T-0145
-    /// <c>EscalateDispute.Handler</c> (Function-dispatched, no caller
-    /// principal) mutates the returned entity via
-    /// <see cref="Dispute.TryMarkAutoEscalated"/>.
+    /// Load a single dispute by id, unscoped. <b>Admin host only</b> per
+    /// ADR 0013. Tracked — the T-0145 <c>EscalateDispute.Handler</c>
+    /// (Function-dispatched, no caller principal) mutates the returned
+    /// entity via <see cref="Dispute.TryMarkAutoEscalated"/>, and
+    /// <c>GenerateReturnLabel</c> / admin <c>MarkReturnReceived</c> (T-0146)
+    /// mutate it via the return-shipment mutators.
     /// </summary>
     Task<Dispute?> GetByIdUnscopedAsync(string disputeId, CancellationToken cancellationToken);
 
@@ -51,4 +53,32 @@ public interface IDisputeRepository
     IAsyncEnumerable<string> GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(
         DateTimeOffset asOf,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Read-only unscoped variant for the Function context
+    /// (<c>FetchAndStoreReturnLabel</c>, no caller principal). Mirrors
+    /// <c>IOrderRepository.GetByIdUnscopedReadOnlyAsync</c>.
+    /// </summary>
+    Task<Dispute?> GetByIdUnscopedReadOnlyAsync(string disputeId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Load a dispute owned (via its parent order) by
+    /// <paramref name="customerUserId"/>, read-only. Returns <c>null</c>
+    /// for unknown ids OR ids belonging to another customer's order —
+    /// same IDOR-leak-resistant shape as
+    /// <c>IOrderRepository.GetByIdForCustomerReadOnlyAsync</c> (AC-7).
+    /// Backs the customer-host return-label download endpoint.
+    /// </summary>
+    Task<Dispute?> GetByIdForCustomerReadOnlyAsync(
+        string disputeId, string customerUserId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Load a dispute owned (via its parent order) by
+    /// <paramref name="makerId"/>. Returns <c>null</c> for unknown ids OR
+    /// ids belonging to another maker's order (same IDOR shield). Tracked
+    /// — the maker's <c>MarkReturnReceived</c> command mutates. Backs
+    /// AC-7's maker-side symmetric 404.
+    /// </summary>
+    Task<Dispute?> GetByIdForMakerAsync(
+        string disputeId, string makerId, CancellationToken cancellationToken);
 }

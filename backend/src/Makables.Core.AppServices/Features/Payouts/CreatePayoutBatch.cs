@@ -73,7 +73,9 @@ public static class CreatePayoutBatch
         bool AlreadyExisted,
         bool ArtifactsComplete,
         int FeeInvoiceCount,
-        bool CsvReady);
+        bool CsvReady,
+        long DeductionsAppliedMinor,
+        int DeductionCount);
 
     /// <summary>
     /// No-op validator — the command is parameterless (it claims everything
@@ -92,6 +94,7 @@ public static class CreatePayoutBatch
     public sealed class Handler(
         IOrderRepository orders,
         IPayoutBatchRepository payoutBatches,
+        IPayoutDeductionRepository payoutDeductions,
         IPayoutBatchNumberGenerator numberGenerator,
         ICountryConfigurationRepository countries,
         IOptions<AuthDefaultCountryOptions> defaultCountry,
@@ -143,7 +146,8 @@ public static class CreatePayoutBatch
                         "({FeeInvoiceCount} fee invoices, CsvReady={CsvReady}).",
                         openBatch.BatchNumber, artifacts.FeeInvoiceCount, artifacts.CsvReady);
                 }
-                return BusinessResult.Success(BuildResponse(openBatch, alreadyExisted: true, artifacts));
+                return BusinessResult.Success(BuildResponse(
+                    openBatch, alreadyExisted: true, artifacts, deductionsAppliedMinor: 0, deductionCount: 0));
             }
 
             // Step 4: derive the batch number from the country-LOCAL date
@@ -235,7 +239,32 @@ public static class CreatePayoutBatch
             // back.
             var total = eligible.Sum(c => c.Order.MakerPayoutAmountMinor);
             var orderCount = eligible.Count;
-            var makerCount = eligible.Select(c => c.MakerId).Distinct(StringComparer.Ordinal).Count();
+            var makerIds = eligible.Select(c => c.MakerId).Distinct(StringComparer.Ordinal).ToList();
+            var makerCount = makerIds.Count;
+
+            // Step 8b (T-0146 / Q-0037): every eligible maker's pending
+            // PayoutDeduction rows (e.g. a return-shipment cost from
+            // GenerateReturnLabel) are claimed into THIS batch — subtracted
+            // from the wire total the operator sends. Clamped so a
+            // deduction total can never zero out or invert the batch
+            // (defensive; expected deductions are small relative to a
+            // week's claimed orders).
+            var pendingDeductions = new List<PayoutDeduction>();
+            foreach (var makerId in makerIds)
+            {
+                var pending = await payoutDeductions.GetPendingForMakerAsync(makerId, cancellationToken);
+                pendingDeductions.AddRange(pending);
+            }
+            var deductionsTotal = pendingDeductions.Sum(d => d.AmountMinor);
+            if (deductionsTotal >= total)
+            {
+                logger.LogCritical(
+                    "CreatePayoutBatch: pending deductions ({DeductionsTotal}) for {CountryCode} would consume " +
+                    "the entire claimed total ({Total}) — capping at total-1 minor unit.",
+                    deductionsTotal, countryCode, total);
+                deductionsTotal = total - 1;
+            }
+            total -= deductionsTotal;
 
             var batch = PayoutBatch.Create(
                 id: idGenerator.Next(),
@@ -256,6 +285,22 @@ public static class CreatePayoutBatch
             {
                 candidate.Order.AssignToPayoutBatch(batch.Id);
                 claimedOrders.Add(candidate.Order);
+            }
+
+            // Claim the deductions into this batch (set-once FK) now that
+            // batch.Id is known. A refusal (already applied) is a
+            // programmer error — GetPendingForMakerAsync already filtered
+            // PayoutBatchId == null — so it throws and the UoW rolls back,
+            // mirroring the AssignToPayoutBatch guard above.
+            foreach (var deduction in pendingDeductions)
+            {
+                var applyResult = deduction.ApplyToPayoutBatch(batch.Id);
+                if (!applyResult.IsSuccess)
+                {
+                    throw new InvalidOperationException(
+                        $"PayoutDeduction {deduction.Id} was already applied to a batch — " +
+                        "GetPendingForMakerAsync should never have returned it.");
+                }
             }
 
             // Step 10: artifacts (T-0102b) — Fee invoices + CSV + maker
@@ -290,6 +335,8 @@ public static class CreatePayoutBatch
                 ArtifactsComplete = artifactResult.Complete,
                 FeeInvoiceCount = artifactResult.FeeInvoiceCount,
                 CsvReady = artifactResult.CsvReady,
+                DeductionsAppliedMinor = deductionsTotal,
+                DeductionCount = pendingDeductions.Count,
             });
 
             await auditWriter.AppendAsync(
@@ -312,11 +359,14 @@ public static class CreatePayoutBatch
 
             // The pipeline commits batch + N claims + fee invoices + outbox +
             // audit atomically (ADR 0014).
-            return BusinessResult.Success(BuildResponse(batch, alreadyExisted: false, artifactResult));
+            return BusinessResult.Success(BuildResponse(
+                batch, alreadyExisted: false, artifactResult,
+                deductionsAppliedMinor: deductionsTotal, deductionCount: pendingDeductions.Count));
         }
 
         private static CreatePayoutBatchResponse BuildResponse(
-            PayoutBatch batch, bool alreadyExisted, PayoutArtifactResult artifacts) => new(
+            PayoutBatch batch, bool alreadyExisted, PayoutArtifactResult artifacts,
+            long deductionsAppliedMinor, int deductionCount) => new(
             BatchId: batch.Id,
             BatchNumber: batch.BatchNumber,
             State: batch.State,
@@ -330,7 +380,9 @@ public static class CreatePayoutBatch
             AlreadyExisted: alreadyExisted,
             ArtifactsComplete: artifacts.Complete,
             FeeInvoiceCount: artifacts.FeeInvoiceCount,
-            CsvReady: artifacts.CsvReady || batch.CsvBlobPath is not null);
+            CsvReady: artifacts.CsvReady || batch.CsvBlobPath is not null,
+            DeductionsAppliedMinor: deductionsAppliedMinor,
+            DeductionCount: deductionCount);
 
         private static DateOnly ToCountryLocalDate(DateTimeOffset instant, string timeZoneId)
         {

@@ -36,6 +36,7 @@ public sealed class DisputeRepository(MakablesDbContext db) : IDisputeRepository
             return Task.FromResult<Dispute?>(null);
 
         return db.Set<Dispute>()
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(d => d.Id == disputeId, cancellationToken);
     }
 
@@ -52,5 +53,47 @@ public sealed class DisputeRepository(MakablesDbContext db) : IDisputeRepository
             .OrderBy(d => d.CreatedAt)
             .Select(d => d.Id)
             .AsAsyncEnumerable();
+    }
+
+    public Task<Dispute?> GetByIdUnscopedReadOnlyAsync(string disputeId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(disputeId))
+            return Task.FromResult<Dispute?>(null);
+
+        return db.Set<Dispute>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == disputeId, cancellationToken);
+    }
+
+    public Task<Dispute?> GetByIdForCustomerReadOnlyAsync(
+        string disputeId, string customerUserId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(disputeId) || string.IsNullOrWhiteSpace(customerUserId))
+            return Task.FromResult<Dispute?>(null);
+
+        // Dispute has no EF navigation to Order (lightweight aggregate per
+        // ADR 0013) — join explicitly on OrderId, same pattern as
+        // IOrderRepository.GetPayoutEligibleUnscopedAsync's maker join.
+        var query =
+            from d in db.Set<Dispute>().AsNoTracking()
+            join o in db.Set<Order>().AsNoTracking() on d.OrderId equals o.Id
+            where d.Id == disputeId && o.CustomerUserId == customerUserId
+            select d;
+        return query.FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<Dispute?> GetByIdForMakerAsync(
+        string disputeId, string makerId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(disputeId) || string.IsNullOrWhiteSpace(makerId))
+            return Task.FromResult<Dispute?>(null);
+
+        var query =
+            from d in db.Set<Dispute>()
+            join o in db.Set<Order>().AsNoTracking() on d.OrderId equals o.Id
+            where d.Id == disputeId && o.MakerId == makerId
+            select d;
+        return query.FirstOrDefaultAsync(cancellationToken);
     }
 }

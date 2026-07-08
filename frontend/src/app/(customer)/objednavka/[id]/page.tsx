@@ -321,6 +321,19 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
         </Card>
       ) : null}
 
+      {hasUrl(detail.returnLabelUrl) ? (
+        <Card padding="md" className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-zinc-400">
+            {t('customer.orderDetail.returnLabel.heading')}
+          </h2>
+          <FileDownloadButton
+            path={detail.returnLabelUrl}
+            filename={`vratkovy-stitek-${detail.orderNumber}.pdf`}
+            label={t('customer.orderDetail.returnLabel.download')}
+          />
+        </Card>
+      ) : null}
+
       <Card padding="md" className="flex flex-col gap-4">
         <OrderThreadClient
           orderId={detail.orderId}

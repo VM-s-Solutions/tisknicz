@@ -58,11 +58,42 @@ The outcome edges apply from the restored state, so `Order.Refund`'s and `Order.
 - **Re-OPEN is Silent-Success:** opening on an already-`Disputed` order returns 200 with the EXISTING open dispute's id — no second row, no second outbox emission. Backed by the partial unique index `ux_disputes_order_open UNIQUE (order_id) WHERE resolved_at IS NULL` (makes the concurrent-open race safe). The carrier sweep's re-fire on a Disputed order is the same Silent-Success.
 - **Re-RESOLVE is loud:** resolve on a non-`Disputed` order — and a second `Dispute.Resolve` — returns `409 order.dispute.notOpen`. The asymmetry is intentional (T-0106 §C.4): re-open is idempotent-safe; a silently "succeeding" re-resolve with a different outcome would mask an admin race and risks double money-movement.
 
+## Reverse shipment (return-to-maker, T-0146)
+
+Once a dispute is confirmed to warrant a physical return, admin generates a
+reverse Zásilkovna shipment (customer's address as sender, maker's
+registered address as recipient — mirrors the forward T-0072/T-0074/T-0075
+label-cache shape verbatim, pointed at a dispute-scoped blob path):
+
+- `ReturnCarrierRef` / `ReturnTrackingUrl` — nullable, set once by
+  `Dispute.SetReturnShipment` (same set-once + same-value-Silent-Success /
+  different-value-loud-conflict contract as `PayoutBatch.AttachCsvBlobPath`).
+  Their presence gates the customer-facing "Stáhnout vratkový štítek" link.
+- `ReturnReceivedAt` / `ReturnReceivedBy` — nullable, set once by
+  `Dispute.MarkReturnReceived` (requires a return shipment to exist first;
+  a second call is a loud conflict, mirroring `Resolve`'s re-resolve
+  posture). No automated carrier-status sync for the reverse leg — the
+  maker (`MarkDisputeReturnReceivedByMaker`, owner-scoped) or admin on
+  their behalf (`MarkDisputeReturnReceivedByAdmin`, admin-audited) records
+  the acknowledgment manually, ahead of the eventual `ResolveDispute.Command`.
+- **Trigger is admin-gated** (`GenerateReturnLabel.Command`,
+  `IAdminAuditableCommand`), mirroring `RefundOrder`'s posture — every
+  other money/logistics-affecting dispute outcome in this model is
+  admin-triggered, never automatic. Category-gated to `DamagedItem` /
+  `NotAsDescribed` (`dispute.return.categoryNotEligible` otherwise).
+- **Cost accounting (Q-0037):** the maker-borne return-shipping cost is
+  recorded as a `PayoutDeduction` (negative line item) at label-creation
+  time — cost basis is `CountryConfiguration.DefaultShippingPriceMinor`
+  (Packeta doesn't itemize the reverse leg at MVP). `CreatePayoutBatch`
+  claims every eligible maker's pending deductions into whichever batch
+  next pays them, subtracting the sum from that batch's wire total. Never
+  a customer-facing charge.
+
 ## Lifecycle
 
 - **Created by:** factory `Dispute.Open(id, orderId, category, description, source, countryCode)` via four open commands: `OpenCustomerDispute` (customer host; scoped `GetByIdForCustomerAsync` load = IDOR shield, cross-tenant probe → `404 order.notFound`), `OpenMakerDispute` (maker-host mirror), `OpenDispute` (admin host; any category — admin may transcribe phone-reported carrier failures; admin-audited), `DisputeShipment` (carrier-sourced; the rewired T-0078 stub — Packeta `Returned`/`Failed` map to `CarrierReturned`/`CarrierFailed` with canned description incl. `ShippingCarrierRef`)
-- **Modified by:** `Resolve(IClock, DisputeResolutionOutcome, string resolutionNotes)` — sets the resolution triple; refuses double-resolve with `order.dispute.notOpen`. `TryMarkAutoEscalated(IClock)` (T-0145) — stamps `AutoEscalatedAt` exactly once; never touches the resolution triple or `Order.State`.
-- **Persisted by:** `IDisputeRepository` — `AddAsync(dispute, ct)` + `GetOpenByOrderIdAsync(orderId, ct)` (tracked; `ResolvedAt == null` predicate; at most one row matches per the partial unique index) + `GetByIdUnscopedAsync(disputeId, ct)` (tracked, T-0145) + `GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(asOf, ct)` (id-only stream, T-0145)
+- **Modified by:** `Resolve(IClock, DisputeResolutionOutcome, string resolutionNotes)` (resolution triple; refuses double-resolve with `order.dispute.notOpen`), `TryMarkAutoEscalated(IClock)` (T-0145, stamps `AutoEscalatedAt` exactly once; never touches the resolution triple or `Order.State`), `SetReturnShipment(carrierRef, trackingUrl)` (T-0146, set-once), `MarkReturnReceived(IClock, receivedBy)` (T-0146, set-once, requires a return shipment first)
+- **Persisted by:** `IDisputeRepository` — `AddAsync(dispute, ct)` + `GetOpenByOrderIdAsync(orderId, ct)` (tracked; `ResolvedAt == null` predicate; at most one row matches per the partial unique index) + `GetByIdUnscopedAsync(disputeId, ct)` (tracked; admin host + T-0145's `EscalateDispute.Handler` + T-0146's `GenerateReturnLabel`/admin `MarkReturnReceived`) + `GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(asOf, ct)` (id-only stream, T-0145) + T-0146's `GetByIdUnscopedReadOnlyAsync` (Function context) and `GetByIdForCustomerReadOnlyAsync`/`GetByIdForMakerAsync` (owner-scoped, IDOR shield)
 - **Destroyed by:** never (soft delete via `Auditable`)
 
 ## T-0145 — 14-day open window + 7-day maker-response timer
@@ -120,19 +151,22 @@ are T-0148's territory (blocked on its own open question), not this sweep's.
 - The Order state flip + `Dispute` row + admin-email outbox row commit atomically (UoW pipeline; handlers never call `SaveChangesAsync()`)
 - Resolution fields (`ResolutionOutcome`, `ResolutionNotes`, `ResolvedAt`) are set together, exactly once
 - Admin open + resolve are admin-audited via `IAdminAuditableCommand`; party + carrier variants are not (not admin commands)
+- Return-shipment fields (`ReturnCarrierRef`/`ReturnTrackingUrl`) and the ack fields (`ReturnReceivedAt`/`ReturnReceivedBy`) are each set together, exactly once (T-0146)
 
 ## Implementation pointer
 
 - `backend/src/Makables.Core.Domain/Orders/Dispute.cs` (+ `DisputeCategory`, `DisputeSource`, `DisputeResolutionOutcome`, `IDisputeRepository` alongside)
 - `backend/src/Makables.Core.Domain/Orders/Order.cs` — `OpenDispute`/`ResolveDispute` edges + `PreDisputeState`
-- `backend/src/Makables.Core.AppServices/Features/Orders/` — `OpenCustomerDispute`, `OpenMakerDispute`, `OpenDispute`, `ResolveDispute`, `DisputeShipment`
-- `backend/src/Makables.Infra.Database/Orders/DisputeRepository.cs` + `Configurations/DisputeConfiguration.cs`; migration `20260612121152_AddDisputeTableAndPreDisputeState.cs`
+- `backend/src/Makables.Core.AppServices/Features/Orders/` — `OpenCustomerDispute`, `OpenMakerDispute`, `OpenDispute`, `ResolveDispute`, `DisputeShipment`, `GenerateReturnLabel`, `MarkDisputeReturnReceivedByAdmin`, `MarkDisputeReturnReceivedByMaker` (T-0146)
 - T-0145: `backend/src/Makables.Core.AppServices/Features/Orders/EscalateDispute.cs`; `backend/src/Makables.Functions/Disputes/DisputeAutoEscalationFunction.cs`; migrations `20260707102940_AddDisputeAutoEscalatedAt.cs` + `20260707103019_SeedDisputeAutoEscalatedAdminEmailTemplate.cs`
+- `backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreReturnLabel.cs` (T-0146, mirrors `FetchAndStoreShippingLabel`)
+- `backend/src/Makables.Core.Domain/Payouts/PayoutDeduction.cs` + `IPayoutDeductionRepository` (T-0146 Q-0037 accounting)
+- `backend/src/Makables.Infra.Database/Orders/DisputeRepository.cs` + `Configurations/DisputeConfiguration.cs`; migrations `20260612121152_AddDisputeTableAndPreDisputeState.cs`, `20260707102940_AddDisputeAutoEscalatedAt.cs`, `20260707114455_AddDisputeReturnShipmentAndPayoutDeduction.cs`
 
 ## Related
 
-- Roles: `order` (parent; parenthesis state + refund surface), `order-message` (evidence channel), `outbox`, `manual-order-transition-policy` (sanctioned-command interlock)
+- Roles: `order` (parent; parenthesis state + refund surface), `order-message` (evidence channel), `outbox`, `manual-order-transition-policy` (sanctioned-command interlock), `shipping-carrier` (reverse-leg capability)
 - Patterns: §A.22 (state-machine detour with restore)
 - ADRs: 0013 (scoped repositories), 0014 (UoW + admin audit), 0017/0020 (outbox), 0019 (email)
-- Tickets: T-0105 (refund path), T-0106 (this surface), T-0107 (manual-change interlock), T-0118 (dispute UI), T-0145 (14-day window + 7-day timer), T-0146 (reverse-shipping-label, depends on T-0145)
-- Stories: US-admin-0011, US-customer-0022, US-maker-0019
+- Tickets: T-0105 (refund path), T-0106 (this surface), T-0107 (manual-change interlock), T-0118 (dispute UI), T-0145 (14-day window + 7-day timer), T-0146 (reverse-shipping-label + payout deduction, depends on T-0145)
+- Stories: US-admin-0011, US-customer-0022, US-customer-0023, US-maker-0019

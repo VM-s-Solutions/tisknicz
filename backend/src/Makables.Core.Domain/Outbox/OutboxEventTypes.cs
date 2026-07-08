@@ -75,6 +75,20 @@ public static class OutboxEventTypes
     public const string ShippingGenerateLabel = "shipping.generate.label";
 
     /// <summary>
+    /// "Generate the reverse (return-to-maker) shipping label PDF" event,
+    /// fired by admin's <c>GenerateReturnLabel.Command</c> (T-0146) once
+    /// the reverse Packeta shipment is created. Routes to the SAME
+    /// <c>generate-label</c> queue as <see cref="ShippingGenerateLabel"/>
+    /// (see <see cref="IsGenerateLabel"/>) — <c>GenerateLabelFunction</c>
+    /// discriminates by <c>OutboxEvent.EventType</c> and dispatches
+    /// <c>FetchAndStoreReturnLabel.Command</c> instead of
+    /// <c>FetchAndStoreShippingLabel.Command</c>. Reusing the queue avoids
+    /// standing up a second Storage Queue + retry budget for what is the
+    /// same class of work (Packeta label PDF fetch + blob cache-fill).
+    /// </summary>
+    public const string ShippingGenerateReturnLabel = "shipping.generate.returnLabel";
+
+    /// <summary>
     /// "Your order has been delivered" customer notification email, fired
     /// by <see cref="Features.Orders.MarkOrderDelivered"/> after the
     /// Shipped → Delivered transition. Single email per delivery (no
@@ -219,5 +233,5 @@ public static class OutboxEventTypes
     /// split — a slow Packeta label download cannot stall email sends.
     /// </summary>
     public static bool IsGenerateLabel(string eventType) =>
-        eventType == ShippingGenerateLabel;
+        eventType is ShippingGenerateLabel or ShippingGenerateReturnLabel;
 }

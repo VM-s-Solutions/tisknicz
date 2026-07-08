@@ -202,6 +202,9 @@ public static class MakablesInfrastructureExtensions
         // === Payout batches (T-0101) ===
         services.AddScoped<IPayoutBatchRepository, PayoutBatchRepository>();
 
+        // === Payout deductions (T-0146) ===
+        services.AddScoped<IPayoutDeductionRepository, PayoutDeductionRepository>();
+
         // === Payout read-side queries (T-0112) ===
         // Maker-scoped projection reads (AsNoTracking + IgnoreAutoIncludes),
         // separate from the admin-scoped IPayoutBatchRepository per ADR 0023.

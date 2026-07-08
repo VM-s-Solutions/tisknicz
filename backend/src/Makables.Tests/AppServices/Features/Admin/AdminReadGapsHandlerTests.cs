@@ -199,5 +199,6 @@ public sealed class AdminReadGapsHandlerTests
         ShippingMethod.ZasilkovnaPickupPoint, "pp-42", null, null,
         null, null, null,
         new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero),
-        null, null, null, null, null, null, null, null, true);
+        null, null, null, null, null, null, null, null, true,
+        null, null, false);
 }

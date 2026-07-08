@@ -31,6 +31,7 @@ public class CreatePayoutBatchHandlerTests
 
     private readonly IOrderRepository _orders = Substitute.For<IOrderRepository>();
     private readonly IPayoutBatchRepository _payoutBatches = Substitute.For<IPayoutBatchRepository>();
+    private readonly IPayoutDeductionRepository _payoutDeductions = Substitute.For<IPayoutDeductionRepository>();
     private readonly IPayoutBatchNumberGenerator _numberGenerator = Substitute.For<IPayoutBatchNumberGenerator>();
     private readonly ICountryConfigurationRepository _countries = Substitute.For<ICountryConfigurationRepository>();
     private readonly IAdminAuditLogWriter _auditWriter = Substitute.For<IAdminAuditLogWriter>();
@@ -50,11 +51,13 @@ public class CreatePayoutBatchHandlerTests
         _countries.GetByCodeAsync(CountryCode, Arg.Any<CancellationToken>()).Returns(BuildConfig());
         _artifacts.GenerateAsync(Arg.Any<PayoutBatch>(), Arg.Any<IReadOnlyList<Order>?>(), Arg.Any<CancellationToken>())
             .Returns(new PayoutArtifactResult(Complete: true, FeeInvoiceCount: 2, CsvReady: true));
+        _payoutDeductions.GetPendingForMakerAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<PayoutDeduction>());
 
         var defaultCountry = Options.Create(new AuthDefaultCountryOptions { CountryCodePrimary = CountryCode });
 
         _sut = new CreatePayoutBatch.Handler(
-            _orders, _payoutBatches, _numberGenerator, _countries, defaultCountry,
+            _orders, _payoutBatches, _payoutDeductions, _numberGenerator, _countries, defaultCountry,
             _auditWriter, _session, _ids, _clock, _metrics, _artifacts,
             NullLogger<CreatePayoutBatch.Handler>.Instance);
     }
@@ -270,5 +273,38 @@ public class CreatePayoutBatchHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be(BusinessErrorMessage.PayoutBatchCurrencyMismatch);
         _metrics.Received(1).RecordRun("currency_mismatch");
+    }
+
+    // === 9. T-0146 / Q-0037 — pending PayoutDeduction claimed into the batch ===
+
+    [Fact]
+    public async Task Pending_return_shipping_deduction_reduces_the_makers_batch_total()
+    {
+        var o1 = DeliveredOrder("o1", "maker-A", 10000);
+        var o2 = DeliveredOrder("o2", "maker-B", 7000);
+        _orders.GetPayoutEligibleUnscopedAsync(CountryCode, Arg.Any<CancellationToken>())
+            .Returns(new List<PayoutCandidate>
+            {
+                Candidate(o1, "maker-A", "111/0100"),
+                Candidate(o2, "maker-B", "222/0800"),
+            });
+
+        var deduction = PayoutDeduction.Create(
+            id: "pd-1", makerId: "maker-A", disputeId: "disp-1",
+            reason: PayoutDeductionReason.ReturnShippingCost,
+            amountMinor: 7900, currency: "CZK", countryCode: CountryCode);
+        _payoutDeductions.GetPendingForMakerAsync("maker-A", Arg.Any<CancellationToken>())
+            .Returns(new List<PayoutDeduction> { deduction });
+        _payoutDeductions.GetPendingForMakerAsync("maker-B", Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<PayoutDeduction>());
+
+        var result = await _sut.Handle(new CreatePayoutBatch.Command(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        // 10000 + 7000 - 7900 deduction = 9100.
+        result.Value!.TotalAmountMinor.Should().Be(9100);
+        result.Value.DeductionsAppliedMinor.Should().Be(7900);
+        result.Value.DeductionCount.Should().Be(1);
+        deduction.PayoutBatchId.Should().Be(result.Value.BatchId, "claimed into the batch that pays maker-A next");
     }
 }

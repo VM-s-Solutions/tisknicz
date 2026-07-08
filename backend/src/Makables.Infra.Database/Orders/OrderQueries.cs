@@ -222,6 +222,10 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
                     .Where(i => i.OrderId == o.Id && i.PdfBlobPath != null)
                     .Select(i => "/api/v1/orders/" + o.Id + "/invoice")
                     .FirstOrDefault(),
+                db.Set<Dispute>()
+                    .Where(d => d.OrderId == o.Id && d.ReturnCarrierRef != null)
+                    .Select(d => "/api/v1/customer/files/disputes/" + d.Id + "/return-label")
+                    .FirstOrDefault(),
                 o.CreatedAt,
                 o.UpdatedAt))
             .FirstOrDefaultAsync(ct);
