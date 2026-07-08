@@ -1,6 +1,6 @@
 {
   "_comment": "NSwag configuration per ADR 0022. Generates one TypeScript client per Web host per version. Run via `npm run generate:api` from /frontend/. The backend host must be running locally on the configured port — see scripts/generate-api.mjs for how the script orchestrates startup.",
-  "runtime": "Net80",
+  "runtime": "Net100",
   "defaultVariables": null,
   "documentGenerator": {
     "fromDocuments": [

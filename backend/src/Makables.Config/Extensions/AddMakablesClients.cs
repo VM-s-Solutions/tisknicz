@@ -4,6 +4,7 @@ using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Payments;
 using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.Shipping;
+using Makables.Infra.Clients.Apple;
 using Makables.Infra.Clients.Ares;
 using Makables.Infra.Clients.Comgate;
 using Makables.Infra.Clients.Google;
@@ -41,6 +42,19 @@ public static class MakablesClientsExtensions
             .Bind(configuration.GetSection(GoogleOAuthOptions.SectionName));
         services.AddHttpClient(GoogleOAuthClient.HttpClientName);
         services.AddScoped<IGoogleOAuthClient, GoogleOAuthClient>();
+
+        // === Apple OAuth (T-0139 / ADR 0026) ===
+        // Not ValidateOnStart: per the ticket's Technical notes, a host
+        // that hasn't onboarded the Apple Developer "Services ID" yet
+        // must fail closed (client-secret signing fails at first use,
+        // AppleOAuthException), not crash at boot — mirrors how a
+        // missing provider config should degrade gracefully rather than
+        // take down the whole host.
+        services.AddOptions<AppleOAuthOptions>()
+            .Bind(configuration.GetSection(AppleOAuthOptions.SectionName));
+        services.AddHttpClient(AppleOAuthClient.HttpClientName);
+        services.AddScoped<AppleClientSecretSigner>();
+        services.AddScoped<IAppleOAuthClient, AppleOAuthClient>();
 
         // === SendGrid (T-0028) ===
         // ValidateOnStart so a missing/typo'd SendGrid:ApiKey crashes the
