@@ -25,6 +25,7 @@ import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { canonicalJsonHash } from './lib/canonical-json.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(here, '..');
@@ -68,7 +69,10 @@ for (const doc of documents) {
   }
 
   const specText = await probe.text();
-  const hash = createHash('sha256').update(specText).digest('hex');
+  // Canonicalized (key-sorted) hash — see lib/canonical-json.mjs for why:
+  // raw-text hashing was sensitive to controller-discovery ordering that
+  // can differ between build environments without any real contract change.
+  const hash = canonicalJsonHash(createHash, specText);
 
   console.log(`[gen] ${doc.host} ${doc.url} → ${doc.output} (sha256 ${hash.slice(0, 12)}…)`);
 
