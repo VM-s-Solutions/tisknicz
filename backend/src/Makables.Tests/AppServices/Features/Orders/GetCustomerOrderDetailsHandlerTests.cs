@@ -32,6 +32,7 @@ public class GetCustomerOrderDetailsHandlerTests
 
     private static CustomerOrderDetailDto BuildDto(
         string? invoicePdfUrl = null,
+        string? returnLabelUrl = null,
         IReadOnlyList<OrderAttachmentSummaryDto>? attachments = null) =>
         new(
             OrderId: OrderId,
@@ -56,6 +57,7 @@ public class GetCustomerOrderDetailsHandlerTests
             ShippingCarrierTrackingUrl: "https://tracking.packeta.com/Z1234",
             Attachments: attachments ?? Array.Empty<OrderAttachmentSummaryDto>(),
             InvoicePdfUrl: invoicePdfUrl,
+            ReturnLabelUrl: returnLabelUrl,
             CreatedAt: Now.AddDays(-7),
             UpdatedAt: Now.AddDays(-1));
 

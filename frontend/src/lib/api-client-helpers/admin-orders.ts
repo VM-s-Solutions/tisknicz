@@ -30,6 +30,8 @@ import {
   DisputeResolutionOutcome,
   type IAdminOrderDetailDto,
   type IChangeOrderStateManuallyResponse,
+  type IGenerateReturnLabelResponse,
+  type IMarkDisputeReturnReceivedByAdminResponse,
   type IOpenDisputeResponse,
   type IRefundOrderResponse,
   type IResolveDisputeResponse,
@@ -157,6 +159,53 @@ export async function openAdminDispute(
       method: 'POST',
       json: { category: input.category, description: input.description },
     },
+  );
+}
+
+// ---- Generate return label (T-0146 POST /disputes/{disputeId}/return-label) ----
+
+// Leading slash matters: apiFetch concatenates `${baseUrl}${path}` against
+// host URLs with no trailing slash (admin-client.ts precedent).
+const DisputesBase = '/api/v1/disputes';
+
+/** Wire shape of <c>GenerateReturnLabelResponse</c>. */
+export type GenerateReturnLabelResult = Readonly<IGenerateReturnLabelResponse>;
+
+/**
+ * Admin "Vygenerovat vratkový štítek" (T-0146, US-customer-0023 AC-1).
+ * Only offered for `DamagedItem` / `NotAsDescribed` disputes (AC-6 — the
+ * page gates the button; the backend re-checks and returns
+ * `dispute.return.categoryNotEligible` for anything else). Idempotent —
+ * a re-run against an already-labeled dispute is Silent Success.
+ */
+export async function generateReturnLabel(
+  disputeId: string,
+): Promise<Result<GenerateReturnLabelResult, ApiError>> {
+  return apiFetch<GenerateReturnLabelResult>(
+    'admin',
+    `${DisputesBase}/${encodeURIComponent(disputeId)}/return-label`,
+    { method: 'POST' },
+  );
+}
+
+// ---- Mark return received, admin-on-behalf-of-maker (T-0146 POST /disputes/{disputeId}/return-label/mark-received) ----
+
+/** Wire shape of <c>MarkDisputeReturnReceivedByAdminResponse</c>. */
+export type MarkDisputeReturnReceivedResult = Readonly<IMarkDisputeReturnReceivedByAdminResponse>;
+
+/**
+ * Admin acknowledges — on the maker's behalf — that the return was
+ * received (T-0146 AC-5). Failure codes:
+ * `dispute.return.shipmentNotGenerated` (409, no label yet),
+ * `dispute.return.alreadyReceived` (409, immutable once recorded).
+ */
+export async function markDisputeReturnReceived(
+  disputeId: string,
+): Promise<Result<MarkDisputeReturnReceivedResult, ApiError>> {
+  return apiFetch<MarkDisputeReturnReceivedResult>(
+    'admin',
+    `${DisputesBase}/${encodeURIComponent(disputeId)}/return-label/mark-received`,
+    { method: 'POST' },
   );
 }
 

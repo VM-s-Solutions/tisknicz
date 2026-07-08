@@ -36,7 +36,8 @@ public class RunWeeklyPayoutBatchFunctionTests
         TotalAmountMinor: 30000, Currency: "CZK", OrderCount: 3, MakerCount: 2,
         ExcludedPartiallyRefundedOrderCount: 1, ExcludedNoBankAccountOrderCount: 1,
         ExcludedNoBankAccountMakerCount: 1, AlreadyExisted: alreadyExisted,
-        ArtifactsComplete: true, FeeInvoiceCount: 2, CsvReady: true);
+        ArtifactsComplete: true, FeeInvoiceCount: 2, CsvReady: true,
+        DeductionsAppliedMinor: 0, DeductionCount: 0);
 
     private int LogCount(LogLevel level) =>
         _logger.ReceivedCalls()

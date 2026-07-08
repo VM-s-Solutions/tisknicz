@@ -67,4 +67,10 @@ public sealed record AdminOrderDetailDto(
     DateTimeOffset? CancelledAt,
     DateTimeOffset? RefundedAt,
     DateTimeOffset? DisputedAt,
-    bool IsActive);
+    bool IsActive,
+    // T-0146 — the order's OPEN dispute (null if none), so the admin UI
+    // can gate the "Vygenerovat vratkový štítek" action to return-
+    // warranting categories (AC-6) and show whether a label already exists.
+    string? OpenDisputeId,
+    Orders.DisputeCategory? OpenDisputeCategory,
+    bool ReturnLabelGenerated);

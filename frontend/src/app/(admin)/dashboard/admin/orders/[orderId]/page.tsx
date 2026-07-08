@@ -18,6 +18,7 @@ import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-l
 import { formatDateTime } from '@/lib/utils/dates';
 import { OrderActions } from './order-actions';
 import { DisputeForm } from './dispute-form';
+import { ReturnLabelForm } from './return-label-form';
 
 /**
  * Admin order detail (T-0118b / T-0127 re-wire, US-admin-0009 AC-2 + the
@@ -131,6 +132,11 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
                 {t('dashboard.admin.orderActions.section.dispute')}
               </h2>
               <DisputeForm orderId={order.orderId} state={order.state} />
+              <ReturnLabelForm
+                disputeId={order.openDisputeId}
+                disputeCategory={order.openDisputeCategory}
+                returnLabelGenerated={order.returnLabelGenerated}
+              />
             </section>
           </>
         ) : (
