@@ -40,9 +40,11 @@ internal static class OrderPricing
     ///
     /// <para>
     /// Formula (frozen per role/order-pricing.md + user decisions
-    /// Q1/Q2/Q3 logged in T-0061):
+    /// Q1/Q2/Q3 logged in T-0061; T-0140 replaces the unconditional
+    /// <c>config.PlatformFeeRateBp</c> read with a caller-resolved rate —
+    /// see <paramref name="platformFeeRateBp"/>):
     /// <code>
-    /// platformFee = productPrice.PercentOfBp(config.PlatformFeeRateBp)   // product only (Q1)
+    /// platformFee = productPrice.PercentOfBp(platformFeeRateBp)   // product only (Q1)
     /// makerPayout = productPrice.Subtract(platformFee).Add(shippingPrice)
     /// totalPrice  = productPrice.Add(shippingPrice)
     /// vatAmount   = config.InvoicingMode == StandardVat
@@ -52,6 +54,22 @@ internal static class OrderPricing
     /// </code>
     /// </para>
     /// </summary>
+    /// <param name="productPrice">The product's price.</param>
+    /// <param name="shippingPrice">The resolved shipping price for the chosen method.</param>
+    /// <param name="config">
+    /// Country configuration — still consulted for VAT (<see cref="CountryConfiguration.InvoicingMode"/>,
+    /// <see cref="CountryConfiguration.StandardVatRateBp"/>) and the currency
+    /// cross-check. It is deliberately NOT the source of the platform-fee
+    /// rate any more (T-0140) — see <paramref name="platformFeeRateBp"/>.
+    /// </param>
+    /// <param name="platformFeeRateBp">
+    /// The ALREADY-RESOLVED platform-fee rate in basis points (T-0140). The
+    /// caller (<c>PricingService</c>) resolves
+    /// <c>maker.FeeRateOverrideBp ?? config.PlatformFeeRateBp</c> before
+    /// calling in — this pure-math layer stays decoupled from WHERE the
+    /// rate came from (country default vs. per-maker loyalty override),
+    /// matching the class's "no DI seam needed" design (T-0061 Q5).
+    /// </param>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the currencies on the inputs disagree (programmer
     /// error — see class remarks).
@@ -59,7 +77,8 @@ internal static class OrderPricing
     public static PricingBreakdown Compute(
         global::Makables.Core.Domain.Money.Money productPrice,
         global::Makables.Core.Domain.Money.Money shippingPrice,
-        CountryConfiguration config)
+        CountryConfiguration config,
+        int platformFeeRateBp)
     {
         ArgumentNullException.ThrowIfNull(config);
 
@@ -78,8 +97,10 @@ internal static class OrderPricing
 
         // Per Q1: platform fee is computed on the product line only, NOT
         // on (product + shipping). Carrier costs are pass-through to the
-        // maker.
-        var platformFee = productPrice.PercentOfBp(config.PlatformFeeRateBp);
+        // maker. T-0140: the rate itself is caller-resolved (country
+        // default or per-maker loyalty override) — this layer just does
+        // the math on whatever rate it's handed.
+        var platformFee = productPrice.PercentOfBp(platformFeeRateBp);
         var makerPayout = productPrice.Subtract(platformFee).Add(shippingPrice);
         var totalPrice = productPrice.Add(shippingPrice);
 

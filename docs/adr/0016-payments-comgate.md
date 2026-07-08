@@ -1,7 +1,7 @@
 ---
 id: 0016
 title: Payments — Comgate as the launch provider; PaymentProvider role; webhook idempotency via outbox
-status: accepted
+status: amended by 0027
 date: 2026-05-21
 deciders: [Architect]
 ---

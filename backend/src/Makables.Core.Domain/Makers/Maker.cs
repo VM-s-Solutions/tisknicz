@@ -149,6 +149,19 @@ public sealed class Maker : Auditable
     /// </summary>
     public bool IsRetainedForLegal { get; private set; }
 
+    /// <summary>
+    /// Admin-set per-maker platform-fee override in basis points (T-0140 /
+    /// US-admin-0018). <c>null</c> means "no override — use
+    /// <see cref="Configuration.CountryConfiguration.PlatformFeeRateBp"/>".
+    /// When set, the pricing layer (<c>PricingService.ComputeForProductAsync</c>)
+    /// resolves <c>maker.FeeRateOverrideBp ?? config.PlatformFeeRateBp</c>
+    /// before delegating to <c>OrderPricing.Compute</c>. Set/cleared only by
+    /// <see cref="SetFeeRateOverride"/> (the <c>SetMakerFeeOverride</c> admin
+    /// command); never changes historical orders' already-snapshotted
+    /// <c>PlatformFeeMinor</c>.
+    /// </summary>
+    public int? FeeRateOverrideBp { get; private set; }
+
     private Maker() { }
 
     public static Maker Create(
@@ -350,6 +363,25 @@ public sealed class Maker : Auditable
         IsActiveInRegistry = isActiveInRegistry;
         SnapshotFetchedAt = snapshotFetchedAt;
         SnapshotIsStale = snapshotIsStale;
+        return this;
+    }
+
+    /// <summary>
+    /// Admin sets or clears the per-maker loyalty fee-rate override
+    /// (T-0140 <c>SetMakerFeeOverride</c>). <paramref name="rateBp"/> is
+    /// <c>null</c> to clear (revert to the country default). The
+    /// country-default CEILING (the override must never exceed
+    /// <see cref="Configuration.CountryConfiguration.PlatformFeeRateBp"/>)
+    /// is a cross-aggregate rule the entity cannot see — enforced by
+    /// <c>SetMakerFeeOverride.Handler</c>, which loads both aggregates.
+    /// This mutator only guards the structural invariant: a rate can never
+    /// be negative.
+    /// </summary>
+    public Maker SetFeeRateOverride(int? rateBp)
+    {
+        if (rateBp is < 0)
+            throw new ArgumentOutOfRangeException(nameof(rateBp), "FeeRateOverrideBp cannot be negative.");
+        FeeRateOverrideBp = rateBp;
         return this;
     }
 

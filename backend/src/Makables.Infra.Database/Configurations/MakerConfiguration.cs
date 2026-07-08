@@ -75,6 +75,10 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.RatingCount).HasColumnName("rating_count").IsRequired();
         builder.Property(m => m.TotalOrders).HasColumnName("total_orders").IsRequired();
 
+        // T-0140 admin-set loyalty fee-rate override (basis points). Null
+        // means "no override — use CountryConfiguration.PlatformFeeRateBp".
+        builder.Property(m => m.FeeRateOverrideBp).HasColumnName("fee_rate_override_bp");
+
         // T-0110 GDPR-erasure tombstone flag: true when the maker was
         // anonymized-but-legally-retained (IČO + bank account kept).
         builder.Property(m => m.IsRetainedForLegal)

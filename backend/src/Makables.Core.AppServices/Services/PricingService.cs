@@ -1,5 +1,6 @@
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
 
@@ -8,10 +9,12 @@ namespace Makables.Core.AppServices.Services;
 /// <summary>
 /// Default <see cref="IPricingService"/>. See the interface XML doc for
 /// contract details; this file implements the seven-step recipe from
-/// T-0061 §Scope.Application.PricingService.
+/// T-0061 §Scope.Application.PricingService, extended by T-0140 to resolve
+/// the per-maker loyalty fee-rate override.
 /// </summary>
 public sealed class PricingService(
     IProductRepository products,
+    IMakerRepository makers,
     ICountryConfigurationRepository configs) : IPricingService
 {
     public async Task<BusinessResult<PricingBreakdown>> ComputeForProductAsync(
@@ -47,6 +50,17 @@ public sealed class PricingService(
                 Error.NotFound("countryCode", BusinessErrorMessage.CountryConfigurationNotFound));
         }
 
+        // === Step 3b (T-0140): load the maker to resolve the effective
+        // platform-fee rate — maker.FeeRateOverrideBp ?? config default. ===
+        var maker = await makers.GetByIdAsync(product.MakerId, cancellationToken);
+        if (maker is null)
+        {
+            return BusinessResult.Failure<PricingBreakdown>(
+                Error.NotFound("makerId", BusinessErrorMessage.MakerNotFound));
+        }
+
+        var platformFeeRateBp = maker.FeeRateOverrideBp ?? config.PlatformFeeRateBp;
+
         // === Step 4: resolve shipping price for the chosen method. ===
         // Per T-0061 user decision Q3: Zásilkovna uses the country-level
         // admin-editable default (admin path in T-0108). Personal pickup
@@ -69,7 +83,7 @@ public sealed class PricingService(
         // currency-mismatch programmer-error path (throws
         // InvalidOperationException; unreachable in production but
         // surfaces seed-data corruption in monitoring per Q7).
-        var breakdown = OrderPricing.Compute(productPrice, shippingPrice, config);
+        var breakdown = OrderPricing.Compute(productPrice, shippingPrice, config, platformFeeRateBp);
 
         // === Step 7: wrap. ===
         return BusinessResult.Success(breakdown);

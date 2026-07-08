@@ -82,7 +82,7 @@ export function PublicNavbar() {
 
       <div
         id="public-mobile-menu"
-        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-surface-primary/95 backdrop-blur transition-all duration-300 md:hidden ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'}`}
+        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-zinc-950 transition-all duration-300 md:hidden ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'}`}
       >
         <div className="px-4 pb-4 sm:px-6">
           <nav className="flex flex-col gap-1 pt-3" aria-label={t('nav.public_aria')}>

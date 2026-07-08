@@ -18,10 +18,10 @@ import type { MessageKey } from '@/lib/i18n';
  * `layout.tsx`; this component renders only for an authenticated admin.
  *
  * The live sections (Přehled / Objednávky / Faktury / Audit log +, since
- * T-0118c, Výplaty / Fronta událostí / Uživatelé / Nastavení zemí) are
- * real `<Link>`s. Only sections with no slice yet (Makeři) render as
- * visibly-pending non-links (Option H: no live link to a not-yet-built
- * route).
+ * T-0118c, Výplaty / Fronta událostí / Uživatelé / Nastavení zemí, since
+ * T-0140 Makeři) are real `<Link>`s. `PENDING_NAV` stays empty for now —
+ * kept as the seam for the next not-yet-built section (Option H: no live
+ * link to a not-yet-built route).
  */
 
 interface NavItem {
@@ -37,11 +37,12 @@ const LIVE_NAV: readonly NavItem[] = [
   { href: '/dashboard/admin/outbox', labelKey: 'dashboard.admin.nav.outbox' },
   { href: '/dashboard/admin/users', labelKey: 'dashboard.admin.nav.users' },
   { href: '/dashboard/admin/countries/CZ', labelKey: 'dashboard.admin.nav.config' },
+  { href: '/dashboard/admin/makers', labelKey: 'dashboard.admin.nav.makers' },
   { href: '/dashboard/admin/audit', labelKey: 'dashboard.admin.nav.audit' },
 ];
 
 /** Sections with no slice yet — rendered visibly pending, never as live links (AC-3). */
-const PENDING_NAV: readonly MessageKey[] = ['dashboard.admin.nav.makers'];
+const PENDING_NAV: readonly MessageKey[] = [];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/dashboard/admin') return pathname === href;

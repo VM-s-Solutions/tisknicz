@@ -2,6 +2,7 @@ using FluentAssertions;
 using Makables.Core.AppServices.Services;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Money;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
@@ -13,22 +14,51 @@ namespace Makables.Tests.AppServices.Services;
 /// T-0061 — pins the orchestrator contract that <c>CreateOrder.Validator</c>
 /// (T-0063), the customer checkout preview (T-0099), the platform-fee
 /// invoice composer (T-0068), and the Comgate session amount (T-0065)
-/// all depend on. Mocks the two repositories the service touches; the
-/// pricing math itself is covered exhaustively in
-/// <see cref="Domain.Orders.OrderPricingTests"/>.
+/// all depend on. Mocks the repositories the service touches; the pricing
+/// math itself is covered exhaustively in
+/// <see cref="Domain.Orders.OrderPricingTests"/>. T-0140 adds the
+/// <see cref="IMakerRepository"/> mock for the per-maker fee-rate-override
+/// resolution branch.
 /// </summary>
 public class PricingServiceTests
 {
     private readonly IProductRepository _products = Substitute.For<IProductRepository>();
+    private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
     private readonly ICountryConfigurationRepository _configs = Substitute.For<ICountryConfigurationRepository>();
     private readonly PricingService _sut;
 
     public PricingServiceTests()
     {
-        _sut = new PricingService(_products, _configs);
+        _sut = new PricingService(_products, _makers, _configs);
+
+        // Default fixture: a maker with NO override, so existing tests
+        // (pre-dating T-0140) keep passing unmodified — AC-3, no behavior
+        // change for makers without an override.
+        _makers.GetByIdAsync("maker-1", Arg.Any<CancellationToken>())
+            .Returns(BuildMaker());
     }
 
     // === Fixtures ===
+
+    private static Maker BuildMaker(string id = "maker-1", int? feeRateOverrideBp = null)
+    {
+        var maker = Maker.Create(
+            id: id,
+            userId: "user-1",
+            registrationNumber: "12345678",
+            vatId: null,
+            companyName: "Dílna Novák",
+            legalForm: null,
+            registeredAddressId: "addr-1",
+            incorporatedOn: null,
+            isActiveInRegistry: true,
+            sourceRegistry: "ares",
+            snapshotFetchedAt: DateTimeOffset.UtcNow,
+            snapshotIsStale: false,
+            countryCode: "CZ");
+        maker.SetFeeRateOverride(feeRateOverrideBp);
+        return maker;
+    }
 
     private static CountryConfiguration BuildCz(
         InvoicingMode invoicingMode = InvoicingMode.StandardVat,
@@ -202,7 +232,7 @@ public class PricingServiceTests
     }
 
     [Fact]
-    public async Task ComputeForProductAsync_propagates_CancellationToken_to_both_repos()
+    public async Task ComputeForProductAsync_propagates_CancellationToken_to_all_repos()
     {
         var product = BuildProduct();
         var cfg = BuildCz();
@@ -217,5 +247,66 @@ public class PricingServiceTests
 
         await _products.Received(1).GetByIdAsync(product.Id, token);
         await _configs.Received(1).GetByCodeAsync(product.CountryCode, token);
+        await _makers.Received(1).GetByIdAsync(product.MakerId, token);
+    }
+
+    // === T-0140: per-maker fee-rate-override resolution ===
+
+    [Fact]
+    public async Task ComputeForProductAsync_returns_NotFound_when_maker_missing()
+    {
+        var product = BuildProduct();
+        _products.GetByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        _configs.GetByCodeAsync(product.CountryCode, Arg.Any<CancellationToken>()).Returns(BuildCz());
+        _makers.GetByIdAsync(product.MakerId, Arg.Any<CancellationToken>()).Returns((Maker?)null);
+
+        var result = await _sut.ComputeForProductAsync(
+            product.Id, ShippingMethod.PersonalPickup, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.NotFound);
+        result.Error.Code.Should().Be(BusinessErrorMessage.MakerNotFound);
+        result.Error.Field.Should().Be("makerId");
+    }
+
+    [Fact]
+    public async Task ComputeForProductAsync_uses_maker_FeeRateOverrideBp_when_set()
+    {
+        // AC-2: maker.FeeRateOverrideBp = 350 bp, country default 1500 bp —
+        // the resolved platform fee must reflect 350 bp, not 1500 bp.
+        var product = BuildProduct(priceMinor: 50000);
+        var cfg = BuildCz(); // platformFeeRateBp defaults to 1500 in BuildCz
+        _products.GetByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        _configs.GetByCodeAsync(product.CountryCode, Arg.Any<CancellationToken>()).Returns(cfg);
+        _makers.GetByIdAsync(product.MakerId, Arg.Any<CancellationToken>())
+            .Returns(BuildMaker(feeRateOverrideBp: 350));
+
+        var result = await _sut.ComputeForProductAsync(
+            product.Id, ShippingMethod.PersonalPickup, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        // 3,5% of 500 CZK = 17,50 CZK.
+        result.Value!.PlatformFee.Should().Be(Money.CZK(1750));
+        result.Value.MakerPayout.Should().Be(Money.CZK(48250));
+    }
+
+    [Fact]
+    public async Task ComputeForProductAsync_uses_country_default_when_maker_has_no_override()
+    {
+        // AC-3: no behavior change for makers without an override.
+        var product = BuildProduct(priceMinor: 50000);
+        var cfg = BuildCz(); // 1500 bp default
+        _products.GetByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        _configs.GetByCodeAsync(product.CountryCode, Arg.Any<CancellationToken>()).Returns(cfg);
+        _makers.GetByIdAsync(product.MakerId, Arg.Any<CancellationToken>())
+            .Returns(BuildMaker(feeRateOverrideBp: null));
+
+        var result = await _sut.ComputeForProductAsync(
+            product.Id, ShippingMethod.PersonalPickup, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        // 15% of 500 CZK = 75 CZK — unchanged from pre-T-0140 behavior.
+        result.Value!.PlatformFee.Should().Be(Money.CZK(7500));
+        result.Value.MakerPayout.Should().Be(Money.CZK(42500));
     }
 }

@@ -59,7 +59,7 @@ public class OrderPricingTests
         var shipping = Money.Zero("CZK");
         var cfg = BuildCz();
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.ProductPrice.Should().Be(Money.CZK(50000));
         b.ShippingPrice.Should().Be(Money.Zero("CZK"));
@@ -77,7 +77,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz();
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.ShippingPrice.Should().Be(Money.CZK(7900));
         b.TotalPrice.Should().Be(Money.CZK(57900));
@@ -96,7 +96,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz();
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.PlatformFee.Should().Be(Money.CZK(7500));
         b.MakerPayout.Should().Be(Money.CZK(50400));
@@ -112,7 +112,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz(invoicingMode: InvoicingMode.StandardVat, standardVatBp: 2100);
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.VatAmount.Should().Be(Money.CZK(12159));
         b.VatRateBp.Should().Be(2100);
@@ -125,7 +125,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz(invoicingMode: InvoicingMode.None);
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.VatAmount.Should().Be(Money.Zero("CZK"));
         b.VatRateBp.Should().Be(0);
@@ -139,7 +139,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz(invoicingMode: InvoicingMode.ReverseCharge);
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.VatAmount.Should().Be(Money.Zero("CZK"));
         b.VatRateBp.Should().Be(0);
@@ -155,7 +155,7 @@ public class OrderPricingTests
         var shipping = Money.CZK(7900);
         var cfg = BuildCz();
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         var act = () => Order.Create(
             id: "ord-roundtrip",
@@ -189,7 +189,7 @@ public class OrderPricingTests
         var shipping = Money.Zero("CZK");
         var cfg = BuildCz();
 
-        var act = () => OrderPricing.Compute(product, shipping, cfg);
+        var act = () => OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -235,10 +235,28 @@ public class OrderPricingTests
             standardVatBp: 5000,
             platformFeeRateBp: 0);
 
-        var b = OrderPricing.Compute(product, shipping, cfg);
+        var b = OrderPricing.Compute(product, shipping, cfg, cfg.PlatformFeeRateBp);
 
         b.TotalPrice.Should().Be(new Money(2, "CZK"));
         b.VatAmount.Should().Be(new Money(1, "CZK"));
+    }
+
+    [Fact]
+    public void Compute_uses_caller_resolved_rate_not_config_PlatformFeeRateBp()
+    {
+        // T-0140: Compute must use the explicit platformFeeRateBp argument,
+        // NOT config.PlatformFeeRateBp, so a per-maker loyalty override
+        // (resolved by the caller) actually takes effect. Config still
+        // carries its own 1500 bp default; we pass 350 bp explicitly and
+        // assert the fee reflects 350 bp, not 1500 bp.
+        var product = Money.CZK(50000);
+        var shipping = Money.Zero("CZK");
+        var cfg = BuildCz(platformFeeRateBp: 1500);
+
+        var b = OrderPricing.Compute(product, shipping, cfg, platformFeeRateBp: 350);
+
+        b.PlatformFee.Should().Be(Money.CZK(1750)); // 3,5% of 500 CZK = 17,50 CZK
+        b.MakerPayout.Should().Be(Money.CZK(48250)); // 500 − 17,50 = 482,50 CZK
     }
 
     [Fact]

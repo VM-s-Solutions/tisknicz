@@ -6,14 +6,26 @@ Patterns reference: [patterns.md §A.15](./patterns.md#a15-provider-adapter-patt
 
 ## 1. Payment provider
 - Interface: `Makables.Core.Domain.Payments.IPaymentProvider`
-- Adapter: `Makables.Infra.Clients.Comgate.ComgatePaymentProvider` (CZ)
-- Future: `StripePaymentProvider`, `AdyenPaymentProvider`
+- Adapter: `Makables.Infra.Clients.Comgate.ComgatePaymentProvider` (CZ launch; single-merchant model, ADR 0016) — stays wired as an inactive fallback after cutover
+- Adapter (T-0142, not yet built): `Makables.Infra.Clients.Stripe.StripeConnectPaymentProvider` — marketplace-escrow model per **ADR 0027** ("B-tok 3": Stripe Connect Express, separate charges and transfers; funds captured on the platform account, released to the maker's connected account only on explicit instruction)
+- Future fallback if Stripe fails verification (ADR 0027 §"Assumptions requiring confirmation"): `AdyenPaymentProvider`, `MangopayPaymentProvider`
 - Selection: `CountryConfiguration.DefaultPaymentProvider` → `IPaymentProviderFactory.ResolveAsync(countryCode)`
 
 Methods:
 - `CreatePaymentAsync(Order order, CancellationToken) → BusinessResult<PaymentSession>`
 - `VerifyPaymentAsync(string providerRef, CancellationToken) → BusinessResult<PaymentStatus>`
 - `VerifyWebhookAsync(HttpRequest request, CancellationToken) → BusinessResult<WebhookPayload>`
+- `RefundAsync(string providerRef, long amountMinor, string currency, CancellationToken) → BusinessResult<RefundReceipt>` (T-0105)
+- `ReleaseFundsAsync(string payoutAccountRef, long amountMinor, string currency, CancellationToken) → BusinessResult<TransferReceipt>` (**ADR 0027**, T-0142) — transfers held funds from the platform's gateway balance to a maker's connected account; called only from the weekly `PayoutBatch` claim path, never a request handler directly. Comgate's implementation throws `NotSupportedException` (no connected-account concept).
+
+### 1b. Payout account provider (new adapter role, ADR 0027)
+- Interface: `Makables.Core.Domain.Payments.IPayoutAccountProvider` (T-0142) — maker-scoped KYC onboarding, deliberately separate from the order-scoped `IPaymentProvider` above
+- Adapter (T-0142): `Makables.Infra.Clients.Stripe.StripeConnectPayoutAccountProvider`
+- No Comgate implementation — Comgate has no connected-account concept; countries on Comgate never resolve this factory
+- Selection: same `CountryConfiguration.DefaultPaymentProvider` code, via a new `IPayoutAccountProviderFactory`
+- Methods: `CreateOnboardingLinkAsync(makerId, returnUrl, refreshUrl, ct) → BusinessResult<OnboardingLink>`; `GetAccountStatusAsync(payoutAccountRef, ct) → BusinessResult<PayoutAccountStatus>`
+- New `Maker` fields: `PayoutAccountRef` (nullable), `PayoutAccountStatus` (`NotStarted | PendingRequirements | Enabled | Disabled`) — set only via the gateway's `account.updated`-style webhook, never client-settable. A maker with a non-`Enabled` status cannot publish products or accept new orders.
+- See `docs/architecture/roles/payout-account-provider.md`.
 
 ## 2. Shipping carrier
 - Interface: `Makables.Core.Domain.Shipping.IShippingCarrier`
