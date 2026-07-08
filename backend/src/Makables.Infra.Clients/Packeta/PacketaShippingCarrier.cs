@@ -159,6 +159,92 @@ public sealed class PacketaShippingCarrier(
         return BusinessResult.Success(new Shipment(carrierRef, trackingUrl));
     }
 
+    public async Task<BusinessResult<Shipment>> CreateReturnShipmentAsync(
+        Order order,
+        ReturnRecipient recipient,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(recipient);
+
+        var opts = options.Value;
+        var (firstName, lastName) = SplitContactName(recipient.Name);
+
+        // Reverse leg (T-0146): same v6 createPacket surface as the
+        // forward path, but the RECIPIENT is now the maker's registered
+        // (or pickup) address — a door-delivery address rather than a
+        // pickup-point id, since makers aren't Zásilkovna box holders.
+        // The customer (who physically drops the parcel off) is the
+        // conceptual "sender"; Packeta's packetAttributes payload only
+        // ever names the final recipient, so no separate sender block
+        // is sent — mirrors the forward call's shape.
+        var packetAttributes = new XElement("packetAttributes",
+            new XElement("number", $"{order.OrderNumber}-RET"),
+            new XElement("name", firstName),
+            new XElement("surname", lastName),
+            new XElement("email", recipient.Email),
+            new XElement("phone", recipient.Phone),
+            new XElement("street", recipient.Street),
+            new XElement("houseNumber", recipient.HouseNumber),
+            new XElement("city", recipient.City),
+            new XElement("zip", recipient.Zip),
+            new XElement("country", recipient.CountryCodeIso),
+            new XElement("cod", "0"),
+            // No itemized reverse-leg price from Packeta at MVP — the
+            // cost basis for the maker payout-batch deduction is computed
+            // by the caller from CountryConfiguration.DefaultShippingPriceMinor
+            // (T-0146 Technical notes); this call only creates the shipment.
+            new XElement("value", "0.00"),
+            new XElement("weight", "1.0"),
+            new XElement("currency", order.Currency),
+            new XElement("eshop", opts.SenderLabel));
+        var requestRoot = new XElement("createPacket",
+            new XElement("apiPassword", opts.ApiKey),
+            packetAttributes);
+
+        var responseText = await PostXmlAsync(
+            $"{opts.BaseUrl.TrimEnd('/')}/v6/createPacket",
+            requestRoot.ToString(),
+            operationLabel: "createReturnPacket",
+            cancellationToken);
+        if (!responseText.IsSuccess)
+            return BusinessResult.Failure<Shipment>(responseText.Error!);
+
+        XDocument doc;
+        try
+        {
+            doc = XDocument.Parse(responseText.Value!);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Packeta.createReturnPacket: XML parse failed.");
+            return BusinessResult.Failure<Shipment>(
+                Error.Permanent(BusinessErrorMessage.ShippingCarrierConfigurationError));
+        }
+
+        var status = doc.Root?.Element("status")?.Value;
+        if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
+        {
+            return ClassifyPacketaFault<Shipment>(doc, "createReturnPacket");
+        }
+
+        var idElement = doc.Root?.Element("result")?.Element("id")
+                        ?? doc.Root?.Element("id");
+        var carrierRef = idElement?.Value?.Trim();
+        if (string.IsNullOrWhiteSpace(carrierRef))
+        {
+            logger.LogError("Packeta.createReturnPacket: status=ok but result.id missing.");
+            return BusinessResult.Failure<Shipment>(
+                Error.Permanent(BusinessErrorMessage.ShippingCarrierConfigurationError));
+        }
+
+        var trackingUrl = $"https://tracking.packeta.com/Z{carrierRef}";
+        logger.LogInformation(
+            "Packeta.createReturnPacket: reverse shipment created for order {OrderId} (carrierRef={CarrierRef}).",
+            order.Id, carrierRef);
+        return BusinessResult.Success(new Shipment(carrierRef, trackingUrl));
+    }
+
     public async Task<BusinessResult<ShipmentStatus>> GetStatusAsync(
         string carrierRef,
         CancellationToken cancellationToken)

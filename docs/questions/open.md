@@ -541,8 +541,8 @@ same edit.
   - Admin-gated trigger (BA default, locked in T-0146) + payout-batch negative line item (simplest single ledger to reconcile against, mirrors how the platform fee itself is already deducted from payout).
   - Admin-gated trigger + fee-invoice line item (keeps the payout batch a pure "money owed to maker" number; the return cost shows as a separate commercial-document line the maker's accountant can categorize).
   - Earlier (thread-agreed) trigger, with the eventual dispute resolution only formalizing what already happened — faster for the customer, but weakens the "admin gates every money/logistics outcome" invariant the rest of the dispute model relies on (dispute.md).
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** resolved
+- **Answer (filled by user):** 2026-07-07 — accounting mechanism locked: the return cost is **deducted from the maker's next payout batch** as a negative line item (not a fee-invoice line). Trigger point stays the BA default already locked in the ticket (admin-gated, mirroring `RefundOrder`).
 
 ## Q-0038 — Does the made-to-order withdrawal-exemption notice need a blocking acknowledgement (checkbox) rather than a visible notice? (T-0144)
 - **From:** BA (T-0144 grooming)

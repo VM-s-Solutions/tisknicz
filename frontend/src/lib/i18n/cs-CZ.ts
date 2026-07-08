@@ -1020,6 +1020,11 @@ export const messages = {
   'customer.orderDetail.invoice.heading': 'Faktura',
   'customer.orderDetail.invoice.download': 'Stáhnout fakturu',
 
+  // T-0146 — reverse-shipment ("vratkový") label download, visible once
+  // an admin has generated the return label (US-customer-0023).
+  'customer.orderDetail.returnLabel.heading': 'Vratkový štítek',
+  'customer.orderDetail.returnLabel.download': 'Stáhnout vratkový štítek',
+
   // Caption key reserved by T-0076 (supersedes the US draft wording
   // "Potvrdit doručení" — final copy belongs to l10n).
   'customer.orders.markDeliveredButton': 'Označit jako doručeno',
@@ -1541,6 +1546,16 @@ export const messages = {
   'dashboard.admin.orderActions.dispute.outcome.refunded': 'Refundováno',
   'dashboard.admin.orderActions.dispute.outcome.resumed': 'Obnoveno',
   'dashboard.admin.orderActions.dispute.outcome.cancelled': 'Zrušeno',
+
+  // T-0146 — reverse-shipment ("vratkový štítek") admin action, gated to
+  // DamagedItem/NotAsDescribed disputes (AC-6).
+  'dashboard.admin.orderActions.returnLabel.heading': 'Vratkový štítek',
+  'dashboard.admin.orderActions.returnLabel.generate': 'Vygenerovat vratkový štítek',
+  'dashboard.admin.orderActions.returnLabel.generating': 'Generuji…',
+  'dashboard.admin.orderActions.returnLabel.generated': 'Vratkový štítek byl vygenerován.',
+  'dashboard.admin.orderActions.returnLabel.markReceived': 'Označit jako přijaté makerem',
+  'dashboard.admin.orderActions.returnLabel.markingReceived': 'Označuji…',
+  'dashboard.admin.orderActions.returnLabel.received': 'Vrácené zboží bylo přijato makerem.',
 
   // Audit-trail panel on the detail (load-bearing read — §C.2).
   'dashboard.admin.orderActions.audit.heading': 'Historie auditu',

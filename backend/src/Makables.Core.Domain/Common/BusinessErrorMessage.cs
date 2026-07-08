@@ -166,6 +166,14 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string OrderDisputeNotOpen = "order.dispute.notOpen";
 
+    /// <summary>
+    /// Dispute id not found — unknown id, OR (on scoped lookups) an id
+    /// belonging to a different customer's/maker's order. Same
+    /// IDOR-leak-resistant shape as <see cref="OrderNotFound"/> (T-0146
+    /// AC-7). Also used by admin lookups for a genuinely unknown id.
+    /// </summary>
+    public const string OrderDisputeNotFound = "order.dispute.notFound";
+
     // === Maker (T-0063 defence-in-depth on maker state) ===
     /// <summary>
     /// The maker's row exists but <c>Auditable.IsActive</c> is false (or
@@ -419,6 +427,35 @@ public static class BusinessErrorMessage
     /// </summary>
     public const string ShippingMethodNotEligible = "shipping.methodNotEligible";
 
+    // === Dispute return-shipment (T-0146) ===
+    /// <summary>
+    /// <c>GenerateReturnLabel</c> attempted on a dispute whose
+    /// <c>Category</c> does not plausibly warrant a physical return
+    /// (anything other than <c>DamagedItem</c> / <c>NotAsDescribed</c>,
+    /// AC-6). Classified <see cref="ErrorType.Validation"/>.
+    /// </summary>
+    public const string DisputeReturnCategoryNotEligible = "dispute.return.categoryNotEligible";
+
+    /// <summary>
+    /// <c>Dispute.SetReturnShipment</c> called twice with a DIFFERENT
+    /// carrier ref / tracking URL — a return label is not replaceable
+    /// once issued. The SAME value is Silent Success (re-run safe).
+    /// </summary>
+    public const string DisputeReturnShipmentAlreadySet = "dispute.return.shipmentAlreadySet";
+
+    /// <summary>
+    /// <c>Dispute.MarkReturnReceived</c> attempted before a return label
+    /// exists — nothing to acknowledge receipt of yet.
+    /// </summary>
+    public const string DisputeReturnShipmentNotGenerated = "dispute.return.shipmentNotGenerated";
+
+    /// <summary>
+    /// <c>Dispute.MarkReturnReceived</c> called twice — the
+    /// acknowledgment is immutable once recorded (mirrors
+    /// <c>Dispute.Resolve</c>'s loud re-resolve posture).
+    /// </summary>
+    public const string DisputeReturnAlreadyReceived = "dispute.return.alreadyReceived";
+
     // === Review (T-0100) ===
     /// <summary>An active review already exists for the order (US-customer-0015 AC-2).</summary>
     public const string ReviewAlreadyExists = "review.alreadyExists";
@@ -509,6 +546,13 @@ public static class BusinessErrorMessage
     /// the domain method total and future-proofs a third state. T-0103.
     /// </summary>
     public const string PayoutBatchNotProcessing = "payoutBatch.notProcessing";
+
+    /// <summary>
+    /// <see cref="Payouts.PayoutDeduction.ApplyToPayoutBatch"/> targeted a
+    /// deduction already claimed by an earlier batch — a deduction is
+    /// consumed by exactly one payout batch, never reassigned. T-0146.
+    /// </summary>
+    public const string PayoutDeductionAlreadyApplied = "payoutDeduction.alreadyApplied";
 
     // === Invoice (T-0068a) ===
     /// <summary>

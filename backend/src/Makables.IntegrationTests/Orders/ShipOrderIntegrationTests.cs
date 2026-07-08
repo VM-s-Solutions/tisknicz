@@ -305,6 +305,10 @@ public sealed class ShipOrderIntegrationTests : IAsyncLifetime
             Order order, CancellationToken cancellationToken) =>
             Task.FromResult(BusinessResult.Success(new Shipment(CarrierRef, TrackingUrl)));
 
+        public Task<BusinessResult<Shipment>> CreateReturnShipmentAsync(
+            Order order, ReturnRecipient recipient, CancellationToken cancellationToken) =>
+            Task.FromResult(BusinessResult.Success(new Shipment(CarrierRef, TrackingUrl)));
+
         public Task<BusinessResult<ShipmentStatus>> GetStatusAsync(
             string carrierRef, CancellationToken cancellationToken) =>
             Task.FromResult(BusinessResult.Success(new ShipmentStatus(ShipmentState.Created, null)));

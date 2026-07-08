@@ -3,6 +3,7 @@ using System;
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    partial class MakablesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707114455_AddDisputeReturnShipmentAndPayoutDeduction")]
+    partial class AddDisputeReturnShipmentAndPayoutDeduction
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -885,11 +888,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("id");
 
-                    b.Property<string>("AppleSub")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("apple_sub");
-
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -991,10 +989,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnName("updated_by");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppleSub")
-                        .IsUnique()
-                        .HasFilter("apple_sub IS NOT NULL");
 
                     b.HasIndex("EmailNormalized")
                         .IsUnique()
@@ -1240,10 +1234,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("deactivated_by");
-
-                    b.Property<int?>("FeeRateOverrideBp")
-                        .HasColumnType("integer")
-                        .HasColumnName("fee_rate_override_bp");
 
                     b.Property<DateOnly?>("IncorporatedOn")
                         .HasColumnType("date")
