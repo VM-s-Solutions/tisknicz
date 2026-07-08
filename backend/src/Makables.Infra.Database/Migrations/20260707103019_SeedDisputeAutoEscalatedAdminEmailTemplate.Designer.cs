@@ -3,6 +3,7 @@ using System;
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    partial class MakablesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707103019_SeedDisputeAutoEscalatedAdminEmailTemplate")]
+    partial class SeedDisputeAutoEscalatedAdminEmailTemplate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -885,11 +888,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("id");
 
-                    b.Property<string>("AppleSub")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("apple_sub");
-
                     b.Property<string>("CountryCode")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -991,10 +989,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnName("updated_by");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppleSub")
-                        .IsUnique()
-                        .HasFilter("apple_sub IS NOT NULL");
 
                     b.HasIndex("EmailNormalized")
                         .IsUnique()
@@ -1240,10 +1234,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("deactivated_by");
-
-                    b.Property<int?>("FeeRateOverrideBp")
-                        .HasColumnType("integer")
-                        .HasColumnName("fee_rate_override_bp");
 
                     b.Property<DateOnly?>("IncorporatedOn")
                         .HasColumnType("date")
@@ -1591,25 +1581,6 @@ namespace Makables.Infra.Database.Migrations
                     b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("resolved_at");
-
-                    b.Property<string>("ReturnCarrierRef")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("return_carrier_ref");
-
-                    b.Property<DateTimeOffset?>("ReturnReceivedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("return_received_at");
-
-                    b.Property<string>("ReturnReceivedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("return_received_by");
-
-                    b.Property<string>("ReturnTrackingUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("return_tracking_url");
 
                     b.Property<short>("Source")
                         .HasColumnType("smallint")
@@ -2198,90 +2169,6 @@ namespace Makables.Infra.Database.Migrations
                     b.ToTable("payout_batches", (string)null);
                 });
 
-            modelBuilder.Entity("Makables.Core.Domain.Payouts.PayoutDeduction", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("id");
-
-                    b.Property<long>("AmountMinor")
-                        .HasColumnType("bigint")
-                        .HasColumnName("amount_minor");
-
-                    b.Property<string>("CountryCode")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)")
-                        .HasColumnName("country_code");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)")
-                        .HasColumnName("currency");
-
-                    b.Property<DateTimeOffset?>("DeactivatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deactivated_at");
-
-                    b.Property<string>("DeactivatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("deactivated_by");
-
-                    b.Property<string>("DisputeId")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("dispute_id");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("MakerId")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("maker_id");
-
-                    b.Property<string>("PayoutBatchId")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("payout_batch_id");
-
-                    b.Property<short>("Reason")
-                        .HasColumnType("smallint")
-                        .HasColumnName("reason");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("updated_by");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MakerId", "PayoutBatchId")
-                        .HasDatabaseName("ix_payout_deductions_maker_pending");
-
-                    b.ToTable("payout_deductions", (string)null);
-                });
-
             modelBuilder.Entity("Makables.Core.Domain.Products.Product", b =>
                 {
                     b.Property<string>("Id")
@@ -2324,14 +2211,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("description");
-
-                    b.Property<string>("FulfillmentType")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("MadeToOrder")
-                        .HasColumnName("fulfillment_type");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")

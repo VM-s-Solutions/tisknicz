@@ -69,7 +69,7 @@ public class ProductMutationHandlerTests
         var sut = new UpdateProduct.Handler(_products, _makers, _categories, _session);
 
         var result = await sut.Handle(
-            new UpdateProduct.Command("prod-2", "cat-1", "Hacked", null, 100, PriceType.Fixed, 1),
+            new UpdateProduct.Command("prod-2", "cat-1", "Hacked", null, 100, PriceType.Fixed, FulfillmentType.MadeToOrder, 1),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -84,7 +84,7 @@ public class ProductMutationHandlerTests
         var sut = new UpdateProduct.Handler(_products, _makers, _categories, _session);
 
         var result = await sut.Handle(
-            new UpdateProduct.Command("prod-1", "cat-1", "Nový hrnek", "popis", 30000, PriceType.From, 500),
+            new UpdateProduct.Command("prod-1", "cat-1", "Nový hrnek", "popis", 30000, PriceType.From, FulfillmentType.MadeToOrder, 500),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -210,5 +210,32 @@ public class ProductMutationHandlerTests
         // User-visible outcome (image detached) succeeded; orphan blob logged.
         result.IsSuccess.Should().BeTrue();
         product.Images.Should().BeEmpty();
+    }
+
+    // === UpdateProduct.Validator (T-0144) ===
+
+    private static UpdateProduct.Command ValidUpdateCommand(FulfillmentType type) =>
+        new("prod-1", "cat-1", "Title", null, 100, PriceType.Fixed, type, 400);
+
+    [Fact]
+    public void Validator_accepts_MadeToOrder_and_InStock()
+    {
+        var validator = new UpdateProduct.Validator();
+
+        validator.Validate(ValidUpdateCommand(FulfillmentType.MadeToOrder)).IsValid.Should().BeTrue();
+        validator.Validate(ValidUpdateCommand(FulfillmentType.InStock)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_rejects_out_of_range_FulfillmentType()
+    {
+        var validator = new UpdateProduct.Validator();
+
+        var result = validator.Validate(ValidUpdateCommand((FulfillmentType)99));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.PropertyName == nameof(UpdateProduct.Command.FulfillmentType)
+            && e.ErrorCode == BusinessErrorMessage.InvalidEnumValue);
     }
 }

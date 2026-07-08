@@ -103,6 +103,22 @@ public sealed class OpenDisputeIntegrationTests : IAsyncLifetime
                     }
                     services.AddDbContext<MakablesDbContext>(o =>
                         o.UseNpgsql(_harness.ConnectionString));
+
+                    // Pin the app clock to the same fixed Now the seed graph
+                    // uses so T-0145's 14-day dispute-open window is evaluated
+                    // deterministically. Without this the handler runs against
+                    // the real SystemClock, and the seeded DeliveredAt
+                    // (Now - 2d) drifts past the window as wall-clock time
+                    // advances — making the OK-path tests fail with 409.
+                    var clockDescriptor = services.SingleOrDefault(
+                        d => d.ServiceType == typeof(IClock));
+                    if (clockDescriptor is not null)
+                    {
+                        services.Remove(clockDescriptor);
+                    }
+                    var appClock = Substitute.For<IClock>();
+                    appClock.UtcNow.Returns(Now);
+                    services.AddSingleton(appClock);
                 });
             });
     }

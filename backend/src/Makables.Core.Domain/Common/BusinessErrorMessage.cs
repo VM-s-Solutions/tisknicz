@@ -165,6 +165,14 @@ public static class BusinessErrorMessage
     /// different outcome would mask an admin race. T-0106 §C.4.
     /// </summary>
     public const string OrderDisputeNotOpen = "order.dispute.notOpen";
+    /// <summary>
+    /// Customer called <c>OpenCustomerDispute.Command</c> more than 14 days
+    /// after <c>Order.DeliveredAt</c> — the platform's dispute button is
+    /// time-boxed; statutory rights continue outside it (admin channel is
+    /// unlimited). Gates ONLY the customer opener — the maker / admin /
+    /// carrier-sourced openers are unaffected. T-0145 (dopady §2.5 Q6–Q9).
+    /// </summary>
+    public const string OrderDisputeWindowExpired = "order.dispute.windowExpired";
 
     /// <summary>
     /// Dispute id not found — unknown id, OR (on scoped lookups) an id

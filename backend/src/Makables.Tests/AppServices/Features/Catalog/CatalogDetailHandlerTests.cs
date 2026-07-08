@@ -58,7 +58,7 @@ public class CatalogDetailHandlerTests
     public async Task GetProductById_returns_detail()
     {
         var detail = new ProductDetail(
-            "p1", "Hrnek", "popis", 25000, "CZK", "Fixed", 400, "cat-1",
+            "p1", "Hrnek", "popis", 25000, "CZK", "Fixed", "MadeToOrder", 400, "cat-1",
             "m1", "keramika", "Keramika s.r.o.", true,
             Array.Empty<ProductImageItem>());
         _catalog.GetProductByIdAsync("p1", Arg.Any<CancellationToken>()).Returns(detail);

@@ -22,10 +22,12 @@ import {
   type ICustomerOrderListItemDto,
   type IMarkCustomerOrderMessagesAsReadResponse,
   type IMarkOrderDeliveredApiResponse,
+  type IOpenCustomerDisputeResponse,
   type IOrderAttachmentSummaryDto,
   type IOrderMessageDto,
   type IPostCustomerOrderMessageResponse,
   type IUploadOrderAttachmentResponse,
+  DisputeCategory,
   OrderSort,
   OrderState,
   ShippingMethod,
@@ -56,7 +58,7 @@ const UPLOAD_TIMEOUT_MS = 120_000;
  * Re-exported directly so write requests use the same runtime values
  * and reads narrow on the union.
  */
-export { OrderSort, OrderState, ShippingMethod };
+export { DisputeCategory, OrderSort, OrderState, ShippingMethod };
 
 /**
  * Mirror of <c>GetCustomerOrders.DefaultPageSize</c> (T-0080). The
@@ -368,6 +370,29 @@ export async function postOrderMessage(
     'customer',
     `${Base}/${encodeURIComponent(orderId)}/messages`,
     { method: 'POST', json: { body } },
+  );
+}
+
+/** Mirror of <c>OpenCustomerDisputeResponse { orderId, disputeId }</c> (T-0106/T-0145). */
+export type OpenCustomerDisputeResult = Readonly<IOpenCustomerDisputeResponse>;
+
+/**
+ * "Eskalovat na Makables" (T-0145) — escalates the order-message thread
+ * into a platform dispute. Failure codes from <c>BusinessErrorMessage</c>:
+ * <c>order.dispute.categoryNotAllowed</c> (carrier-reserved categories are
+ * never offered here), <c>order.dispute.windowExpired</c> (14-day
+ * from-delivery window elapsed), <c>order.invalidTransition</c>. Silent-
+ * Success re-open (§C.4) returns the existing open dispute's id.
+ */
+export async function openCustomerDispute(
+  orderId: string,
+  category: DisputeCategory,
+  description: string,
+): Promise<Result<OpenCustomerDisputeResult, ApiError>> {
+  return apiFetch<OpenCustomerDisputeResult>(
+    'customer',
+    `${Base}/${encodeURIComponent(orderId)}/dispute`,
+    { method: 'POST', json: { category, description } },
   );
 }
 

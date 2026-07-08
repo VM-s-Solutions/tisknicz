@@ -22,6 +22,13 @@ const Base = '/api/v1/catalog';
 // ---- DTOs (mirror Makables.Core.Domain.Catalog records) ----
 
 /**
+ * Mirror of <c>Makables.Core.Domain.Products.FulfillmentType</c>
+ * (T-0144). "Na zakázku" vs. "skladem" — drives the product-detail
+ * badge and the checkout withdrawal-right notice.
+ */
+export type FulfillmentType = 'MadeToOrder' | 'InStock';
+
+/**
  * Mirror of <c>PagedData&lt;T&gt;</c> in
  * <c>Makables.Core.Domain.Common</c>. Backend computes
  * <c>TotalPages</c>, <c>HasNext</c>, <c>HasPrevious</c>; we surface them
@@ -57,6 +64,7 @@ export interface MakerListItem {
  * Mirror of <c>MakerProductItem</c> — an active product as shown on the
  * maker's profile and (forward-compat) other product-list surfaces.
  * <c>priceType</c> is <c>"Fixed" | "From" | "OnRequest"</c>;
+ * <c>fulfillmentType</c> is <c>"MadeToOrder" | "InStock"</c> (T-0144);
  * <c>primaryImageBlobPath</c> is the blob storage path (use
  * <see cref="buildProductImageUrl"/> to build a renderable URL).
  */
@@ -66,6 +74,7 @@ export interface MakerProductItem {
   readonly priceAmountMinor: number;
   readonly priceCurrency: string;
   readonly priceType: 'Fixed' | 'From' | 'OnRequest';
+  readonly fulfillmentType: FulfillmentType;
   readonly primaryImageBlobPath: string | null;
 }
 
@@ -128,6 +137,7 @@ export interface ProductDetail {
   readonly priceAmountMinor: number;
   readonly priceCurrency: string;
   readonly priceType: 'Fixed' | 'From' | 'OnRequest';
+  readonly fulfillmentType: FulfillmentType;
   readonly weightGrams: number;
   readonly categoryId: string;
   readonly makerId: string;

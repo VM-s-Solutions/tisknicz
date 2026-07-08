@@ -339,6 +339,11 @@ export const messages = {
   'catalog.product.image_alt': 'Fotografie produktu {title}',
   'catalog.product.no_image': 'Bez fotografie',
 
+  // Fulfillment-type badge + maker-form option labels (T-0144). Shared
+  // across the product detail badge and the maker create/edit form.
+  'product.fulfillmentType.MadeToOrder': 'Na zakázku',
+  'product.fulfillmentType.InStock': 'Skladem',
+
   // Catalog — product detail page (T-0048, US-customer-0009).
   // Plural-neutral phrasing rule from the catalog card block above
   // applies here too — keep any future {count} keys in the "Label: N"
@@ -588,6 +593,7 @@ export const messages = {
   'dashboard.maker.products.form.field.description_help': 'Volitelný popis. Krátký, výstižný — co produkt umí a komu se hodí.',
   'dashboard.maker.products.form.field.category': 'Kategorie',
   'dashboard.maker.products.form.field.category_placeholder': 'Vyberte kategorii',
+  'dashboard.maker.products.form.field.fulfillment_type': 'Způsob výroby',
   'dashboard.maker.products.form.field.price_type': 'Typ ceny',
   'dashboard.maker.products.form.field.price_amount': 'Cena',
   'dashboard.maker.products.form.field.price_amount_help': 'Částka v Kč. U "Na poptávku" je pole nepovinné — odešle se 0 Kč jako informační údaj, finální cenu doladíte se zákazníkem.',
@@ -748,6 +754,10 @@ export const messages = {
     'Tuto kategorii reklamace nelze zvolit — je vyhrazena dopravci.',
   'order.dispute.notOpen':
     'K této objednávce není otevřená žádná reklamace.',
+  // T-0145 — the customer's platform dispute button is time-boxed to 14
+  // days from delivery (admin channel stays unlimited).
+  'order.dispute.windowExpired':
+    'Lhůta pro podání reklamace přes platformu (14 dní od doručení) už vypršela.',
 
   // T-0100 review error codes (parity with BusinessErrorMessage —
   // resolveErrorMessage maps the dotted code 1:1). Vykání on the customer
@@ -909,6 +919,19 @@ export const messages = {
   'checkout.summary.totalNote':
     'Konečnou cenu včetně dopravy uvidíte před platbou.',
 
+  // Withdrawal-right notice (T-0144, § 1837 písm. d) OZ). Branches on
+  // the ordered product's fulfillmentType; both variants are interim
+  // placeholder copy per the T-0130 legal-placeholder-lock pattern
+  // (final wording gated behind Q-0030 — see static.terms.disclaimer /
+  // static.privacy.disclaimer for the same pattern on /vop and /gdpr).
+  'checkout.withdrawalNotice.interimLabel': 'Předběžné znění — čeká na právní kontrolu',
+  'checkout.withdrawalNotice.madeToOrder.title': 'Zboží vyrobené na míru',
+  'checkout.withdrawalNotice.madeToOrder.body':
+    'Tento produkt je vyráběn na zakázku podle vašich požadavků. U zboží upraveného podle přání spotřebitele nebo pro jeho osobu zákon nepřiznává právo na odstoupení od smlouvy do 14 dnů (§ 1837 písm. d) občanského zákoníku).',
+  'checkout.withdrawalNotice.inStock.title': 'Právo na odstoupení do 14 dnů',
+  'checkout.withdrawalNotice.inStock.body':
+    'Tento produkt je skladem. Jako spotřebitel máte právo odstoupit od smlouvy bez udání důvodu do 14 dnů od převzetí zboží, v souladu s občanským zákoníkem.',
+
   'checkout.submit': 'Odeslat objednávku',
   'checkout.submitting': 'Odesílám…',
   'checkout.uploadProgress': 'Nahrávání příloh: {done}/{total}',
@@ -1019,6 +1042,26 @@ export const messages = {
 
   'customer.orderDetail.invoice.heading': 'Faktura',
   'customer.orderDetail.invoice.download': 'Stáhnout fakturu',
+
+  // T-0145 — "Reklamovat" routes into the message thread (not a standalone
+  // dispute form): a category selector + an "Eskalovat na Makables" action
+  // that only appears while the 14-day window (when applicable) hasn't
+  // elapsed. Vykání throughout.
+  'customer.orderDetail.dispute.heading': 'Reklamace',
+  'customer.orderDetail.dispute.intro':
+    'Nejdřív napište výrobci do vlákna zpráv níže. Pokud se do 7 dní neozve nebo řešení nevyhovuje, můžete reklamaci eskalovat na Makables.',
+  'customer.orderDetail.dispute.categoryLabel': 'Kategorie reklamace',
+  'customer.orderDetail.dispute.category.notDelivered': 'Nedoručeno',
+  'customer.orderDetail.dispute.category.damagedItem': 'Poškozené zboží',
+  'customer.orderDetail.dispute.category.notAsDescribed': 'Neodpovídá popisu',
+  'customer.orderDetail.dispute.category.other': 'Jiné',
+  'customer.orderDetail.dispute.descriptionLabel': 'Popis reklamace',
+  'customer.orderDetail.dispute.escalateButton': 'Eskalovat na Makables',
+  'customer.orderDetail.dispute.escalateSubmitting': 'Odesílám…',
+  'customer.orderDetail.dispute.windowExpiredNote':
+    'Lhůta pro eskalaci přes platformu (14 dní od doručení) už vypršela — kontaktujte prosím podporu přímo.',
+  'customer.orderDetail.dispute.alreadyOpenNote':
+    'Reklamace k této objednávce je otevřená a čeká na vyřízení.',
 
   // T-0146 — reverse-shipment ("vratkový") label download, visible once
   // an admin has generated the return label (US-customer-0023).

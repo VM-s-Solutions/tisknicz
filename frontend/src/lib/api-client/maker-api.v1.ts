@@ -2792,6 +2792,7 @@ export class CreateProductRequest implements ICreateProductRequest {
     description!: string | undefined;
     priceAmountMinor!: number;
     priceType!: PriceType;
+    fulfillmentType!: FulfillmentType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -2816,6 +2817,7 @@ export class CreateProductRequest implements ICreateProductRequest {
             this.description = _data["description"];
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
         }
     }
@@ -2838,6 +2840,7 @@ export class CreateProductRequest implements ICreateProductRequest {
         data["description"] = this.description;
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         return data;
     }
@@ -2849,6 +2852,7 @@ export interface ICreateProductRequest {
     description: string | undefined;
     priceAmountMinor: number;
     priceType: PriceType;
+    fulfillmentType: FulfillmentType;
     weightGrams: number;
 
     [key: string]: any;
@@ -2981,6 +2985,11 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export enum FulfillmentType {
+    MadeToOrder = "MadeToOrder",
+    InStock = "InStock",
 }
 
 export class GetMakerOrderDetailsResponse implements IGetMakerOrderDetailsResponse {
@@ -4045,6 +4054,7 @@ export class MakerProductDetail implements IMakerProductDetail {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     isActive!: boolean;
@@ -4077,6 +4087,7 @@ export class MakerProductDetail implements IMakerProductDetail {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.isActive = _data["isActive"];
@@ -4108,6 +4119,7 @@ export class MakerProductDetail implements IMakerProductDetail {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["isActive"] = this.isActive;
@@ -4128,6 +4140,7 @@ export interface IMakerProductDetail {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     isActive: boolean;
@@ -4143,6 +4156,7 @@ export class MakerProductListItem implements IMakerProductListItem {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     isActive!: boolean;
@@ -4172,6 +4186,7 @@ export class MakerProductListItem implements IMakerProductListItem {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.isActive = _data["isActive"];
@@ -4199,6 +4214,7 @@ export class MakerProductListItem implements IMakerProductListItem {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["isActive"] = this.isActive;
@@ -4215,6 +4231,7 @@ export interface IMakerProductListItem {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     isActive: boolean;
@@ -5724,6 +5741,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
     description!: string | undefined;
     priceAmountMinor!: number;
     priceType!: PriceType;
+    fulfillmentType!: FulfillmentType;
     weightGrams!: number;
 
     [key: string]: any;
@@ -5748,6 +5766,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
             this.description = _data["description"];
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
         }
     }
@@ -5770,6 +5789,7 @@ export class UpdateProductRequest implements IUpdateProductRequest {
         data["description"] = this.description;
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         return data;
     }
@@ -5781,6 +5801,7 @@ export interface IUpdateProductRequest {
     description: string | undefined;
     priceAmountMinor: number;
     priceType: PriceType;
+    fulfillmentType: FulfillmentType;
     weightGrams: number;
 
     [key: string]: any;

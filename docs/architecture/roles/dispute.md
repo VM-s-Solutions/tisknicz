@@ -92,9 +92,57 @@ label-cache shape verbatim, pointed at a dispute-scoped blob path):
 ## Lifecycle
 
 - **Created by:** factory `Dispute.Open(id, orderId, category, description, source, countryCode)` via four open commands: `OpenCustomerDispute` (customer host; scoped `GetByIdForCustomerAsync` load = IDOR shield, cross-tenant probe → `404 order.notFound`), `OpenMakerDispute` (maker-host mirror), `OpenDispute` (admin host; any category — admin may transcribe phone-reported carrier failures; admin-audited), `DisputeShipment` (carrier-sourced; the rewired T-0078 stub — Packeta `Returned`/`Failed` map to `CarrierReturned`/`CarrierFailed` with canned description incl. `ShippingCarrierRef`)
-- **Modified by:** `Resolve(IClock, DisputeResolutionOutcome, string resolutionNotes)` (resolution triple; refuses double-resolve with `order.dispute.notOpen`), `SetReturnShipment(carrierRef, trackingUrl)` (T-0146, set-once), `MarkReturnReceived(IClock, receivedBy)` (T-0146, set-once, requires a return shipment first)
-- **Persisted by:** `IDisputeRepository` — `AddAsync(dispute, ct)` + `GetOpenByOrderIdAsync(orderId, ct)` (tracked; `ResolvedAt == null` predicate; at most one row matches per the partial unique index) + T-0146's `GetByIdUnscopedAsync`/`GetByIdUnscopedReadOnlyAsync` (admin/Function) and `GetByIdForCustomerReadOnlyAsync`/`GetByIdForMakerAsync` (owner-scoped, IDOR shield)
+- **Modified by:** `Resolve(IClock, DisputeResolutionOutcome, string resolutionNotes)` (resolution triple; refuses double-resolve with `order.dispute.notOpen`), `TryMarkAutoEscalated(IClock)` (T-0145, stamps `AutoEscalatedAt` exactly once; never touches the resolution triple or `Order.State`), `SetReturnShipment(carrierRef, trackingUrl)` (T-0146, set-once), `MarkReturnReceived(IClock, receivedBy)` (T-0146, set-once, requires a return shipment first)
+- **Persisted by:** `IDisputeRepository` — `AddAsync(dispute, ct)` + `GetOpenByOrderIdAsync(orderId, ct)` (tracked; `ResolvedAt == null` predicate; at most one row matches per the partial unique index) + `GetByIdUnscopedAsync(disputeId, ct)` (tracked; admin host + T-0145's `EscalateDispute.Handler` + T-0146's `GenerateReturnLabel`/admin `MarkReturnReceived`) + `GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync(asOf, ct)` (id-only stream, T-0145) + T-0146's `GetByIdUnscopedReadOnlyAsync` (Function context) and `GetByIdForCustomerReadOnlyAsync`/`GetByIdForMakerAsync` (owner-scoped, IDOR shield)
 - **Destroyed by:** never (soft delete via `Auditable`)
+
+## T-0145 — 14-day open window + 7-day maker-response timer
+
+Per dopady §2.5 Q6–Q9, this ticket adds exactly two time-based rules on top of the T-0106 machinery
+above — it does not change the resolution model, the parenthesis-state mechanics, or any opener
+except `OpenCustomerDispute`.
+
+### 14-day customer open window
+
+`OpenCustomerDispute.Command`'s handler rejects with `order.dispute.windowExpired` when
+`Order.State == Delivered AND now() > Order.DeliveredAt + 14 days` (the constant is
+`OpenCustomerDispute.OpenWindowDays`). Boundary is inclusive on the "still open" side —
+`now() == DeliveredAt + 14 days` still succeeds.
+
+- **Gates ONLY the customer's platform button.** `OpenMakerDispute`, `OpenDispute` (admin), and
+  `DisputeShipment` (carrier) are unchanged — the admin channel stays unlimited (statutory rights run
+  outside the button) and the carrier-sourced path has no customer-initiated timing concept at all
+  (Alternatives Considered Option A, T-0145).
+- **No anchor, no gate.** Paid / Accepted / Shipped orders have no `DeliveredAt` yet, so the guard
+  never fires for them — the pre-delivery in-flight behaviour is unchanged.
+- Re-opening an already-`Disputed` order is still the T-0106 §C.4 Silent-Success path and is
+  evaluated BEFORE the window guard (a re-open is not "opening a new dispute").
+
+### 7-day maker-response auto-escalation
+
+A daily sweep (`DisputeAutoEscalationFunction`, mirrors T-0077's `AutoDeliverOrdersFunction` shape)
+selects id-only candidates via `IDisputeRepository.GetAutoEscalationCandidateIdsUnscopedReadOnlyAsync`
+— `ResolvedAt IS NULL AND Source == Customer AND AutoEscalatedAt IS NULL AND CreatedAt < asOf - 7 days`
+— and dispatches `EscalateDispute.Command` per candidate. The command's handler re-checks every guard
+against a freshly-loaded tracked `Dispute` (the id-only projection can be stale by dispatch time):
+
+1. Dispute still exists, still open, not already escalated.
+2. `IOrderMessageRepository.HasMakerReplySinceAsync(orderId, dispute.CreatedAt, ct)` — a targeted
+   `EXISTS` against `OrderMessage` (`AuthorRole == Maker AND CreatedAt > dispute.CreatedAt`), not a
+   full thread load. The anchor is `Dispute.CreatedAt`, never "last customer message" — an anchor tied
+   to the customer's own messages would let a chatty customer repeatedly reset the maker's clock
+   (Alternatives Considered Option C, locked).
+3. If no maker reply, `Dispute.TryMarkAutoEscalated(clock)` stamps `AutoEscalatedAt` (the idempotency
+   claim — a second dispatch against the same dispute returns `false` and no-ops) and the handler
+   enqueues `dispute.autoEscalated.adminEmail` (`EmailTemplateType.DisputeAutoEscalatedAdmin`,
+   recipient resolves at send time exactly like `order.disputed.adminEmail`).
+
+**Notification only — never resolves, never sanctions.** The dispute stays `Disputed` / `ResolvedAt
+== null` after escalation; only admin's own `ResolveDispute.Command` can close it. Auto-refunding or
+auto-sanctioning the maker on a timer was explicitly rejected (Alternatives Considered Option B,
+T-0145) — a maker's delay may be a legitimate ongoing investigation, and every money-moving /
+sanctioning outcome in this system requires a human admin decision. Maker sanctions for missed SLAs
+are T-0148's territory (blocked on its own open question), not this sweep's.
 
 ## Invariants
 
@@ -110,14 +158,15 @@ label-cache shape verbatim, pointed at a dispute-scoped blob path):
 - `backend/src/Makables.Core.Domain/Orders/Dispute.cs` (+ `DisputeCategory`, `DisputeSource`, `DisputeResolutionOutcome`, `IDisputeRepository` alongside)
 - `backend/src/Makables.Core.Domain/Orders/Order.cs` — `OpenDispute`/`ResolveDispute` edges + `PreDisputeState`
 - `backend/src/Makables.Core.AppServices/Features/Orders/` — `OpenCustomerDispute`, `OpenMakerDispute`, `OpenDispute`, `ResolveDispute`, `DisputeShipment`, `GenerateReturnLabel`, `MarkDisputeReturnReceivedByAdmin`, `MarkDisputeReturnReceivedByMaker` (T-0146)
+- T-0145: `backend/src/Makables.Core.AppServices/Features/Orders/EscalateDispute.cs`; `backend/src/Makables.Functions/Disputes/DisputeAutoEscalationFunction.cs`; migrations `20260707102940_AddDisputeAutoEscalatedAt.cs` + `20260707103019_SeedDisputeAutoEscalatedAdminEmailTemplate.cs`
 - `backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreReturnLabel.cs` (T-0146, mirrors `FetchAndStoreShippingLabel`)
 - `backend/src/Makables.Core.Domain/Payouts/PayoutDeduction.cs` + `IPayoutDeductionRepository` (T-0146 Q-0037 accounting)
-- `backend/src/Makables.Infra.Database/Orders/DisputeRepository.cs` + `Configurations/DisputeConfiguration.cs`; migrations `20260612121152_AddDisputeTableAndPreDisputeState.cs`, `20260707114455_AddDisputeReturnShipmentAndPayoutDeduction.cs`
+- `backend/src/Makables.Infra.Database/Orders/DisputeRepository.cs` + `Configurations/DisputeConfiguration.cs`; migrations `20260612121152_AddDisputeTableAndPreDisputeState.cs`, `20260707102940_AddDisputeAutoEscalatedAt.cs`, `20260707114455_AddDisputeReturnShipmentAndPayoutDeduction.cs`
 
 ## Related
 
 - Roles: `order` (parent; parenthesis state + refund surface), `order-message` (evidence channel), `outbox`, `manual-order-transition-policy` (sanctioned-command interlock), `shipping-carrier` (reverse-leg capability)
 - Patterns: §A.22 (state-machine detour with restore)
 - ADRs: 0013 (scoped repositories), 0014 (UoW + admin audit), 0017/0020 (outbox), 0019 (email)
-- Tickets: T-0105 (refund path), T-0106 (this surface), T-0107 (manual-change interlock), T-0118 (dispute UI), T-0145 (dispute window, hard dependency), T-0146 (reverse shipment + payout deduction)
-- Stories: US-admin-0011, US-customer-0023
+- Tickets: T-0105 (refund path), T-0106 (this surface), T-0107 (manual-change interlock), T-0118 (dispute UI), T-0145 (14-day window + 7-day timer), T-0146 (reverse-shipping-label + payout deduction, depends on T-0145)
+- Stories: US-admin-0011, US-customer-0022, US-customer-0023, US-maker-0019

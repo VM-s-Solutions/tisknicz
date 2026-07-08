@@ -69,6 +69,9 @@ param cancelExpiredOrdersSchedule string = '0 0 2 * * *'
 @description('RunWeeklyPayoutBatch timer (Monday 02:00 UTC). T-0104.')
 param runWeeklyPayoutBatchSchedule string = '0 0 2 * * 1'
 
+@description('DisputeAutoEscalation timer (daily 09:00 UTC). T-0145.')
+param disputeAutoEscalationSchedule string = '0 0 9 * * *'
+
 param location string = resourceGroup().location
 
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -171,6 +174,10 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'RunWeeklyPayoutBatch__Schedule'
           value: runWeeklyPayoutBatchSchedule
+        }
+        {
+          name: 'DisputeAutoEscalation__Schedule'
+          value: disputeAutoEscalationSchedule
         }
         // Provider secrets (ValidateOnStart on the Functions host).
         {
