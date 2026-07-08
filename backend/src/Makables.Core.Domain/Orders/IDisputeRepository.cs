@@ -26,4 +26,39 @@ public interface IDisputeRepository
     /// the resolve handler mutates the returned entity.
     /// </summary>
     Task<Dispute?> GetOpenByOrderIdAsync(string orderId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Load a dispute by id without ownership scoping. <b>Admin
+    /// host only</b> per ADR 0013. Tracked — <c>GenerateReturnLabel</c> /
+    /// admin <c>MarkReturnReceived</c> mutate the returned entity.
+    /// </summary>
+    Task<Dispute?> GetByIdUnscopedAsync(string disputeId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Read-only unscoped variant for the Function context
+    /// (<c>FetchAndStoreReturnLabel</c>, no caller principal). Mirrors
+    /// <c>IOrderRepository.GetByIdUnscopedReadOnlyAsync</c>.
+    /// </summary>
+    Task<Dispute?> GetByIdUnscopedReadOnlyAsync(string disputeId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Load a dispute owned (via its parent order) by
+    /// <paramref name="customerUserId"/>, read-only. Returns <c>null</c>
+    /// for unknown ids OR ids belonging to another customer's order —
+    /// same IDOR-leak-resistant shape as
+    /// <c>IOrderRepository.GetByIdForCustomerReadOnlyAsync</c> (AC-7).
+    /// Backs the customer-host return-label download endpoint.
+    /// </summary>
+    Task<Dispute?> GetByIdForCustomerReadOnlyAsync(
+        string disputeId, string customerUserId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// T-0146. Load a dispute owned (via its parent order) by
+    /// <paramref name="makerId"/>. Returns <c>null</c> for unknown ids OR
+    /// ids belonging to another maker's order (same IDOR shield). Tracked
+    /// — the maker's <c>MarkReturnReceived</c> command mutates. Backs
+    /// AC-7's maker-side symmetric 404.
+    /// </summary>
+    Task<Dispute?> GetByIdForMakerAsync(
+        string disputeId, string makerId, CancellationToken cancellationToken);
 }

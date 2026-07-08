@@ -16,7 +16,10 @@ namespace Makables.Core.Domain.Orders.Queries;
 /// link. Nullable <see cref="ShippingCarrierTrackingUrl"/> covers
 /// personal-pickup orders + Zasilkovna orders not yet shipped. Nullable
 /// <see cref="InvoicePdfUrl"/> covers orders whose invoice has not been
-/// generated yet (Invoice.PdfBlobPath still null per T-0068b).
+/// generated yet (Invoice.PdfBlobPath still null per T-0068b). Nullable
+/// <see cref="ReturnLabelUrl"/> (T-0146) covers the common case of no
+/// dispute, or a dispute whose return label hasn't been generated yet —
+/// present only once an admin has generated a reverse-shipment label.
 /// </para>
 /// </summary>
 public sealed record CustomerOrderDetailDto(
@@ -42,5 +45,6 @@ public sealed record CustomerOrderDetailDto(
     string? ShippingCarrierTrackingUrl,
     IReadOnlyList<OrderAttachmentSummaryDto> Attachments,
     string? InvoicePdfUrl,
+    string? ReturnLabelUrl,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt);

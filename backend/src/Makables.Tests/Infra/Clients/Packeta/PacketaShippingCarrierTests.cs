@@ -219,6 +219,73 @@ public class PacketaShippingCarrierTests
         result.Error.Type.Should().Be(ErrorType.Transient);
     }
 
+    // ---- CreateReturnShipmentAsync (T-0146) ----
+
+    private static ReturnRecipient BuildRecipient() => new(
+        Name: "Studio Keramika s.r.o.",
+        Email: "maker@example.cz",
+        Phone: "+420 606 111 222",
+        Street: "Dílenská",
+        HouseNumber: "12",
+        City: "Brno",
+        Zip: "60200",
+        CountryCodeIso: "CZ");
+
+    [Fact]
+    public async Task CreateReturnShipmentAsync_success_returns_Shipment_with_correct_TrackingUrl()
+    {
+        _handler.Response = Xml(HttpStatusCode.OK, PacketaOkResponse(TestCarrierRef));
+
+        var result = await _sut.CreateReturnShipmentAsync(BuildOrder(), BuildRecipient(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.CarrierRef.Should().Be(TestCarrierRef);
+        result.Value.TrackingUrl.Should().Be($"https://tracking.packeta.com/Z{TestCarrierRef}");
+    }
+
+    [Fact]
+    public async Task CreateReturnShipmentAsync_503_returns_Transient_ShippingCarrierUnavailable()
+    {
+        _handler.Response = Xml(HttpStatusCode.ServiceUnavailable, string.Empty);
+
+        var result = await _sut.CreateReturnShipmentAsync(BuildOrder(), BuildRecipient(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.ShippingCarrierUnavailable);
+        result.Error.Type.Should().Be(ErrorType.Transient);
+    }
+
+    [Fact]
+    public async Task CreateReturnShipmentAsync_401_returns_Configuration_ShippingCarrierConfigurationError()
+    {
+        _handler.Response = Xml(HttpStatusCode.Unauthorized, string.Empty);
+
+        var result = await _sut.CreateReturnShipmentAsync(BuildOrder(), BuildRecipient(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.ShippingCarrierConfigurationError);
+        result.Error.Type.Should().Be(ErrorType.Configuration);
+    }
+
+    [Fact]
+    public async Task CreateReturnShipmentAsync_sends_recipient_as_the_packet_destination()
+    {
+        string? capturedBody = null;
+        _handler.OnSend = (request, _) =>
+        {
+            capturedBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return Xml(HttpStatusCode.OK, PacketaOkResponse(TestCarrierRef));
+        };
+
+        await _sut.CreateReturnShipmentAsync(BuildOrder(), BuildRecipient(), CancellationToken.None);
+
+        capturedBody.Should().NotBeNull();
+        capturedBody.Should().Contain("Dílenská");
+        capturedBody.Should().Contain("Brno");
+        capturedBody.Should().Contain("60200");
+        capturedBody.Should().Contain("maker@example.cz");
+    }
+
     // ---- GetStatusAsync ----
 
     [Theory]

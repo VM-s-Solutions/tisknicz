@@ -52,6 +52,21 @@ public interface IShippingCarrier
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// T-0146. Create the mirror-image REVERSE shipment (customer → maker)
+    /// once a dispute is confirmed to warrant a physical return. Reads the
+    /// customer's contact/order details from <paramref name="order"/> and
+    /// ships to <paramref name="recipient"/> (the maker's registered or
+    /// pickup address) — Packeta's v6 REST surface is the same
+    /// <c>createPacket</c> call as the forward path with sender/recipient
+    /// swapped. Returns the same <see cref="Shipment"/> shape as
+    /// <see cref="CreateShipmentAsync"/>.
+    /// </summary>
+    Task<BusinessResult<Shipment>> CreateReturnShipmentAsync(
+        Order order,
+        ReturnRecipient recipient,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// T-0078. Read the current state of an existing shipment from the
     /// carrier. Used by the status-sync timer to transition Shipped →
     /// Delivered when the carrier reports a delivered signal ahead of
