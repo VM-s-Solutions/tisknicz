@@ -46,7 +46,15 @@ export default function RootLayout({
   return (
     <html lang="cs" className={`${inter.variable} h-full antialiased`}>
       <head>
-        {apiOrigin ? <link rel="preconnect" href={apiOrigin} crossOrigin="" /> : null}
+        {apiOrigin ? (
+          <>
+            {/* Warm the API origin before the first client-side fetch:
+                dns-prefetch is the low-cost fallback for browsers that
+                ignore preconnect, preconnect opens TCP+TLS eagerly. */}
+            <link rel="dns-prefetch" href={apiOrigin} />
+            <link rel="preconnect" href={apiOrigin} crossOrigin="" />
+          </>
+        ) : null}
       </head>
       <body className="flex min-h-full flex-col bg-surface-primary font-sans">
         <main className="flex-1">{children}</main>

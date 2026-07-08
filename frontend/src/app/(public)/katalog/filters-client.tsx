@@ -3,8 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t } from '@/lib/i18n';
 
@@ -105,10 +105,10 @@ export function CatalogFilters({
       </h2>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
-        <Select
+        <Dropdown
           label={t('catalog.filter.category')}
           value={category}
-          onChange={(e) => handleCategoryChange(e.target.value)}
+          onChange={handleCategoryChange}
           options={categoryOptions}
           placeholder={t('catalog.filter.category_any')}
           className="h-11"
@@ -124,10 +124,10 @@ export function CatalogFilters({
           className="h-11"
         />
 
-        <Select
+        <Dropdown
           label={t('catalog.filter.min_rating')}
           value={minRating}
-          onChange={(e) => handleMinRatingChange(e.target.value)}
+          onChange={handleMinRatingChange}
           options={ratingOptions}
           placeholder={t('catalog.filter.min_rating_any')}
           className="h-11"

@@ -54,17 +54,17 @@ export default function HomePage() {
             <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/katalog"
-                className="hero-cta-glow inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-brand-400"
+                className="hero-cta-glow group inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-6 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-colors duration-200 hover:border-brand-400 hover:text-brand-200"
               >
                 Prohlédnout katalog
-                <Icon name="arrowRight" size={16} />
+                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/jak-to-funguje"
-                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+                className="group inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
               >
                 Jak to funguje
-                <Icon name="arrowRight" size={16} />
+                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>
@@ -155,10 +155,10 @@ export default function HomePage() {
           </p>
           <Link
             href="/pro-makery"
-            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            className="group mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             Více informací pro makery
-            <Icon name="arrowRight" size={18} />
+            <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
       </section>

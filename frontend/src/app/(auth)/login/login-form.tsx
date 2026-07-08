@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AppleSignInButton } from '@/components/shared/apple-sign-in-button';
 import { login } from '@/lib/api-client-helpers/auth';
@@ -51,7 +50,7 @@ export function LoginForm() {
 
   return (
     <>
-      <Card padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           {serverError && <Alert variant="error">{serverError}</Alert>}
           <Input
@@ -102,7 +101,7 @@ export function LoginForm() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
     </>
   );
 }

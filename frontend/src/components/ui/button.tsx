@@ -15,12 +15,22 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
 }
 
+/**
+ * Hairline button system: transparent surfaces, 1px borders, colored
+ * text and a soft glow on hover instead of solid fills. `ghost` is the
+ * only borderless variant (pure text with an animated underline).
+ */
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
-  primary: 'border border-brand-500 bg-brand-500 text-zinc-950 hover:bg-brand-400 active:bg-brand-300',
-  secondary: 'border border-zinc-700 bg-zinc-800 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700 active:bg-zinc-600',
-  outline: 'border border-zinc-700 bg-transparent text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800 active:bg-zinc-700',
-  ghost: 'border border-transparent bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 active:bg-zinc-700',
-  danger: 'border border-red-700 bg-red-800 text-red-50 hover:bg-red-700 active:bg-red-600',
+  primary:
+    'border border-brand-500/60 bg-transparent text-brand-300 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20 active:border-brand-300',
+  secondary:
+    'border border-zinc-700 bg-transparent text-zinc-200 hover:border-zinc-500 hover:text-white hover:shadow-lg hover:shadow-zinc-500/10 active:border-zinc-400',
+  outline:
+    'border border-zinc-700 bg-transparent text-zinc-300 hover:border-brand-500/50 hover:text-brand-200 active:border-brand-400',
+  ghost:
+    'link-underline border border-transparent bg-transparent text-zinc-300 hover:text-white',
+  danger:
+    'border border-red-500/50 bg-transparent text-red-300 hover:border-red-400 hover:text-red-200 hover:shadow-lg hover:shadow-red-500/20 active:border-red-300',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -40,7 +50,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >

@@ -1,24 +1,21 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { PublicFooter } from '@/components/shared/public-footer';
+import { PublicNavbar } from '@/components/shared/public-navbar';
 
 /**
- * Brand-aligned card layout for /auth/* per T-0035.
- *
- * Centers the page on a dark surface; the Makables wordmark in the top
- * left links to the marketing home. The form itself is rendered as a
- * card by the child page (Card primitive from components/ui/card.tsx).
+ * Fullscreen auth layout: the shared public navbar and footer frame a
+ * viewport-filling main area that centers the auth content (login,
+ * register, magic, verify, reset). Ambient brand glows keep it aligned
+ * with the landing hero without any card chrome.
  */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="px-6 py-5">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          Makables
-        </Link>
-      </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-16 pt-8">
-        {children}
+    <div className="flex min-h-screen flex-col bg-surface-primary text-zinc-100">
+      <PublicNavbar />
+      <main className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
+        <div className="w-full max-w-xl">{children}</div>
       </main>
+      <PublicFooter />
     </div>
   );
 }

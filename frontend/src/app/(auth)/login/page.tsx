@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { LoginForm } from './login-form';
 import { AuthBackButton } from '../auth-back-button';
@@ -26,9 +25,9 @@ export default function LoginPage() {
 
 function FormSkeleton() {
   return (
-    <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+    <div className="flex items-center justify-center gap-3 py-10 text-sm text-zinc-300">
       <Spinner />
       <span>{t('common.loading')}</span>
-    </Card>
+    </div>
   );
 }
