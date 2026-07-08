@@ -1,7 +1,7 @@
 {
   "_comment": "OpenAPI spec hashes per host. CI verifies the committed client matches the live spec from the backend. Per ADR 0022.",
-  "customer-api.v1": "90bdb468d4fce520085554040fb2e91b863bdc46da705ec6bfae7db34def0429",
-  "maker-api.v1": "8593aac0760efb784575e4496ba70c46861ae3e01e310ba245794dd7b0a51449",
-  "admin-api.v1": "da201836aaf893fdc638a276af68ca4725433dde409e4ba023d477d92355d91d",
-  "public-api.v1": "10104a6860e883574e34090957e1cd62c1d71aec4f69ed2eb6d42150836ede07"
+  "customer-api.v1": "0949cb2119b2e7323c5f8381a68cc2e69738d7244a37dda5d4cf19cc7c7e149d",
+  "maker-api.v1": "ba31c4da25891c43e272100ccfe624746cd780caa75bd244a422ac7250619f89",
+  "admin-api.v1": "d868f66a11250e284a330789139695c34cd9020ac1062721c9fdfd392035b582",
+  "public-api.v1": "eb1872f5839c6f64f3348b6c488ce1ee442f9210c22f4b60601cfe2d12742f1f"
 }

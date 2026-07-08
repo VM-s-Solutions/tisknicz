@@ -25,6 +25,7 @@ Represent the identity behind every action on the platform. Owns credentials, ro
 - `FullName`, `Phone`
 - `CountryCodePrimary` — drives default language and JWT claim
 - `GoogleSub` if linked
+- `AppleSub` if linked (T-0139, mirrors `GoogleSub`)
 - Lockout state (`FailedLoginCount`, `LockedUntil`)
 - Refresh-token family (via separate `RefreshToken` aggregate referencing UserId)
 
@@ -40,6 +41,7 @@ Represent the identity behind every action on the platform. Owns credentials, ro
   - `RegisterCustomer.Command` (email + password)
   - `MagicLinkLogin.Command` (first-time magic link from a never-registered email)
   - `GoogleOAuthCallback.Command` (first-time Google login)
+  - `CompleteAppleOAuth.Command` (first-time Apple login, T-0139 — mirrors `GoogleOAuthCallback`)
   - `RegisterMaker.Command` (in collaboration with `Maker` aggregate)
 - **Modified by:**
   - `UpdateProfile.Command` (user action: name, phone)
@@ -47,6 +49,7 @@ Represent the identity behind every action on the platform. Owns credentials, ro
   - `ChangePassword.Command` (user action)
   - `ResetPassword.Command` (forgot-flow)
   - `LinkGoogleAccount.Command` (auto on first Google login if email exists)
+  - `LinkAppleSub.Command` (auto on first Apple login if email exists, T-0139 — mirrors `LinkGoogleAccount`)
   - `RecordLoginFailure` / `ClearLoginFailures` (`AuthService` internal)
 - **Persisted by:** `IUserRepository`
 - **Destroyed by:** `DeleteUserPermanently.Command` (admin GDPR hard-delete, T-0110 / US-admin-0016; audited; the ONLY genuinely irreversible command in the system). The handler is a thin orchestrator — fail-closed session → load Unscoped → retype gate → in-flight interlock — and delegates the whole destructive matrix to the `IUserDataDeletionService` seam (see below).
@@ -78,7 +81,7 @@ The `User` is the **anchor row** of the erasure seam (patterns §A.23, extension
 - `EmailNormalized` is unique across all active users.
 - `Role` is immutable after creation. Role changes require admin tooling (post-MVP).
 - A user with `Role = maker` has exactly one `Maker` aggregate.
-- A user with `Role = admin` cannot authenticate via Google OAuth (ADR 0012).
+- A user with `Role = admin` cannot authenticate via Google or Apple OAuth (ADR 0012, ADR 0026) — admins use password + (future) MFA only.
 - Password reset revokes all existing refresh tokens.
 
 ## Implementation pointer
@@ -87,7 +90,7 @@ The `User` is the **anchor row** of the erasure seam (patterns §A.23, extension
 
 ## Related
 
-- ADRs: 0012 (authentication), 0013 (soft delete + GDPR hard delete), 0014 (admin actions audited)
+- ADRs: 0012 (authentication), 0013 (soft delete + GDPR hard delete), 0014 (admin actions audited), 0026 (Apple OAuth)
 - Patterns: §A.23 (orchestrated multi-entity GDPR erasure in one UoW); §A.23 erasure-FK note (denormalized author id, no User FK — `Order.CustomerUserId` + `Review.CustomerUserId`)
 - Extension points: §14 (`IUserDataDeletionService` seam + erasure matrix)
 - Roles: `auth-service`, `maker`, `email-provider`, `order`, `review`

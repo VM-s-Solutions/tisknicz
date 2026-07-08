@@ -14,6 +14,7 @@
 - backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxCount.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxEvents.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Auth/CompleteAppleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/CompleteGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/ConfirmEmail.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/ConfirmPasswordReset.cs:1:T1  feature file must declare a public static class wrapper
@@ -30,6 +31,7 @@
 - backend/src/Makables.Core.AppServices/Features/Auth/RequestPasswordReset.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/SendEmailConfirmation.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Auth/StartAppleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Auth/StartGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Catalog/GetMakerBySlug.cs:1:T1  feature file must declare a public static class wrapper
 - backend/src/Makables.Core.AppServices/Features/Catalog/GetMakerBySlug.cs:39:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X

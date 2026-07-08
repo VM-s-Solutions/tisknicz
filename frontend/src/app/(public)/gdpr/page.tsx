@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { CookieSettingsLink } from '@/components/shared/cookie-settings-link';
 import { t } from '@/lib/i18n';
 
 /**
@@ -67,6 +68,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_cookies_title')}</h2>
             <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_cookies_body')}</p>
+            <CookieSettingsLink className="inline-block underline" />
           </section>
 
           <section className="space-y-3">

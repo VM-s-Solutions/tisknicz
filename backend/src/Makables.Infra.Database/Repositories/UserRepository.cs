@@ -41,6 +41,12 @@ public sealed class UserRepository(MakablesDbContext db) : IUserRepository
         return db.Set<User>().FirstOrDefaultAsync(u => u.GoogleSub == googleSub, cancellationToken);
     }
 
+    public Task<User?> GetByAppleSubAsync(string appleSub, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(appleSub)) return Task.FromResult<User?>(null);
+        return db.Set<User>().FirstOrDefaultAsync(u => u.AppleSub == appleSub, cancellationToken);
+    }
+
     public Task<bool> EmailExistsAsync(string emailNormalized, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(emailNormalized)) return Task.FromResult(false);
