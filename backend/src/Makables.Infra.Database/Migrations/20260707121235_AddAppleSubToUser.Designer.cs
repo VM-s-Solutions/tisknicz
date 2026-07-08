@@ -3,6 +3,7 @@ using System;
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    partial class MakablesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707121235_AddAppleSubToUser")]
+    partial class AddAppleSubToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1240,6 +1243,10 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("deactivated_by");
+
+                    b.Property<int?>("FeeRateOverrideBp")
+                        .HasColumnType("integer")
+                        .HasColumnName("fee_rate_override_bp");
 
                     b.Property<DateOnly?>("IncorporatedOn")
                         .HasColumnType("date")

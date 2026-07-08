@@ -32,6 +32,9 @@ public interface IUserRepository
     /// <summary>Look up by Google <c>sub</c> (for OAuth login).</summary>
     Task<User?> GetByGoogleSubAsync(string googleSub, CancellationToken cancellationToken);
 
+    /// <summary>Look up by Apple <c>sub</c> (for OAuth login). Mirrors <see cref="GetByGoogleSubAsync"/>.</summary>
+    Task<User?> GetByAppleSubAsync(string appleSub, CancellationToken cancellationToken);
+
     /// <summary>
     /// True if any user (active or soft-deleted) has the given normalized
     /// email. Used at registration to prevent re-using a deactivated

@@ -17,7 +17,7 @@
  * inherited from the apiFetch defaults.
  */
 
-import { type ApiHost, apiFetch } from '../runtime/api-fetch';
+import { type ApiHost, apiFetch, apiHostBaseUrl } from '../runtime/api-fetch';
 import { type ApiError, type Result, ok } from '../runtime/result';
 
 // Leading slash matters: apiFetch concatenates `${baseUrl}${path}`
@@ -120,6 +120,33 @@ export interface ConsumeMagicLinkInput {
 export async function consumeMagicLink(host: ApiHost, input: ConsumeMagicLinkInput): Promise<Result<void, ApiError>> {
   const result = await apiFetch<unknown>(host, `${Base}/consume-magic-link`, { method: 'POST', json: input });
   return result.success ? ok(undefined) : result;
+}
+
+// ---- Apple OAuth (T-0139) ----
+
+export interface StartAppleOAuthOutput {
+  authorizationUrl: string;
+}
+
+/**
+ * Begins the "Sign in with Apple" flow. The `redirectUri` bound into the
+ * signed state must be the backend's own `apple/callback` route — Apple's
+ * `response_mode=form_post` callback POSTs directly to the .NET host, it
+ * never passes through a Next.js route — so this helper derives it from
+ * the host's configured base URL rather than taking it as a caller
+ * parameter (keeps that plumbing out of the button component).
+ *
+ * The backend sets the OAuth anti-CSRF cookie via `Set-Cookie` on this
+ * same response (credentials are always included by `apiFetch`) and
+ * returns the Apple authorization URL the browser should be redirected to
+ * next. Rejected for the admin audience server-side (ADR 0026) — surface
+ * the resulting `ApiError` via the caller's i18n mapping same as any
+ * other auth error.
+ */
+export async function startAppleOAuth(host: ApiHost): Promise<Result<StartAppleOAuthOutput, ApiError>> {
+  const redirectUri = `${apiHostBaseUrl(host)}/api/v1/auth/apple/callback`;
+  const params = new URLSearchParams({ redirectUri });
+  return apiFetch<StartAppleOAuthOutput>(host, `${Base}/apple/start?${params.toString()}`, { method: 'GET' });
 }
 
 // ---- Register maker (Public host only) ----

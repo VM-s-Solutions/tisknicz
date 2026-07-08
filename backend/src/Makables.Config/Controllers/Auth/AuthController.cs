@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Auth;
 using Makables.Config.Extensions;
 using Makables.Core.AppServices.Features.Auth;
+using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -49,6 +50,8 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
     public sealed record ConfirmPasswordResetRequest(string Token, string NewPassword);
     public sealed record RequestMagicLinkRequest(string Email);
     public sealed record ConsumeMagicLinkRequest(string Token);
+    public sealed record StartAppleOAuthRequest(string RedirectUri);
+    public sealed record StartAppleOAuthResponse(string AuthorizationUrl);
 
     /// <summary>Register a customer account. Maker registration goes through <c>/api/v1/makers/register</c> on the Public host.</summary>
     [HttpPost("register")]
@@ -113,6 +116,74 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
     {
         var ua = Request.Headers.UserAgent.ToString();
         return string.IsNullOrEmpty(ua) ? null : ua;
+    }
+
+    /// <summary>
+    /// Begin the "Sign in with Apple" flow. Mirrors the audience-derived
+    /// shape of the other anonymous auth endpoints on this controller
+    /// (audience comes from <see cref="IHostAudience"/>, not the query
+    /// string). Sets the OAuth anti-CSRF cookie before returning the
+    /// authorization URL for the frontend to redirect the browser to.
+    /// Per ADR 0026 / T-0139 AC-1.
+    /// </summary>
+    [HttpGet("apple/start")]
+    [AllowAnonymous]
+    public async Task<IActionResult> StartAppleOAuth([FromQuery] string redirectUri, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new StartAppleOAuth.Command(hostAudience.Value, redirectUri), ct);
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            AuthCookies.SetOAuthCsrfCookie(Response, result.Value.CsrfCookieValue);
+            return HandleResult(BusinessResult.Success(
+                new StartAppleOAuthResponse(result.Value.AuthorizationUrl)));
+        }
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Apple's <c>response_mode=form_post</c> callback — Apple POSTs
+    /// <c>code</c>/<c>state</c>/optional <c>user</c> as form fields, not
+    /// query params. This action is deliberately <c>[HttpPost]</c> with
+    /// <c>[FromForm]</c> binding; this is the one place the Apple flow's
+    /// HTTP shape differs from a GET callback. Per ADR 0026 / T-0139
+    /// AC-3, AC-6, AC-7.
+    /// </summary>
+    [HttpPost("apple/callback")]
+    [AllowAnonymous]
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> CompleteAppleOAuth(
+        [FromForm] string code,
+        [FromForm] string state,
+        [FromForm] string? user,
+        CancellationToken ct)
+    {
+        var csrfCookieValue = AuthCookies.ReadOAuthCsrfCookie(Request) ?? string.Empty;
+
+        // Apple's form_post body carries only code/state/user — not
+        // redirect_uri. The redirect URI bound into the signed state at
+        // Start MUST match the URL Apple actually posted back to, so we
+        // derive it from the current request rather than trusting a
+        // caller-supplied value (which the state signer's exact-match
+        // check would reject anyway if it disagreed).
+        var redirectUri = $"{Request.Scheme}://{Request.Host}{Request.Path}";
+
+        var result = await Mediator.Send(new CompleteAppleOAuth.Command(
+            Code: code,
+            State: state,
+            RedirectUri: redirectUri,
+            CsrfCookieValue: csrfCookieValue,
+            UserFieldJson: user,
+            UserAgent: NormalizedUserAgent(),
+            IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+
+        AuthCookies.ClearOAuthCsrfCookie(Response);
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            AuthCookies.SetSessionCookies(Response, hostAudience.Value, result.Value);
+        }
+        return HandleResult(result);
     }
 
     [HttpPost("refresh")]

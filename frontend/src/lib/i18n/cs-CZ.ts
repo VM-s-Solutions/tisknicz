@@ -51,6 +51,27 @@ export const messages = {
   'auth.login.account_locked': 'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to za chvíli.',
   'auth.login.email_not_confirmed': 'E-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
 
+  // Auth — Apple OAuth (T-0139). Only the button-level copy is
+  // Apple-specific; the BusinessErrorMessage.AuthOAuth* codes below are
+  // provider-agnostic (Google reuses the same codes per ADR 0026 —
+  // T-0139 ticket §Common), so their keys live at the shared
+  // `auth.oauth*` dot-path (exact 1:1 match with the backend constant,
+  // see "Auth — OAuth (shared, provider-agnostic)" below) rather than
+  // duplicated per-provider under `auth.apple.*`.
+  'auth.apple.signInButton': 'Pokračovat přes Apple',
+  'auth.apple.orDivider': 'nebo',
+  'auth.apple.startFailed': 'Přihlášení přes Apple se nepodařilo spustit. Zkuste to prosím znovu.',
+
+  // Auth — OAuth (shared, provider-agnostic; T-0139).
+  // Keys mirror BusinessErrorMessage.AuthOAuth* exactly (parity rule,
+  // patterns.md §A.4) so Google's OAuth path (T-0026/T-0035) can reuse
+  // them without a duplicate translation once its frontend wiring lands.
+  'auth.oauthNotAllowedForAdmin':
+    'Administrátorský účet se nepřihlašuje přes Apple ani Google — použijte e-mail a heslo.',
+  'auth.oauthInvalidState': 'Platnost přihlašovacího požadavku vypršela. Zkuste to prosím znovu.',
+  'auth.oauthEmailNotVerified': 'E-mail u zvoleného účtu není ověřený, přihlášení nelze dokončit.',
+  'auth.oauthExchangeFailed': 'Přihlášení se nepodařilo dokončit. Zkuste to prosím znovu.',
+
   // Auth — shared shell
   'auth.shared.eyebrow': 'Makables marketplace',
   'auth.shared.point_verified': 'Ověření makeři a transparentní hodnocení na jednom místě.',
