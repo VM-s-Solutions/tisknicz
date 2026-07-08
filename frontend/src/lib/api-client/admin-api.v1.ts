@@ -186,6 +186,17 @@ export interface IAdminApi {
     logout(): Promise<void>;
 
     /**
+     * @param redirectUri (optional) 
+     * @return OK
+     */
+    start(redirectUri: string | undefined): Promise<void>;
+
+    /**
+     * @return OK
+     */
+    callback(body: Body): Promise<void>;
+
+    /**
      * @return OK
      */
     refresh(): Promise<void>;
@@ -2026,6 +2037,83 @@ export class AdminApi implements IAdminApi {
     }
 
     protected processLogout(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param redirectUri (optional) 
+     * @return OK
+     */
+    start(redirectUri: string | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/apple/start?";
+        if (redirectUri === null)
+            throw new globalThis.Error("The parameter 'redirectUri' cannot be null.");
+        else if (redirectUri !== undefined)
+            url_ += "redirectUri=" + encodeURIComponent("" + redirectUri) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processStart(_response);
+        });
+    }
+
+    protected processStart(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    callback(body: Body): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/apple/callback";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCallback(_response);
+        });
+    }
+
+    protected processCallback(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -5625,6 +5713,103 @@ export class UpdateProfileRequest implements IUpdateProfileRequest {
 export interface IUpdateProfileRequest {
     fullName: string;
     phone: string | undefined;
+
+    [key: string]: any;
+}
+
+export class Anonymous implements IAnonymous {
+    code?: string;
+
+    [key: string]: any;
+
+    constructor(data?: IAnonymous) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.code = _data["code"];
+        }
+    }
+
+    static fromJS(data: any): Anonymous {
+        data = typeof data === 'object' ? data : {};
+        let result = new Anonymous();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["code"] = this.code;
+        return data;
+    }
+}
+
+export interface IAnonymous {
+    code?: string;
+
+    [key: string]: any;
+}
+
+export class Body extends Anonymous implements IBody {
+    state?: string;
+    user?: string;
+
+    [key: string]: any;
+
+    constructor(data?: IBody) {
+        super(data);
+    }
+
+    override init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.state = _data["state"];
+            this.user = _data["user"];
+        }
+    }
+
+    static override fromJS(data: any): Body {
+        data = typeof data === 'object' ? data : {};
+        let result = new Body();
+        result.init(data);
+        return result;
+    }
+
+    override toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["state"] = this.state;
+        data["user"] = this.user;
+        super.toJSON(data);
+        return data;
+    }
+}
+
+export interface IBody extends IAnonymous {
+    state?: string;
+    user?: string;
 
     [key: string]: any;
 }

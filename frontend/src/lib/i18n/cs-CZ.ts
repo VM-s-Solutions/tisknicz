@@ -51,6 +51,27 @@ export const messages = {
   'auth.login.account_locked': 'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to za chvíli.',
   'auth.login.email_not_confirmed': 'E-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
 
+  // Auth — Apple OAuth (T-0139). Only the button-level copy is
+  // Apple-specific; the BusinessErrorMessage.AuthOAuth* codes below are
+  // provider-agnostic (Google reuses the same codes per ADR 0026 —
+  // T-0139 ticket §Common), so their keys live at the shared
+  // `auth.oauth*` dot-path (exact 1:1 match with the backend constant,
+  // see "Auth — OAuth (shared, provider-agnostic)" below) rather than
+  // duplicated per-provider under `auth.apple.*`.
+  'auth.apple.signInButton': 'Pokračovat přes Apple',
+  'auth.apple.orDivider': 'nebo',
+  'auth.apple.startFailed': 'Přihlášení přes Apple se nepodařilo spustit. Zkuste to prosím znovu.',
+
+  // Auth — OAuth (shared, provider-agnostic; T-0139).
+  // Keys mirror BusinessErrorMessage.AuthOAuth* exactly (parity rule,
+  // patterns.md §A.4) so Google's OAuth path (T-0026/T-0035) can reuse
+  // them without a duplicate translation once its frontend wiring lands.
+  'auth.oauthNotAllowedForAdmin':
+    'Administrátorský účet se nepřihlašuje přes Apple ani Google — použijte e-mail a heslo.',
+  'auth.oauthInvalidState': 'Platnost přihlašovacího požadavku vypršela. Zkuste to prosím znovu.',
+  'auth.oauthEmailNotVerified': 'E-mail u zvoleného účtu není ověřený, přihlášení nelze dokončit.',
+  'auth.oauthExchangeFailed': 'Přihlášení se nepodařilo dokončit. Zkuste to prosím znovu.',
+
   // Auth — shared shell
   'auth.shared.eyebrow': 'Makables marketplace',
   'auth.shared.point_verified': 'Ověření makeři a transparentní hodnocení na jednom místě.',
@@ -210,6 +231,32 @@ export const messages = {
   'footer.link.privacy': 'Ochrana údajů',
   'footer.link.contact': 'Kontakt',
   'footer.copyright': '© {year} Makables. Všechna práva vyhrazena.',
+
+  // Cookie consent banner (T-0147, dopady §2.8)
+  'cookieConsent.title': 'Používáme cookies',
+  'cookieConsent.description':
+    'Nezbytné cookies používáme vždy pro fungování platformy. Analytické a marketingové cookies nasadíme jen s vaším souhlasem. Více se dozvíte v',
+  'cookieConsent.privacyLinkText': 'zásadách ochrany osobních údajů',
+  'cookieConsent.acceptAll': 'Přijmout vše',
+  'cookieConsent.necessaryOnly': 'Pouze nezbytné',
+  'cookieConsent.customize': 'Nastavit předvolby',
+  'cookieConsent.customizeTitle': 'Nastavení souhlasu s cookies',
+  'cookieConsent.customizeDescription':
+    'Vyberte, které kategorie cookies chcete povolit. Nezbytné cookies nelze vypnout, jsou nutné pro chod platformy.',
+  'cookieConsent.categoryNecessaryLabel': 'Nezbytné',
+  'cookieConsent.categoryNecessaryDescription':
+    'Umožňují základní funkce jako přihlášení, zabezpečení a průběh objednávky. Bez nich platforma nefunguje.',
+  'cookieConsent.categoryAnalyticsLabel': 'Analytické',
+  'cookieConsent.categoryAnalyticsDescription':
+    'Pomáhají nám pochopit, jak platformu používáte, abychom ji mohli vylepšovat.',
+  'cookieConsent.categoryMarketingLabel': 'Marketingové',
+  'cookieConsent.categoryMarketingDescription':
+    'Používají se pro personalizovanou nabídku a měření účinnosti kampaní.',
+  'cookieConsent.alwaysOn': 'Vždy aktivní',
+  'cookieConsent.save': 'Uložit nastavení',
+  'cookieConsent.back': 'Zpět',
+  'cookieConsent.close': 'Zavřít',
+  'cookieConsent.settingsLinkLabel': 'Nastavení cookies',
 
   // Catalog — page
   'catalog.title': 'Katalog výrobců',

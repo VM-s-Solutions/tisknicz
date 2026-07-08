@@ -16,6 +16,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { canonicalJsonHash } from './lib/canonical-json.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendDir = resolve(here, '..');
@@ -43,7 +44,8 @@ for (const doc of documents) {
   }
 
   const specText = await probe.text();
-  const actual = createHash('sha256').update(specText).digest('hex');
+  // Canonicalized (key-sorted) hash — see lib/canonical-json.mjs for why.
+  const actual = canonicalJsonHash(createHash, specText);
 
   if (expected === null || expected === undefined) {
     console.warn(`[skip] ${specName}: no committed hash yet (set after first generation).`);
