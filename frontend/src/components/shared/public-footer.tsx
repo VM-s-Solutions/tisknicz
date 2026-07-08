@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CookieSettingsLink } from '@/components/shared/cookie-settings-link';
 import { t } from '@/lib/i18n';
 
 const CUSTOMER_LINKS = [
@@ -19,9 +20,11 @@ const INFO_LINKS = [
 function FooterColumn({
   title,
   links,
+  extra,
 }: {
   title: string;
   links: ReadonlyArray<{ href: string; key: Parameters<typeof t>[0] }>;
+  extra?: React.ReactNode;
 }) {
   return (
     <div className="space-y-3">
@@ -34,6 +37,7 @@ function FooterColumn({
             </Link>
           </li>
         ))}
+        {extra ? <li>{extra}</li> : null}
       </ul>
     </div>
   );
@@ -47,7 +51,11 @@ export function PublicFooter() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6 lg:px-8">
         <FooterColumn title={t('footer.customers')} links={CUSTOMER_LINKS} />
         <FooterColumn title={t('footer.makers')} links={MAKER_LINKS} />
-        <FooterColumn title={t('footer.information')} links={INFO_LINKS} />
+        <FooterColumn
+          title={t('footer.information')}
+          links={INFO_LINKS}
+          extra={<CookieSettingsLink />}
+        />
       </div>
       <div className="border-t border-zinc-800 px-4 py-4 sm:px-6 lg:px-8">
         <p className="mx-auto max-w-7xl text-sm text-zinc-500">{t('footer.copyright', { year })}</p>

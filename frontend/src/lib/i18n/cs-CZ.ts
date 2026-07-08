@@ -210,6 +210,32 @@ export const messages = {
   'footer.link.privacy': 'Ochrana údajů',
   'footer.copyright': '© {year} Makables. Všechna práva vyhrazena.',
 
+  // Cookie consent banner (T-0147, dopady §2.8)
+  'cookieConsent.title': 'Používáme cookies',
+  'cookieConsent.description':
+    'Nezbytné cookies používáme vždy pro fungování platformy. Analytické a marketingové cookies nasadíme jen s vaším souhlasem. Více se dozvíte v',
+  'cookieConsent.privacyLinkText': 'zásadách ochrany osobních údajů',
+  'cookieConsent.acceptAll': 'Přijmout vše',
+  'cookieConsent.necessaryOnly': 'Pouze nezbytné',
+  'cookieConsent.customize': 'Nastavit předvolby',
+  'cookieConsent.customizeTitle': 'Nastavení souhlasu s cookies',
+  'cookieConsent.customizeDescription':
+    'Vyberte, které kategorie cookies chcete povolit. Nezbytné cookies nelze vypnout, jsou nutné pro chod platformy.',
+  'cookieConsent.categoryNecessaryLabel': 'Nezbytné',
+  'cookieConsent.categoryNecessaryDescription':
+    'Umožňují základní funkce jako přihlášení, zabezpečení a průběh objednávky. Bez nich platforma nefunguje.',
+  'cookieConsent.categoryAnalyticsLabel': 'Analytické',
+  'cookieConsent.categoryAnalyticsDescription':
+    'Pomáhají nám pochopit, jak platformu používáte, abychom ji mohli vylepšovat.',
+  'cookieConsent.categoryMarketingLabel': 'Marketingové',
+  'cookieConsent.categoryMarketingDescription':
+    'Používají se pro personalizovanou nabídku a měření účinnosti kampaní.',
+  'cookieConsent.alwaysOn': 'Vždy aktivní',
+  'cookieConsent.save': 'Uložit nastavení',
+  'cookieConsent.back': 'Zpět',
+  'cookieConsent.close': 'Zavřít',
+  'cookieConsent.settingsLinkLabel': 'Nastavení cookies',
+
   // Catalog — page
   'catalog.title': 'Katalog výrobců',
   'catalog.subtitle': 'Najděte si výrobce ve svém okolí. Filtrujte podle kategorie, města nebo hodnocení.',
