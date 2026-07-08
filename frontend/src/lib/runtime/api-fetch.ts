@@ -18,6 +18,18 @@ const HOST_BASE_URLS: Record<ApiHost, string> = {
   public: process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL ?? 'http://localhost:5104',
 };
 
+/**
+ * Exposes a host's configured base URL to helper modules that need to
+ * build an absolute backend URL themselves (T-0139: the Apple OAuth
+ * `redirectUri` must point at the backend's own `apple/callback` route,
+ * not a frontend route — Apple's `form_post` callback never passes
+ * through the Next.js app). Kept as a thin accessor rather than exporting
+ * `HOST_BASE_URLS` directly so call sites can't mutate the map.
+ */
+export function apiHostBaseUrl(host: ApiHost): string {
+  return HOST_BASE_URLS[host];
+}
+
 export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
   /** JSON body — serialized by the wrapper (set `body` to a string to skip). */
   readonly json?: unknown;
