@@ -210,6 +210,10 @@ public sealed class CreateOrderMakerFeeOverrideIntegrationTests : IAsyncLifetime
             AccessTokenLifetime = TimeSpan.FromMinutes(15),
         }));
         var user = BuildCustomerUser();
+        // The Customer host's RequireEmailConfirmedMiddleware rejects tokens
+        // without an EmailConfirmedAt claim with 403; the seeded customer is
+        // confirmed, so the issued token must carry the claim too.
+        user.ConfirmEmail(new DateTimeOffset(2026, 5, 1, 12, 0, 0, TimeSpan.Zero));
         return issuer.Issue(user, MakablesAudiences.Customer, DateTimeOffset.UtcNow).Token;
     }
 
