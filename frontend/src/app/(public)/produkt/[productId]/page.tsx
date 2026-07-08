@@ -125,16 +125,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
  * page lives in <see cref="ProductGallery"/>. Renders title, price,
  * by-maker link (with verified badge), weight, and the order CTA.
  */
-function ProductInfo({ product }: { readonly product: ProductDetail }) {
+export function ProductInfo({ product }: { readonly product: ProductDetail }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
           {product.title}
         </h1>
-        <p className="text-2xl font-semibold text-brand-400">
-          <ProductPrice product={product} />
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-2xl font-semibold text-brand-400">
+            <ProductPrice product={product} />
+          </p>
+          <Badge variant={product.fulfillmentType === 'InStock' ? 'success' : 'default'}>
+            {t(`product.fulfillmentType.${product.fulfillmentType}`)}
+          </Badge>
+        </div>
       </div>
 
       <Link

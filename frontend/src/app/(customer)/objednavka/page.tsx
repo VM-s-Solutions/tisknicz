@@ -120,6 +120,7 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
             pickupNote={maker.pickupNote}
             pickupCity={maker.city}
             widgetConfig={widgetConfig}
+            fulfillmentType={product.fulfillmentType}
           />
         </div>
       </div>

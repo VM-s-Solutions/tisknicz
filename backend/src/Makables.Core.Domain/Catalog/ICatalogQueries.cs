@@ -106,6 +106,7 @@ public sealed record MakerProductItem(
     long PriceAmountMinor,
     string PriceCurrency,
     string PriceType,
+    string FulfillmentType,
     string? PrimaryImageBlobPath);
 
 /// <summary>
@@ -130,6 +131,7 @@ public sealed record ProductDetail(
     long PriceAmountMinor,
     string PriceCurrency,
     string PriceType,
+    string FulfillmentType,
     int WeightGrams,
     string CategoryId,
     string MakerId,

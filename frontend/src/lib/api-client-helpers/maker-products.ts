@@ -35,6 +35,7 @@ import {
   type IProductImageItem,
   type IUpdateProductRequest,
   type IUploadProductImageResponse,
+  FulfillmentType as FulfillmentTypeEnum,
   PriceType as PriceTypeEnum,
 } from '../api-client/maker-api.v1';
 import { apiFetch } from '../runtime/api-fetch';
@@ -60,6 +61,19 @@ export const PRICE_TYPES = [
   PriceTypeEnum.OnRequest,
 ] as const;
 export { PriceTypeEnum as PriceTypeValues };
+
+/**
+ * String-valued enum mirroring
+ * <c>Makables.Core.Domain.Products.FulfillmentType</c> (T-0144). "Na
+ * zakázku" vs. "skladem" — drives the maker-form control and (via the
+ * public catalog DTOs) the product-detail badge + checkout notice.
+ */
+export type FulfillmentType = FulfillmentTypeEnum;
+export const FULFILLMENT_TYPES = [
+  FulfillmentTypeEnum.MadeToOrder,
+  FulfillmentTypeEnum.InStock,
+] as const;
+export { FulfillmentTypeEnum as FulfillmentTypeValues };
 
 /**
  * Mirror of <c>MakerProductListItem</c> — one row in the maker dashboard

@@ -145,6 +145,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 p.PriceAmountMinor,
                 p.PriceCurrency,
                 p.PriceType.ToString(),
+                p.FulfillmentType.ToString(),
                 p.Images
                     .OrderBy(i => i.SortOrder)
                     .Select(i => i.BlobPath)
@@ -193,6 +194,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 p.PriceAmountMinor,
                 p.PriceCurrency,
                 p.PriceType.ToString(),
+                p.FulfillmentType.ToString(),
                 p.WeightGrams,
                 p.CategoryId,
                 m.Id,

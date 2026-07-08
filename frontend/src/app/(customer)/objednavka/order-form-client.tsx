@@ -51,6 +51,14 @@ export interface OrderFormClientProps {
   readonly pickupCity: string;
   /** `null` when the SSR widget-config fetch failed — Zásilkovna degrades to disabled + retry. */
   readonly widgetConfig: PickupPointWidgetConfig | null;
+  /**
+   * Drives the withdrawal-right notice (T-0144, § 1837 písm. d) OZ) —
+   * rendered above the submit action, before any payment redirect can
+   * occur (AC-4/AC-5). Read from the same loaded product as
+   * `product.priceType` (US-customer-0009 AC-4 precedent); no separate
+   * fetch.
+   */
+  readonly fulfillmentType: 'MadeToOrder' | 'InStock';
 }
 
 /** UX mirror of the Czech-format email rule — backend `EmailAddress()` stays authoritative. */
@@ -63,6 +71,7 @@ export function OrderFormClient({
   pickupNote,
   pickupCity,
   widgetConfig,
+  fulfillmentType,
 }: OrderFormClientProps) {
   const router = useRouter();
 
@@ -403,6 +412,8 @@ export function OrderFormClient({
         />
       </Card>
 
+      <WithdrawalNotice fulfillmentType={fulfillmentType} />
+
       <div className="flex flex-col gap-2">
         <Button type="submit" size="lg" loading={submitting} disabled={noShippingSelectable}>
           {submitting ? t('checkout.submitting') : t('checkout.submit')}
@@ -417,6 +428,46 @@ export function OrderFormClient({
         ) : null}
       </div>
     </form>
+  );
+}
+
+/**
+ * Withdrawal-right notice (T-0144, US-customer-0021). Branches on the
+ * ordered product's `fulfillmentType` — made-to-order goods are exempt
+ * from the standard 14-day right of withdrawal (§ 1837 písm. d)
+ * občanského zákoníku); in-stock goods carry the normal 14-day right.
+ * Renders above the submit action so the customer is informed before
+ * any payment redirect can occur (AC-4/AC-5).
+ *
+ * <para>
+ * Both copy variants are interim placeholder text per the T-0130
+ * legal-placeholder-lock pattern (same idiom as `/vop` and `/gdpr`) —
+ * the final wording is gated behind the pre-existing Q-0030 launch-
+ * blocker, which this ticket does not resolve (AC-7).
+ * </para>
+ */
+export function WithdrawalNotice({
+  fulfillmentType,
+}: {
+  readonly fulfillmentType: 'MadeToOrder' | 'InStock';
+}) {
+  const titleKey =
+    fulfillmentType === 'InStock'
+      ? 'checkout.withdrawalNotice.inStock.title'
+      : 'checkout.withdrawalNotice.madeToOrder.title';
+  const bodyKey =
+    fulfillmentType === 'InStock'
+      ? 'checkout.withdrawalNotice.inStock.body'
+      : 'checkout.withdrawalNotice.madeToOrder.body';
+
+  return (
+    <Alert variant="warning">
+      <p className="text-xs font-semibold uppercase tracking-wide">
+        {t('checkout.withdrawalNotice.interimLabel')}
+      </p>
+      <p className="mt-1 font-semibold">{t(titleKey)}</p>
+      <p className="mt-1">{t(bodyKey)}</p>
+    </Alert>
   );
 }
 

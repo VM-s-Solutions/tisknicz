@@ -1568,6 +1568,7 @@ export class MakerProductItem implements IMakerProductItem {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     primaryImageBlobPath!: string | undefined;
 
     [key: string]: any;
@@ -1592,6 +1593,7 @@ export class MakerProductItem implements IMakerProductItem {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.primaryImageBlobPath = _data["primaryImageBlobPath"];
         }
     }
@@ -1614,6 +1616,7 @@ export class MakerProductItem implements IMakerProductItem {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["primaryImageBlobPath"] = this.primaryImageBlobPath;
         return data;
     }
@@ -1625,6 +1628,7 @@ export interface IMakerProductItem {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     primaryImageBlobPath: string | undefined;
 
     [key: string]: any;
@@ -2035,6 +2039,7 @@ export class ProductDetail implements IProductDetail {
     priceAmountMinor!: number;
     priceCurrency!: string;
     priceType!: string;
+    fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
     makerId!: string;
@@ -2069,6 +2074,7 @@ export class ProductDetail implements IProductDetail {
             this.priceAmountMinor = _data["priceAmountMinor"];
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
+            this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
             this.makerId = _data["makerId"];
@@ -2102,6 +2108,7 @@ export class ProductDetail implements IProductDetail {
         data["priceAmountMinor"] = this.priceAmountMinor;
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
+        data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
         data["makerId"] = this.makerId;
@@ -2124,6 +2131,7 @@ export interface IProductDetail {
     priceAmountMinor: number;
     priceCurrency: string;
     priceType: string;
+    fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
     makerId: string;

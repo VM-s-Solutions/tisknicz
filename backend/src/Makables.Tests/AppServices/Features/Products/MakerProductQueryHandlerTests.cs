@@ -177,6 +177,7 @@ public class MakerProductQueryHandlerTests
         var detail = new MakerProductDetail(
             ProductId: "prod-1", Title: "Hrnek", Description: "popis",
             PriceAmountMinor: 25000, PriceCurrency: "CZK", PriceType: "Fixed",
+            FulfillmentType: "MadeToOrder",
             WeightGrams: 400, CategoryId: "cat-1", IsActive: true,
             CreatedOn: CreatedAt,
             Images: Array.Empty<ProductImageItem>());

@@ -40,11 +40,11 @@ public sealed class ProductController(
 {
     public sealed record CreateProductRequest(
         string CategoryId, string Title, string? Description,
-        long PriceAmountMinor, PriceType PriceType, int WeightGrams);
+        long PriceAmountMinor, PriceType PriceType, FulfillmentType FulfillmentType, int WeightGrams);
 
     public sealed record UpdateProductRequest(
         string CategoryId, string Title, string? Description,
-        long PriceAmountMinor, PriceType PriceType, int WeightGrams);
+        long PriceAmountMinor, PriceType PriceType, FulfillmentType FulfillmentType, int WeightGrams);
 
     // Dedicated controller-level response shapes for the two endpoints
     // whose handler returns a typed payload. The handler responses
@@ -118,6 +118,7 @@ public sealed class ProductController(
             Description: body.Description,
             PriceAmountMinor: body.PriceAmountMinor,
             PriceType: body.PriceType,
+            FulfillmentType: body.FulfillmentType,
             WeightGrams: body.WeightGrams), ct);
         // Project the handler's nested Response into the controller-level
         // shape so the OpenAPI schema gets a unique top-level name (see
@@ -140,6 +141,7 @@ public sealed class ProductController(
             Description: body.Description,
             PriceAmountMinor: body.PriceAmountMinor,
             PriceType: body.PriceType,
+            FulfillmentType: body.FulfillmentType,
             WeightGrams: body.WeightGrams), ct);
         return HandleResult(result);
     }

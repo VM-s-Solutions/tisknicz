@@ -51,6 +51,13 @@ public sealed class Product : Auditable
     public string PriceCurrency { get; private set; } = default!;
     public PriceType PriceType { get; private set; }
 
+    /// <summary>
+    /// "Na zakázku" vs. "skladem" (T-0144). Drives the checkout withdrawal-
+    /// right notice; defaults to <see cref="Products.FulfillmentType.MadeToOrder"/>
+    /// (the safer legal posture, and the platform's dominant use case).
+    /// </summary>
+    public FulfillmentType FulfillmentType { get; private set; }
+
     /// <summary>Item shipping weight in grams (Zásilkovna / Comgate input).</summary>
     public int WeightGrams { get; private set; }
 
@@ -70,7 +77,8 @@ public sealed class Product : Auditable
         global::Makables.Core.Domain.Money.Money price,
         PriceType priceType,
         int weightGrams,
-        string countryCode)
+        string countryCode,
+        FulfillmentType fulfillmentType = FulfillmentType.MadeToOrder)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Id is required.", nameof(id));
@@ -111,6 +119,7 @@ public sealed class Product : Auditable
             PriceAmountMinor = price.AmountMinor,
             PriceCurrency = price.Currency,
             PriceType = priceType,
+            FulfillmentType = fulfillmentType,
             WeightGrams = weightGrams,
             CountryCode = countryCode.ToUpperInvariant(),
         };
@@ -126,7 +135,8 @@ public sealed class Product : Auditable
         string? description,
         global::Makables.Core.Domain.Money.Money price,
         PriceType priceType,
-        int weightGrams)
+        int weightGrams,
+        FulfillmentType fulfillmentType = FulfillmentType.MadeToOrder)
     {
         if (string.IsNullOrWhiteSpace(categoryId))
             throw new ArgumentException("CategoryId is required.", nameof(categoryId));
@@ -156,6 +166,7 @@ public sealed class Product : Auditable
         Description = trimmedDescription;
         PriceAmountMinor = price.AmountMinor;
         PriceType = priceType;
+        FulfillmentType = fulfillmentType;
         WeightGrams = weightGrams;
         return this;
     }

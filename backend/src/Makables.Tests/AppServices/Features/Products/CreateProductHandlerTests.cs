@@ -50,7 +50,7 @@ public class CreateProductHandlerTests
 
     private static CreateProduct.Command ValidCommand(long price = 25000, PriceType type = PriceType.Fixed) =>
         new(CategoryId: "cat-1", Title: "Hrnek", Description: "popis",
-            PriceAmountMinor: price, PriceType: type, WeightGrams: 400);
+            PriceAmountMinor: price, PriceType: type, FulfillmentType: FulfillmentType.MadeToOrder, WeightGrams: 400);
 
     private void WireHappyPath()
     {
@@ -123,5 +123,31 @@ public class CreateProductHandlerTests
         // IDOR shield — owning maker resolved from session.
         var props = typeof(CreateProduct.Command).GetProperties();
         props.Should().NotContain(p => p.Name.Equals("MakerId", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // === Validator (T-0144) ===
+
+    [Fact]
+    public void Validator_accepts_MadeToOrder_and_InStock()
+    {
+        var validator = new CreateProduct.Validator();
+
+        validator.Validate(ValidCommand() with { FulfillmentType = FulfillmentType.MadeToOrder })
+            .IsValid.Should().BeTrue();
+        validator.Validate(ValidCommand() with { FulfillmentType = FulfillmentType.InStock })
+            .IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_rejects_out_of_range_FulfillmentType()
+    {
+        var validator = new CreateProduct.Validator();
+
+        var result = validator.Validate(ValidCommand() with { FulfillmentType = (FulfillmentType)99 });
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e =>
+            e.PropertyName == nameof(CreateProduct.Command.FulfillmentType)
+            && e.ErrorCode == BusinessErrorMessage.InvalidEnumValue);
     }
 }
