@@ -103,6 +103,93 @@ public class OpenCustomerDisputeHandlerTests
             OrderId, OutboxEventTypes.OrderDisputedAdminEmail, Arg.Any<string>());
     }
 
+    // === T-0145 14-day open-window guard (AC-1/AC-2/AC-3) ===
+
+    [Fact]
+    public async Task Exactly_at_14_days_from_delivery_still_succeeds()
+    {
+        // AC-1 boundary: now == DeliveredAt + 14 days is INSIDE the window
+        // ("now() <= DeliveredAt + 14 days").
+        var order = BuildDeliveredOrder();
+        _clock.UtcNow.Returns(order.DeliveredAt!.Value.AddDays(OpenCustomerDispute.OpenWindowDays));
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _sut.Handle(
+            new OpenCustomerDispute.Command(OrderId, DisputeCategory.DamagedItem, "Na hranici okna."),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        order.State.Should().Be(OrderState.Disputed);
+    }
+
+    [Fact]
+    public async Task One_tick_past_14_days_from_delivery_is_rejected_with_windowExpired()
+    {
+        // AC-2 boundary: now() > DeliveredAt + 14 days is OUTSIDE the window.
+        var order = BuildDeliveredOrder();
+        _clock.UtcNow.Returns(order.DeliveredAt!.Value.AddDays(OpenCustomerDispute.OpenWindowDays).AddTicks(1));
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _sut.Handle(
+            new OpenCustomerDispute.Command(OrderId, DisputeCategory.DamagedItem, "Za oknem."),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.OrderDisputeWindowExpired);
+        order.State.Should().Be(OrderState.Delivered, "the order must NOT flip to Disputed");
+        await _disputes.DidNotReceiveWithAnyArgs().AddAsync(default!, default);
+        _outbox.DidNotReceive().Enqueue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [InlineData(OrderState.Paid)]
+    [InlineData(OrderState.Accepted)]
+    [InlineData(OrderState.Shipped)]
+    public async Task No_DeliveredAt_anchor_sails_through_unaffected_by_the_window(OrderState state)
+    {
+        // AC-3: Paid/Accepted/Shipped have no DeliveredAt to anchor a
+        // window to — the guard must not fire even with a clock far in
+        // the future.
+        var order = InFlightOrder(state);
+        _clock.UtcNow.Returns(Now.AddYears(10));
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _sut.Handle(
+            new OpenCustomerDispute.Command(OrderId, DisputeCategory.Other, "Stále bez doručení."),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        order.State.Should().Be(OrderState.Disputed);
+
+        static Order InFlightOrder(OrderState targetState)
+        {
+            var o = Order.Create(
+                id: OrderId, orderNumber: "M-CZ-20260044",
+                customerUserId: CustomerUserId, makerId: "maker-1", productId: "prod-1",
+                contactName: "Anna", contactEmail: "anna@example.cz", contactPhone: "+420",
+                productPriceAmountMinor: 50000, shippingPriceAmountMinor: 7900,
+                platformFeeAmountMinor: 7500, makerPayoutAmountMinor: 50400,
+                totalAmountMinor: 57900, currency: "CZK", vatRateBp: 2100,
+                shippingMethod: ShippingMethod.ZasilkovnaPickupPoint,
+                zasilkovnaPickupPointId: "pp-42", countryCode: "CZ");
+            var clock = Substitute.For<IClock>();
+            clock.UtcNow.Returns(Now.AddDays(-5));
+            o.MarkAsPaid(clock, "tx-1");
+            if (targetState is OrderState.Accepted or OrderState.Shipped)
+            {
+                o.Accept(clock);
+            }
+            if (targetState is OrderState.Shipped)
+            {
+                o.Ship(clock, "PKT-1", 7);
+            }
+            return o;
+        }
+    }
+
     [Fact]
     public async Task IDOR_foreign_order_returns_notFound_without_writes()
     {

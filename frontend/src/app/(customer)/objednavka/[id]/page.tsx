@@ -24,6 +24,7 @@ import { t } from '@/lib/i18n';
 import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-labels';
 import { ORDER_ATTACHMENT_MAX_FILES } from '@/lib/utils/validation';
 import { AttachmentManagerClient } from './attachment-manager-client';
+import { DisputeEscalationClient } from './dispute-escalation-client';
 import { FileDownloadButton, MarkDeliveredButton } from './order-actions-client';
 import { OrderBreakdown, OrderPriceCards } from './order-breakdown';
 import { OrderThreadClient } from './order-thread-client';
@@ -157,6 +158,20 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
 function hasUrl(value: string | undefined): value is string {
   return typeof value === 'string' && value !== '';
 }
+
+/**
+ * T-0145: mirrors the backend's Disputable allow-list (`Order.OpenDispute`
+ * — Paid | Accepted | Shipped | Delivered per dispute.md §"Parenthesis-
+ * state mechanics") plus `Disputed` itself, so the escalation surface
+ * renders the read-only "already open" note instead of disappearing.
+ */
+const DISPUTABLE_STATES: ReadonlySet<OrderState> = new Set([
+  OrderState.Paid,
+  OrderState.Accepted,
+  OrderState.Shipped,
+  OrderState.Delivered,
+  OrderState.Disputed,
+]);
 
 type ReviewState =
   | { readonly kind: 'submitted'; readonly review: SubmittedReviewDto }
@@ -319,12 +334,25 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
         </Card>
       ) : null}
 
-      <Card padding="md">
+      <Card padding="md" className="flex flex-col gap-4">
         <OrderThreadClient
           orderId={detail.orderId}
           initialPage={initialThreadPage}
           canPost={detail.state !== OrderState.PendingPayment}
         />
+
+        {/* T-0145: "Reklamovat" lands HERE (in the thread), not in a
+            standalone form — the escalate action + category selector are
+            scoped to the Disputable allow-list mirrored from
+            Order.OpenDispute (Paid | Accepted | Shipped | Delivered),
+            plus Disputed itself (renders the read-only note). */}
+        {DISPUTABLE_STATES.has(detail.state) ? (
+          <DisputeEscalationClient
+            orderId={detail.orderId}
+            state={detail.state}
+            deliveredAt={detail.deliveredAt}
+          />
+        ) : null}
       </Card>
 
       {/* Terminal post-delivery action — renders last, after the thread.

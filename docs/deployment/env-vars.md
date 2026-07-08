@@ -31,6 +31,7 @@ key fails function indexing at host startup. The defaults below are the canonica
 | `SyncShipmentStatuses:Schedule` | `0 0 0,6,12,18 * * *` | Every 6 h — Packeta status pull for in-flight shipments. T-0078. |
 | `CancelExpiredPendingPaymentOrders:Schedule` | `0 0 2 * * *` | Daily 02:00 UTC — cancel `PendingPayment` orders older than 24 h (`CancellationSource = AutoExpiry`). T-0083. |
 | `RunWeeklyPayoutBatch:Schedule` | `0 0 2 * * 1` | Monday 02:00 UTC — weekly maker payout batch (`CreatePayoutBatch`). Also reachable via `POST /api/payouts/run-batch` (function key). T-0104. |
+| `DisputeAutoEscalation:Schedule` | `0 0 9 * * *` | Daily 09:00 UTC — escalate customer-sourced disputes past the 7-day maker-response window with no maker reply (`EscalateDispute`, notification-only). T-0145. |
 
 ## Operator-set: outbox queues + dispatcher
 
