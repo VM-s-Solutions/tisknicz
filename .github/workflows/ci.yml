@@ -19,6 +19,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Cache restored NuGet packages. No packages.lock.json exists, so key on the
+      # central package manifest (Directory.Packages.props pins every version) +
+      # global.json + all csproj (catches package-ref add/remove).
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/src/Directory.Packages.props', 'backend/src/global.json', 'backend/src/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       - name: Restore
         run: dotnet restore backend/src/Makables.Api.slnx
 
@@ -82,6 +93,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/src/Directory.Packages.props', 'backend/src/global.json', 'backend/src/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
