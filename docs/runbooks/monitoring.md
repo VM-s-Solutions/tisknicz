@@ -53,20 +53,20 @@ ADR 0023 §4): `outbox_lag_seconds`, `outbox_stalled_count`, `payment_create_fai
 
 ## 1. Customer API 5xx rate — > 1% / 5 min — Sev 2
 
-**Means:** the Customer host (`makables-prod-customer`) is throwing unhandled errors on > 1% of
+**Means:** the Customer host (`app-makables-customer-weu-prod`) is throwing unhandled errors on > 1% of
 requests. This eats into the 99.5% customer-facing availability budget (ADR 0023 §3).
 
 **Confirm (KQL, App Insights):**
 ```kql
 requests
-| where timestamp > ago(15m) and cloud_RoleName == "makables-prod-customer"
+| where timestamp > ago(15m) and cloud_RoleName == "app-makables-customer-weu-prod"
 | summarize total=count(), errors=countif(resultCode startswith "5") by bin(timestamp, 5m)
 | extend errorRate = todouble(errors) / total
 ```
 Then pivot to the failing operation and pull the exception:
 ```kql
 exceptions
-| where timestamp > ago(15m) and cloud_RoleName == "makables-prod-customer"
+| where timestamp > ago(15m) and cloud_RoleName == "app-makables-customer-weu-prod"
 | project timestamp, operation_Name, type, outerMessage, operation_Id
 ```
 
@@ -88,7 +88,7 @@ succeed while order state lags and customers are stuck (ADR 0023 §3).
 **Confirm:**
 ```kql
 requests
-| where timestamp > ago(15m) and cloud_RoleName == "makables-prod-public"
+| where timestamp > ago(15m) and cloud_RoleName == "app-makables-public-weu-prod"
 | where url has "/webhooks/"
 | summarize total=count(), errors=countif(resultCode startswith "5") by bin(timestamp, 5m)
 ```
@@ -134,7 +134,7 @@ until then the tick log + the stalled-count endpoint (§4) are the authoritative
 (`*/30 * * * * *`) stopped firing, or the storage/queue conn string broke (no publish target).
 
 **First response:**
-1. Confirm the Functions host (`makables-prod-functions`) is running and `alwaysOn` is true
+1. Confirm the Functions host (`func-makables-weu-prod`) is running and `alwaysOn` is true
    (`functions.bicep` sets it).
 2. **Force a drain** via the escape-hatch (T-0029): `POST /api/outbox/process` with the
    `x-functions-key` header (`ProcessOutboxFunction.RunHttp`). This runs `DispatchDueAsync`
@@ -179,7 +179,7 @@ ORDER BY created_at;
 
 ## 5. Database CPU — > 80% / 10 min — Sev 2
 
-**Means:** `makables-prod-pg` (Postgres Flexible Server) is CPU-saturated. On a **Burstable** SKU
+**Means:** `pg-makables-weu-prod` (Postgres Flexible Server) is CPU-saturated. On a **Burstable** SKU
 (staging `Standard_B1ms`; ⚠ confirm prod SKU — ADR 0023 §7 names `D2s_v3` General Purpose for prod,
 but `main.bicep`'s default is `Standard_B2s`) this also **burns CPU credits**, after which the
 server throttles hard.

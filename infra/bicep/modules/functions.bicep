@@ -1,7 +1,19 @@
 // Azure Functions module — hosts the outbox processor, timer jobs, and
 // queue-triggered work per ADR 0020. Single Functions app for the MVP.
+//
+// SECRETS (T-0134, Cleansia pattern):
+//   - AzureWebJobsStorage is IDENTITY-BASED (`__accountName` + `__credential` =
+//     managedidentity) — no account key in app settings. The Functions MI needs
+//     Storage Blob Data OWNER (host coordination blobs) + Queue Data Contributor
+//     (queue triggers) on this storage account; both are granted in
+//     role-assignments.bicep. On a FIRST provision the host may crash-loop for a
+//     few minutes until RBAC propagates — it self-heals; restart to hurry it.
+//   - App-level secrets (Postgres/Blob/outbox connection strings, provider keys)
+//     arrive via `secretAppSettings` as Key Vault REFERENCE strings composed in
+//     main.bicep. The app-level OutboxQueues:ConnectionString stays a connection
+//     string (via Key Vault) because OutboxQueueOptions only supports that shape.
 
-@description('Functions app name, e.g. makables-dev-functions.')
+@description('Functions app name, e.g. func-makables-weu-dev.')
 param functionsAppName string
 
 @description('Storage account used by the Functions runtime + outbox queues.')
@@ -14,41 +26,8 @@ param appServicePlanId string
 @secure()
 param appInsightsConnectionString string
 
-@description('Postgres connection string for the Functions host.')
-@secure()
-param postgresConnectionString string
-
-@description('Blob storage account connection string (AzureBlobStorage:ConnectionString). NOT ServiceUri — App Service/Functions blocks app settings ending in the reserved __ServiceUri suffix.')
-@secure()
-param blobConnectionString string
-
-// --- Provider secrets the Functions host validates via ValidateOnStart ---
-// Makables.Functions/Program.cs calls AddMakablesClients + AddMakablesBlobStorage,
-// so it shares the Web hosts' provider requirements (it does NOT call
-// AddMakablesAuth, so no Jwt key here). Sourced from GitHub Actions secrets.
-
-@secure()
-@description('SendGrid API key (SendGrid:ApiKey).')
-param sendGridApiKey string
-
-@description('Comgate merchant id (Comgate:MerchantId) — non-secret.')
-param comgateMerchantId string
-
-@secure()
-@description('Comgate webhook secret (Comgate:Secret).')
-param comgateSecret string
-
-@secure()
-@description('Packeta API key (Packeta:ApiKey).')
-param packetaApiKey string
-
-@secure()
-@description('Packeta public widget key (Packeta:PublicWidgetKey).')
-param packetaPublicWidgetKey string
-
-@secure()
-@description('Mapbox access token (Mapbox:AccessToken).')
-param mapboxAccessToken string
+@description('Secret-bearing app settings as { name, value } pairs where every value is a Key Vault REFERENCE string (no secret material). Composed in main.bicep.')
+param secretAppSettings array = []
 
 // Timer NCRONTAB schedules (6-field). These are %key% binding expressions on
 // the [TimerTrigger] attributes with NO in-code fallback — a missing key fails
@@ -88,11 +67,71 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   }
 }
 
-// TODO(T-0134): migrate AzureWebJobsStorage to identity-based connection
-// (AzureWebJobsStorage__accountName + managed-identity role assignment)
-// so the account key is no longer embedded in app settings. Tracked in
-// the pre-launch ops runbook.
-var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'
+var baseAppSettings = [
+  // Identity-based host storage: no account key in app settings. Requires the
+  // Functions MI to hold Blob Data Owner + Queue Data Contributor on this
+  // account (role-assignments.bicep).
+  {
+    name: 'AzureWebJobsStorage__accountName'
+    value: storage.name
+  }
+  {
+    name: 'AzureWebJobsStorage__credential'
+    value: 'managedidentity'
+  }
+  {
+    name: 'FUNCTIONS_EXTENSION_VERSION'
+    value: '~4'
+  }
+  {
+    name: 'FUNCTIONS_WORKER_RUNTIME'
+    value: 'dotnet-isolated'
+  }
+  {
+    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+  // Outbox queue names: %key% bindings on the queue-triggered functions; a
+  // missing one fails indexing. The queue CONNECTION string arrives via
+  // secretAppSettings (Key Vault reference — derived-secrets.bicep writes it).
+  {
+    name: 'OutboxQueues__SendEmailQueueName'
+    value: 'send-email'
+  }
+  {
+    name: 'OutboxQueues__GenerateInvoiceQueueName'
+    value: 'generate-invoice'
+  }
+  {
+    name: 'OutboxQueues__GenerateLabelQueueName'
+    value: 'generate-label'
+  }
+  // Timer schedules (%key% bindings — missing key fails indexing).
+  {
+    name: 'ProcessOutbox__Schedule'
+    value: processOutboxSchedule
+  }
+  {
+    name: 'AutoDeliverOrders__Schedule'
+    value: autoDeliverOrdersSchedule
+  }
+  {
+    name: 'SyncShipmentStatuses__Schedule'
+    value: syncShipmentStatusesSchedule
+  }
+  {
+    name: 'CancelExpiredPendingPaymentOrders__Schedule'
+    value: cancelExpiredOrdersSchedule
+  }
+  {
+    name: 'RunWeeklyPayoutBatch__Schedule'
+    value: runWeeklyPayoutBatchSchedule
+  }
+  {
+    name: 'DisputeAutoEscalation__Schedule'
+    value: disputeAutoEscalationSchedule
+  }
+]
 
 resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionsAppName
@@ -109,111 +148,38 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
       alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage'
-          value: storageConnectionString
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet-isolated'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsightsConnectionString
-        }
-        {
-          name: 'ConnectionStrings__Postgres'
-          value: postgresConnectionString
-        }
-        {
-          name: 'BlobStorage__ConnectionString'
-          value: blobConnectionString
-        }
-        // Outbox queues: this Functions storage account doubles as the queue
-        // store (ADR 0020 — Functions + publisher share one account). The
-        // three queue names are %key% bindings on the queue-triggered
-        // functions; a missing one fails indexing.
-        {
-          name: 'OutboxQueues__ConnectionString'
-          value: storageConnectionString
-        }
-        {
-          name: 'OutboxQueues__SendEmailQueueName'
-          value: 'send-email'
-        }
-        {
-          name: 'OutboxQueues__GenerateInvoiceQueueName'
-          value: 'generate-invoice'
-        }
-        {
-          name: 'OutboxQueues__GenerateLabelQueueName'
-          value: 'generate-label'
-        }
-        // Timer schedules (%key% bindings — missing key fails indexing).
-        {
-          name: 'ProcessOutbox__Schedule'
-          value: processOutboxSchedule
-        }
-        {
-          name: 'AutoDeliverOrders__Schedule'
-          value: autoDeliverOrdersSchedule
-        }
-        {
-          name: 'SyncShipmentStatuses__Schedule'
-          value: syncShipmentStatusesSchedule
-        }
-        {
-          name: 'CancelExpiredPendingPaymentOrders__Schedule'
-          value: cancelExpiredOrdersSchedule
-        }
-        {
-          name: 'RunWeeklyPayoutBatch__Schedule'
-          value: runWeeklyPayoutBatchSchedule
-        }
-        {
-          name: 'DisputeAutoEscalation__Schedule'
-          value: disputeAutoEscalationSchedule
-        }
-        // Provider secrets (ValidateOnStart on the Functions host).
-        {
-          name: 'SendGrid__ApiKey'
-          value: sendGridApiKey
-        }
-        {
-          name: 'Comgate__MerchantId'
-          value: comgateMerchantId
-        }
-        {
-          name: 'Comgate__Secret'
-          value: comgateSecret
-        }
-        {
-          name: 'Packeta__ApiKey'
-          value: packetaApiKey
-        }
-        {
-          name: 'Packeta__PublicWidgetKey'
-          value: packetaPublicWidgetKey
-        }
-        {
-          name: 'Mapbox__AccessToken'
-          value: mapboxAccessToken
-        }
-      ]
+      appSettings: concat(baseAppSettings, secretAppSettings)
+    }
+  }
+}
+
+// Container/console logs to the filesystem so Log stream shows the worker's
+// stdout (startup crashes, host errors). See app-service.bicep for rationale.
+resource siteLogs 'Microsoft.Web/sites/config@2024-04-01' = {
+  parent: functionsApp
+  name: 'logs'
+  properties: {
+    applicationLogs: {
+      fileSystem: {
+        level: 'Information'
+      }
+    }
+    httpLogs: {
+      fileSystem: {
+        enabled: true
+        retentionInMb: 100
+        retentionInDays: 3
+      }
+    }
+    detailedErrorMessages: {
+      enabled: true
+    }
+    failedRequestsTracing: {
+      enabled: false
     }
   }
 }
 
 output principalId string = functionsApp.identity.principalId
 output storageAccountName string = storage.name
-
-// Secure: the same storage account is the outbox queue store (ADR 0020 —
-// Functions + the Web-host publisher share one account). The Web hosts need
-// this connection string for OutboxQueues:ConnectionString to enqueue.
-@secure()
-output queuesConnectionString string = storageConnectionString
+output storageAccountId string = storage.id

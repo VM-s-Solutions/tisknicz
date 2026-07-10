@@ -33,7 +33,7 @@ yields a *working* app — once the operator does these. Full procedure:
   secret aborts the deploy (fail-closed). No secret value is in the repo.
   (No `VERCEL_TOKEN` — the frontend deploys to Azure App Service.)
 - [ ] **Azure RG + OIDC federated credential (BLOCKING):** create the
-  `rg-makables-dev` / `makables-prod` resource group and the Entra app + federated
+  `rg-makables-weu-dev` / `rg-makables-weu-prod` resource group and the Entra app + federated
   credential bound to the GitHub environment (the workflows use OIDC, no stored
   password). See deploy-runbook §"One-time operator setup".
 - [ ] **Frontend custom domain (optional for dev):** the frontend runs on the

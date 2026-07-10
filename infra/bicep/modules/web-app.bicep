@@ -4,7 +4,7 @@
 // only runtime config is the NEXT_PUBLIC_* API base URLs (non-secret, baked
 // into the build but also read at runtime for SSR fetches).
 
-@description('Logical app name, e.g. makables-dev-web.')
+@description('Logical app name, e.g. web-makables-weu-dev.')
 param appName string
 
 @description('Resource ID of the App Service Plan to host on (shared with the API hosts).')
@@ -83,6 +83,33 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   tags: {
     role: 'frontend'
+  }
+}
+
+// Container/console logs to the filesystem so Log stream shows Next.js stdout
+// (startup errors, SSR crashes). See app-service.bicep for rationale.
+resource siteLogs 'Microsoft.Web/sites/config@2024-04-01' = {
+  parent: webApp
+  name: 'logs'
+  properties: {
+    applicationLogs: {
+      fileSystem: {
+        level: 'Information'
+      }
+    }
+    httpLogs: {
+      fileSystem: {
+        enabled: true
+        retentionInMb: 100
+        retentionInDays: 3
+      }
+    }
+    detailedErrorMessages: {
+      enabled: true
+    }
+    failedRequestsTracing: {
+      enabled: false
+    }
   }
 }
 

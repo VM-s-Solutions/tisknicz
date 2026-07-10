@@ -3,8 +3,15 @@
 // Each audience gets its own App Service so traffic, scaling, and access
 // logs are isolated per ADR 0005. All four share a single App Service Plan
 // to keep the cost ceiling realistic for the MVP.
+//
+// SECRETS: this module receives secret-bearing settings as `secretAppSettings`
+// — an array of { name, value } pairs whose values are
+// `@Microsoft.KeyVault(SecretUri=...)` REFERENCE strings composed in
+// main.bicep (T-0134). No secret material flows through this module; the
+// host's system-assigned managed identity resolves the references at runtime
+// (Key Vault Secrets User, granted in role-assignments.bicep).
 
-@description('Logical app name, e.g. makables-dev-customer.')
+@description('Logical app name, e.g. app-makables-customer-weu-dev.')
 param appName string
 
 @description('Resource ID of the App Service Plan to host on.')
@@ -26,58 +33,17 @@ param audience string
 @secure()
 param appInsightsConnectionString string
 
-@description('Postgres connection string (forwarded as ConnectionStrings__Postgres).')
-@secure()
-param postgresConnectionString string
-
 @description('Allowed CORS origins for this audience. Injected as the Cors:AllowedOrigins:<audience> config ARRAY the .NET host reads — NOT platform CORS (which AddMakablesCors ignores). An empty array crashes the host outside Development (fail-closed).')
 param corsOrigins array = []
 
-@description('Public site origin for links in emails etc. (PublicAppUrls:WebBaseUrl). Per-env so staging emails do not link to prod.')
+@description('Public site origin for links in emails etc. (PublicAppUrls:WebBaseUrl). Per-env so dev emails do not link to prod.')
 param publicWebBaseUrl string
-
-@description('Blob storage account connection string (AzureBlobStorage:ConnectionString). NOT ServiceUri — App Service blocks app settings ending in the reserved __ServiceUri suffix.')
-@secure()
-param blobConnectionString string
-
-@description('Storage queue connection string for the outbox publisher (OutboxQueues:ConnectionString).')
-@secure()
-param outboxQueuesConnectionString string
-
-// --- Required-to-boot settings the .NET hosts validate via ValidateOnStart ---
-// A missing one crashes the host at startup. Non-secrets are plain params;
-// secrets are @secure() and sourced from GitHub Actions secrets at deploy time
-// (no secret value lives in the repo). See docs/deployment/env-vars.md.
 
 @description('JWT issuer (Jwt:Issuer) — non-secret, per environment.')
 param jwtIssuer string
 
-@secure()
-@description('JWT signing key, base64, >=32 bytes (Jwt:SigningKeyBase64).')
-param jwtSigningKeyBase64 string
-
-@secure()
-@description('SendGrid API key (SendGrid:ApiKey).')
-param sendGridApiKey string
-
-@description('Comgate merchant id (Comgate:MerchantId) — non-secret.')
-param comgateMerchantId string
-
-@secure()
-@description('Comgate webhook secret (Comgate:Secret).')
-param comgateSecret string
-
-@secure()
-@description('Packeta API key (Packeta:ApiKey).')
-param packetaApiKey string
-
-@secure()
-@description('Packeta public widget key (Packeta:PublicWidgetKey).')
-param packetaPublicWidgetKey string
-
-@secure()
-@description('Mapbox access token (Mapbox:AccessToken).')
-param mapboxAccessToken string
+@description('Secret-bearing app settings as { name, value } pairs where every value is a Key Vault REFERENCE string (no secret material). Composed in main.bicep from the vault URI + secret names.')
+param secretAppSettings array = []
 
 // CORS origins injected as the Cors__AllowedOrigins__<audience>__N indexed
 // app settings that bind to the string[] the host reads. (Bicep app settings
@@ -101,10 +67,6 @@ var baseAppSettings = [
     value: audience
   }
   {
-    name: 'ConnectionStrings__Postgres'
-    value: postgresConnectionString
-  }
-  {
     name: 'WEBSITES_PORT'
     value: '8080'
   }
@@ -113,44 +75,8 @@ var baseAppSettings = [
     value: publicWebBaseUrl
   }
   {
-    name: 'BlobStorage__ConnectionString'
-    value: blobConnectionString
-  }
-  {
-    name: 'OutboxQueues__ConnectionString'
-    value: outboxQueuesConnectionString
-  }
-  {
     name: 'Jwt__Issuer'
     value: jwtIssuer
-  }
-  {
-    name: 'Jwt__SigningKeyBase64'
-    value: jwtSigningKeyBase64
-  }
-  {
-    name: 'SendGrid__ApiKey'
-    value: sendGridApiKey
-  }
-  {
-    name: 'Comgate__MerchantId'
-    value: comgateMerchantId
-  }
-  {
-    name: 'Comgate__Secret'
-    value: comgateSecret
-  }
-  {
-    name: 'Packeta__ApiKey'
-    value: packetaApiKey
-  }
-  {
-    name: 'Packeta__PublicWidgetKey'
-    value: packetaPublicWidgetKey
-  }
-  {
-    name: 'Mapbox__AccessToken'
-    value: mapboxAccessToken
   }
 ]
 
@@ -169,11 +95,41 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       use32BitWorkerProcess: false
-      appSettings: concat(baseAppSettings, corsAppSettings)
+      appSettings: concat(baseAppSettings, secretAppSettings, corsAppSettings)
     }
   }
   tags: {
     audience: audience
+  }
+}
+
+// App Service Logs — container stdout/stderr to the filesystem so the portal
+// Log stream / `az webapp log tail` / Kudu show the app's console output.
+// OFF by default on Linux App Service, which is why a crashing container shows
+// nothing in Log stream. Filesystem logging auto-disables after 12h of quota
+// pressure but the retention below keeps it bounded regardless.
+resource siteLogs 'Microsoft.Web/sites/config@2024-04-01' = {
+  parent: app
+  name: 'logs'
+  properties: {
+    applicationLogs: {
+      fileSystem: {
+        level: 'Information'
+      }
+    }
+    httpLogs: {
+      fileSystem: {
+        enabled: true
+        retentionInMb: 100
+        retentionInDays: 3
+      }
+    }
+    detailedErrorMessages: {
+      enabled: true
+    }
+    failedRequestsTracing: {
+      enabled: false
+    }
   }
 }
 

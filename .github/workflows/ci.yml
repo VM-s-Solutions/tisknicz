@@ -196,17 +196,13 @@ jobs:
         run: az bicep build --file infra/bicep/main.bicep --stdout > /dev/null
       - name: Validate .bicepparam files compile
         run: |
-          az bicep build-params --file infra/bicep/envs/staging.bicepparam --stdout > /dev/null
-          az bicep build-params --file infra/bicep/envs/production.bicepparam --stdout > /dev/null
+          az bicep build-params --file infra/bicep/envs/weu.dev.bicepparam --stdout > /dev/null
+          az bicep build-params --file infra/bicep/envs/weu.prod.bicepparam --stdout > /dev/null
         env:
           # build-params evaluates readEnvironmentVariable(); supply stub values
           # so compilation succeeds (these are NOT real secrets — CI lint only).
+          # Provider/JWT secrets are no longer Bicep params (T-0134 — they are
+          # pushed to Key Vault by the deploy workflow), so only the Postgres
+          # admin pair is needed here; ALERT_EMAIL has an in-file default.
           POSTGRES_ADMIN_USER: ci-lint
           POSTGRES_ADMIN_PASSWORD: ci-lint
-          JWT_SIGNING_KEY_BASE64: ci-lint
-          SENDGRID_API_KEY: ci-lint
-          COMGATE_MERCHANT_ID: ci-lint
-          COMGATE_SECRET: ci-lint
-          PACKETA_API_KEY: ci-lint
-          PACKETA_PUBLIC_WIDGET_KEY: ci-lint
-          MAPBOX_ACCESS_TOKEN: ci-lint

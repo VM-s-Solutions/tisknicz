@@ -1,9 +1,15 @@
 using '../main.bicep'
 
-// Production environment — same template as staging but with higher SKUs
-// and the production domain as the only CORS origin.
+// Production environment (resource group rg-makables-weu-prod) — same template
+// as dev but with higher SKUs and the production domain as the only CORS origin.
+// Naming follows the Cleansia/CAF convention: <type>-makables-<region>-<env>.
+//
+// SECRETS: only the Postgres admin pair is a Bicep parameter now. The
+// application secrets are pushed into Key Vault by the deploy workflow's
+// "Push external secrets" step and consumed as Key Vault references (T-0134).
 
 param envSlug = 'prod'
+param region = 'weu'
 param location = 'westeurope'
 
 // Per ADR 0023 §7: production runs General Purpose D2s_v3 Postgres and
@@ -41,13 +47,7 @@ param publicCorsOrigins = [
 // Per-env non-secret app config.
 param publicWebBaseUrl = 'https://makables.cz'
 param jwtIssuer = 'https://makables.cz'
-param comgateMerchantId = readEnvironmentVariable('COMGATE_MERCHANT_ID')
 
-// Application secrets — GitHub Actions secrets at deploy time; never committed.
-// Missing secret aborts the deploy (fail-closed), like the Postgres password.
-param jwtSigningKeyBase64 = readEnvironmentVariable('JWT_SIGNING_KEY_BASE64')
-param sendGridApiKey = readEnvironmentVariable('SENDGRID_API_KEY')
-param comgateSecret = readEnvironmentVariable('COMGATE_SECRET')
-param packetaApiKey = readEnvironmentVariable('PACKETA_API_KEY')
-param packetaPublicWidgetKey = readEnvironmentVariable('PACKETA_PUBLIC_WIDGET_KEY')
-param mapboxAccessToken = readEnvironmentVariable('MAPBOX_ACCESS_TOKEN')
+// Ops alert email — production should set the ALERT_EMAIL GitHub secret so
+// Http5xx / latency / exceptions / Postgres alerts actually notify someone.
+param alertEmail = readEnvironmentVariable('ALERT_EMAIL', '')

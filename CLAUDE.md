@@ -10,8 +10,22 @@
 2. **[docs/architecture/overview.md](./docs/architecture/overview.md)** — system shape.
 3. **[docs/adr/](./docs/adr/)** — every architectural decision, numbered. Especially [0007](./docs/adr/0007-stack-pivot-dotnet-backend.md) (the pivot from Supabase to .NET).
 4. **[.claude/agents/](./.claude/agents/)** — your role-specific charter if you are a sub-agent.
+5. **[agents/](./agents/)** — the agent operating system: how the team works together. Start at [agents/WAY-OF-WORKING.md](./agents/WAY-OF-WORKING.md) and [agents/README.md](./agents/README.md).
 
 You are part of a multi-agent team building a Czech marketplace platform with production-grade discipline. Every decision serves a self-running marketplace that requires minimal manual intervention. Once we go live, changes are expensive — bias toward long-term flexibility.
+
+## Agent operating system
+
+The team runs as a deterministic, artifact-based flow. `.claude/agents/` holds the agent **charters** (system prompts); `agents/` holds the **operating system** everything they read, produce, and coordinate through:
+
+- **[agents/WAY-OF-WORKING.md](./agents/WAY-OF-WORKING.md)** — the request → shipped-code walkthrough.
+- **[agents/process/](./agents/process/)** — [routing](./agents/process/routing.md) (signal → agent), [ticket-lifecycle](./agents/process/ticket-lifecycle.md) (states + Definition of Ready), [quality-gates](./agents/process/quality-gates.md), [deliberation](./agents/process/deliberation.md) (defense panels), [communication](./agents/process/communication.md), [enforcement](./agents/process/enforcement.md), [shared-file-lanes](./agents/process/shared-file-lanes.md).
+- **[agents/knowledge/](./agents/knowledge/)** — how-we-build guidance (conventions, security S-rules, testing/TDD, runtime-readiness) that complements the pattern catalog.
+- **[agents/templates/](./agents/templates/)** — ticket / story / ADR / audit / test-plan templates.
+
+The backlog itself (tickets, ADRs, questions, sprint status) lives under **[docs/](./docs/)** — that is the system of record for project state; `agents/` is the process layer.
+
+Entry point: **`/team <request>`** hands work to the PM, who convenes a defense panel, files tickets, routes to specialists, runs a reviewer in parallel with every developer, and gates before `done`. Narrower commands: `/plan`, `/execute`, `/feature`, `/review`, `/audit`, `/sync`.
 
 ## Stack reality (dual-stack monorepo)
 
@@ -34,10 +48,13 @@ You are part of a multi-agent team building a Czech marketplace platform with pr
 
 ```
 makables/
-├── backend/             # /backend/src/Makables.Api.sln (.NET solution)
+├── backend/             # /backend/src/Makables.Api.slnx (.NET solution)
 ├── frontend/            # Next.js app
-├── docs/                # process, ADRs, user stories, tickets, architecture
-├── .claude/agents/      # sub-agent charters
+├── docs/                # process, ADRs, user stories, tickets, architecture (project system of record)
+├── agents/              # agent operating system: process, knowledge, templates
+├── infra/bicep/         # Azure IaC (per-audience hosts, Postgres, Key Vault, Functions)
+├── scripts/             # run-dev.ps1, check-consistency.mjs
+├── .claude/agents/      # sub-agent charters   .claude/commands/ # slash commands
 └── CLAUDE.md, README.md, TISKNI_MVP_SPEC.md, PROJEKT-VIZE.md
 ```
 

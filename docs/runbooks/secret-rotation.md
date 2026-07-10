@@ -86,8 +86,8 @@ accepted behavior is **"all active sessions drop on rotation"**:
 
 **Procedure:**
 1. Generate a new 32-byte key: `openssl rand -base64 32` (or `[Convert]::ToBase64String((1..32 | % {Get-Random -Max 256}))` in PowerShell).
-2. Set it in the prod vault: `az keyvault secret set --vault-name makables-prod-kv --name jwt-signing-key --value "<base64>"` (or update the App Setting until KV-ref cut-over).
-3. **Restart all four Web hosts** (`makables-prod-customer/-maker/-admin/-public`) and the Functions
+2. Set it in the prod vault: `az keyvault secret set --vault-name kv-makables-weu-prod --name jwt-signing-key --value "<base64>"` (or update the App Setting until KV-ref cut-over).
+3. **Restart all four Web hosts** (`app-makables-customer-weu-prod/-maker/-admin/-public`) and the Functions
    host. `ValidateOnStart` re-validates the new key at boot — a malformed base64 or a < 32-byte key
    **fails the boot**, so you catch a bad rotation before it serves a request.
 4. **Blast radius:** all hosts (the key is shared). Sub-15-min window of access-token churn handled
@@ -149,7 +149,7 @@ widget key.
 
 Injected by Bicep from the Postgres module output (`main.bicep`, `app-service.bicep`,
 `functions.bicep`). **This is the highest-blast-radius secret.**
-1. Rotate the admin password: `az postgres flexible-server update --resource-group <rg> --name makables-prod-pg --admin-password "<new>"`.
+1. Rotate the admin password: `az postgres flexible-server update --resource-group <rg> --name pg-makables-weu-prod --admin-password "<new>"`.
 2. `az keyvault secret set --name postgres-connstring --value "Host=...;Database=makables;Username=...;Password=<new>;SslMode=Require"`.
 3. **Restart all four Web hosts + the Functions host.** `Web.Customer` is the migration runner; the
    other hosts wait for it on a readiness check (ADR 0023 §7) — restart Customer first, confirm

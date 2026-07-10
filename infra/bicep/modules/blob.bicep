@@ -47,6 +47,7 @@ resource containerResources 'Microsoft.Storage/storageAccounts/blobServices/cont
 }]
 
 output storageAccountName string = storage.name
+output storageAccountId string = storage.id
 output blobServiceUri string = storage.properties.primaryEndpoints.blob
 
 // Secure: blob account connection string. The hosts inject this as

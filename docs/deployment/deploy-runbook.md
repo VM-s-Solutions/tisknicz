@@ -6,10 +6,10 @@
 > verify a deploy actually produced a working app. Closes T-0138.
 >
 > **Naming note:** the non-production environment is **dev** — Azure resource
-> group `rg-makables-dev`, resources `makables-dev-*` (Bicep `envSlug = 'dev'`),
+> group `rg-makables-weu-dev`, resources `<type>-makables-weu-dev` (Bicep `envSlug = 'dev'`),
 > and the GitHub Actions *environment* is named **`dev`**. The only thing still
 > carrying the old "staging" label is the workflow *filename* `deploy-staging.yml`
-> (kept for path stability) and the `staging.bicepparam` *filename* — both
+> (kept for path stability) and the `weu.dev.bicepparam` *filename* — both
 > describe the dev env.
 
 ## What the pipeline does (per environment)
@@ -37,7 +37,7 @@
 ```bash
 az login
 az account set --subscription <subscription-id>
-az group create --name rg-makables-dev --location westeurope   # prod: makables-prod
+az group create --name rg-makables-weu-dev --location westeurope   # prod: makables-prod
 ```
 
 Configure an **OIDC federated credential** so GitHub Actions can `azure/login`
@@ -99,7 +99,7 @@ runner once the VNet is wired.
 
 ## Verify a deploy actually worked (not just "az succeeded")
 
-1. **Hosts booted:** `GET https://makables-dev-customer.azurewebsites.net/`
+1. **Hosts booted:** `GET https://app-makables-customer-weu-dev.azurewebsites.net/`
    returns `Makables Customer API — alive.` (repeat per host). A boot crash =
    a missing app setting (check the App Service log stream for
    `OptionsValidationException`).

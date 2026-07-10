@@ -1,11 +1,16 @@
 using '../main.bicep'
 
-// Dev environment (resource group rg-makables-dev) — single-region West Europe,
-// Burstable SKUs, narrow CORS allowlist pointing at the dev frontend URL.
-// (This file is still named staging.bicepparam for path stability; the env it
-// describes is the non-production "dev" environment, envSlug = 'dev'.)
+// Dev environment (resource group rg-makables-weu-dev) — single-region West
+// Europe, Burstable SKUs, narrow CORS allowlist pointing at the dev frontend.
+// Naming follows the Cleansia/CAF convention: <type>-makables-<region>-<env>.
+//
+// SECRETS: only the Postgres admin pair is a Bicep parameter now. The
+// application secrets (JWT signing key, SendGrid/Comgate/Packeta/Mapbox) are
+// pushed straight into Key Vault by the deploy workflow's "Push external
+// secrets" step and consumed by the hosts as Key Vault references (T-0134).
 
 param envSlug = 'dev'
+param region = 'weu'
 param location = 'westeurope'
 
 // Postgres goes in northeurope: this subscription is offer-restricted for
@@ -49,14 +54,7 @@ param publicCorsOrigins = [
 // Per-env non-secret app config.
 param publicWebBaseUrl = 'https://dev.makables.cz'
 param jwtIssuer = 'https://dev.makables.cz'
-param comgateMerchantId = readEnvironmentVariable('COMGATE_MERCHANT_ID')
 
-// Application secrets — sourced from GitHub Actions secrets at deploy time;
-// never committed. A missing secret aborts the deploy (fail-closed), exactly
-// like the Postgres password above.
-param jwtSigningKeyBase64 = readEnvironmentVariable('JWT_SIGNING_KEY_BASE64')
-param sendGridApiKey = readEnvironmentVariable('SENDGRID_API_KEY')
-param comgateSecret = readEnvironmentVariable('COMGATE_SECRET')
-param packetaApiKey = readEnvironmentVariable('PACKETA_API_KEY')
-param packetaPublicWidgetKey = readEnvironmentVariable('PACKETA_PUBLIC_WIDGET_KEY')
-param mapboxAccessToken = readEnvironmentVariable('MAPBOX_ACCESS_TOKEN')
+// Ops alert email — optional (empty skips the alerts module). Set the
+// ALERT_EMAIL GitHub secret to enable metric alerts in dev.
+param alertEmail = readEnvironmentVariable('ALERT_EMAIL', '')

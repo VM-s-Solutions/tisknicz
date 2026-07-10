@@ -1,6 +1,12 @@
-# Deploys the non-production "dev" environment (Azure RG rg-makables-dev,
-# resources makables-dev-*, GitHub environment "dev"). The file is named
+# Deploys the non-production "dev" environment (Azure RG rg-makables-weu-dev,
+# resources <type>-makables-weu-dev, GitHub environment "dev"). The file is named
 # deploy-staging.yml for path stability; the env it targets is dev.
+#
+# SECRETS MODEL (T-0134): Bicep provisions the vault + derives the connection
+# strings; this workflow pushes the EXTERNAL secrets (JWT key, SendGrid, Comgate,
+# Packeta, Mapbox) from GitHub Environment secrets into Key Vault right after
+# provisioning. The hosts read everything as Key Vault references via their
+# managed identities — no secret rides as a plaintext App Setting anymore.
 name: Deploy → dev
 
 on:
@@ -11,6 +17,11 @@ on:
 concurrency:
   group: deploy-dev
   cancel-in-progress: false
+
+env:
+  RG: rg-makables-weu-dev
+  KV: kv-makables-weu-dev
+  PG_SERVER: pg-makables-weu-dev
 
 jobs:
   bicep:
@@ -35,8 +46,27 @@ jobs:
         env:
           # The .bicepparam reads these via readEnvironmentVariable(); a missing
           # secret aborts the deploy (fail-closed). No secret value is in the repo.
+          # The provider/JWT secrets are NOT Bicep params anymore — they are pushed
+          # to Key Vault by the step below.
           POSTGRES_ADMIN_USER: ${{ secrets.POSTGRES_ADMIN_USER }}
           POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az deployment group create \
+              --resource-group $RG \
+              --template-file infra/bicep/main.bicep \
+              --parameters infra/bicep/envs/weu.dev.bicepparam
+
+      # Push the EXTERNAL secrets (the ones Bicep cannot derive) into Key Vault.
+      # Self-grants the CI principal Key Vault Secrets Officer on the vault (the
+      # OIDC principal needs User Access Administrator on the RG for this), then
+      # retries each write to ride out RBAC propagation on a fresh assignment.
+      # Idempotent — `az role assignment create` is a no-op when it exists, and
+      # re-setting a secret to the same value is harmless.
+      - name: Push external secrets to Key Vault
+        env:
           JWT_SIGNING_KEY_BASE64: ${{ secrets.JWT_SIGNING_KEY_BASE64 }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           COMGATE_MERCHANT_ID: ${{ secrets.COMGATE_MERCHANT_ID }}
@@ -44,13 +74,42 @@ jobs:
           PACKETA_API_KEY: ${{ secrets.PACKETA_API_KEY }}
           PACKETA_PUBLIC_WIDGET_KEY: ${{ secrets.PACKETA_PUBLIC_WIDGET_KEY }}
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
-        with:
-          azcliversion: latest
-          inlineScript: |
-            az deployment group create \
-              --resource-group rg-makables-dev \
-              --template-file infra/bicep/main.bicep \
-              --parameters infra/bicep/envs/staging.bicepparam
+        run: |
+          set -euo pipefail
+          # Resolve the CI principal's object id (OIDC: account user.name is the app/client id).
+          CI_OID="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+          if [ -z "$CI_OID" ]; then
+            CI_APPID="$(az account show --query user.name -o tsv)"
+            CI_OID="$(az ad sp show --id "$CI_APPID" --query id -o tsv)"
+          fi
+          KV_ID="$(az keyvault show -n "$KV" -g "$RG" --query id -o tsv)"
+          az role assignment create --assignee-object-id "$CI_OID" --assignee-principal-type ServicePrincipal \
+            --role "Key Vault Secrets Officer" --scope "$KV_ID" --output none 2>/dev/null || true
+
+          set_secret() {
+            # $1 = Key Vault secret name, $2 = value; fail loudly if empty (every
+            # secret here is required-to-boot via ValidateOnStart). Retry to ride
+            # out RBAC propagation on a freshly-granted assignment.
+            if [ -z "$2" ]; then
+              echo "::error::GitHub secret for Key Vault secret '$1' is EMPTY — the hosts will crash on ValidateOnStart. Set it and re-run."
+              return 1
+            fi
+            for attempt in 1 2 3 4 5 6; do
+              if az keyvault secret set --vault-name "$KV" --name "$1" --value "$2" --output none 2>/dev/null; then
+                echo "set $1"; return 0
+              fi
+              echo "  $1 not authorized yet (attempt $attempt) — waiting 20s for RBAC propagation…"
+              sleep 20
+            done
+            echo "::error::failed to set $1 after retries (check the CI principal's Key Vault RBAC)"; return 1
+          }
+          set_secret "Jwt--SigningKeyBase64"      "$JWT_SIGNING_KEY_BASE64"
+          set_secret "SendGrid--ApiKey"           "$SENDGRID_API_KEY"
+          set_secret "Comgate--MerchantId"        "$COMGATE_MERCHANT_ID"
+          set_secret "Comgate--Secret"            "$COMGATE_SECRET"
+          set_secret "Packeta--ApiKey"            "$PACKETA_API_KEY"
+          set_secret "Packeta--PublicWidgetKey"   "$PACKETA_PUBLIC_WIDGET_KEY"
+          set_secret "Mapbox--AccessToken"        "$MAPBOX_ACCESS_TOKEN"
 
   migrate:
     name: EF Core migrations → Postgres
@@ -109,7 +168,7 @@ jobs:
             set -euo pipefail
             RUNNER_IP=$(curl -s https://api.ipify.org)
             az postgres flexible-server firewall-rule create \
-              --resource-group rg-makables-dev --server-name makables-dev-db \
+              --resource-group $RG --server-name $PG_SERVER \
               --name ci-migrate-${{ github.run_id }} \
               --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" \
               --output none
@@ -121,7 +180,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y postgresql-client
-          FQDN="makables-dev-db.postgres.database.azure.com"
+          FQDN="$PG_SERVER.postgres.database.azure.com"
           psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
             -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
 
@@ -132,7 +191,7 @@ jobs:
           azcliversion: latest
           inlineScript: |
             az postgres flexible-server firewall-rule delete --yes \
-              --resource-group rg-makables-dev --server-name makables-dev-db \
+              --resource-group $RG --server-name $PG_SERVER \
               --name ci-migrate-${{ github.run_id }} --output none || true
 
   backend:
@@ -147,10 +206,10 @@ jobs:
     strategy:
       matrix:
         host:
-          - { project: 'Makables.Web.Customer', app: 'makables-dev-customer' }
-          - { project: 'Makables.Web.Maker',    app: 'makables-dev-maker'    }
-          - { project: 'Makables.Web.Admin',    app: 'makables-dev-admin'    }
-          - { project: 'Makables.Web.Public',   app: 'makables-dev-public'   }
+          - { project: 'Makables.Web.Customer', app: 'app-makables-customer-weu-dev' }
+          - { project: 'Makables.Web.Maker',    app: 'app-makables-maker-weu-dev'    }
+          - { project: 'Makables.Web.Admin',    app: 'app-makables-admin-weu-dev'    }
+          - { project: 'Makables.Web.Public',   app: 'app-makables-public-weu-dev'   }
     steps:
       - uses: actions/checkout@v4
 
@@ -201,7 +260,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: Azure/functions-action@v1
         with:
-          app-name: makables-dev-functions
+          app-name: func-makables-weu-dev
           package: ${{ runner.temp }}/functions-publish
 
   frontend:
@@ -244,5 +303,5 @@ jobs:
 
       - uses: azure/webapps-deploy@v3
         with:
-          app-name: makables-dev-web
+          app-name: web-makables-weu-dev
           package: frontend/.next/standalone

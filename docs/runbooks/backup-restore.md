@@ -43,14 +43,14 @@ full rewind (see the invoice/audit hazards in §B).
    ```bash
    az postgres flexible-server restore \
      --resource-group <rg> \
-     --name makables-prod-pg-restored \
-     --source-server makables-prod-pg \
+     --name pg-makables-weu-prod-restored \
+     --source-server pg-makables-weu-prod \
      --restore-time "2026-06-21T09:30:00Z"
    ```
 3. **Validate the restored server** before touching production: connect, spot-check row counts on
    `orders`, `invoices`, `outbox_event`, `admin_audit_log`. Confirm the timestamp is right.
 4. **Re-point the connection-string secret** to the restored server's FQDN:
-   - `az keyvault secret set --name postgres-connstring --value "Host=makables-prod-pg-restored.postgres.database.azure.com;Database=makables;Username=...;Password=...;SslMode=Require"`
+   - `az keyvault secret set --name postgres-connstring --value "Host=pg-makables-weu-prod-restored.postgres.database.azure.com;Database=makables;Username=...;Password=...;SslMode=Require"`
    - (Or update the `ConnectionStrings__Postgres` App Setting until the Key Vault-reference cut-over
      lands — see `secret-rotation.md` §C.)
 5. **Restart hosts in order:** `Web.Customer` is the migration runner (ADR 0023 §7); restart it
@@ -114,7 +114,7 @@ that have no other source of truth.
 
 Deleted secrets are recoverable for 90 days (`key-vault.bicep` `softDeleteRetentionInDays: 90`):
 ```bash
-az keyvault secret recover --vault-name makables-prod-kv --name <secret-name>
+az keyvault secret recover --vault-name kv-makables-weu-prod --name <secret-name>
 ```
 A purged secret within the window is also recoverable unless purge-protection forced a hard purge.
 ⚠ **confirm:** purge-protection is **not** enabled in `key-vault.bicep` — consider enabling it
