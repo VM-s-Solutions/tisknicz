@@ -270,6 +270,7 @@ module customerApp 'modules/app-service.bicep' = {
     publicWebBaseUrl: publicWebBaseUrl
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
+    healthCheckPath: '/health'
   }
 }
 
@@ -285,6 +286,7 @@ module makerApp 'modules/app-service.bicep' = {
     publicWebBaseUrl: publicWebBaseUrl
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
+    healthCheckPath: '/health'
   }
 }
 
@@ -300,6 +302,7 @@ module adminApp 'modules/app-service.bicep' = {
     publicWebBaseUrl: publicWebBaseUrl
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
+    healthCheckPath: '/health'
   }
 }
 
@@ -315,6 +318,7 @@ module publicApp 'modules/app-service.bicep' = {
     publicWebBaseUrl: publicWebBaseUrl
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
+    healthCheckPath: '/health'
   }
 }
 

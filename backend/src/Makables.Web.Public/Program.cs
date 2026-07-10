@@ -33,6 +33,11 @@ var app = builder.Build();
 app.UseMakablesPipeline();
 
 app.MapGet("/", () => "Makables Public API — alive.");
+// Liveness probe for the App Service health check (healthCheckPath in
+// infra/bicep/modules/app-service.bicep). Deliberately dependency-free: a
+// probe that touched the DB would turn a transient outage into instance
+// restarts. Any 2xx counts as healthy.
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 app.MapOpenApi();
 

@@ -39,6 +39,17 @@ const nextConfig: NextConfig = {
   // runs with `node server.js`, no full install needed at runtime. The CI
   // deploy job assembles standalone + .next/static + public into the package.
   output: 'standalone',
+  // Pin the workspace root to THIS directory. Without it, Next walks up and
+  // infers the MONOREPO root as the workspace (parent lockfile / .git), which
+  // nests the standalone output under `.next/standalone/frontend/` — the CI
+  // assemble step then fails (`.next/standalone/.next` does not exist) and
+  // `node server.js` would not sit at the deploy-package root that
+  // infra/bicep/modules/web-app.bicep expects. The frontend's dependency
+  // closure is complete within this folder (own package-lock + node_modules).
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
+  },
   compress: true,
   poweredByHeader: false,
   images: {

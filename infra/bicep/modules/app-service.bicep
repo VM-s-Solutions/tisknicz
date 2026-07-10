@@ -45,6 +45,9 @@ param jwtIssuer string
 @description('Secret-bearing app settings as { name, value } pairs where every value is a Key Vault REFERENCE string (no secret material). Composed in main.bicep from the vault URI + secret names.')
 param secretAppSettings array = []
 
+@description('App Service health-check path (Cleansia pattern). The platform pings it per instance; repeated non-2xx marks the instance unhealthy (and with >1 instance pulls it from rotation / restarts it). The API hosts expose a dependency-free liveness endpoint at /health (see each Program.cs). Empty disables the health check.')
+param healthCheckPath string = ''
+
 // CORS origins injected as the Cors__AllowedOrigins__<audience>__N indexed
 // app settings that bind to the string[] the host reads. (Bicep app settings
 // are flat key/value, so the array is expanded to indexed keys here.)
@@ -95,6 +98,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       use32BitWorkerProcess: false
+      healthCheckPath: healthCheckPath
       appSettings: concat(baseAppSettings, secretAppSettings, corsAppSettings)
     }
   }
