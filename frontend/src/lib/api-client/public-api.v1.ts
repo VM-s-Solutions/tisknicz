@@ -1891,6 +1891,8 @@ export class MakerReviewItem implements IMakerReviewItem {
     ratingStars!: number;
     comment!: string | undefined;
     createdAt!: Date;
+    replyBody!: string | undefined;
+    replyCreatedAt!: Date | undefined;
 
     [key: string]: any;
 
@@ -1913,6 +1915,8 @@ export class MakerReviewItem implements IMakerReviewItem {
             this.ratingStars = _data["ratingStars"];
             this.comment = _data["comment"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.replyBody = _data["replyBody"];
+            this.replyCreatedAt = _data["replyCreatedAt"] ? new Date(_data["replyCreatedAt"].toString()) : undefined as any;
         }
     }
 
@@ -1933,6 +1937,8 @@ export class MakerReviewItem implements IMakerReviewItem {
         data["ratingStars"] = this.ratingStars;
         data["comment"] = this.comment;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["replyBody"] = this.replyBody;
+        data["replyCreatedAt"] = this.replyCreatedAt ? this.replyCreatedAt.toISOString() : undefined as any;
         return data;
     }
 }
@@ -1942,6 +1948,8 @@ export interface IMakerReviewItem {
     ratingStars: number;
     comment: string | undefined;
     createdAt: Date;
+    replyBody: string | undefined;
+    replyCreatedAt: Date | undefined;
 
     [key: string]: any;
 }

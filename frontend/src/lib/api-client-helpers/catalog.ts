@@ -79,15 +79,17 @@ export interface MakerProductItem {
 }
 
 /**
- * Mirror of <c>MakerReviewItem</c>. Empty list until T-0050 ships the
- * review producer; kept on the contract so the maker-profile page is
- * forward-compatible.
+ * Mirror of <c>MakerReviewItem</c> (T-0050). The latest 5 active
+ * reviews, newest-first, with the maker's reply when one exists (flat
+ * nullable fields — one overwritable reply per review).
  */
 export interface MakerReviewItem {
   readonly reviewId: string;
   readonly ratingStars: number;
   readonly comment: string | null;
   readonly createdAt: string;
+  readonly replyBody: string | null;
+  readonly replyCreatedAt: string | null;
 }
 
 /**
