@@ -58,6 +58,26 @@ export interface IAdminApi {
     /**
      * @return OK
      */
+    categoriesGET(): Promise<GetAdminCategoriesResponse>;
+
+    /**
+     * @return OK
+     */
+    categoriesPOST(body: CreateCategoryRequest): Promise<CreateCategoryResponse>;
+
+    /**
+     * @return OK
+     */
+    categoriesPUT(categoryId: string, body: UpdateCategoryRequest): Promise<void>;
+
+    /**
+     * @return OK
+     */
+    deactivate(categoryId: string, body: DeactivateCategoryRequest): Promise<void>;
+
+    /**
+     * @return OK
+     */
     countryConfigurationsGET(countryCode: string): Promise<GetCountryConfigurationResponse>;
 
     /**
@@ -247,6 +267,11 @@ export interface IAdminApi {
      * @return OK
      */
     anonymous(): Promise<string>;
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void>;
 }
 
 export class AdminApi implements IAdminApi {
@@ -637,6 +662,227 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<GetAdminAuditLogResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    categoriesGET(): Promise<GetAdminCategoriesResponse> {
+        let url_ = this.baseUrl + "/api/v1/categories";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCategoriesGET(_response);
+        });
+    }
+
+    protected processCategoriesGET(response: Response): Promise<GetAdminCategoriesResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetAdminCategoriesResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetAdminCategoriesResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    categoriesPOST(body: CreateCategoryRequest): Promise<CreateCategoryResponse> {
+        let url_ = this.baseUrl + "/api/v1/categories";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCategoriesPOST(_response);
+        });
+    }
+
+    protected processCategoriesPOST(response: Response): Promise<CreateCategoryResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = CreateCategoryResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CreateCategoryResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    categoriesPUT(categoryId: string, body: UpdateCategoryRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/categories/{categoryId}";
+        if (categoryId === undefined || categoryId === null)
+            throw new globalThis.Error("The parameter 'categoryId' must be defined.");
+        url_ = url_.replace("{categoryId}", encodeURIComponent("" + categoryId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCategoriesPUT(_response);
+        });
+    }
+
+    protected processCategoriesPUT(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    deactivate(categoryId: string, body: DeactivateCategoryRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/categories/{categoryId}/deactivate";
+        if (categoryId === undefined || categoryId === null)
+            throw new globalThis.Error("The parameter 'categoryId' must be defined.");
+        url_ = url_.replace("{categoryId}", encodeURIComponent("" + categoryId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDeactivate(_response);
+        });
+    }
+
+    protected processDeactivate(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 
     /**
@@ -2593,6 +2839,39 @@ export class AdminApi implements IAdminApi {
         }
         return Promise.resolve<string>(null as any);
     }
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void> {
+        let url_ = this.baseUrl + "/health";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processHealth(_response);
+        });
+    }
+
+    protected processHealth(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class AcknowledgeOutboxEventRequest implements IAcknowledgeOutboxEventRequest {
@@ -2771,6 +3050,82 @@ export interface IAdminAuditLogItemDto {
     notes: string | undefined;
     ipAddress: string | undefined;
     createdAt: Date;
+
+    [key: string]: any;
+}
+
+export class AdminCategoryItem implements IAdminCategoryItem {
+    id!: string;
+    name!: string;
+    slug!: string;
+    icon!: string | undefined;
+    description!: string | undefined;
+    sortOrder!: number;
+    countryCode!: string;
+    isActive!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: IAdminCategoryItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.slug = _data["slug"];
+            this.icon = _data["icon"];
+            this.description = _data["description"];
+            this.sortOrder = _data["sortOrder"];
+            this.countryCode = _data["countryCode"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): AdminCategoryItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new AdminCategoryItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["slug"] = this.slug;
+        data["icon"] = this.icon;
+        data["description"] = this.description;
+        data["sortOrder"] = this.sortOrder;
+        data["countryCode"] = this.countryCode;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface IAdminCategoryItem {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string | undefined;
+    description: string | undefined;
+    sortOrder: number;
+    countryCode: string;
+    isActive: boolean;
 
     [key: string]: any;
 }
@@ -3387,6 +3742,130 @@ export interface IConsumeMagicLinkRequest {
     [key: string]: any;
 }
 
+export class CreateCategoryRequest implements ICreateCategoryRequest {
+    name!: string;
+    slug!: string | undefined;
+    icon!: string | undefined;
+    description!: string | undefined;
+    sortOrder!: number;
+    countryCode!: string;
+    notes!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: ICreateCategoryRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.name = _data["name"];
+            this.slug = _data["slug"];
+            this.icon = _data["icon"];
+            this.description = _data["description"];
+            this.sortOrder = _data["sortOrder"];
+            this.countryCode = _data["countryCode"];
+            this.notes = _data["notes"];
+        }
+    }
+
+    static fromJS(data: any): CreateCategoryRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCategoryRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["name"] = this.name;
+        data["slug"] = this.slug;
+        data["icon"] = this.icon;
+        data["description"] = this.description;
+        data["sortOrder"] = this.sortOrder;
+        data["countryCode"] = this.countryCode;
+        data["notes"] = this.notes;
+        return data;
+    }
+}
+
+export interface ICreateCategoryRequest {
+    name: string;
+    slug: string | undefined;
+    icon: string | undefined;
+    description: string | undefined;
+    sortOrder: number;
+    countryCode: string;
+    notes: string | undefined;
+
+    [key: string]: any;
+}
+
+export class CreateCategoryResponse implements ICreateCategoryResponse {
+    id!: string;
+    slug!: string;
+
+    [key: string]: any;
+
+    constructor(data?: ICreateCategoryResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.slug = _data["slug"];
+        }
+    }
+
+    static fromJS(data: any): CreateCategoryResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCategoryResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["slug"] = this.slug;
+        return data;
+    }
+}
+
+export interface ICreateCategoryResponse {
+    id: string;
+    slug: string;
+
+    [key: string]: any;
+}
+
 export class CreatePayoutBatchResponse implements ICreatePayoutBatchResponse {
     batchId!: string;
     batchNumber!: string;
@@ -3491,6 +3970,54 @@ export interface ICreatePayoutBatchResponse {
     csvReady: boolean;
     deductionsAppliedMinor: number;
     deductionCount: number;
+
+    [key: string]: any;
+}
+
+export class DeactivateCategoryRequest implements IDeactivateCategoryRequest {
+    notes!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IDeactivateCategoryRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.notes = _data["notes"];
+        }
+    }
+
+    static fromJS(data: any): DeactivateCategoryRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new DeactivateCategoryRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["notes"] = this.notes;
+        return data;
+    }
+}
+
+export interface IDeactivateCategoryRequest {
+    notes: string | undefined;
 
     [key: string]: any;
 }
@@ -3789,6 +4316,65 @@ export class GetAdminAuditLogResponse implements IGetAdminAuditLogResponse {
 
 export interface IGetAdminAuditLogResponse {
     entries: PagedDataOfAdminAuditLogItemDto;
+
+    [key: string]: any;
+}
+
+export class GetAdminCategoriesResponse implements IGetAdminCategoriesResponse {
+    items!: AdminCategoryItem[];
+
+    [key: string]: any;
+
+    constructor(data?: IGetAdminCategoriesResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AdminCategoryItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): GetAdminCategoriesResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetAdminCategoriesResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IGetAdminCategoriesResponse {
+    items: AdminCategoryItem[];
 
     [key: string]: any;
 }
@@ -5720,6 +6306,70 @@ export interface IStalledOutboxEventDto {
     lastErrorCode: string | undefined;
     retryCount: number;
     createdAt: Date;
+
+    [key: string]: any;
+}
+
+export class UpdateCategoryRequest implements IUpdateCategoryRequest {
+    name!: string;
+    icon!: string | undefined;
+    description!: string | undefined;
+    sortOrder!: number;
+    notes!: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IUpdateCategoryRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.name = _data["name"];
+            this.icon = _data["icon"];
+            this.description = _data["description"];
+            this.sortOrder = _data["sortOrder"];
+            this.notes = _data["notes"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCategoryRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCategoryRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["name"] = this.name;
+        data["icon"] = this.icon;
+        data["description"] = this.description;
+        data["sortOrder"] = this.sortOrder;
+        data["notes"] = this.notes;
+        return data;
+    }
+}
+
+export interface IUpdateCategoryRequest {
+    name: string;
+    icon: string | undefined;
+    description: string | undefined;
+    sortOrder: number;
+    notes: string | undefined;
 
     [key: string]: any;
 }

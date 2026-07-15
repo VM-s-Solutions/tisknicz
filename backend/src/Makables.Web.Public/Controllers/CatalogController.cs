@@ -56,6 +56,26 @@ public sealed class CatalogController : MakablesApiController
         return HandleResult(result);
     }
 
+    /// <summary>
+    /// Active categories for the country (T-0119). Feeds the catalog
+    /// filter dropdown and the maker product-creation form — replaces the
+    /// frontend's hardcoded launch-category list so admin-created
+    /// categories surface without a deploy. Reference data that changes
+    /// rarely → short public cache (same pattern as the shipping
+    /// widget-config endpoint, shorter TTL because admins expect edits
+    /// to show up within minutes).
+    /// </summary>
+    [HttpGet("categories")]
+    [ProducesResponseType(typeof(GetPublicCategories.GetPublicCategoriesResponse), StatusCodes.Status200OK)]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> GetCategories(
+        [FromQuery] string country = "CZ",
+        CancellationToken cancellationToken = default)
+    {
+        var result = await Mediator.Send(new GetPublicCategories.Query(country), cancellationToken);
+        return HandleResult(result);
+    }
+
     /// <summary>Public maker profile by slug (US-customer-0008).</summary>
     [HttpGet("makers/{slug}")]
     [ProducesResponseType(typeof(MakerProfile), StatusCodes.Status200OK)]

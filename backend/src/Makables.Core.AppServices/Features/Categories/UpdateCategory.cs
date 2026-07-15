@@ -43,7 +43,9 @@ public static class UpdateCategory
 
             RuleFor(c => c.Name)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
-                .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength);
+                .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength)
+                .Must(n => !ProhibitedContent.ContainsProhibitedTerm(n))
+                .WithErrorCode(BusinessErrorMessage.CategoryNameNotAllowed);
 
             When(c => c.Icon is not null, () =>
             {
@@ -54,7 +56,9 @@ public static class UpdateCategory
             When(c => c.Description is not null, () =>
             {
                 RuleFor(c => c.Description!)
-                    .MaximumLength(500).WithErrorCode(BusinessErrorMessage.MaxLength);
+                    .MaximumLength(500).WithErrorCode(BusinessErrorMessage.MaxLength)
+                    .Must(d => !ProhibitedContent.ContainsProhibitedTerm(d))
+                    .WithErrorCode(BusinessErrorMessage.CategoryNameNotAllowed);
             });
 
             When(c => c.Notes is not null, () =>

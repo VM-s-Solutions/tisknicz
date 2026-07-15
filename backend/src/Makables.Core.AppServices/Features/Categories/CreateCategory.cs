@@ -48,14 +48,15 @@ public static class CreateCategory
         int SortOrder,
         string CountryCode,
         string? Notes)
-        : ICommand<Response>, IAdminAuditableCommand
+        : ICommand<CreateCategoryResponse>, IAdminAuditableCommand
     {
         public string ActionCode => "category.create";
         public string TargetEntity => "category";
         public string TargetId => Id;
     }
 
-    public sealed record Response(string Id, string Slug);
+    // Globally-unique response name (T-0080 naming lock — see GetAdminCategories).
+    public sealed record CreateCategoryResponse(string Id, string Slug);
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -67,12 +68,16 @@ public static class CreateCategory
 
             RuleFor(c => c.Name)
                 .NotEmpty().WithErrorCode(BusinessErrorMessage.Required)
-                .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength);
+                .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength)
+                .Must(n => !ProhibitedContent.ContainsProhibitedTerm(n))
+                .WithErrorCode(BusinessErrorMessage.CategoryNameNotAllowed);
 
             When(c => !string.IsNullOrEmpty(c.Slug), () =>
             {
                 RuleFor(c => c.Slug!)
-                    .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength);
+                    .MaximumLength(100).WithErrorCode(BusinessErrorMessage.MaxLength)
+                    .Must(s => !ProhibitedContent.ContainsProhibitedTerm(s))
+                    .WithErrorCode(BusinessErrorMessage.CategoryNameNotAllowed);
             });
 
             When(c => c.Icon is not null, () =>
@@ -84,7 +89,9 @@ public static class CreateCategory
             When(c => c.Description is not null, () =>
             {
                 RuleFor(c => c.Description!)
-                    .MaximumLength(500).WithErrorCode(BusinessErrorMessage.MaxLength);
+                    .MaximumLength(500).WithErrorCode(BusinessErrorMessage.MaxLength)
+                    .Must(d => !ProhibitedContent.ContainsProhibitedTerm(d))
+                    .WithErrorCode(BusinessErrorMessage.CategoryNameNotAllowed);
             });
 
             RuleFor(c => c.CountryCode)
@@ -102,13 +109,13 @@ public static class CreateCategory
     public sealed class Handler(
         ICategoryRepository categories,
         IUserSessionProvider session)
-        : IRequestHandler<Command, BusinessResult<Response>>
+        : IRequestHandler<Command, BusinessResult<CreateCategoryResponse>>
     {
-        public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken cancellationToken)
+        public async Task<BusinessResult<CreateCategoryResponse>> Handle(Command command, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(session.GetUserId()))
             {
-                return BusinessResult.Failure<Response>(Error.Unauthorized());
+                return BusinessResult.Failure<CreateCategoryResponse>(Error.Unauthorized());
             }
 
             // Resolve slug now so we can pre-check uniqueness BEFORE
@@ -121,13 +128,13 @@ public static class CreateCategory
 
             if (resolvedSlug.Length == 0)
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<CreateCategoryResponse>(
                     Error.Validation(nameof(command.Slug), BusinessErrorMessage.Required));
             }
 
             if (await categories.SlugExistsAsync(resolvedSlug, cancellationToken))
             {
-                return BusinessResult.Failure<Response>(
+                return BusinessResult.Failure<CreateCategoryResponse>(
                     Error.Conflict("slug", BusinessErrorMessage.CategorySlugAlreadyExists));
             }
 
@@ -142,7 +149,7 @@ public static class CreateCategory
 
             categories.Add(category);
 
-            return BusinessResult.Success(new Response(category.Id, category.Slug));
+            return BusinessResult.Success(new CreateCategoryResponse(category.Id, category.Slug));
         }
     }
 }

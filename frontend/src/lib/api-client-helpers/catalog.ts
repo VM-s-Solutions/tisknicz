@@ -184,7 +184,38 @@ export const CATALOG_MAX_PAGE_SIZE = 48;
  */
 export const RATING_BP_PER_STAR = 10_000;
 
+/**
+ * Mirror of <c>PublicCategoryItem</c> (T-0119). One active category —
+ * feeds the catalog filter dropdown and the maker product-form category
+ * picker. <c>id</c> is what <c>Product.CategoryId</c> references;
+ * <c>slug</c> is the catalog URL query value.
+ */
+export interface PublicCategoryItem {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly icon: string | null;
+  readonly description: string | null;
+  readonly sortOrder: number;
+}
+
 // ---- Endpoints ----
+
+/**
+ * Active categories for the country (T-0119). Anonymous reference data —
+ * replaces the hardcoded launch list so admin-created categories surface.
+ * Callers keep `CATALOG_CATEGORIES` as the degrade-gracefully fallback.
+ */
+export async function getCatalogCategories(
+  country = 'CZ',
+): Promise<Result<{ readonly items: readonly PublicCategoryItem[] }, ApiError>> {
+  const params = new URLSearchParams({ country });
+  return apiFetch<{ readonly items: readonly PublicCategoryItem[] }>(
+    'public',
+    `${Base}/categories?${params.toString()}`,
+    { method: 'GET' },
+  );
+}
 
 /**
  * Paged maker list for the public catalog (US-customer-0007). Anonymous

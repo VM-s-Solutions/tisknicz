@@ -1357,7 +1357,43 @@ export const messages = {
   'dashboard.admin.nav.makers': 'Makeři',
   'dashboard.admin.nav.users': 'Uživatelé',
   'dashboard.admin.nav.config': 'Nastavení zemí',
+  'dashboard.admin.nav.categories': 'Kategorie',
   'dashboard.admin.nav.pendingBadge': 'Připravujeme',
+
+  // Admin categories (T-0119 / US-admin-0013)
+  'dashboard.admin.categories.metadata.title': 'Kategorie — Administrace',
+  'dashboard.admin.categories.metadata.description': 'Správa kategorií katalogu Makables.',
+  'dashboard.admin.categories.title': 'Kategorie',
+  'dashboard.admin.categories.subtitle':
+    'Spravujte kategorie katalogu. Přejmenování nemění URL adresu kategorie; deaktivovaná kategorie zmizí z filtru i z formuláře produktu, existující produkty zůstávají.',
+  'dashboard.admin.categories.list.empty': 'Zatím žádné kategorie.',
+  'dashboard.admin.categories.list.error':
+    'Seznam kategorií se nepodařilo načíst. Zkuste to prosím znovu.',
+  'dashboard.admin.categories.badge.active': 'Aktivní',
+  'dashboard.admin.categories.badge.inactive': 'Deaktivovaná',
+  'dashboard.admin.categories.form.title': 'Nová kategorie',
+  'dashboard.admin.categories.form.name': 'Název',
+  'dashboard.admin.categories.form.slug': 'Slug (volitelné)',
+  'dashboard.admin.categories.form.slug_hint': 'Odvodí se z názvu, např. 3d-tisk',
+  'dashboard.admin.categories.form.description': 'Popis (volitelné)',
+  'dashboard.admin.categories.form.sortOrder': 'Pořadí řazení',
+  'dashboard.admin.categories.form.submit': 'Vytvořit kategorii',
+  'dashboard.admin.categories.form.success': 'Kategorie vytvořena (slug: {slug}).',
+  'dashboard.admin.categories.row.sortOrder': 'pořadí {order}',
+  'dashboard.admin.categories.row.edit': 'Upravit',
+  'dashboard.admin.categories.row.cancel': 'Zrušit',
+  'dashboard.admin.categories.row.save': 'Uložit změny',
+  'dashboard.admin.categories.row.deactivate': 'Deaktivovat',
+  'dashboard.admin.categories.row.deactivate_confirm': 'Opravdu deaktivovat?',
+  'dashboard.admin.categories.row.slug_note':
+    'Slug se při přejmenování nemění — veřejné odkazy a produkty zůstávají funkční.',
+
+  // Category error codes (parity with BusinessErrorMessage, T8)
+  'category.notFound': 'Kategorie nebyla nalezena.',
+  'category.notActive': 'Kategorie není aktivní.',
+  'category.slugAlreadyExists': 'Kategorie s tímto slugem už existuje.',
+  'category.nameNotAllowed':
+    'Název, slug nebo popis kategorie obsahuje nepovolený výraz.',
 
   // Admin login
   'dashboard.admin.login.metadata.title': 'Přihlášení administrátora — Makables',

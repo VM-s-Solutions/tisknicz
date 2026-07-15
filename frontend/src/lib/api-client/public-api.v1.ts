@@ -21,6 +21,12 @@ export interface IPublicApi {
     makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
 
     /**
+     * @param country (optional) 
+     * @return OK
+     */
+    categories(country: string | undefined): Promise<GetPublicCategoriesResponse>;
+
+    /**
      * @return OK
      */
     makers2(slug: string): Promise<MakerProfile>;
@@ -144,6 +150,11 @@ export interface IPublicApi {
      * @return OK
      */
     anonymous(): Promise<string>;
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void>;
 }
 
 export class PublicApi implements IPublicApi {
@@ -221,6 +232,48 @@ export class PublicApi implements IPublicApi {
             });
         }
         return Promise.resolve<PagedDataOfMakerListItem>(null as any);
+    }
+
+    /**
+     * @param country (optional) 
+     * @return OK
+     */
+    categories(country: string | undefined): Promise<GetPublicCategoriesResponse> {
+        let url_ = this.baseUrl + "/api/v1/catalog/categories?";
+        if (country === null)
+            throw new globalThis.Error("The parameter 'country' cannot be null.");
+        else if (country !== undefined)
+            url_ += "country=" + encodeURIComponent("" + country) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCategories(_response);
+        });
+    }
+
+    protected processCategories(response: Response): Promise<GetPublicCategoriesResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetPublicCategoriesResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetPublicCategoriesResponse>(null as any);
     }
 
     /**
@@ -1156,6 +1209,39 @@ export class PublicApi implements IPublicApi {
         }
         return Promise.resolve<string>(null as any);
     }
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void> {
+        let url_ = this.baseUrl + "/health";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processHealth(_response);
+        });
+    }
+
+    protected processHealth(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
@@ -1376,6 +1462,65 @@ export enum ErrorType {
     Permanent = "Permanent",
     Configuration = "Configuration",
     Unknown = "Unknown",
+}
+
+export class GetPublicCategoriesResponse implements IGetPublicCategoriesResponse {
+    items!: PublicCategoryItem[];
+
+    [key: string]: any;
+
+    constructor(data?: IGetPublicCategoriesResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(PublicCategoryItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): GetPublicCategoriesResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetPublicCategoriesResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IGetPublicCategoriesResponse {
+    items: PublicCategoryItem[];
+
+    [key: string]: any;
 }
 
 export class ChangePasswordRequest implements IChangePasswordRequest {
@@ -2194,6 +2339,74 @@ export class ProductImageItem implements IProductImageItem {
 export interface IProductImageItem {
     imageId: string;
     blobPath: string;
+    sortOrder: number;
+
+    [key: string]: any;
+}
+
+export class PublicCategoryItem implements IPublicCategoryItem {
+    id!: string;
+    name!: string;
+    slug!: string;
+    icon!: string | undefined;
+    description!: string | undefined;
+    sortOrder!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IPublicCategoryItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.slug = _data["slug"];
+            this.icon = _data["icon"];
+            this.description = _data["description"];
+            this.sortOrder = _data["sortOrder"];
+        }
+    }
+
+    static fromJS(data: any): PublicCategoryItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new PublicCategoryItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["slug"] = this.slug;
+        data["icon"] = this.icon;
+        data["description"] = this.description;
+        data["sortOrder"] = this.sortOrder;
+        return data;
+    }
+}
+
+export interface IPublicCategoryItem {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string | undefined;
+    description: string | undefined;
     sortOrder: number;
 
     [key: string]: any;

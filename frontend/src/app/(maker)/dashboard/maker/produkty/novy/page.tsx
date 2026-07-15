@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Icon } from '@/components/ui/icon';
+import { loadProductCategoryOptions } from '@/lib/catalog/load-category-options';
 import { t } from '@/lib/i18n';
 import { ProductForm } from '../_components/product-form';
 
@@ -17,7 +18,8 @@ export function generateMetadata(): Metadata {
  * can immediately upload images (image upload requires
  * <c>productId</c> in the path).
  */
-export default function MakerProductCreatePage() {
+export default async function MakerProductCreatePage() {
+  const categoryOptions = await loadProductCategoryOptions();
   return (
     <section className="bg-surface-primary py-12 lg:py-16">
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
@@ -38,7 +40,7 @@ export default function MakerProductCreatePage() {
             {t('dashboard.maker.products.create.subtitle')}
           </p>
         </header>
-        <ProductForm mode="create" />
+        <ProductForm mode="create" categoryOptions={categoryOptions} />
       </div>
     </section>
   );

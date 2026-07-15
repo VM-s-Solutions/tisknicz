@@ -19,13 +19,18 @@ import {
   PriceTypeValues,
   updateProduct,
 } from '@/lib/api-client-helpers/maker-products';
-import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t, type MessageKey } from '@/lib/i18n';
 
 interface ProductFormProps {
   readonly mode: 'create' | 'edit';
   /** Prefill values for the edit mode; undefined for create. */
   readonly initial?: MakerProductDetail;
+  /**
+   * Category picker options resolved server-side by the wrapping page
+   * (data-driven since T-0119, static fallback). `value` is the
+   * category ID — what `Product.CategoryId` references.
+   */
+  readonly categoryOptions: readonly { value: string; label: string }[];
 }
 
 const PRICE_TYPE_LABEL_KEYS: Record<PriceType, MessageKey> = {
@@ -55,7 +60,7 @@ const FULFILLMENT_TYPE_LABEL_KEYS: Record<FulfillmentType, MessageKey> = {
  * does the multiplication.
  * </para>
  */
-export function ProductForm({ mode, initial }: ProductFormProps) {
+export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps) {
   const router = useRouter();
 
   // Form state. Init from `initial` in edit mode; otherwise empty.
@@ -86,11 +91,6 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   const [topError, setTopError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
   const [savedFlash, setSavedFlash] = useState(false);
-
-  const categoryOptions = CATALOG_CATEGORIES.map((c) => ({
-    value: c.slug,
-    label: t(c.labelKey),
-  }));
 
   const priceTypeOptions = PRICE_TYPES.map((value) => ({
     value,
@@ -234,7 +234,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
             label={t('dashboard.maker.products.form.field.category')}
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            options={categoryOptions}
+            options={[...categoryOptions]}
             placeholder={t('dashboard.maker.products.form.field.category_placeholder')}
             disabled={submitting}
             required

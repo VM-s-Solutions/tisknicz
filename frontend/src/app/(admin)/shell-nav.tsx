@@ -37,6 +37,7 @@ const LIVE_NAV: readonly NavItem[] = [
   { href: '/dashboard/admin/outbox', labelKey: 'dashboard.admin.nav.outbox' },
   { href: '/dashboard/admin/users', labelKey: 'dashboard.admin.nav.users' },
   { href: '/dashboard/admin/countries/CZ', labelKey: 'dashboard.admin.nav.config' },
+  { href: '/dashboard/admin/kategorie', labelKey: 'dashboard.admin.nav.categories' },
   { href: '/dashboard/admin/makers', labelKey: 'dashboard.admin.nav.makers' },
   { href: '/dashboard/admin/audit', labelKey: 'dashboard.admin.nav.audit' },
 ];
