@@ -5,10 +5,11 @@ import { type FormEvent, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dropdown } from '@/components/ui/dropdown';
 import { Input } from '@/components/ui/input';
-import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t } from '@/lib/i18n';
 
 interface CatalogFiltersProps {
+  /** Category options resolved server-side (data-driven since T-0119, static fallback). */
+  readonly categories: readonly { readonly slug: string; readonly label: string }[];
   readonly initialCategory: string;
   readonly initialCity: string;
   readonly initialMinRating: string;
@@ -31,6 +32,7 @@ const CITY_DEBOUNCE_MS = 300;
  * browser back button still restores prior URL state (AC-2).
  */
 export function CatalogFilters({
+  categories,
   initialCategory,
   initialCity,
   initialMinRating,
@@ -86,9 +88,9 @@ export function CatalogFilters({
     router.replace(pathname, { scroll: false });
   };
 
-  const categoryOptions = CATALOG_CATEGORIES.map((c) => ({
+  const categoryOptions = categories.map((c) => ({
     value: c.slug,
-    label: t(c.labelKey),
+    label: c.label,
   }));
   const ratingOptions = RATING_OPTIONS.map((stars) => ({
     value: stars,

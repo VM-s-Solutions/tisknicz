@@ -242,6 +242,9 @@ public static class MakablesInfrastructureExtensions
         // === Catalog read-side (T-0043) ===
         services.AddScoped<ICatalogQueries, CatalogQueries>();
 
+        // === Category read-side (T-0119) ===
+        services.AddScoped<ICategoryQueries, Makables.Infra.Database.Categories.CategoryQueries>();
+
         // === Maker dashboard product reads (T-0049a) ===
         // Separate from ICatalogQueries because it bypasses the
         // soft-delete filter and the email-confirmed gate — owner sees

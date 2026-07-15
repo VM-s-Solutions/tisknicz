@@ -24,12 +24,12 @@ const IMAGE_HEIGHT = 240;
  * — the only interactivity is the embedded <c>DeleteProductButton</c>
  * which opens a confirm modal client-side.
  *
- * Categories: <c>MakerProductListItem.categoryId</c> is the slug; we
- * look it up in <c>CATALOG_CATEGORIES</c> for the i18n label. If the
- * slug isn't in the launch list (admin added a category after launch),
- * we fall back to rendering the raw slug — better to show the maker
- * exactly what's attached to their product than hide it behind a
- * placeholder (T-0049 review M1).
+ * Categories: <c>MakerProductListItem.categoryId</c> is the category
+ * row ID; we look it up in <c>CATALOG_CATEGORIES</c> for the i18n
+ * label. If the id isn't in the launch list (admin added a category
+ * after launch, T-0119), we fall back to rendering the raw id — better
+ * to show the maker exactly what's attached to their product than hide
+ * it behind a placeholder (T-0049 review M1).
  *
  * Soft-deleted rows render with reduced opacity and the
  * <c>inactive</c> badge — the dashboard surfaces drafts and
@@ -37,8 +37,8 @@ const IMAGE_HEIGHT = 240;
  */
 export function MakerProductCard({ item }: ProductCardProps) {
   const imageUrl = buildProductImageUrl(item.primaryImageBlobPath);
-  const categoryOption = CATALOG_CATEGORIES.find((c) => c.slug === item.categoryId);
-  // Spec fallback: if an admin adds a category post-launch the slug
+  const categoryOption = CATALOG_CATEGORIES.find((c) => c.id === item.categoryId);
+  // Spec fallback: if an admin adds a category post-launch the id
   // won't match the seeded list — render it raw rather than hiding the
   // mismatch behind a "Bez kategorie" placeholder so the maker can see
   // what's really attached to their product. T-0049 review M1.

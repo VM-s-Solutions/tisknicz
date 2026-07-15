@@ -226,6 +226,13 @@ public static class BusinessErrorMessage
     public const string CategoryNotActive = "category.notActive";
     public const string CategorySlugAlreadyExists = "category.slugAlreadyExists";
 
+    /// <summary>
+    /// The category name/slug/description contains a prohibited (vulgar)
+    /// term — <see cref="ProhibitedContent"/> screen on the admin CRUD
+    /// commands (T-0119).
+    /// </summary>
+    public const string CategoryNameNotAllowed = "category.nameNotAllowed";
+
     // === Blob storage (T-0042) ===
     public const string BlobNotFound = "blob.notFound";
     public const string BlobUploadFailed = "blob.uploadFailed";

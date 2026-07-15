@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
 import { Icon } from '@/components/ui/icon';
 import { getMyProductById } from '@/lib/api-client-helpers/maker-products';
+import { loadProductCategoryOptions } from '@/lib/catalog/load-category-options';
 import { t } from '@/lib/i18n';
 import { DeleteProductButton } from '../_components/delete-product-button';
 import { ImageManager } from '../_components/image-manager';
@@ -107,7 +108,7 @@ export default async function MakerProductEditPage({ params }: PageProps) {
           </Alert>
         ) : null}
 
-        <ProductForm mode="edit" initial={product} />
+        <ProductForm mode="edit" initial={product} categoryOptions={await loadProductCategoryOptions()} />
 
         <ImageManager productId={product.productId} images={product.images} />
 

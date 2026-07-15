@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import {
   CATALOG_DEFAULT_PAGE_SIZE,
   type CatalogFilterInput,
+  getCatalogCategories,
   getPagedMakers,
   type MakerListItem,
 } from '@/lib/api-client-helpers/catalog';
@@ -35,7 +36,19 @@ export function generateMetadata(): Metadata {
 // filters live in the query string. No SSG / no ISR cache.
 export const dynamic = 'force-dynamic';
 
-const VALID_CATEGORY_SLUGS = new Set(CATALOG_CATEGORIES.map((c) => c.slug));
+/**
+ * Category options for the filter dropdown (T-0119). Data-driven from
+ * the anonymous categories endpoint so admin-created categories appear;
+ * degrades to the static launch list when the read fails (the maker
+ * list itself has its own error surface).
+ */
+async function loadCategoryOptions(): Promise<readonly { slug: string; label: string }[]> {
+  const result = await getCatalogCategories();
+  if (result.success && result.value.items.length > 0) {
+    return result.value.items.map((c) => ({ slug: c.slug, label: c.name }));
+  }
+  return CATALOG_CATEGORIES.map((c) => ({ slug: c.slug, label: t(c.labelKey) }));
+}
 
 interface CatalogPageProps {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -59,7 +72,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const rawMinRating = readString(sp.minRating);
   const rawPage = readString(sp.page);
 
-  const category = VALID_CATEGORY_SLUGS.has(rawCategory) ? rawCategory : '';
+  const categoryOptions = await loadCategoryOptions();
+  const validCategorySlugs = new Set(categoryOptions.map((c) => c.slug));
+  const category = validCategorySlugs.has(rawCategory) ? rawCategory : '';
   const minRatingStarsParsed = Number.parseInt(rawMinRating, 10);
   const minRatingStars =
     Number.isFinite(minRatingStarsParsed) && minRatingStarsParsed >= 1 && minRatingStarsParsed <= 5
@@ -102,6 +117,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
         <div className="mt-14">
           <CatalogFilters
+            categories={categoryOptions}
             initialCategory={category}
             initialCity={rawCity}
             initialMinRating={initialMinRating}
