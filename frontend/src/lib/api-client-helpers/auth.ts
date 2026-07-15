@@ -149,6 +149,27 @@ export async function startAppleOAuth(host: ApiHost): Promise<Result<StartAppleO
   return apiFetch<StartAppleOAuthOutput>(host, `${Base}/apple/start?${params.toString()}`, { method: 'GET' });
 }
 
+// ---- Google OAuth (T-0026) ----
+
+export interface StartGoogleOAuthOutput {
+  authorizationUrl: string;
+}
+
+/**
+ * Begins the "Sign in with Google" flow. Mirrors {@link startAppleOAuth}:
+ * the `redirectUri` bound into the signed state must be the backend's own
+ * `google/callback` route — Google GET-redirects the browser straight back
+ * to the .NET host (query-param callback, unlike Apple's `form_post`), it
+ * never passes through a Next.js route. The backend sets the OAuth
+ * anti-CSRF cookie on this response and returns the authorization URL to
+ * redirect the browser to.
+ */
+export async function startGoogleOAuth(host: ApiHost): Promise<Result<StartGoogleOAuthOutput, ApiError>> {
+  const redirectUri = `${apiHostBaseUrl(host)}/api/v1/auth/google/callback`;
+  const params = new URLSearchParams({ redirectUri });
+  return apiFetch<StartGoogleOAuthOutput>(host, `${Base}/google/start?${params.toString()}`, { method: 'GET' });
+}
+
 // ---- Register maker (Public host only) ----
 
 export interface RegisterMakerInput {
