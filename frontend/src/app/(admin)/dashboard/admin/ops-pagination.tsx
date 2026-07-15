@@ -9,6 +9,12 @@ interface OpsPaginationProps {
   readonly hasPrevious: boolean;
   /** The route path the pagination links target (no query). */
   readonly routePath: string;
+  /**
+   * Extra URL-state params to preserve across page links (T-0119b — the
+   * makers list carries a `search` term). Omitted by the param-less
+   * outbox/payout lists.
+   */
+  readonly extraParams?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -27,13 +33,18 @@ export function OpsPagination({
   hasNext,
   hasPrevious,
   routePath,
+  extraParams,
 }: OpsPaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
 
-  const hrefFor = (target: number): string =>
-    target > 1 ? `${routePath}?page=${target}` : routePath;
+  const hrefFor = (target: number): string => {
+    const params = new URLSearchParams(extraParams ?? {});
+    if (target > 1) params.set('page', String(target));
+    const query = params.toString();
+    return query ? `${routePath}?${query}` : routePath;
+  };
 
   return (
     <nav

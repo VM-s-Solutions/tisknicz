@@ -1,16 +1,25 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import {
+  type AdminMakerListItem,
+  getAdminMakers,
+} from '@/lib/api-client-helpers/admin-makers';
 import { t } from '@/lib/i18n';
-import { MakerLookupPanel } from './maker-lookup-panel';
+import { OpsPagination } from '../ops-pagination';
+import { MakerSearchForm } from './maker-search-form';
 
 /**
- * Admin makers section entry point (T-0140, US-admin-0018). There is no
- * admin maker LIST/detail READ endpoint yet (the backend shipped only the
- * `SetMakerFeeOverride` write for this ticket — see the read-gap note on
- * the detail page), so this mirrors the delete-user lookup precedent
- * (`dashboard/admin/users`): the admin already knows the maker id (from an
- * order, a support ticket, etc.) and types it in to reach the fee-override
- * form at `/dashboard/admin/makers/{id}`.
+ * Admin makers list (T-0119b / US-admin-0003..0005). Server Component,
+ * `force-dynamic`, URL-state search + pagination (T-0087a precedent).
+ * Replaces the T-0140 id-lookup panel — the real cross-tenant list read
+ * exists now, so the admin browses makers (including deactivated ones)
+ * and drills into `/dashboard/admin/makers/{id}` for the verify /
+ * deactivate / refresh-ARES / fee-override actions.
  */
+
 export function generateMetadata(): Metadata {
   return {
     title: t('dashboard.admin.ops.makers.metadata.title'),
@@ -18,21 +27,116 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function AdminMakersLookupPage() {
+export const dynamic = 'force-dynamic';
+
+const ROUTE_PATH = '/dashboard/admin/makers';
+
+interface PageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function readString(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
+}
+
+function parsePositiveInt(raw: string, fallback: number): number {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+export default async function AdminMakersPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const search = readString(sp.search).trim();
+  const page = parsePositiveInt(readString(sp.page), 1);
+
+  const result = await getAdminMakers({ page, search: search || undefined });
+
+  const extraParams: Record<string, string> = {};
+  if (search) extraParams.search = search;
+
   return (
     <section className="py-12 lg:py-16">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
+        <header>
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             {t('dashboard.admin.ops.makers.lookup.title')}
           </h1>
           <p className="mt-3 max-w-2xl text-base text-zinc-400">
-            {t('dashboard.admin.ops.makers.lookup.subtitle')}
+            {t('dashboard.admin.ops.makers.list.subtitle')}
           </p>
         </header>
 
-        <MakerLookupPanel />
+        <MakerSearchForm initialSearch={search} />
+
+        {result.success ? (
+          result.value.makers.items.length === 0 ? (
+            <p className="text-sm text-zinc-400">{t('dashboard.admin.ops.makers.list.empty')}</p>
+          ) : (
+            <>
+              <ul className="flex flex-col gap-3">
+                {result.value.makers.items.map((item) => (
+                  <li key={item.makerId}>
+                    <MakerRow item={item} />
+                  </li>
+                ))}
+              </ul>
+              <OpsPagination
+                routePath={ROUTE_PATH}
+                page={result.value.makers.page}
+                totalPages={result.value.makers.totalPages}
+                hasNext={result.value.makers.hasNext}
+                hasPrevious={result.value.makers.hasPrevious}
+                extraParams={extraParams}
+              />
+            </>
+          )
+        ) : (
+          <Alert variant="error">{t('dashboard.admin.ops.makers.list.error')}</Alert>
+        )}
       </div>
     </section>
+  );
+}
+
+function MakerRow({ item }: { readonly item: AdminMakerListItem }) {
+  return (
+    <Link href={`/dashboard/admin/makers/${encodeURIComponent(item.makerId)}`} className="block">
+      <Card
+        className={`flex flex-wrap items-center justify-between gap-3 transition-colors hover:border-zinc-600 ${item.isActive ? '' : 'opacity-60'}`}
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-base font-semibold text-white">{item.companyName}</p>
+            {item.isVerified ? (
+              <Badge variant="success">{t('dashboard.admin.ops.makers.badge.verified')}</Badge>
+            ) : (
+              <Badge variant="warning">{t('dashboard.admin.ops.makers.badge.unverified')}</Badge>
+            )}
+            {!item.isActive ? (
+              <Badge variant="error">{t('dashboard.admin.ops.makers.badge.inactive')}</Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 text-xs text-zinc-500">
+            {t('dashboard.admin.ops.makers.list.rowMeta', {
+              ico: item.registrationNumber,
+              city: item.city,
+              email: item.userEmail,
+            })}
+          </p>
+        </div>
+        <div className="shrink-0 text-right text-xs text-zinc-400">
+          <p>{t('dashboard.admin.ops.makers.list.rowOrders', { count: item.totalOrders })}</p>
+          {item.feeRateOverrideBp !== null ? (
+            <p className="mt-1 text-brand-300">
+              {t('dashboard.admin.ops.makers.list.rowOverride', {
+                percent: (item.feeRateOverrideBp / 100).toString().replace('.', ','),
+              })}
+            </p>
+          ) : null}
+        </div>
+      </Card>
+    </Link>
   );
 }

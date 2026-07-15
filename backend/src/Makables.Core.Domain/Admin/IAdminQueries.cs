@@ -61,6 +61,23 @@ public interface IAdminQueries
     Task<AdminOrderDetailDto?> GetOrderDetailAsync(string orderId, CancellationToken ct);
 
     /// <summary>
+    /// Paged cross-tenant maker list (T-0119b / US-admin-0003..0005).
+    /// Ignores the soft-delete filter so deactivated makers surface
+    /// (reconciliation + audit context). Joins User (account email) +
+    /// Address (city). Sorted <c>CreatedAt DESC</c>.
+    /// </summary>
+    Task<PagedData<AdminMakerListItemDto>> GetAllMakersPagedAsync(
+        AdminMakerFilter filter, int page, int pageSize, CancellationToken ct);
+
+    /// <summary>
+    /// Single privileged maker header (T-0119b). Ignores the soft-delete
+    /// filter (a deactivated maker's detail stays reachable). Returns
+    /// <c>null</c> for unknown ids (the handler maps to
+    /// <c>maker.notFound</c>).
+    /// </summary>
+    Task<AdminMakerDetailDto?> GetMakerDetailAsync(string makerId, CancellationToken ct);
+
+    /// <summary>
     /// Paged cross-maker payout-batch list (T-0127 / Q-0029). Reads the
     /// payout-batch DbSet directly, <c>AsNoTracking</c> (the batch repo
     /// exposes no Unscoped queryable). Spans every maker (the admin browse

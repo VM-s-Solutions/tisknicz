@@ -48,14 +48,16 @@ namespace Makables.Core.AppServices.Features.Maker;
 public static class RefreshMakerFromAres
 {
     public sealed record Command(string MakerId, string? Notes)
-        : ICommand<Response>, IAdminAuditableCommand
+        : ICommand<RefreshMakerFromAresResponse>, IAdminAuditableCommand
     {
         public string ActionCode => "maker.refreshFromAres";
         public string TargetEntity => "maker";
         public string TargetId => MakerId;
     }
 
-    public sealed record Response(bool SnapshotIsStale);
+    // Globally-unique response name (NSwag convention — a schema named just
+    // `Response` shadows the DOM Response type in the generated TS client).
+    public sealed record RefreshMakerFromAresResponse(bool SnapshotIsStale);
 
     public sealed class Validator : AbstractValidator<Command>
     {
@@ -81,9 +83,9 @@ public static class RefreshMakerFromAres
         ICompanyRegistry companyRegistry,
         IUserSessionProvider session,
         ILogger<Handler> logger)
-        : IRequestHandler<Command, BusinessResult<Response>>
+        : IRequestHandler<Command, BusinessResult<RefreshMakerFromAresResponse>>
     {
-        public async Task<BusinessResult<Response>> Handle(Command command, CancellationToken cancellationToken)
+        public async Task<BusinessResult<RefreshMakerFromAresResponse>> Handle(Command command, CancellationToken cancellationToken)
         {
             // T-0034 Copilot review: fail-closed when there's no session
             // user. The host-level [Authorize(Roles="Admin")] gate should
@@ -93,20 +95,20 @@ public static class RefreshMakerFromAres
             // VerifyMaker shape.
             if (string.IsNullOrEmpty(session.GetUserId()))
             {
-                return BusinessResult.Failure<Response>(Error.Unauthorized());
+                return BusinessResult.Failure<RefreshMakerFromAresResponse>(Error.Unauthorized());
             }
 
             var maker = await makers.GetByIdAsync(command.MakerId, cancellationToken);
             if (maker is null)
             {
-                return BusinessResult.Failure<Response>(Error.NotFound("maker"));
+                return BusinessResult.Failure<RefreshMakerFromAresResponse>(Error.NotFound("maker"));
             }
 
             var registryResult = await companyRegistry.LookupByRegistrationNumberAsync(
                 maker.RegistrationNumber, cancellationToken);
             if (!registryResult.IsSuccess)
             {
-                return BusinessResult.Failure<Response>(registryResult.Error!);
+                return BusinessResult.Failure<RefreshMakerFromAresResponse>(registryResult.Error!);
             }
 
             var company = registryResult.Value!;
@@ -146,7 +148,7 @@ public static class RefreshMakerFromAres
                 "RefreshMakerFromAres succeeded for maker {MakerId} (IČO {Ico}, stale snapshot={Stale}).",
                 maker.Id, maker.RegistrationNumber, company.IsStale);
 
-            return BusinessResult.Success(new Response(SnapshotIsStale: company.IsStale));
+            return BusinessResult.Success(new RefreshMakerFromAresResponse(SnapshotIsStale: company.IsStale));
         }
     }
 }
