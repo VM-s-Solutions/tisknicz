@@ -98,6 +98,8 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       use32BitWorkerProcess: false
+      // HTTP/2 at the App Service front end (parity with the web app).
+      http20Enabled: true
       healthCheckPath: healthCheckPath
       appSettings: concat(baseAppSettings, secretAppSettings, corsAppSettings)
     }

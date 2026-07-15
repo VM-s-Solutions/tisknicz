@@ -40,6 +40,10 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       use32BitWorkerProcess: false
+      // HTTP/2 at the App Service front end — multiplexes the CSS/JS/font
+      // fetches the storefront's first paint depends on; App Service
+      // defaults to HTTP/1.1 unless opted in.
+      http20Enabled: true
       // The Next.js `output: 'standalone'` build emits server.js; run it
       // directly (no `next start` / npm install needed at runtime).
       appCommandLine: 'node server.js'
