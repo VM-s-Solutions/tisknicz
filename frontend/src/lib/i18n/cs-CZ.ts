@@ -404,7 +404,7 @@ export const messages = {
   'static.how_it_works.step2_detail4': 'Platba je chráněná: maker dostane peníze až po doručení.',
   'static.how_it_works.step3_title': 'Zaplatíš online',
   'static.how_it_works.step3_body':
-    'Zaplatíš bezpečně přes Comgate kartou nebo převodem. Jakmile je platba potvrzená, maker může hned začít vyrábět.',
+    'Zaplatíš bezpečně online kartou nebo převodem. Jakmile je platba potvrzená, maker může hned začít vyrábět.',
   'static.how_it_works.step4_title': 'Maker objednávku potvrdí a vyrobí',
   'static.how_it_works.step4_body':
     'Maker dostane upozornění na novou objednávku, potvrdí ji a pustí se do práce. Stav vidíš průběžně ve svém účtu.',
