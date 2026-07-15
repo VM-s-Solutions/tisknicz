@@ -8,10 +8,9 @@ interface ReviewsSectionProps {
 }
 
 /**
- * Reviews section (T-0047 AC-7). Always renders the heading; the body
- * is the empty-state copy until T-0050 ships review production. When
- * reviews flow through, only the list body needs to change — the
- * heading + section wrapper stay.
+ * Reviews section (T-0047 AC-7, list body bound by T-0050). Renders the
+ * latest 5 reviews newest-first with the maker's reply panel when one
+ * exists; the empty-state copy stays for makers without reviews.
  */
 export function ReviewsSection({ reviews }: ReviewsSectionProps) {
   return (
@@ -37,6 +36,14 @@ export function ReviewsSection({ reviews }: ReviewsSectionProps) {
                 </div>
                 {review.comment ? (
                   <p className="text-sm text-zinc-300">{review.comment}</p>
+                ) : null}
+                {review.replyBody ? (
+                  <div className="mt-1 border-l-2 border-zinc-700 pl-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      {t('catalog.maker.reviews.reply_label')}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-300">{review.replyBody}</p>
+                  </div>
                 ) : null}
               </Card>
             </li>

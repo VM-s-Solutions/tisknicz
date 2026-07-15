@@ -322,6 +322,7 @@ export const messages = {
   'catalog.maker.products.empty': 'Tento výrobce zatím nemá žádné aktivní produkty.',
   'catalog.maker.reviews.heading': 'Hodnocení zákazníků',
   'catalog.maker.reviews.empty': 'Tento výrobce zatím nemá žádná hodnocení.',
+  'catalog.maker.reviews.reply_label': 'Odpověď výrobce',
   'catalog.maker.error.title': 'Profil se nepodařilo načíst',
   'catalog.maker.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
   'catalog.maker.not_found.title': 'Výrobce nenalezen',

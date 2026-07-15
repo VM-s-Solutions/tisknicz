@@ -144,6 +144,11 @@ export interface IPublicApi {
      * @return OK
      */
     anonymous(): Promise<string>;
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void>;
 }
 
 export class PublicApi implements IPublicApi {
@@ -1156,6 +1161,39 @@ export class PublicApi implements IPublicApi {
         }
         return Promise.resolve<string>(null as any);
     }
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void> {
+        let url_ = this.baseUrl + "/health";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processHealth(_response);
+        });
+    }
+
+    protected processHealth(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
@@ -1759,6 +1797,8 @@ export class MakerReviewItem implements IMakerReviewItem {
     ratingStars!: number;
     comment!: string | undefined;
     createdAt!: Date;
+    replyBody!: string | undefined;
+    replyCreatedAt!: Date | undefined;
 
     [key: string]: any;
 
@@ -1781,6 +1821,8 @@ export class MakerReviewItem implements IMakerReviewItem {
             this.ratingStars = _data["ratingStars"];
             this.comment = _data["comment"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.replyBody = _data["replyBody"];
+            this.replyCreatedAt = _data["replyCreatedAt"] ? new Date(_data["replyCreatedAt"].toString()) : undefined as any;
         }
     }
 
@@ -1801,6 +1843,8 @@ export class MakerReviewItem implements IMakerReviewItem {
         data["ratingStars"] = this.ratingStars;
         data["comment"] = this.comment;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["replyBody"] = this.replyBody;
+        data["replyCreatedAt"] = this.replyCreatedAt ? this.replyCreatedAt.toISOString() : undefined as any;
         return data;
     }
 }
@@ -1810,6 +1854,8 @@ export interface IMakerReviewItem {
     ratingStars: number;
     comment: string | undefined;
     createdAt: Date;
+    replyBody: string | undefined;
+    replyCreatedAt: Date | undefined;
 
     [key: string]: any;
 }
