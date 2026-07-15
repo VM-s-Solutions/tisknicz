@@ -62,6 +62,10 @@ export const messages = {
   'auth.apple.orDivider': 'nebo',
   'auth.apple.startFailed': 'Přihlášení přes Apple se nepodařilo spustit. Zkuste to prosím znovu.',
 
+  // Auth — Google OAuth trigger (T-0026 frontend wiring).
+  'auth.google.signInButton': 'Pokračovat přes Google',
+  'auth.google.startFailed': 'Přihlášení přes Google se nepodařilo spustit. Zkuste to prosím znovu.',
+
   // Auth — OAuth (shared, provider-agnostic; T-0139).
   // Keys mirror BusinessErrorMessage.AuthOAuth* exactly (parity rule,
   // patterns.md §A.4) so Google's OAuth path (T-0026/T-0035) can reuse
