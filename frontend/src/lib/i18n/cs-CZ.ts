@@ -62,6 +62,10 @@ export const messages = {
   'auth.apple.orDivider': 'nebo',
   'auth.apple.startFailed': 'Přihlášení přes Apple se nepodařilo spustit. Zkuste to prosím znovu.',
 
+  // Auth — Google OAuth trigger (T-0026 frontend wiring).
+  'auth.google.signInButton': 'Pokračovat přes Google',
+  'auth.google.startFailed': 'Přihlášení přes Google se nepodařilo spustit. Zkuste to prosím znovu.',
+
   // Auth — OAuth (shared, provider-agnostic; T-0139).
   // Keys mirror BusinessErrorMessage.AuthOAuth* exactly (parity rule,
   // patterns.md §A.4) so Google's OAuth path (T-0026/T-0035) can reuse
@@ -322,6 +326,7 @@ export const messages = {
   'catalog.maker.products.empty': 'Tento výrobce zatím nemá žádné aktivní produkty.',
   'catalog.maker.reviews.heading': 'Hodnocení zákazníků',
   'catalog.maker.reviews.empty': 'Tento výrobce zatím nemá žádná hodnocení.',
+  'catalog.maker.reviews.reply_label': 'Odpověď výrobce',
   'catalog.maker.error.title': 'Profil se nepodařilo načíst',
   'catalog.maker.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
   'catalog.maker.not_found.title': 'Výrobce nenalezen',
@@ -404,7 +409,7 @@ export const messages = {
   'static.how_it_works.step2_detail4': 'Platba je chráněná: maker dostane peníze až po doručení.',
   'static.how_it_works.step3_title': 'Zaplatíš online',
   'static.how_it_works.step3_body':
-    'Zaplatíš bezpečně přes Comgate kartou nebo převodem. Jakmile je platba potvrzená, maker může hned začít vyrábět.',
+    'Zaplatíš bezpečně online kartou nebo převodem. Jakmile je platba potvrzená, maker může hned začít vyrábět.',
   'static.how_it_works.step4_title': 'Maker objednávku potvrdí a vyrobí',
   'static.how_it_works.step4_body':
     'Maker dostane upozornění na novou objednávku, potvrdí ji a pustí se do práce. Stav vidíš průběžně ve svém účtu.',

@@ -101,7 +101,20 @@ export interface IPublicApi {
     /**
      * @return OK
      */
-    callback(body: Body): Promise<void>;
+    callbackPOST(body: Body): Promise<void>;
+
+    /**
+     * @param redirectUri (optional) 
+     * @return OK
+     */
+    start2(redirectUri: string | undefined): Promise<void>;
+
+    /**
+     * @param code (optional) 
+     * @param state (optional) 
+     * @return OK
+     */
+    callbackGET(code: string | undefined, state: string | undefined): Promise<void>;
 
     /**
      * @return OK
@@ -144,6 +157,11 @@ export interface IPublicApi {
      * @return OK
      */
     anonymous(): Promise<string>;
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void>;
 }
 
 export class PublicApi implements IPublicApi {
@@ -822,7 +840,7 @@ export class PublicApi implements IPublicApi {
     /**
      * @return OK
      */
-    callback(body: Body): Promise<void> {
+    callbackPOST(body: Body): Promise<void> {
         let url_ = this.baseUrl + "/api/v1/auth/apple/callback";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -839,11 +857,92 @@ export class PublicApi implements IPublicApi {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCallback(_response);
+            return this.processCallbackPOST(_response);
         });
     }
 
-    protected processCallback(response: Response): Promise<void> {
+    protected processCallbackPOST(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param redirectUri (optional) 
+     * @return OK
+     */
+    start2(redirectUri: string | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/google/start?";
+        if (redirectUri === null)
+            throw new globalThis.Error("The parameter 'redirectUri' cannot be null.");
+        else if (redirectUri !== undefined)
+            url_ += "redirectUri=" + encodeURIComponent("" + redirectUri) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processStart2(_response);
+        });
+    }
+
+    protected processStart2(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param code (optional) 
+     * @param state (optional) 
+     * @return OK
+     */
+    callbackGET(code: string | undefined, state: string | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/google/callback?";
+        if (code === null)
+            throw new globalThis.Error("The parameter 'code' cannot be null.");
+        else if (code !== undefined)
+            url_ += "code=" + encodeURIComponent("" + code) + "&";
+        if (state === null)
+            throw new globalThis.Error("The parameter 'state' cannot be null.");
+        else if (state !== undefined)
+            url_ += "state=" + encodeURIComponent("" + state) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCallbackGET(_response);
+        });
+    }
+
+    protected processCallbackGET(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1155,6 +1254,39 @@ export class PublicApi implements IPublicApi {
             });
         }
         return Promise.resolve<string>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    health(): Promise<void> {
+        let url_ = this.baseUrl + "/health";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processHealth(_response);
+        });
+    }
+
+    protected processHealth(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 }
 
@@ -1759,6 +1891,8 @@ export class MakerReviewItem implements IMakerReviewItem {
     ratingStars!: number;
     comment!: string | undefined;
     createdAt!: Date;
+    replyBody!: string | undefined;
+    replyCreatedAt!: Date | undefined;
 
     [key: string]: any;
 
@@ -1781,6 +1915,8 @@ export class MakerReviewItem implements IMakerReviewItem {
             this.ratingStars = _data["ratingStars"];
             this.comment = _data["comment"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.replyBody = _data["replyBody"];
+            this.replyCreatedAt = _data["replyCreatedAt"] ? new Date(_data["replyCreatedAt"].toString()) : undefined as any;
         }
     }
 
@@ -1801,6 +1937,8 @@ export class MakerReviewItem implements IMakerReviewItem {
         data["ratingStars"] = this.ratingStars;
         data["comment"] = this.comment;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["replyBody"] = this.replyBody;
+        data["replyCreatedAt"] = this.replyCreatedAt ? this.replyCreatedAt.toISOString() : undefined as any;
         return data;
     }
 }
@@ -1810,6 +1948,8 @@ export interface IMakerReviewItem {
     ratingStars: number;
     comment: string | undefined;
     createdAt: Date;
+    replyBody: string | undefined;
+    replyCreatedAt: Date | undefined;
 
     [key: string]: any;
 }

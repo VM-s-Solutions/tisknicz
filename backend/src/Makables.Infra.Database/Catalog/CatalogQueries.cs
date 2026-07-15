@@ -5,6 +5,7 @@ using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Products;
+using Makables.Core.Domain.Reviews;
 using Microsoft.EntityFrameworkCore;
 
 namespace Makables.Infra.Database.Catalog;
@@ -152,6 +153,26 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                     .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
+        // Latest 5 active reviews, newest-first (T-0050 / US-customer-0008
+        // AC-3). The soft-delete query filter hides deactivated reviews.
+        // Ordered by Id descending — review ids are ULIDs (time-ordered),
+        // same provider-portable trick as the products above. The
+        // aggregate star numbers on the header stay authoritative from
+        // Maker.RatingAverageBp/RatingCount (T-0100 Q5); this list is
+        // display-only.
+        var reviews = await db.Set<Review>().AsNoTracking()
+            .Where(r => r.MakerId == header.Id)
+            .OrderByDescending(r => r.Id)
+            .Take(5)
+            .Select(r => new MakerReviewItem(
+                r.Id,
+                r.Rating,
+                r.Body,
+                r.CreatedAt,
+                r.MakerReply,
+                r.MakerReplyAt))
+            .ToListAsync(cancellationToken);
+
         return new MakerProfile(
             MakerId: header.Id,
             Slug: header.Slug,
@@ -166,9 +187,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
             RatingCount: header.RatingCount,
             TotalOrders: header.TotalOrders,
             Products: products,
-            // Reviews deferred to T-0050 — empty list keeps the contract
-            // stable so the frontend/NSwag client don't change later.
-            Reviews: Array.Empty<MakerReviewItem>());
+            Reviews: reviews);
     }
 
     public async Task<ProductDetail?> GetProductByIdAsync(
