@@ -50,6 +50,14 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Transform-only variant for above-the-fold reveals: an opacity-gated
+   element is not painted until the animation runs, which pushes LCP /
+   Speed Index on throttled devices. Text must be paintable at t=0. */
+@keyframes reveal-rise {
+  from { transform: translateY(20px); }
+  to { transform: translateY(0); }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -62,8 +70,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .reveal-up {
-    opacity: 0;
-    animation: slide-up 0.65s ease-out forwards;
+    animation: reveal-rise 0.65s ease-out backwards;
   }
 
   .reveal-delay-1 { animation-delay: 0.08s; }
