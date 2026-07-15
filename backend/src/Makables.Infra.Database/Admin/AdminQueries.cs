@@ -1,6 +1,8 @@
+using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Admin;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
@@ -257,6 +259,93 @@ public sealed class AdminQueries(
                     .FirstOrDefault(),
                 db.Set<Dispute>()
                     .Any(d => d.OrderId == o.Id && d.ResolvedAt == null && d.ReturnCarrierRef != null)))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<PagedData<AdminMakerListItemDto>> GetAllMakersPagedAsync(
+        AdminMakerFilter filter, int page, int pageSize, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+
+        // IgnoreQueryFilters on all three sets: a deactivated maker (and
+        // its possibly-deactivated user/address) must stay visible in the
+        // admin browse list — this is where the admin confirms a
+        // deactivation ran, and the only surface listing non-listable
+        // makers at all. Admin-host only per ADR 0013.
+        var baseQuery =
+            from m in db.Set<Maker>().AsNoTracking().IgnoreQueryFilters().IgnoreAutoIncludes()
+            join u in db.Set<User>().AsNoTracking().IgnoreQueryFilters() on m.UserId equals u.Id
+            join a in db.Set<Address>().AsNoTracking().IgnoreQueryFilters() on m.RegisteredAddressId equals a.Id
+            select new { m, u, a };
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.Trim();
+            var pattern = $"%{term}%";
+            baseQuery = baseQuery.Where(x =>
+                EF.Functions.ILike(x.m.CompanyName, pattern) || x.m.RegistrationNumber == term);
+        }
+
+        if (filter.IsVerified.HasValue)
+            baseQuery = baseQuery.Where(x => x.m.IsVerified == filter.IsVerified.Value);
+
+        var totalCount = await baseQuery.CountAsync(ct);
+        if (totalCount == 0)
+            return PagedData<AdminMakerListItemDto>.Empty(page, pageSize);
+
+        var items = await baseQuery
+            .OrderByDescending(x => x.m.CreatedAt)
+            .ThenByDescending(x => x.m.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new AdminMakerListItemDto(
+                x.m.Id,
+                x.m.CompanyName,
+                x.m.RegistrationNumber,
+                x.a.City,
+                x.u.Email,
+                x.m.IsVerified,
+                x.m.IsActive,
+                x.m.FeeRateOverrideBp,
+                x.m.RatingAverageBp,
+                x.m.TotalOrders,
+                x.m.CreatedAt))
+            .ToListAsync(ct);
+
+        return new PagedData<AdminMakerListItemDto>(items, page, pageSize, totalCount);
+    }
+
+    public async Task<AdminMakerDetailDto?> GetMakerDetailAsync(string makerId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(makerId)) return null;
+
+        return await (
+            from m in db.Set<Maker>().AsNoTracking().IgnoreQueryFilters().IgnoreAutoIncludes()
+            join u in db.Set<User>().AsNoTracking().IgnoreQueryFilters() on m.UserId equals u.Id
+            join a in db.Set<Address>().AsNoTracking().IgnoreQueryFilters() on m.RegisteredAddressId equals a.Id
+            where m.Id == makerId
+            select new AdminMakerDetailDto(
+                m.Id,
+                m.UserId,
+                u.Email,
+                m.CompanyName,
+                m.RegistrationNumber,
+                m.VatId,
+                m.LegalForm,
+                m.Slug,
+                a.City,
+                m.IsVerified,
+                m.IsActive,
+                m.IsActiveInRegistry,
+                m.SnapshotIsStale,
+                m.SnapshotFetchedAt,
+                m.FeeRateOverrideBp,
+                m.RatingAverageBp,
+                m.RatingCount,
+                m.TotalOrders,
+                m.PersonalPickupEnabled,
+                m.IsRetainedForLegal,
+                m.CreatedAt))
             .FirstOrDefaultAsync(ct);
     }
 

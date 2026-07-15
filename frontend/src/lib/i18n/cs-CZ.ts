@@ -1835,16 +1835,49 @@ export const messages = {
   'dashboard.admin.ops.makers.metadata.description':
     'Nastavení nebo zrušení individuální slevy na provizi platformy pro výrobce.',
   'dashboard.admin.ops.makers.lookup.title': 'Výrobci',
-  'dashboard.admin.ops.makers.lookup.subtitle':
-    'Zadejte ID výrobce, kterému chcete nastavit nebo zrušit individuální sazbu provize (věrnostní slevu).',
-  'dashboard.admin.ops.makers.lookup.idLabel': 'ID výrobce',
-  'dashboard.admin.ops.makers.lookup.idHint': 'Identifikátor výrobce (GUID).',
-  'dashboard.admin.ops.makers.lookup.submit': 'Pokračovat',
-  'dashboard.admin.ops.makers.detail.title': 'Provize výrobce {makerId}',
-  'dashboard.admin.ops.makers.detail.subtitle':
-    'Nastavení individuální slevy na provizi platformy (věrnostní sazba). Sleva nesmí přesáhnout výchozí provizi země a nikdy se nedotkne již vytvořených objednávek.',
-  'dashboard.admin.ops.makers.detail.readGapNote':
-    'Backend zatím nevystavuje čtení aktuálního nastavení výrobce (jméno, země, aktivní override), proto zde nelze zobrazit aktuálně platnou sazbu. Formulář níže odešle nové nastavení naslepo — před odesláním si prosím ověřte ID výrobce a hodnotu jinde (např. v auditním logu). Doplnění čtecího endpointu je evidováno jako následný backendový úkol.',
+
+  // Admin makers list + detail (T-0119b — real list/detail reads replace the id-lookup)
+  'dashboard.admin.ops.makers.list.subtitle':
+    'Procházejte výrobce včetně deaktivovaných. Ověření, deaktivace, obnova ARES i sazba provize jsou v detailu výrobce.',
+  'dashboard.admin.ops.makers.list.empty': 'Žádní výrobci neodpovídají hledání.',
+  'dashboard.admin.ops.makers.list.error':
+    'Seznam výrobců se nepodařilo načíst. Zkuste to prosím znovu.',
+  'dashboard.admin.ops.makers.list.searchLabel': 'Hledat',
+  'dashboard.admin.ops.makers.list.searchPlaceholder': 'Název firmy nebo přesné IČO',
+  'dashboard.admin.ops.makers.list.searchSubmit': 'Hledat',
+  'dashboard.admin.ops.makers.list.rowMeta': 'IČO {ico} · {city} · {email}',
+  'dashboard.admin.ops.makers.list.rowOrders': '{count} objednávek',
+  'dashboard.admin.ops.makers.list.rowOverride': 'override {percent} %',
+  'dashboard.admin.ops.makers.badge.verified': 'Ověřený',
+  'dashboard.admin.ops.makers.badge.unverified': 'Neověřený',
+  'dashboard.admin.ops.makers.badge.inactive': 'Deaktivovaný',
+  'dashboard.admin.ops.makers.badge.staleSnapshot': 'Zastaralý ARES snapshot',
+  'dashboard.admin.ops.makers.detail.back': 'Zpět na výrobce',
+  'dashboard.admin.ops.makers.detail.loadError':
+    'Detail výrobce se nepodařilo načíst. Zkuste to prosím znovu.',
+  'dashboard.admin.ops.makers.detail.ico': 'IČO',
+  'dashboard.admin.ops.makers.detail.dic': 'DIČ',
+  'dashboard.admin.ops.makers.detail.legalForm': 'Právní forma',
+  'dashboard.admin.ops.makers.detail.city': 'Město',
+  'dashboard.admin.ops.makers.detail.slug': 'Katalogový slug',
+  'dashboard.admin.ops.makers.detail.orders': 'Objednávky',
+  'dashboard.admin.ops.makers.detail.rating': 'Hodnocení',
+  'dashboard.admin.ops.makers.detail.effectiveFee': 'Platná provize',
+  'dashboard.admin.ops.makers.detail.feeOverride': 'Individuální sazba',
+  'dashboard.admin.ops.makers.detail.feeOverrideNone': 'Není nastavena',
+  'dashboard.admin.ops.makers.detail.dissolvedWarning':
+    'Subjekt je v registru veden jako zaniklý. Zvažte deaktivaci výrobce.',
+  'dashboard.admin.ops.makers.actions.title': 'Akce',
+  'dashboard.admin.ops.makers.actions.verify': 'Ověřit výrobce',
+  'dashboard.admin.ops.makers.actions.verifySuccess': 'Výrobce byl označen jako ověřený.',
+  'dashboard.admin.ops.makers.actions.refresh': 'Obnovit z ARES',
+  'dashboard.admin.ops.makers.actions.refreshSuccess': 'ARES snapshot byl obnoven.',
+  'dashboard.admin.ops.makers.actions.deactivate': 'Deaktivovat',
+  'dashboard.admin.ops.makers.actions.deactivateConfirm': 'Opravdu deaktivovat?',
+  'dashboard.admin.ops.makers.actions.deactivateSuccess':
+    'Výrobce byl deaktivován — zmizí z katalogu a nepřijme nové objednávky; rozpracované objednávky se dokončí.',
+  'dashboard.admin.ops.makers.actions.note':
+    'Každá akce se zapisuje do auditního logu. Deaktivace je měkká — data zůstávají a výrobce lze najít v tomto seznamu.',
   'dashboard.admin.ops.makers.detail.countryDefaultLabel': 'Výchozí provize země {country}',
   'dashboard.admin.ops.makers.detail.countryDefaultUnavailable':
     'Výchozí provizi země se nepodařilo načíst.',
