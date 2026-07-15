@@ -37,18 +37,26 @@ param postgresAdminUser = readEnvironmentVariable('POSTGRES_ADMIN_USER')
 // are not valid in a .bicepparam file (BCP130).
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
+// Dev allowlists include the App Service DEFAULT hostname alongside the custom
+// domain (Cleansia D3 pattern): until DNS is rebound, the frontend serves at
+// web-makables-weu-dev.azurewebsites.net, and a browser Origin not in this list
+// fails the CORS preflight even against a healthy backend.
 param customerCorsOrigins = [
   'https://dev.makables.cz'
+  'https://web-makables-weu-dev.azurewebsites.net'
 ]
 param makerCorsOrigins = [
   'https://dev.makables.cz'
+  'https://web-makables-weu-dev.azurewebsites.net'
 ]
 param adminCorsOrigins = [
   'https://dev-admin.makables.cz'
+  'https://web-makables-weu-dev.azurewebsites.net'
 ]
 param publicCorsOrigins = [
   'https://dev.makables.cz'
   'https://makables.cz'
+  'https://web-makables-weu-dev.azurewebsites.net'
 ]
 
 // Per-env non-secret app config.

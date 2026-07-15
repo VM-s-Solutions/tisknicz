@@ -111,6 +111,29 @@ jobs:
           set_secret "Packeta--PublicWidgetKey"   "$PACKETA_PUBLIC_WIDGET_KEY"
           set_secret "Mapbox--AccessToken"        "$MAPBOX_ACCESS_TOKEN"
 
+      # Assert the full secret inventory (external + Bicep-derived) is present
+      # and NON-EMPTY in the vault before anything deploys. An empty secret
+      # resolves "successfully" into an empty app setting and the host dies on
+      # ValidateOnStart with a 503 warmup loop — fail the deploy here instead.
+      # Only lengths are printed, never values.
+      - name: Verify Key Vault secret inventory
+        run: |
+          set -euo pipefail
+          fail=0
+          for name in "Jwt--SigningKeyBase64" "SendGrid--ApiKey" "Comgate--MerchantId" \
+                      "Comgate--Secret" "Packeta--ApiKey" "Packeta--PublicWidgetKey" \
+                      "Mapbox--AccessToken" "ConnectionStrings--Postgres" \
+                      "Storage--ConnectionString" "OutboxQueues--ConnectionString"; do
+            len=$(az keyvault secret show --vault-name "$KV" --name "$name" --query "length(value)" -o tsv 2>/dev/null || echo 0)
+            if [ "${len:-0}" -gt 0 ]; then
+              echo "OK      $name (length $len)"
+            else
+              echo "::error::Key Vault secret '$name' is MISSING or EMPTY in $KV — hosts will crash on ValidateOnStart."
+              fail=1
+            fi
+          done
+          exit $fail
+
   migrate:
     name: EF Core migrations → Postgres
     runs-on: ubuntu-latest
@@ -302,3 +325,43 @@ jobs:
         with:
           app-name: web-makables-weu-prod
           package: frontend/.next/standalone
+
+  # Post-deploy smoke: a host that "deployed green" but dies on ValidateOnStart
+  # (missing/empty secret, unresolved Key Vault reference) never binds its port
+  # and 503s the warmup probe forever — this job turns that into a RED run.
+  smoke:
+    name: Post-deploy smoke (/health)
+    runs-on: ubuntu-latest
+    needs: [backend, functions, frontend]
+    timeout-minutes: 15
+    steps:
+      - name: Probe /health on every API host
+        run: |
+          set -euo pipefail
+          hosts=(app-makables-customer-weu-prod app-makables-maker-weu-prod app-makables-admin-weu-prod app-makables-public-weu-prod)
+          for h in "${hosts[@]}"; do
+            echo "probing https://$h.azurewebsites.net/health"
+            ok=0
+            for attempt in $(seq 1 12); do
+              code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "https://$h.azurewebsites.net/health" || echo 000)
+              if [ "$code" = "200" ]; then echo "  healthy"; ok=1; break; fi
+              echo "  attempt $attempt: HTTP $code — waiting 15s (cold start / KV reference resolution)…"
+              sleep 15
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::$h never returned 200 on /health — check its Log stream and the Key Vault reference status on its Environment variables blade."
+              exit 1
+            fi
+          done
+
+      - name: Probe the frontend
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 8); do
+            code=$(curl -s -o /dev/null --max-time 30 -w '%{http_code}' "https://web-makables-weu-prod.azurewebsites.net/" || echo 000)
+            if [ "$code" = "200" ]; then echo "frontend healthy"; exit 0; fi
+            echo "attempt $attempt: HTTP $code — waiting 15s…"
+            sleep 15
+          done
+          echo "::error::frontend never returned 200"
+          exit 1

@@ -62,18 +62,24 @@ design) without them.
    compromised workflow's blast radius to one project.
 
 3. **Verify the GitHub Actions secrets** (Settings → Environments → `dev`).
-   All of these must be non-empty — the workflow **fails loudly on any empty
-   one** (they are required-to-boot via `ValidateOnStart`):
 
-   `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
-   `POSTGRES_ADMIN_USER`, `POSTGRES_ADMIN_PASSWORD` (alphanumeric-only),
-   `JWT_SIGNING_KEY_BASE64` (base64, ≥ 32 bytes — generate:
-   `openssl rand -base64 32`), `SENDGRID_API_KEY`, `COMGATE_MERCHANT_ID`,
-   `COMGATE_SECRET`, `PACKETA_API_KEY`, `PACKETA_PUBLIC_WIDGET_KEY`,
-   `MAPBOX_ACCESS_TOKEN`. Optional: `ALERT_EMAIL` (enables metric alerts).
+   **Hard-required (deploy fails without them):** `AZURE_CLIENT_ID`,
+   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `POSTGRES_ADMIN_USER`,
+   `POSTGRES_ADMIN_PASSWORD` (alphanumeric-only), `JWT_SIGNING_KEY_BASE64`
+   (base64, ≥ 32 bytes — generate: `openssl rand -base64 32`).
 
-   Dev may use placeholder values for the provider keys (no host calls a
-   provider at startup) — only the JWT key must be genuinely ≥ 32 bytes.
+   **Provider credentials — optional in dev:** `SENDGRID_API_KEY`,
+   `COMGATE_MERCHANT_ID`, `COMGATE_SECRET`, `PACKETA_API_KEY`,
+   `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`. When one is unset, the
+   dev push step writes a non-secret **boot-stub** into Key Vault so the hosts
+   boot (`ValidateOnStart` only needs non-empty; no host calls a provider at
+   startup). Provider *calls* — payments, shipping, geocoding, **all emails
+   (incl. registration confirmation)** — fail at call time until real values
+   land. Setting the GitHub secret later overwrites the stub on the next
+   deploy; a value set manually in the vault is never overwritten by an empty
+   GitHub secret. **Production has no stub path — all secrets hard-required.**
+
+   Optional: `ALERT_EMAIL` (enables metric alerts).
 
 4. *(Recommended)* **What-if first** so the initial diff holds no surprises:
 

@@ -87,9 +87,8 @@ jobs:
             --role "Key Vault Secrets Officer" --scope "$KV_ID" --output none 2>/dev/null || true
 
           set_secret() {
-            # $1 = Key Vault secret name, $2 = value; fail loudly if empty (every
-            # secret here is required-to-boot via ValidateOnStart). Retry to ride
-            # out RBAC propagation on a freshly-granted assignment.
+            # $1 = Key Vault secret name, $2 = value; fail loudly if empty.
+            # Retry to ride out RBAC propagation on a freshly-granted assignment.
             if [ -z "$2" ]; then
               echo "::error::GitHub secret for Key Vault secret '$1' is EMPTY — the hosts will crash on ValidateOnStart. Set it and re-run."
               return 1
@@ -103,13 +102,62 @@ jobs:
             done
             echo "::error::failed to set $1 after retries (check the CI principal's Key Vault RBAC)"; return 1
           }
-          set_secret "Jwt--SigningKeyBase64"      "$JWT_SIGNING_KEY_BASE64"
-          set_secret "SendGrid--ApiKey"           "$SENDGRID_API_KEY"
-          set_secret "Comgate--MerchantId"        "$COMGATE_MERCHANT_ID"
-          set_secret "Comgate--Secret"            "$COMGATE_SECRET"
-          set_secret "Packeta--ApiKey"            "$PACKETA_API_KEY"
-          set_secret "Packeta--PublicWidgetKey"   "$PACKETA_PUBLIC_WIDGET_KEY"
-          set_secret "Mapbox--AccessToken"        "$MAPBOX_ACCESS_TOKEN"
+
+          ensure_secret() {
+            # DEV-ONLY provider-secret semantics: $1 = KV name, $2 = GitHub
+            # value, $3 = boot-stub. The ValidateOnStart validators only need a
+            # NON-EMPTY value and no host calls a provider at startup, so dev
+            # boots on stubs until the real credentials exist (mirrors the CI
+            # spec-parity job + appsettings.Development.json). Precedence:
+            #   GitHub secret set        -> push it (real value wins, always)
+            #   unset + vault has value  -> keep the vault value (never stomp
+            #                               a manually-set real credential)
+            #   unset + vault empty      -> push the stub so the host boots
+            # Provider calls (payments, shipping, geocoding, EMAILS) fail at
+            # call time until real values land. Prod has NO stub path.
+            if [ -n "$2" ]; then set_secret "$1" "$2"; return; fi
+            existing_len=$(az keyvault secret show --vault-name "$KV" --name "$1" --query "length(value)" -o tsv 2>/dev/null || echo 0)
+            if [ "${existing_len:-0}" -gt 0 ]; then
+              echo "kept $1 (GitHub secret empty; vault already has a value)"
+              return 0
+            fi
+            echo "stub $1 (GitHub secret empty — pushing dev boot-stub; set the real secret and redeploy to replace it)"
+            set_secret "$1" "$3"
+          }
+
+          # Required-for-real in every environment: JWT signing key (tokens must
+          # verify) — no stub fallback.
+          set_secret "Jwt--SigningKeyBase64"         "$JWT_SIGNING_KEY_BASE64"
+          # Provider credentials — stub fallback in dev (see ensure_secret).
+          ensure_secret "SendGrid--ApiKey"           "$SENDGRID_API_KEY"           "SG.dev-boot-stub"
+          ensure_secret "Comgate--MerchantId"        "$COMGATE_MERCHANT_ID"        "dev-boot-stub-merchant"
+          ensure_secret "Comgate--Secret"            "$COMGATE_SECRET"             "dev-boot-stub-secret"
+          ensure_secret "Packeta--ApiKey"            "$PACKETA_API_KEY"            "dev-boot-stub-packeta-api-key"
+          ensure_secret "Packeta--PublicWidgetKey"   "$PACKETA_PUBLIC_WIDGET_KEY"  "dev-boot-stub-packeta-widget-key"
+          ensure_secret "Mapbox--AccessToken"        "$MAPBOX_ACCESS_TOKEN"        "pk.dev-boot-stub"
+
+      # Assert the full secret inventory (external + Bicep-derived) is present
+      # and NON-EMPTY in the vault before anything deploys. An empty secret
+      # resolves "successfully" into an empty app setting and the host dies on
+      # ValidateOnStart with a 503 warmup loop — fail the deploy here instead.
+      # Only lengths are printed, never values.
+      - name: Verify Key Vault secret inventory
+        run: |
+          set -euo pipefail
+          fail=0
+          for name in "Jwt--SigningKeyBase64" "SendGrid--ApiKey" "Comgate--MerchantId" \
+                      "Comgate--Secret" "Packeta--ApiKey" "Packeta--PublicWidgetKey" \
+                      "Mapbox--AccessToken" "ConnectionStrings--Postgres" \
+                      "Storage--ConnectionString" "OutboxQueues--ConnectionString"; do
+            len=$(az keyvault secret show --vault-name "$KV" --name "$name" --query "length(value)" -o tsv 2>/dev/null || echo 0)
+            if [ "${len:-0}" -gt 0 ]; then
+              echo "OK      $name (length $len)"
+            else
+              echo "::error::Key Vault secret '$name' is MISSING or EMPTY in $KV — hosts will crash on ValidateOnStart."
+              fail=1
+            fi
+          done
+          exit $fail
 
   migrate:
     name: EF Core migrations → Postgres
@@ -316,3 +364,44 @@ jobs:
         with:
           app-name: web-makables-weu-dev
           package: frontend/.next/standalone
+
+  # Post-deploy smoke: a host that "deployed green" but dies on ValidateOnStart
+  # (missing/empty secret, unresolved Key Vault reference) never binds its port
+  # and 503s the warmup probe forever — this job turns that into a RED run.
+  # /health is the dependency-free liveness endpoint each API host maps.
+  smoke:
+    name: Post-deploy smoke (/health)
+    runs-on: ubuntu-latest
+    needs: [backend, functions, frontend]
+    timeout-minutes: 15
+    steps:
+      - name: Probe /health on every API host
+        run: |
+          set -euo pipefail
+          hosts=(app-makables-customer-weu-dev app-makables-maker-weu-dev app-makables-admin-weu-dev app-makables-public-weu-dev)
+          for h in "${hosts[@]}"; do
+            echo "probing https://$h.azurewebsites.net/health"
+            ok=0
+            for attempt in $(seq 1 12); do
+              code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "https://$h.azurewebsites.net/health" || echo 000)
+              if [ "$code" = "200" ]; then echo "  healthy"; ok=1; break; fi
+              echo "  attempt $attempt: HTTP $code — waiting 15s (cold start / KV reference resolution)…"
+              sleep 15
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::$h never returned 200 on /health — check its Log stream and the Key Vault reference status on its Environment variables blade."
+              exit 1
+            fi
+          done
+
+      - name: Probe the frontend
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 8); do
+            code=$(curl -s -o /dev/null --max-time 30 -w '%{http_code}' "https://web-makables-weu-dev.azurewebsites.net/" || echo 000)
+            if [ "$code" = "200" ]; then echo "frontend healthy"; exit 0; fi
+            echo "attempt $attempt: HTTP $code — waiting 15s…"
+            sleep 15
+          done
+          echo "::error::frontend never returned 200"
+          exit 1
