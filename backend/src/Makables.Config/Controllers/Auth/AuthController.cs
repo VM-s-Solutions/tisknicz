@@ -52,6 +52,7 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
     public sealed record ConsumeMagicLinkRequest(string Token);
     public sealed record StartAppleOAuthRequest(string RedirectUri);
     public sealed record StartAppleOAuthResponse(string AuthorizationUrl);
+    public sealed record StartGoogleOAuthResponse(string AuthorizationUrl);
 
     /// <summary>Register a customer account. Maker registration goes through <c>/api/v1/makers/register</c> on the Public host.</summary>
     [HttpPost("register")]
@@ -174,6 +175,67 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
             RedirectUri: redirectUri,
             CsrfCookieValue: csrfCookieValue,
             UserFieldJson: user,
+            UserAgent: NormalizedUserAgent(),
+            IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+
+        AuthCookies.ClearOAuthCsrfCookie(Response);
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            AuthCookies.SetSessionCookies(Response, hostAudience.Value, result.Value);
+        }
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Begin the Google OAuth flow (T-0026). The handlers and
+    /// <c>GoogleOAuthClient</c> shipped with T-0026/T-0035; this endpoint
+    /// is the HTTP surface that was still missing. Mirrors
+    /// <see cref="StartAppleOAuth"/>: audience from <see cref="IHostAudience"/>,
+    /// anti-CSRF cookie set before returning the authorization URL the
+    /// frontend redirects the browser to. Admin audience is rejected by
+    /// the handler (ADR 0012 §Google OAuth).
+    /// </summary>
+    [HttpGet("google/start")]
+    [AllowAnonymous]
+    public async Task<IActionResult> StartGoogleOAuth([FromQuery] string redirectUri, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new StartGoogleOAuth.Command(hostAudience.Value, redirectUri), ct);
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            AuthCookies.SetOAuthCsrfCookie(Response, result.Value.CsrfCookieValue);
+            return HandleResult(BusinessResult.Success(
+                new StartGoogleOAuthResponse(result.Value.AuthorizationUrl)));
+        }
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Google's authorization-code callback — unlike Apple's
+    /// <c>form_post</c>, Google GET-redirects the browser back with
+    /// <c>code</c>/<c>state</c> as query parameters (ADR 0026 Defense
+    /// section relies on the two providers keeping structurally distinct
+    /// callback routes — never point both at the same URI). The redirect
+    /// URI bound into the signed state at Start must match the URL Google
+    /// actually redirected to, so it is derived from the current request,
+    /// same as the Apple callback.
+    /// </summary>
+    [HttpGet("google/callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CompleteGoogleOAuth(
+        [FromQuery] string code,
+        [FromQuery] string state,
+        CancellationToken ct)
+    {
+        var csrfCookieValue = AuthCookies.ReadOAuthCsrfCookie(Request) ?? string.Empty;
+        var redirectUri = $"{Request.Scheme}://{Request.Host}{Request.Path}";
+
+        var result = await Mediator.Send(new CompleteGoogleOAuth.Command(
+            Code: code,
+            State: state,
+            RedirectUri: redirectUri,
+            CsrfCookieValue: csrfCookieValue,
             UserAgent: NormalizedUserAgent(),
             IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
 

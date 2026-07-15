@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppleSignInButton } from '@/components/shared/apple-sign-in-button';
+import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { registerCustomer } from '@/lib/api-client-helpers/auth';
 import { t } from '@/lib/i18n';
 
@@ -100,6 +101,7 @@ export function RegisterForm() {
         <div className="h-px flex-1 bg-zinc-800" />
       </div>
       <AppleSignInButton host="customer" onError={setServerError} />
+      <GoogleSignInButton host="customer" onError={setServerError} />
       <p className="text-center text-sm text-zinc-400">
         {t('auth.register.already_have_account')}{' '}
         <Link href="/login" className="text-brand-400 hover:underline">

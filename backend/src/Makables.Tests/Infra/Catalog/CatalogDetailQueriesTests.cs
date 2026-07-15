@@ -2,7 +2,9 @@ using FluentAssertions;
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Makers;
+using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Products;
+using Makables.Core.Domain.Reviews;
 using Makables.Infra.Database.Catalog;
 using Makables.Tests.Infra.Database;
 using DomainMoney = Makables.Core.Domain.Money.Money;
@@ -71,10 +73,90 @@ public class CatalogDetailQueriesTests
         profile!.CompanyName.Should().Be("Keramika s.r.o.");
         profile.RatingAverageBp.Should().Be(45000);
         profile.Products.Should().HaveCount(2);
-        profile.Reviews.Should().BeEmpty("reviews are deferred to T-0050");
+        profile.Reviews.Should().BeEmpty("no reviews seeded");
         // The 2-image product exposes its lowest-sort-order image as primary.
         profile.Products.Single(p => p.ProductId == "prod-1").PrimaryImageBlobPath
             .Should().Be("cz/products/prod-1/0.jpg");
+    }
+
+    // === GetMakerBySlug reviews (T-0050) ===
+
+    private static void SeedReviewCustomer(TestDbHarness h)
+    {
+        h.Db.Set<User>().Add(User.Create(
+            id: "user-cust-1", email: "cust@example.cz", role: UserRole.Customer,
+            fullName: "Zákazník", countryCodePrimary: "CZ",
+            emailAlreadyConfirmed: true, confirmedAt: Now));
+    }
+
+    /// <summary>Reviews carry a real FK to orders, so each seeded review needs its own order row.</summary>
+    private static Review SeedReview(TestDbHarness h, string id, string makerId, short rating, string? body)
+    {
+        h.Db.Set<Order>().Add(Order.Create(
+            id: $"ord-{id}", orderNumber: $"M-CZ-2026{id}",
+            customerUserId: "user-cust-1", makerId: makerId, productId: "prod-1",
+            contactName: "Anna", contactEmail: "anna@example.cz", contactPhone: "+420 723 456 789",
+            productPriceAmountMinor: 25000, shippingPriceAmountMinor: 7900,
+            platformFeeAmountMinor: 1750, makerPayoutAmountMinor: 31150,
+            totalAmountMinor: 32900, currency: "CZK", vatRateBp: 2100,
+            shippingMethod: ShippingMethod.ZasilkovnaPickupPoint,
+            zasilkovnaPickupPointId: "pp-1", countryCode: "CZ"));
+
+        var review = Review.Create(
+            id: id, orderId: $"ord-{id}", makerId: makerId,
+            customerUserId: "user-cust-1", rating: rating, body: body, countryCode: "CZ");
+        h.Db.Set<Review>().Add(review);
+        return review;
+    }
+
+    [Fact]
+    public async Task GetMakerBySlug_returns_latest_five_reviews_newest_first_with_reply()
+    {
+        using var h = TestDbHarness.Create();
+        SeedListableMaker(h, "1", "keramika");
+        SeedReviewCustomer(h);
+        SeedProduct(h, "prod-1", "maker-1", "Hrnek");
+        for (var i = 1; i <= 6; i++)
+        {
+            // Ids are ULIDs in production (time-ordered); zero-padded
+            // suffixes give the same lexicographic ordering here.
+            SeedReview(h, $"rev-{i:D2}", "maker-1", 4, $"Recenze {i}");
+        }
+        var replied = SeedReview(h, "rev-07", "maker-1", 5, "S odpovědí");
+        replied.AddReply("Děkujeme!", Now);
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new CatalogQueries(h.Db);
+        var profile = await sut.GetMakerBySlugAsync("keramika", default);
+
+        profile!.Reviews.Should().HaveCount(5, "the public list caps at the latest 5 (US-customer-0008 AC-3)");
+        profile.Reviews.Select(r => r.ReviewId)
+            .Should().ContainInOrder("rev-07", "rev-06", "rev-05", "rev-04", "rev-03");
+        var withReply = profile.Reviews.Single(r => r.ReviewId == "rev-07");
+        withReply.RatingStars.Should().Be(5);
+        withReply.Comment.Should().Be("S odpovědí");
+        withReply.ReplyBody.Should().Be("Děkujeme!");
+        withReply.ReplyCreatedAt.Should().Be(Now);
+        profile.Reviews.Single(r => r.ReviewId == "rev-06").ReplyBody.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetMakerBySlug_excludes_soft_deleted_reviews()
+    {
+        using var h = TestDbHarness.Create();
+        SeedListableMaker(h, "1", "keramika");
+        SeedReviewCustomer(h);
+        SeedProduct(h, "prod-1", "maker-1", "Hrnek");
+        SeedReview(h, "rev-01", "maker-1", 5, "Zůstává");
+        var removed = SeedReview(h, "rev-02", "maker-1", 1, "Skrytá");
+        await h.Db.SaveChangesAsync(default);
+        removed.MarkDeactivated("admin", Now);
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new CatalogQueries(h.Db);
+        var profile = await sut.GetMakerBySlugAsync("keramika", default);
+
+        profile!.Reviews.Should().ContainSingle().Which.ReviewId.Should().Be("rev-01");
     }
 
     [Fact]

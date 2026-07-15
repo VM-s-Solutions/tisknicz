@@ -59,7 +59,7 @@ export function PublicFooter() {
         />
       </div>
       <div className="border-t border-zinc-800 px-4 py-4 sm:px-6 lg:px-8">
-        <p className="mx-auto max-w-7xl text-sm text-zinc-500">{t('footer.copyright', { year })}</p>
+        <p className="mx-auto max-w-7xl text-sm text-zinc-400">{t('footer.copyright', { year })}</p>
       </div>
     </footer>
   );

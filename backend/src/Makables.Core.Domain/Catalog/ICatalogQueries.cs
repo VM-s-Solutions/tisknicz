@@ -29,8 +29,7 @@ public interface ICatalogQueries
     /// maker's bio + rating + city, plus all active products. Null when
     /// the slug doesn't resolve to a publicly-listable maker (inactive /
     /// unconfirmed → treated as not found, same gate as the list).
-    /// Reviews are deferred to T-0050 — the DTO carries an empty review
-    /// list for now (null-safe forward-compat).
+    /// Includes the latest 5 active reviews with maker replies (T-0050).
     /// </summary>
     Task<MakerProfile?> GetMakerBySlugAsync(
         string slug,
@@ -110,14 +109,22 @@ public sealed record MakerProductItem(
     string? PrimaryImageBlobPath);
 
 /// <summary>
-/// A recent review on the maker profile. Placeholder DTO — no producer
-/// until T-0050; the profile query returns an empty list for now.
+/// A recent review on the maker profile (T-0050). The latest 5 active
+/// reviews, newest-first (US-customer-0008 AC-3), each with the maker's
+/// reply when one exists. Flat nullable reply fields (not a nested
+/// record) — the reply is a single overwritable text per review
+/// (T-0100 Q4 lock), so a nested shape would add wire noise for no
+/// modelling gain. No author field: the public surface deliberately
+/// carries no customer-identifying data (GDPR data minimisation,
+/// mirrors the T-0081 customer-email lock).
 /// </summary>
 public sealed record MakerReviewItem(
     string ReviewId,
     int RatingStars,
     string? Comment,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? ReplyBody,
+    DateTimeOffset? ReplyCreatedAt);
 
 /// <summary>
 /// Public product-detail view (US-customer-0009). The product fields +
