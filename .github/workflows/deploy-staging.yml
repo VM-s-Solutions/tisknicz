@@ -74,6 +74,12 @@ jobs:
           PACKETA_API_KEY: ${{ secrets.PACKETA_API_KEY }}
           PACKETA_PUBLIC_WIDGET_KEY: ${{ secrets.PACKETA_PUBLIC_WIDGET_KEY }}
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          APPLE_SERVICES_ID: ${{ secrets.APPLE_SERVICES_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY_PEM: ${{ secrets.APPLE_PRIVATE_KEY_PEM }}
         run: |
           set -euo pipefail
           # Resolve the CI principal's object id (OIDC: account user.name is the app/client id).
@@ -135,6 +141,17 @@ jobs:
           ensure_secret "Packeta--ApiKey"            "$PACKETA_API_KEY"            "dev-boot-stub-packeta-api-key"
           ensure_secret "Packeta--PublicWidgetKey"   "$PACKETA_PUBLIC_WIDGET_KEY"  "dev-boot-stub-packeta-widget-key"
           ensure_secret "Mapbox--AccessToken"        "$MAPBOX_ACCESS_TOKEN"        "pk.dev-boot-stub"
+          # OAuth sign-in providers (Auth:Google T-0026 / Auth:Apple ADR 0026).
+          # Deliberately NOT ValidateOnStart in the hosts — the stub keeps the
+          # KV reference resolvable and the sign-in button fails closed at the
+          # provider until real credentials land. Registration steps:
+          # docs/deployment/oauth-providers.md.
+          ensure_secret "Auth--Google--ClientId"     "$GOOGLE_OAUTH_CLIENT_ID"     "dev-boot-stub.apps.googleusercontent.com"
+          ensure_secret "Auth--Google--ClientSecret" "$GOOGLE_OAUTH_CLIENT_SECRET" "dev-boot-stub"
+          ensure_secret "Auth--Apple--ClientId"      "$APPLE_SERVICES_ID"          "cz.makables.dev-boot-stub"
+          ensure_secret "Auth--Apple--TeamId"        "$APPLE_TEAM_ID"              "DEVBOOTSTUB"
+          ensure_secret "Auth--Apple--KeyId"         "$APPLE_KEY_ID"               "DEVBOOTSTUB"
+          ensure_secret "Auth--Apple--PrivateKeyPem" "$APPLE_PRIVATE_KEY_PEM"      "dev-boot-stub-not-a-key"
 
       # Assert the full secret inventory (external + Bicep-derived) is present
       # and NON-EMPTY in the vault before anything deploys. An empty secret
@@ -148,7 +165,10 @@ jobs:
           for name in "Jwt--SigningKeyBase64" "SendGrid--ApiKey" "Comgate--MerchantId" \
                       "Comgate--Secret" "Packeta--ApiKey" "Packeta--PublicWidgetKey" \
                       "Mapbox--AccessToken" "ConnectionStrings--Postgres" \
-                      "Storage--ConnectionString" "OutboxQueues--ConnectionString"; do
+                      "Storage--ConnectionString" "OutboxQueues--ConnectionString" \
+                      "Auth--Google--ClientId" "Auth--Google--ClientSecret" \
+                      "Auth--Apple--ClientId" "Auth--Apple--TeamId" \
+                      "Auth--Apple--KeyId" "Auth--Apple--PrivateKeyPem"; do
             len=$(az keyvault secret show --vault-name "$KV" --name "$name" --query "length(value)" -o tsv 2>/dev/null || echo 0)
             if [ "${len:-0}" -gt 0 ]; then
               echo "OK      $name (length $len)"

@@ -217,6 +217,34 @@ var apiSecretSettings = [
     name: 'Mapbox__AccessToken'
     value: kvRef(kvUri, 'Mapbox--AccessToken')
   }
+  // OAuth sign-in providers (Auth:Google T-0026, Auth:Apple ADR 0026).
+  // Deliberately NOT ValidateOnStart in the hosts — a boot-stub value keeps
+  // the KV reference resolvable and the feature fails closed at the provider
+  // until real credentials land (dev); prod requires real values.
+  {
+    name: 'Auth__Google__ClientId'
+    value: kvRef(kvUri, 'Auth--Google--ClientId')
+  }
+  {
+    name: 'Auth__Google__ClientSecret'
+    value: kvRef(kvUri, 'Auth--Google--ClientSecret')
+  }
+  {
+    name: 'Auth__Apple__ClientId'
+    value: kvRef(kvUri, 'Auth--Apple--ClientId')
+  }
+  {
+    name: 'Auth__Apple__TeamId'
+    value: kvRef(kvUri, 'Auth--Apple--TeamId')
+  }
+  {
+    name: 'Auth__Apple__KeyId'
+    value: kvRef(kvUri, 'Auth--Apple--KeyId')
+  }
+  {
+    name: 'Auth__Apple__PrivateKeyPem'
+    value: kvRef(kvUri, 'Auth--Apple--PrivateKeyPem')
+  }
 ]
 
 var functionsSecretSettings = [
