@@ -32,6 +32,15 @@ yields a *working* app — once the operator does these. Full procedure:
   `PACKETA_PUBLIC_WIDGET_KEY`, `MAPBOX_ACCESS_TOKEN`. A missing
   secret aborts the deploy (fail-closed). No secret value is in the repo.
   (No `VERCEL_TOKEN` — the frontend deploys to Azure App Service.)
+- [ ] **Register Google + Apple sign-in (BLOCKING for prod):** the login /
+  register pages ship both OAuth buttons; register the providers per
+  [docs/deployment/oauth-providers.md](deployment/oauth-providers.md) and set
+  `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `APPLE_SERVICES_ID`,
+  `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY_PEM`. Dev deploys boot
+  on stubs (buttons fail closed at the provider); the production deploy
+  fails loudly if any of the six is missing. Apple needs the paid Developer
+  Program; Google's consent screen must be switched from Testing to
+  In production before launch.
 - [ ] **Azure RG + OIDC federated credential (BLOCKING):** create the
   `rg-makables-weu-dev` / `rg-makables-weu-prod` resource group and the Entra app + federated
   credential bound to the GitHub environment (the workflows use OIDC, no stored
