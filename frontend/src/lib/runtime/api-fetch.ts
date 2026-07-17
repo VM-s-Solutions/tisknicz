@@ -8,6 +8,16 @@ import { ACCESS_COOKIE_PREFIX, REFRESH_COOKIE_PREFIX } from '../auth/session';
  * Admin=5003, Public=5104). Public moved off 5004 in T-0046b because the
  * default collided with an unrelated local project on dev machines —
  * launchSettings, nswag/config.json and this fallback all track 5104.
+ *
+ * Deployed environments (T-0153): `NEXT_PUBLIC_*` may instead be a
+ * SAME-ORIGIN RELATIVE path (`/api-proxy/<host>`) that the Next server
+ * rewrites to the real API host (see `next.config.ts`). That makes the
+ * backend's `Set-Cookie` land first-party on the frontend origin — the
+ * only way the ADR 0012 `SameSite=Strict` session cookies can work when
+ * frontend and APIs sit on sibling `*.azurewebsites.net` hosts (a
+ * public-suffix domain, so no shared parent cookie is possible). Server
+ * renders can't use a relative path, so they resolve the sibling
+ * `API_<HOST>_INTERNAL_BASE_URL` runtime env var instead.
  */
 export type ApiHost = 'customer' | 'maker' | 'admin' | 'public';
 
@@ -19,15 +29,61 @@ const HOST_BASE_URLS: Record<ApiHost, string> = {
 };
 
 /**
- * Exposes a host's configured base URL to helper modules that need to
- * build an absolute backend URL themselves (T-0026: the Google OAuth
- * `redirectUri` must point at the backend's own `google/callback` route,
- * not a frontend route — the OAuth callback never passes
- * through the Next.js app). Kept as a thin accessor rather than exporting
+ * Server-side (SSR) absolute base URLs. Read lazily — NOT `NEXT_PUBLIC_`,
+ * so they are never inlined into the client bundle and stay overridable
+ * via App Service app settings at runtime (standalone output).
+ */
+function internalHostBaseUrl(host: ApiHost): string | undefined {
+  const byHost: Record<ApiHost, string | undefined> = {
+    customer: process.env.API_CUSTOMER_INTERNAL_BASE_URL,
+    maker: process.env.API_MAKER_INTERNAL_BASE_URL,
+    admin: process.env.API_ADMIN_INTERNAL_BASE_URL,
+    public: process.env.API_PUBLIC_INTERNAL_BASE_URL,
+  };
+  return byHost[host];
+}
+
+/**
+ * Resolves the base URL a fetch from the CURRENT runtime should use:
+ * the browser gets the public base (absolute, or proxy-relative which
+ * the browser resolves against the page origin), the server prefers the
+ * internal absolute URL and refuses to fetch a relative base (Node
+ * `fetch` has no origin to resolve it against).
+ */
+function resolveBaseUrl(host: ApiHost): string {
+  const publicBase = HOST_BASE_URLS[host];
+  if (typeof window !== 'undefined') {
+    return publicBase;
+  }
+  const internal = internalHostBaseUrl(host);
+  if (internal) {
+    return internal;
+  }
+  if (publicBase.startsWith('/')) {
+    throw new Error(
+      `apiFetch(${host}): NEXT_PUBLIC base is the proxy-relative path "${publicBase}" but ` +
+        `API_${host.toUpperCase()}_INTERNAL_BASE_URL is not set — server renders need an absolute URL.`,
+    );
+  }
+  return publicBase;
+}
+
+/**
+ * Exposes a host's BROWSER-FACING absolute base URL to helper modules
+ * that need to build an absolute backend URL themselves (T-0026: the
+ * Google OAuth `redirectUri` — under the same-origin proxy that URL is
+ * `<frontend origin>/api-proxy/<host>/...`, which the rewrite forwards
+ * to the backend's own `google/callback` route so the resulting
+ * `Set-Cookie` still lands first-party). Client-only concern; callers
+ * are Client Components. Kept as a thin accessor rather than exporting
  * `HOST_BASE_URLS` directly so call sites can't mutate the map.
  */
 export function apiHostBaseUrl(host: ApiHost): string {
-  return HOST_BASE_URLS[host];
+  const base = HOST_BASE_URLS[host];
+  if (base.startsWith('/') && typeof window !== 'undefined') {
+    return `${window.location.origin}${base}`;
+  }
+  return base;
 }
 
 export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
@@ -95,7 +151,7 @@ export async function apiFetch<TValue>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<Result<TValue, ApiError>> {
-  const baseUrl = HOST_BASE_URLS[host];
+  const baseUrl = resolveBaseUrl(host);
   // Belt-and-braces: helper modules pass paths starting with "/" (and
   // a Copilot reviewer would catch one that doesn't), but a missing
   // slash on either side would silently glue host + path into

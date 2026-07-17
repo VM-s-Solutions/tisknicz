@@ -140,3 +140,25 @@ follow-up tickets.
   show in the catalog and users can order those items"). Dependencies all
   `done`; the only external prerequisite is Azure access for the dev-env
   revival, listed as `manual_steps`.
+- 2026-07-17 `ready → in_progress` — **dev-env revival scope is already
+  satisfied**: the dopady §4 "backend down" finding is stale. Hosts moved to
+  the CAF names (`app-makables-{customer,maker,admin,public}-weu-dev` +
+  `web-makables-weu-dev`); all five answer 200 and
+  `GET /api/v1/catalog/makers` returns valid JSON (`totalCount: 0` — empty
+  catalog, as expected pre-walk). "Deploy → dev" runs green (last:
+  2026-07-17 13:02). AC-1 satisfied.
+- 2026-07-17 — **cookie-domain strategy decided + implemented: same-origin
+  proxy** (`feat/T-0153-same-origin-api-proxy`). Browser-facing API bases
+  become relative `/api-proxy/<host>` paths; `next.config.ts` rewrites them
+  to the real hosts (from new `API_<HOST>_INTERNAL_BASE_URL` vars, also used
+  by SSR fetches in `api-fetch.ts`). Set-Cookie thus lands first-party on the
+  frontend origin — no DNS/custom-domain dependency. Chosen over the custom
+  parent domain because it is code-only; the parent domain remains the better
+  production endgame (per-IP rate limiting funnels through one egress IP
+  under the proxy — T-0136 caveat noted in both deploy workflows).
+  **New manual step:** add
+  `https://web-makables-weu-dev.azurewebsites.net/api-proxy/customer/api/v1/auth/google/callback`
+  (and the prod equivalent) to the Google OAuth client's authorized redirect
+  URIs before OAuth login can work on deployed envs.
+- Blocked-on-user residue: `az login` (refresh token expired 90d) for any
+  portal-side diagnosis; not needed for the current slice.

@@ -14,6 +14,12 @@ import type { NextConfig } from "next";
  */
 function publicHostRemotePattern() {
   const raw = process.env.NEXT_PUBLIC_API_PUBLIC_BASE_URL ?? 'http://localhost:5104';
+  // Same-origin proxy mode (T-0153): a relative base ('/api-proxy/public')
+  // yields relative image srcs, which next/image serves without any
+  // remotePatterns entry — return null and omit the pattern.
+  if (raw.startsWith('/')) {
+    return null;
+  }
   try {
     const url = new URL(raw);
     const port = url.port || undefined;
@@ -31,6 +37,42 @@ function publicHostRemotePattern() {
       pathname: '/api/v1/files/products/**',
     };
   }
+}
+
+/**
+ * Same-origin API proxy (T-0153). On deployed environments the frontend
+ * and the four API hosts live on sibling `*.azurewebsites.net` hostnames —
+ * a public-suffix domain, so the ADR 0012 session cookies
+ * (HttpOnly + Secure + SameSite=Strict, no Domain) can never cross
+ * between them. Instead the browser talks ONLY to the frontend origin:
+ * `NEXT_PUBLIC_API_<HOST>_BASE_URL=/api-proxy/<host>` and the rewrite
+ * below forwards to the real API host server-side. Set-Cookie flows back
+ * through the proxy and lands first-party on the frontend origin, which
+ * both the browser and the SSR cookie-forwarding in
+ * `lib/runtime/api-fetch.ts` can then use.
+ *
+ * A rewrite is only emitted for hosts whose `API_<HOST>_INTERNAL_BASE_URL`
+ * is set at build time — local dev (absolute localhost bases, shared
+ * `localhost` cookie domain) needs no proxy and gets none.
+ *
+ * Known dev-tier limitation: proxied requests reach the API from the
+ * frontend App Service egress IP, so the backend's per-IP rate limits
+ * (T-0136) see one shared IP. Acceptable on dev; production should front
+ * everything with a shared parent domain (T-0153 follow-up).
+ */
+function apiProxyRewrites() {
+  const targets: Record<string, string | undefined> = {
+    customer: process.env.API_CUSTOMER_INTERNAL_BASE_URL,
+    maker: process.env.API_MAKER_INTERNAL_BASE_URL,
+    admin: process.env.API_ADMIN_INTERNAL_BASE_URL,
+    public: process.env.API_PUBLIC_INTERNAL_BASE_URL,
+  };
+  return Object.entries(targets)
+    .filter((entry): entry is [string, string] => Boolean(entry[1]))
+    .map(([host, origin]) => ({
+      source: `/api-proxy/${host}/:path*`,
+      destination: `${origin.replace(/\/+$/, '')}/:path*`,
+    }));
 }
 
 const nextConfig: NextConfig = {
@@ -52,10 +94,13 @@ const nextConfig: NextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  async rewrites() {
+    return apiProxyRewrites();
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    remotePatterns: [publicHostRemotePattern()],
+    remotePatterns: [publicHostRemotePattern()].filter((pattern) => pattern !== null),
   },
 };
 

@@ -401,8 +401,11 @@ module derivedSecrets 'modules/derived-secrets.bicep' = {
 }
 
 // Next.js frontend on its own Linux App Service (Node), on the shared plan.
-// Everything stays in Azure (no Vercel). The NEXT_PUBLIC_* API base URLs point
-// at the deployed API hosts' default hostnames.
+// Everything stays in Azure (no Vercel). T-0153 same-origin proxy: the
+// browser-facing NEXT_PUBLIC_* bases are relative `/api-proxy/<host>` paths
+// (session cookies must land first-party — sibling *.azurewebsites.net hosts
+// share no cookie-visible parent); the API_*_INTERNAL_BASE_URL settings carry
+// the real host origins for SSR fetches and the Next rewrite table.
 module webApp 'modules/web-app.bicep' = {
   name: 'web-app'
   params: {
@@ -410,10 +413,14 @@ module webApp 'modules/web-app.bicep' = {
     appServicePlanId: appServicePlan.id
     location: location
     siteUrl: publicWebBaseUrl
-    customerApiBaseUrl: 'https://${customerApp.outputs.defaultHostName}'
-    makerApiBaseUrl: 'https://${makerApp.outputs.defaultHostName}'
-    adminApiBaseUrl: 'https://${adminApp.outputs.defaultHostName}'
-    publicApiBaseUrl: 'https://${publicApp.outputs.defaultHostName}'
+    customerApiBaseUrl: '/api-proxy/customer'
+    makerApiBaseUrl: '/api-proxy/maker'
+    adminApiBaseUrl: '/api-proxy/admin'
+    publicApiBaseUrl: '/api-proxy/public'
+    customerApiInternalBaseUrl: 'https://${customerApp.outputs.defaultHostName}'
+    makerApiInternalBaseUrl: 'https://${makerApp.outputs.defaultHostName}'
+    adminApiInternalBaseUrl: 'https://${adminApp.outputs.defaultHostName}'
+    publicApiInternalBaseUrl: 'https://${publicApp.outputs.defaultHostName}'
   }
 }
 
