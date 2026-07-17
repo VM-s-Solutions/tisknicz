@@ -1,8 +1,13 @@
 // Next.js frontend App Service (Linux / Node). Runs the SSR app via
 // `next start` on the SAME App Service Plan as the four API hosts — everything
 // stays in Azure (no Vercel). The frontend is a pure presentation layer; its
-// only runtime config is the NEXT_PUBLIC_* API base URLs (non-secret, baked
-// into the build but also read at runtime for SSR fetches).
+// only runtime config is the API base URLs (non-secret).
+//
+// T-0153 same-origin proxy: the NEXT_PUBLIC_* bases are the browser-facing
+// values (relative `/api-proxy/<host>` paths on deployed envs — inlined at
+// BUILD time; the copies here are documentation-of-record). The
+// API_*_INTERNAL_BASE_URL settings are the ones the standalone server
+// actually reads at RUNTIME for SSR fetches (lib/runtime/api-fetch.ts).
 
 @description('Logical app name, e.g. web-makables-weu-dev.')
 param appName string
@@ -27,6 +32,18 @@ param adminApiBaseUrl string
 
 @description('Public API base URL (NEXT_PUBLIC_API_PUBLIC_BASE_URL).')
 param publicApiBaseUrl string
+
+@description('Customer API absolute origin for SSR fetches (API_CUSTOMER_INTERNAL_BASE_URL).')
+param customerApiInternalBaseUrl string
+
+@description('Maker API absolute origin for SSR fetches (API_MAKER_INTERNAL_BASE_URL).')
+param makerApiInternalBaseUrl string
+
+@description('Admin API absolute origin for SSR fetches (API_ADMIN_INTERNAL_BASE_URL).')
+param adminApiInternalBaseUrl string
+
+@description('Public API absolute origin for SSR fetches (API_PUBLIC_INTERNAL_BASE_URL).')
+param publicApiInternalBaseUrl string
 
 resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   name: appName
@@ -81,6 +98,22 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'NEXT_PUBLIC_API_PUBLIC_BASE_URL'
           value: publicApiBaseUrl
+        }
+        {
+          name: 'API_CUSTOMER_INTERNAL_BASE_URL'
+          value: customerApiInternalBaseUrl
+        }
+        {
+          name: 'API_MAKER_INTERNAL_BASE_URL'
+          value: makerApiInternalBaseUrl
+        }
+        {
+          name: 'API_ADMIN_INTERNAL_BASE_URL'
+          value: adminApiInternalBaseUrl
+        }
+        {
+          name: 'API_PUBLIC_INTERNAL_BASE_URL'
+          value: publicApiInternalBaseUrl
         }
       ]
     }

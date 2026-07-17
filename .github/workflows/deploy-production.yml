@@ -314,15 +314,25 @@ jobs:
         working-directory: frontend
         env:
           # NEXT_PUBLIC_* is inlined into the CLIENT bundle at build time — the
-          # runtime App Settings on the web app only cover SSR fetches. Without
-          # these the browser would call the localhost fallbacks in
-          # lib/runtime/api-fetch.ts. NEXT_PUBLIC_API_PUBLIC_BASE_URL also feeds
-          # the next/image remotePatterns allowlist (next.config.ts).
+          # runtime App Settings on the web app only cover SSR fetches.
+          #
+          # T-0153 same-origin proxy (mirrors deploy-staging.yml): browser-
+          # facing bases are relative `/api-proxy/<host>` paths so the ADR 0012
+          # SameSite=Strict session cookies land first-party on the frontend
+          # origin; next.config.ts rewrites each prefix to the matching
+          # API_<HOST>_INTERNAL_BASE_URL (read at build for the rewrite table,
+          # at runtime via App Settings for SSR fetches). Revisit for a shared
+          # parent domain (api.makables.cz) before launch — the proxy funnels
+          # per-IP rate limiting through one egress IP (T-0136 caveat).
           NEXT_PUBLIC_SITE_URL: https://makables.cz
-          NEXT_PUBLIC_API_CUSTOMER_BASE_URL: https://app-makables-customer-weu-prod.azurewebsites.net
-          NEXT_PUBLIC_API_MAKER_BASE_URL: https://app-makables-maker-weu-prod.azurewebsites.net
-          NEXT_PUBLIC_API_ADMIN_BASE_URL: https://app-makables-admin-weu-prod.azurewebsites.net
-          NEXT_PUBLIC_API_PUBLIC_BASE_URL: https://app-makables-public-weu-prod.azurewebsites.net
+          NEXT_PUBLIC_API_CUSTOMER_BASE_URL: /api-proxy/customer
+          NEXT_PUBLIC_API_MAKER_BASE_URL: /api-proxy/maker
+          NEXT_PUBLIC_API_ADMIN_BASE_URL: /api-proxy/admin
+          NEXT_PUBLIC_API_PUBLIC_BASE_URL: /api-proxy/public
+          API_CUSTOMER_INTERNAL_BASE_URL: https://app-makables-customer-weu-prod.azurewebsites.net
+          API_MAKER_INTERNAL_BASE_URL: https://app-makables-maker-weu-prod.azurewebsites.net
+          API_ADMIN_INTERNAL_BASE_URL: https://app-makables-admin-weu-prod.azurewebsites.net
+          API_PUBLIC_INTERNAL_BASE_URL: https://app-makables-public-weu-prod.azurewebsites.net
         run: |
           npm ci
           npx next build
