@@ -162,3 +162,12 @@ follow-up tickets.
   URIs before OAuth login can work on deployed envs.
 - Blocked-on-user residue: `az login` (refresh token expired 90d) for any
   portal-side diagnosis; not needed for the current slice.
+- 2026-07-17 — **proxy verified on the deployed dev site** after "Deploy →
+  dev" run `29593679668` went green: catalog GET + login POST transit the
+  proxy (Kestrel-served JSON, correlation id echoed), homepage SSR renders,
+  customer registration through the proxy created
+  `vitchvoj+t0153@gmail.com` (userId `01KXRDNMC3EPA253PEZ841P6AH`), and the
+  email-confirmation login gate answers `auth.emailNotConfirmed`. Evidence
+  log started at `docs/test-plans/T-0153-e2e-walk.md` — Phase 0 + most of
+  Phase 1 ✅; next manual step is clicking the confirmation email, then the
+  cookie/navbar login check (walk row 1.7).
