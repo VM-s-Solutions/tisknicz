@@ -15,12 +15,11 @@ interface GoogleSignInButtonProps {
 }
 
 /**
- * "Sign in with Google" trigger (T-0026). Mirrors
- * {@link AppleSignInButton}: the smallest possible client boundary — it
- * only calls {@link startGoogleOAuth} and redirects the browser to
- * Google's authorization URL on success. Google GET-redirects the result
- * straight back to the backend's `google/callback` route; this component
- * never sees the callback.
+ * "Sign in with Google" trigger (T-0026). The smallest possible client
+ * boundary — it only calls {@link startGoogleOAuth} and redirects the
+ * browser to Google's authorization URL on success. Google GET-redirects
+ * the result straight back to the backend's `google/callback` route;
+ * this component never sees the callback.
  */
 export function GoogleSignInButton({ host, onError }: GoogleSignInButtonProps) {
   const [submitting, setSubmitting] = useState(false);

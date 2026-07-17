@@ -5,8 +5,7 @@ import { GoogleSignInButton } from './google-sign-in-button';
 /**
  * Component test for the "Sign in with Google" trigger (T-0026 frontend
  * wiring). `startGoogleOAuth` is mocked — this is a UI test, not an
- * integration test against the .NET backend. Mirrors the Apple button
- * test one-for-one.
+ * integration test against the .NET backend.
  */
 
 const startGoogleOAuth = vi.fn();
@@ -65,7 +64,7 @@ describe('GoogleSignInButton', () => {
   });
 
   it.each([
-    ['auth.oauthNotAllowedForAdmin', 'Administrátorský účet se nepřihlašuje přes Apple ani Google — použijte e-mail a heslo.'],
+    ['auth.oauthNotAllowedForAdmin', 'Administrátorský účet se nepřihlašuje přes Google — použijte e-mail a heslo.'],
     ['auth.oauthInvalidState', 'Platnost přihlašovacího požadavku vypršela. Zkuste to prosím znovu.'],
     ['auth.oauthEmailNotVerified', 'E-mail u zvoleného účtu není ověřený, přihlášení nelze dokončit.'],
     ['auth.oauthExchangeFailed', 'Přihlášení se nepodařilo dokončit. Zkuste to prosím znovu.'],
