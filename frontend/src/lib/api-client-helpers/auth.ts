@@ -122,33 +122,6 @@ export async function consumeMagicLink(host: ApiHost, input: ConsumeMagicLinkInp
   return result.success ? ok(undefined) : result;
 }
 
-// ---- Apple OAuth (T-0139) ----
-
-export interface StartAppleOAuthOutput {
-  authorizationUrl: string;
-}
-
-/**
- * Begins the "Sign in with Apple" flow. The `redirectUri` bound into the
- * signed state must be the backend's own `apple/callback` route — Apple's
- * `response_mode=form_post` callback POSTs directly to the .NET host, it
- * never passes through a Next.js route — so this helper derives it from
- * the host's configured base URL rather than taking it as a caller
- * parameter (keeps that plumbing out of the button component).
- *
- * The backend sets the OAuth anti-CSRF cookie via `Set-Cookie` on this
- * same response (credentials are always included by `apiFetch`) and
- * returns the Apple authorization URL the browser should be redirected to
- * next. Rejected for the admin audience server-side (ADR 0026) — surface
- * the resulting `ApiError` via the caller's i18n mapping same as any
- * other auth error.
- */
-export async function startAppleOAuth(host: ApiHost): Promise<Result<StartAppleOAuthOutput, ApiError>> {
-  const redirectUri = `${apiHostBaseUrl(host)}/api/v1/auth/apple/callback`;
-  const params = new URLSearchParams({ redirectUri });
-  return apiFetch<StartAppleOAuthOutput>(host, `${Base}/apple/start?${params.toString()}`, { method: 'GET' });
-}
-
 // ---- Google OAuth (T-0026) ----
 
 export interface StartGoogleOAuthOutput {
@@ -156,13 +129,15 @@ export interface StartGoogleOAuthOutput {
 }
 
 /**
- * Begins the "Sign in with Google" flow. Mirrors {@link startAppleOAuth}:
- * the `redirectUri` bound into the signed state must be the backend's own
- * `google/callback` route — Google GET-redirects the browser straight back
- * to the .NET host (query-param callback, unlike Apple's `form_post`), it
- * never passes through a Next.js route. The backend sets the OAuth
- * anti-CSRF cookie on this response and returns the authorization URL to
- * redirect the browser to.
+ * Begins the "Sign in with Google" flow. The `redirectUri` bound into the
+ * signed state must be the backend's own `google/callback` route — Google
+ * GET-redirects the browser straight back to the .NET host, it never
+ * passes through a Next.js route — so this helper derives it from the
+ * host's configured base URL rather than taking it as a caller parameter.
+ * The backend sets the OAuth anti-CSRF cookie on this response and
+ * returns the authorization URL to redirect the browser to. Rejected for
+ * the admin audience server-side — surface the resulting `ApiError` via
+ * the caller's i18n mapping same as any other auth error.
  */
 export async function startGoogleOAuth(host: ApiHost): Promise<Result<StartGoogleOAuthOutput, ApiError>> {
   const redirectUri = `${apiHostBaseUrl(host)}/api/v1/auth/google/callback`;

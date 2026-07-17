@@ -51,27 +51,17 @@ export const messages = {
   'auth.login.account_locked': 'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to za chvíli.',
   'auth.login.email_not_confirmed': 'E-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
 
-  // Auth — Apple OAuth (T-0139). Only the button-level copy is
-  // Apple-specific; the BusinessErrorMessage.AuthOAuth* codes below are
-  // provider-agnostic (Google reuses the same codes per ADR 0026 —
-  // T-0139 ticket §Common), so their keys live at the shared
-  // `auth.oauth*` dot-path (exact 1:1 match with the backend constant,
-  // see "Auth — OAuth (shared, provider-agnostic)" below) rather than
-  // duplicated per-provider under `auth.apple.*`.
-  'auth.apple.signInButton': 'Pokračovat přes Apple',
-  'auth.apple.orDivider': 'nebo',
-  'auth.apple.startFailed': 'Přihlášení přes Apple se nepodařilo spustit. Zkuste to prosím znovu.',
-
   // Auth — Google OAuth trigger (T-0026 frontend wiring).
   'auth.google.signInButton': 'Pokračovat přes Google',
   'auth.google.startFailed': 'Přihlášení přes Google se nepodařilo spustit. Zkuste to prosím znovu.',
 
-  // Auth — OAuth (shared, provider-agnostic; T-0139).
+  // Auth — OAuth (shared, provider-agnostic).
   // Keys mirror BusinessErrorMessage.AuthOAuth* exactly (parity rule,
-  // patterns.md §A.4) so Google's OAuth path (T-0026/T-0035) can reuse
-  // them without a duplicate translation once its frontend wiring lands.
+  // patterns.md §A.4) so any future OAuth provider reuses the same
+  // translations without duplicating them per provider.
+  'auth.oauth.orDivider': 'nebo',
   'auth.oauthNotAllowedForAdmin':
-    'Administrátorský účet se nepřihlašuje přes Apple ani Google — použijte e-mail a heslo.',
+    'Administrátorský účet se nepřihlašuje přes Google — použijte e-mail a heslo.',
   'auth.oauthInvalidState': 'Platnost přihlašovacího požadavku vypršela. Zkuste to prosím znovu.',
   'auth.oauthEmailNotVerified': 'E-mail u zvoleného účtu není ověřený, přihlášení nelze dokončit.',
   'auth.oauthExchangeFailed': 'Přihlášení se nepodařilo dokončit. Zkuste to prosím znovu.',
@@ -222,6 +212,16 @@ export const messages = {
   'nav.public_aria': 'Hlavní navigace',
   'nav.dashboard': 'Přehled',
   'nav.logout': 'Odhlásit se',
+  'nav.logging_out': 'Odhlašuji…',
+  'nav.account': 'Můj účet',
+  'nav.dashboard_aria': 'Navigace účtu',
+  'nav.customer.orders': 'Moje objednávky',
+  'nav.customer.profile': 'Můj profil',
+  'nav.maker.orders': 'Objednávky',
+  'nav.maker.products': 'Produkty',
+  'nav.maker.payouts': 'Výplaty',
+  'nav.maker.reviews': 'Recenze',
+  'nav.maker.profile': 'Profil',
 
   // Footer
   'footer.customers': 'Pro zákazníky',

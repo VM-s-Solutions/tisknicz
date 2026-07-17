@@ -6,18 +6,19 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AppleSignInButton } from '@/components/shared/apple-sign-in-button';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { login } from '@/lib/api-client-helpers/auth';
 import { t } from '@/lib/i18n';
+import type { ApiHost } from '@/lib/runtime/api-fetch';
 
 /**
- * Login form for the customer host. Posts to /api/v1/auth/login which
- * sets the audience-scoped session cookies on success. On error the
- * BusinessErrorMessage code is mapped to a localized message.
- *
- * Hardcoded to the 'customer' host for the MVP; T-0036 (maker dashboard)
- * reuses this component with `host="maker"`.
+ * Shared login form for customers AND makers. The backend binds each
+ * account to exactly one audience (`User.MatchesAudience` — a maker can
+ * only log in against the maker host), so the form first tries the host
+ * matching the redirect target and falls back to the other one when the
+ * backend answers `auth.forbidden` (right password, wrong audience).
+ * Credential errors never trigger the fallback — the password check runs
+ * before the audience check, so their message is already accurate.
  */
 export function LoginForm() {
   const router = useRouter();
@@ -25,9 +26,9 @@ export function LoginForm() {
   // Open-redirect guard (checkout-flow Gate 3 F1): accept only
   // path-only targets — a single leading slash, not protocol-relative
   // `//host` (nor `/\host`, which WHATWG URL parsing normalises to
-  // `//host`). Anything else falls back to the homepage.
-  const rawRedirect = searchParams.get('redirect') ?? '/';
-  const redirectTo = /^\/(?![/\\])/.test(rawRedirect) ? rawRedirect : '/';
+  // `//host`). Anything else falls back to the role default below.
+  const rawRedirect = searchParams.get('redirect');
+  const safeRedirect = rawRedirect !== null && /^\/(?![/\\])/.test(rawRedirect) ? rawRedirect : null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,11 +39,26 @@ export function LoginForm() {
     event.preventDefault();
     setServerError(null);
     setSubmitting(true);
-    const result = await login('customer', { email, password });
+
+    // A maker bounced here from /dashboard/maker/* should hit the maker
+    // host first — one request instead of two.
+    const hostOrder: readonly ApiHost[] =
+      safeRedirect?.startsWith('/dashboard/maker') ? ['maker', 'customer'] : ['customer', 'maker'];
+
+    let host = hostOrder[0];
+    let result = await login(host, { email, password });
+    if (!result.success && result.error.code === 'auth.forbidden') {
+      host = hostOrder[1];
+      result = await login(host, { email, password });
+    }
     setSubmitting(false);
 
     if (result.success) {
-      router.push(redirectTo);
+      const target = safeRedirect ?? (host === 'maker' ? '/dashboard/maker/objednavky' : '/');
+      router.push(target);
+      // Re-render the server tree so session-aware chrome (navbar
+      // account menu, dashboard layouts) picks up the fresh cookie.
+      router.refresh();
       return;
     }
 
@@ -78,10 +94,9 @@ export function LoginForm() {
         </form>
         <div className="flex items-center gap-3 text-xs text-zinc-500">
           <div className="h-px flex-1 bg-zinc-800" />
-          {t('auth.apple.orDivider')}
+          {t('auth.oauth.orDivider')}
           <div className="h-px flex-1 bg-zinc-800" />
         </div>
-        <AppleSignInButton host="customer" onError={setServerError} />
         <GoogleSignInButton host="customer" onError={setServerError} />
         <div className="flex flex-col gap-2 text-sm text-zinc-400">
           <Link href="/reset" className="text-brand-400 hover:underline">

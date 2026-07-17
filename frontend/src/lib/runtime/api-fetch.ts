@@ -20,9 +20,9 @@ const HOST_BASE_URLS: Record<ApiHost, string> = {
 
 /**
  * Exposes a host's configured base URL to helper modules that need to
- * build an absolute backend URL themselves (T-0139: the Apple OAuth
- * `redirectUri` must point at the backend's own `apple/callback` route,
- * not a frontend route — Apple's `form_post` callback never passes
+ * build an absolute backend URL themselves (T-0026: the Google OAuth
+ * `redirectUri` must point at the backend's own `google/callback` route,
+ * not a frontend route — the OAuth callback never passes
  * through the Next.js app). Kept as a thin accessor rather than exporting
  * `HOST_BASE_URLS` directly so call sites can't mutate the map.
  */

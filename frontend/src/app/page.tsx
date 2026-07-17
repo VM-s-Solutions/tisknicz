@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { PublicFooter } from '@/components/shared/public-footer';
 import { HeroSceneWrapper } from '@/components/shared/hero-scene-wrapper';
 import { PublicNavbar } from '@/components/shared/public-navbar';
+import { getDisplaySession } from '@/lib/auth/display-session';
 import { t } from '@/lib/i18n';
 import { canonicalUrl } from '@/lib/seo/site-url';
 
@@ -29,10 +30,11 @@ const CATEGORIES = [
   { name: 'Handmade', slug: 'handmade', icon: 'palette' as const, description: 'Originální výrobky, dekorace' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getDisplaySession();
   return (
     <div className="min-h-screen bg-surface-primary">
-      <PublicNavbar />
+      <PublicNavbar session={session} />
 
       <section className="hero-section relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
         <div className="pointer-events-none absolute inset-0 z-0 motion-reduce:hidden" aria-hidden="true">
