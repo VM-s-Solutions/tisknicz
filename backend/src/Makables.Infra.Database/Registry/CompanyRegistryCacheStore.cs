@@ -65,4 +65,22 @@ public sealed class CompanyRegistryCacheStore(
                 expires_at = EXCLUDED.expires_at
         ", cancellationToken);
     }
+
+    public async Task<int> EvictFetchedBeforeAsync(
+        DateTimeOffset fetchedBefore,
+        CancellationToken cancellationToken)
+    {
+        // Raw set-based DELETE in the store's own DbContext scope, mirroring
+        // the UpsertAsync raw-SQL approach above. Raw SQL (not a LINQ
+        // ExecuteDelete) because the EF Core SQLite provider used in
+        // integration tests cannot translate a DateTimeOffset comparison
+        // server-side; the parameter binds identically on both providers, and
+        // fetched_at is always written as UTC (AresCompanyRegistry uses
+        // clock.UtcNow), so the comparison is chronologically correct.
+        // ExecuteSqlInterpolatedAsync returns the affected-row count.
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM company_registry_cache WHERE fetched_at < {fetchedBefore}",
+            cancellationToken);
+    }
 }
