@@ -8,7 +8,21 @@ every ❌ must end as a fix commit or a filed ticket (T-0153 AC-5 —
 zero silent skips).
 
 **Legend:** ✅ pass · 🟡 pending (not yet run / blocked on a manual step) ·
-❌ fail (link the fix/ticket)
+❌ fail (link the fix/ticket) · ⛔ blocked (environment/ops, needs the operator)
+
+> **⛔ 2026-07-20 — walk paused: dev App Services are STOPPED.** All five
+> hosts return HTTP 403 with the Azure *"Web App — Unavailable"* stopped-site
+> page (a crash would be 503; an IP block a different page). No `schedule:`/
+> cron exists in either deploy workflow, so our pipeline did not stop them —
+> most likely a manual weekend stop or an Azure spending-cap on this personal
+> "Azure subscription 1" (a capped/disabled sub stops all App Services at
+> once). **Restarting needs Azure access the agent does not have** (`az`
+> refresh token expired 2026-07-17, and there is no start-apps workflow).
+> **Operator action:** `az login` then `az webapp start` on the six dev apps
+> (`web-makables-weu-dev`, `app-makables-{customer,maker,admin,public}-weu-dev`,
+> `func-makables-weu-dev`), or Start them from the portal; then a fresh
+> `Deploy → dev` (or just re-run the failed maker backend job). Phase 0/1
+> results below stand from 2026-07-17 when the apps were up.
 
 ## Phase 0 — Environment (T-0153 AC-1)
 
@@ -16,8 +30,10 @@ zero silent skips).
 |---|---|---|---|
 | 0.1 | All five App Services answer | ✅ | `GET /` → 200 on web + customer + maker + admin + public hosts (curl, 0.15–1.2 s) |
 | 0.2 | Public catalog API answers with real JSON | ✅ | `GET /api/v1/catalog/makers?page=1&pageSize=2` → `{"items":[],"totalCount":0,…}` (empty catalog is the expected pre-walk state) |
-| 0.3 | Deploy pipeline green end-to-end | ✅ | "Deploy → dev" run `29593679668`: Bicep + migrations + 4 backends + Functions + frontend + `/health` smoke all `success` |
-| 0.4 | Stale-doc reconciliation | ✅ | dopady §4 🔴 1 ("backend down", `makables-dev-*` hostnames) is obsolete — hosts renamed to CAF convention, apps up. Recorded in T-0153 status log |
+| 0.3 | Deploy pipeline green end-to-end | ✅ | "Deploy → dev" run `29593679668` (2026-07-17): Bicep + migrations + 4 backends + Functions + frontend + `/health` smoke all `success` |
+| 0.4 | Stale-doc reconciliation | ✅ | dopady §4 🔴 1 ("backend down", `makables-dev-*` hostnames) is obsolete — hosts renamed to CAF convention. Recorded in T-0153 status log |
+| 0.5 | Hosts up **now** (2026-07-20) | ⛔ | All five → 403 stopped-site page. See the ⛔ banner above — operator must start the apps before the walk resumes |
+| 0.6 | Deploy-race hardening (walk-surfaced defect) | ✅ | The 2026-07-17T16:15 `Deploy → dev` failed: docs PR #97 re-ran Bicep → App Services bounced → maker backend zipdeploy hit the OneDeploy *"SCM container restart"* race. Fix: `paths-ignore` (`**/*.md`, `docs/**`, `agents/**`, `.claude/**`) on the dev deploy trigger so docs-only merges no longer redeploy the stack (also saves cost on the capped sub). Prod is manual-dispatch only — unaffected |
 
 ## Phase 1 — Same-origin proxy + auth seam (T-0153 AC-6, PR #96)
 

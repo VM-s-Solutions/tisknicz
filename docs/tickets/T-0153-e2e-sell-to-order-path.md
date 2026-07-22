@@ -171,3 +171,13 @@ follow-up tickets.
   log started at `docs/test-plans/T-0153-e2e-walk.md` — Phase 0 + most of
   Phase 1 ✅; next manual step is clicking the confirmation email, then the
   cookie/navbar login check (walk row 1.7).
+- 2026-07-20 — **walk paused: dev App Services stopped.** All five hosts now
+  return 403 with the Azure stopped-site page. No cron exists in our
+  workflows, so the pipeline didn't stop them — likely a manual weekend stop
+  or a spending-cap on the personal sub. Restart needs Azure access the agent
+  lacks (`az` token expired). **Blocked on operator:** start the six dev apps,
+  then resume from walk row 0.5/1.7. Walk-surfaced defect fixed in the
+  meantime: the 2026-07-17T16:15 deploy failure was a docs-merge-triggered
+  redeploy racing the SCM restart — `paths-ignore` added to the dev deploy
+  trigger so docs-only merges stop redeploying the stack
+  (`fix/T-0153-deploy-hygiene`).

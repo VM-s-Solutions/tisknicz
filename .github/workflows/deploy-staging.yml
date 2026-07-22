@@ -12,6 +12,19 @@ name: Deploy → dev
 on:
   push:
     branches: [master]
+    # Docs / process-only changes must NOT redeploy the whole stack (T-0153).
+    # A test-plan markdown merge on 2026-07-17 (PR #97) re-ran Bicep, which
+    # bounced the App Services, and the maker backend zipdeploy then landed
+    # mid-restart and failed with the OneDeploy "SCM container restart" race.
+    # paths-ignore only skips a push when EVERY changed file matches — a mixed
+    # code+docs push still deploys, so no real code change is ever missed.
+    # `.github/**` is deliberately NOT ignored: a workflow change should still
+    # run to validate itself.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'agents/**'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:
