@@ -99,8 +99,11 @@
 
     <!-- Transitive vulnerability overrides
          GHSA-37gx-xxp4-5rgx, GHSA-w3x6-4m5h-cxqf flag 9.0.x in EF Core 10.0.0's chain.
-         Pin to 10.0.x where the advisories are addressed. -->
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.8" />
+         Pin to 10.0.x where the advisories are addressed.
+         2026-07-22: 10.0.8 itself got five new high-severity GHSAs
+         (GHSA-23rf-6693-g89p et al.) → NU1903 fails Restore under
+         TreatWarningsAsErrors; bumped to 10.0.10. -->
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
 
     <!-- PDF rendering (Infra.PdfRendering) — T-0068b. QuestPDF 2024.x
          is the Community-licensed release used by the IInvoicePdfRenderer
