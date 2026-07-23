@@ -31,6 +31,7 @@ zero silent skips).
 | 1.6 | Confirmation email arrives + link works | 🟡 | Outbox → SendGrid → operator inbox; **manual: click the link in the `vitchvoj+t0153@gmail.com` confirmation email**. If nothing arrives, check `/dashboard/admin/outbox` for a parked event |
 | 1.7 | Login sets first-party session cookies; navbar shows "Můj účet"; dashboard reachable | 🟡 | Blocked on 1.6. Expected: `Set-Cookie makables_access_customer` (no `Domain` → host-only on the web origin), navbar account menu (T-0152), `/dashboard/zakaznik/objednavky` renders |
 | 1.8 | Google OAuth through the proxy | 🟡 | Blocked on the manual Google-console redirect-URI allowlist entry (see T-0153 status log) |
+| 1.9 | Session persists past the access-token lifetime | ❌→fix | Operator report 2026-07-23: "does not hold logged in state". Root cause: 15-min access JWT/cookie (`JwtOptions.AccessTokenLifetime`) and **zero** frontend callers of `/api/v1/auth/refresh` — the T-0035 helper was never wired. Fix = [T-0154](../tickets/T-0154-session-refresh.md): middleware session refresh (all pages, de-duped, request-patching) + apiFetch 401 → refresh → retry-once. Re-verify on dev after merge+deploy: log in, wait >15 min (or delete the access cookie in devtools), reload → still logged in |
 
 ## Phase 2 — Maker journey (AC-2)
 
