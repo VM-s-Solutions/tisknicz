@@ -1,0 +1,55 @@
+# Manual-dispatch ops diagnostics for the dev environment (T-0159 follow-up;
+# the T-0134 runbooks say "check the Log stream / App Insights" but until now
+# there was no executable path — the operator's az login regularly expires and
+# the agent has none). Uses the SAME GitHub OIDC identity as the deploy
+# workflows; prints recent App Insights exceptions + failed requests for one
+# app. Dev-only on purpose: production diagnostics stay a deliberate operator
+# action in the portal.
+name: Ops — dev diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'Look-back window in hours'
+        required: false
+        default: '2'
+
+jobs:
+  diagnostics:
+    name: App Insights exceptions (dev)
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Recent exceptions + failed requests
+        run: |
+          set -euo pipefail
+          az extension add --name application-insights --only-show-errors
+          APP_ID=$(az monitor app-insights component show \
+            --app appi-makables-weu-dev -g rg-makables-weu-dev \
+            --query appId -o tsv)
+          HOURS='${{ github.event.inputs.hours }}'
+          echo "== exceptions (last ${HOURS}h) =="
+          az monitor app-insights query --app "$APP_ID" --analytics-query "
+            exceptions
+            | where timestamp > ago(${HOURS}h)
+            | project timestamp, cloud_RoleName, operation_Name, type, outerMessage, innermostMessage, method
+            | order by timestamp desc
+            | take 30" -o table
+          echo "== failed requests (last ${HOURS}h) =="
+          az monitor app-insights query --app "$APP_ID" --analytics-query "
+            requests
+            | where timestamp > ago(${HOURS}h) and success == false
+            | project timestamp, cloud_RoleName, name, resultCode, duration, operation_Id
+            | order by timestamp desc
+            | take 30" -o table
