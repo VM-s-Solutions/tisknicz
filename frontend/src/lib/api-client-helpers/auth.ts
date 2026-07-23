@@ -164,3 +164,33 @@ export interface RegisterMakerOutput {
 export async function registerMaker(input: RegisterMakerInput): Promise<Result<RegisterMakerOutput, ApiError>> {
   return apiFetch<RegisterMakerOutput>('public', `${PublicBase}/register`, { method: 'POST', json: input });
 }
+
+// ---- Company preview by IČO (T-0159, business decision Q4) ----
+
+/** Display slice of the ARES record the registration form shows for confirmation. */
+export interface CompanyPreview {
+  registrationNumber: string;
+  companyName: string;
+  legalForm?: string | null;
+  vatId?: string | null;
+  street: string;
+  houseNumber: string;
+  city: string;
+  zip: string;
+  isActiveInRegistry: boolean;
+  isStale: boolean;
+}
+
+/**
+ * Anonymous IČO → company preview (Public host). UX helper only — the
+ * registration submit re-runs the authoritative lookup server-side, so
+ * a failed preview must never block the form.
+ */
+export async function lookupCompanyPreview(ico: string): Promise<Result<CompanyPreview, ApiError>> {
+  const params = new URLSearchParams({ registrationNumber: ico, countryCode: 'CZ' });
+  return apiFetch<CompanyPreview>(
+    'public',
+    `${PublicBase}/registry-preview?${params.toString()}`,
+    { method: 'GET' },
+  );
+}

@@ -110,6 +110,18 @@ export const messages = {
   'auth.register_maker.ico_hint': '8 číslic, např. 27074358.',
   'auth.register_maker.submit': 'Pokračovat',
   'auth.register_maker.ico_invalid': 'IČO je neplatné nebo neexistuje v rejstříku ARES.',
+  'auth.register_maker.ico_checksum_invalid':
+    'Toto není platné české IČO — zkontrolujte prosím překlepy.',
+  'auth.register_maker.preview_loading': 'Hledám firmu v ARES…',
+  'auth.register_maker.preview_heading': 'Firma podle ARES',
+  'auth.register_maker.preview_confirm_hint':
+    'Zkontrolujte, že registrujete správnou firmu — tyto údaje převezmeme z ARES.',
+  'auth.register_maker.preview_not_found': 'Firma s tímto IČO nebyla v ARES nalezena.',
+  'auth.register_maker.preview_unavailable':
+    'ARES je momentálně nedostupný. Registraci to neblokuje — údaje ověříme při odeslání.',
+  'auth.register_maker.preview_dissolved':
+    'Tato firma je v ARES vedena jako zaniklá — registrace nebude možná.',
+  'auth.register_maker.preview_vat_id': 'DIČ',
   'auth.register_maker.ico_already_registered': 'Tento výrobce už má u nás účet.',
   'auth.register_maker.company_dissolved': 'Tato firma je v ARES vedena jako zaniklá. Nelze ji registrovat.',
   'auth.register_maker.snapshot_stale_notice': 'Údaje z ARES jsou starší. Administrátor je obnoví při ověření.',

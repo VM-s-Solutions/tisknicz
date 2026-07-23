@@ -47,6 +47,13 @@ export interface IPublicApi {
     register(body: RegisterMakerRequest): Promise<void>;
 
     /**
+     * @param registrationNumber (optional) 
+     * @param countryCode (optional) 
+     * @return OK
+     */
+    registryPreview(registrationNumber: string | undefined, countryCode: string | undefined): Promise<LookupCompanyPreviewResponse>;
+
+    /**
      * @param country (optional) 
      * @param locale (optional) 
      * @return OK
@@ -460,6 +467,60 @@ export class PublicApi implements IPublicApi {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param registrationNumber (optional) 
+     * @param countryCode (optional) 
+     * @return OK
+     */
+    registryPreview(registrationNumber: string | undefined, countryCode: string | undefined): Promise<LookupCompanyPreviewResponse> {
+        let url_ = this.baseUrl + "/api/v1/makers/registry-preview?";
+        if (registrationNumber === null)
+            throw new globalThis.Error("The parameter 'registrationNumber' cannot be null.");
+        else if (registrationNumber !== undefined)
+            url_ += "registrationNumber=" + encodeURIComponent("" + registrationNumber) + "&";
+        if (countryCode === null)
+            throw new globalThis.Error("The parameter 'countryCode' cannot be null.");
+        else if (countryCode !== undefined)
+            url_ += "countryCode=" + encodeURIComponent("" + countryCode) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRegistryPreview(_response);
+        });
+    }
+
+    protected processRegistryPreview(response: Response): Promise<LookupCompanyPreviewResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = LookupCompanyPreviewResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<LookupCompanyPreviewResponse>(null as any);
     }
 
     /**
@@ -1717,6 +1778,90 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class LookupCompanyPreviewResponse implements ILookupCompanyPreviewResponse {
+    registrationNumber!: string;
+    companyName!: string;
+    legalForm!: string | undefined;
+    vatId!: string | undefined;
+    street!: string;
+    houseNumber!: string;
+    city!: string;
+    zip!: string;
+    isActiveInRegistry!: boolean;
+    isStale!: boolean;
+
+    [key: string]: any;
+
+    constructor(data?: ILookupCompanyPreviewResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.registrationNumber = _data["registrationNumber"];
+            this.companyName = _data["companyName"];
+            this.legalForm = _data["legalForm"];
+            this.vatId = _data["vatId"];
+            this.street = _data["street"];
+            this.houseNumber = _data["houseNumber"];
+            this.city = _data["city"];
+            this.zip = _data["zip"];
+            this.isActiveInRegistry = _data["isActiveInRegistry"];
+            this.isStale = _data["isStale"];
+        }
+    }
+
+    static fromJS(data: any): LookupCompanyPreviewResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new LookupCompanyPreviewResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["registrationNumber"] = this.registrationNumber;
+        data["companyName"] = this.companyName;
+        data["legalForm"] = this.legalForm;
+        data["vatId"] = this.vatId;
+        data["street"] = this.street;
+        data["houseNumber"] = this.houseNumber;
+        data["city"] = this.city;
+        data["zip"] = this.zip;
+        data["isActiveInRegistry"] = this.isActiveInRegistry;
+        data["isStale"] = this.isStale;
+        return data;
+    }
+}
+
+export interface ILookupCompanyPreviewResponse {
+    registrationNumber: string;
+    companyName: string;
+    legalForm: string | undefined;
+    vatId: string | undefined;
+    street: string;
+    houseNumber: string;
+    city: string;
+    zip: string;
+    isActiveInRegistry: boolean;
+    isStale: boolean;
 
     [key: string]: any;
 }

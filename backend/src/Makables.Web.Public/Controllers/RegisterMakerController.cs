@@ -1,8 +1,12 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Config.Extensions;
 using Makables.Core.AppServices.Features.Maker;
+using Makables.Core.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Makables.Web.Public.Controllers;
 
@@ -35,6 +39,30 @@ public sealed class RegisterMakerController : MakablesApiController
             FullName: body.FullName,
             CountryCodePrimary: body.CountryCodePrimary,
             RegistrationNumber: body.RegistrationNumber), ct);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Anonymous IČO → company preview for the registration form (T-0159,
+    /// business decision Q4: prefill from ARES, user confirms). Read-only
+    /// UX helper — registration re-runs the authoritative lookup. Rides
+    /// the tight per-IP "auth" rate-limit bucket (T-0136): it is an
+    /// anonymous enumeration-adjacent surface, and the client debounces
+    /// to at most one call per typed IČO.
+    /// </summary>
+    [HttpGet("registry-preview")]
+    [AllowAnonymous]
+    [EnableRateLimiting(MakablesRateLimitingExtensions.AuthPolicyName)]
+    [ProducesResponseType(typeof(LookupCompanyPreview.LookupCompanyPreviewResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RegistryPreview(
+        [FromQuery] string registrationNumber,
+        [FromQuery] string countryCode,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(new LookupCompanyPreview.Query(
+            RegistrationNumber: registrationNumber?.Trim() ?? string.Empty,
+            CountryCode: countryCode?.Trim().ToUpperInvariant() ?? string.Empty), ct);
         return HandleResult(result);
     }
 }
