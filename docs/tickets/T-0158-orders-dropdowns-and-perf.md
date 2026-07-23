@@ -1,7 +1,7 @@
 ---
 id: T-0158
 title: Orders filters on the katalog Dropdown + first perf pass (SSR profile, parallel katalog fetches)
-status: in_review
+status: done
 size: S
 owner: frontend
 created: 2026-07-23
@@ -87,3 +87,4 @@ populated; /katalog TTFB drops by roughly one backend round trip.
 
 - 2026-07-23 `draft → in_progress → in_review` — operator-requested UI
   polish + perf pass, built on the day's auth-fix stack.
+- 2026-07-23 `in_review → done` — PR #107 merged; live on dev with the day's stack.
