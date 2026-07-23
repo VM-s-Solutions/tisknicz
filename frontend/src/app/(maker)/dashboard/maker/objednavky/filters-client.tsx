@@ -3,8 +3,8 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { OrderSort } from '@/lib/api-client-helpers/maker-orders';
 import { t } from '@/lib/i18n';
 
@@ -117,10 +117,10 @@ export function OrdersFilters({
         onChange={(e) => handleDateToChange(e.target.value)}
       />
 
-      <Select
+      <Dropdown
         label={t('dashboard.maker.orders.filter.sort')}
         value={sort}
-        onChange={(e) => handleSortChange(e.target.value)}
+        onChange={handleSortChange}
         options={SORT_OPTIONS}
       />
 

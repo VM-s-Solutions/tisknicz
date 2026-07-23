@@ -3,8 +3,8 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { OrderSort, OrderState } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { orderStateLabelKey } from '@/lib/orders/state-labels';
@@ -102,10 +102,10 @@ export function OrdersFilters({
 
   return (
     <div className="grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:grid-cols-2 lg:grid-cols-5">
-      <Select
+      <Dropdown
         label={t('customer.orders.filter.state')}
         value={state}
-        onChange={(e) => handleStateChange(e.target.value)}
+        onChange={handleStateChange}
         options={STATE_OPTIONS}
         placeholder={t('customer.orders.filter.state_any')}
       />
@@ -124,10 +124,10 @@ export function OrdersFilters({
         onChange={(e) => handleDateToChange(e.target.value)}
       />
 
-      <Select
+      <Dropdown
         label={t('customer.orders.filter.sort')}
         value={sort}
-        onChange={(e) => handleSortChange(e.target.value)}
+        onChange={handleSortChange}
         options={SORT_OPTIONS}
       />
 

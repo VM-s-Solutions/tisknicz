@@ -1,7 +1,7 @@
 ---
 id: T-0157
 title: Switch the email provider to Resend (ADR 0019 re-amendment)
-status: in_review
+status: done
 size: M
 owner: dotnet-backend
 created: 2026-07-23
@@ -107,3 +107,4 @@ receipt, BaseUrl override. Full unit suite 1893/1893 green in Release;
 
 - 2026-07-23 `draft → in_progress → in_review` — operator-directed switch;
   built on the T-0124 factory seam the same day it merged.
+- 2026-07-23 `in_review → done` — PR #106 merged (CI green after integration-test Resend stubs); deployed with the auth-fix stack.
