@@ -1,3 +1,4 @@
+using Makables.Config.Auth;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Infra.Common.Auth;
@@ -110,11 +111,61 @@ public static class MakablesAuthExtensions
                     NameClaimType = ClaimTypes.NameIdentifier,
                     RoleClaimType = "role",
                 };
+
+                // Cookie → JWT bridge (T-0156, walk-surfaced BLOCKER). The
+                // session model ships the access JWT as an HttpOnly cookie
+                // (ADR 0012 / AuthCookies) which browser JS CANNOT convert
+                // into an Authorization header — yet the default JwtBearer
+                // handler reads ONLY that header, so every [Authorize]
+                // endpoint 401'd for every real browser session (test rigs
+                // pass Bearer headers directly, which is why the suite never
+                // caught it). When no Authorization header is present, read
+                // the token from the first accepted-audience access cookie.
+                // CSRF exposure of cookie-borne auth is contained by
+                // SameSite=Strict on the session cookies + per-host CORS.
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        context.Token ??= ResolveTokenFromCookies(context.Request, acceptedAudiences);
+                        return Task.CompletedTask;
+                    },
+                };
             });
 
         services.AddAuthorization();
 
         return services;
+    }
+
+    /// <summary>
+    /// Reads the access JWT from the audience-scoped session cookies
+    /// (<c>makables_access_&lt;audience&gt;</c>) when the request carries no
+    /// <c>Authorization</c> header. Audiences are probed in the host's
+    /// accepted-audience order (own audience first, admin last), so on a
+    /// host accepting several audiences a user holding multiple session
+    /// cookies authenticates with the most specific one. Header always
+    /// wins — a caller-supplied Bearer token is never overridden.
+    /// Returns <c>null</c> (leave the default header path in charge) when
+    /// a header is present or no accepted cookie exists.
+    /// </summary>
+    internal static string? ResolveTokenFromCookies(HttpRequest request, string[] acceptedAudiences)
+    {
+        if (!string.IsNullOrEmpty(request.Headers.Authorization))
+        {
+            return null;
+        }
+
+        foreach (var audience in acceptedAudiences)
+        {
+            if (request.Cookies.TryGetValue(AuthCookies.AccessCookieName(audience), out var token)
+                && !string.IsNullOrWhiteSpace(token))
+            {
+                return token;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
