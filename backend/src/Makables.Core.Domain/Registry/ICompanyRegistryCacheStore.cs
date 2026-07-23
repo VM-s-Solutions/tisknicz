@@ -44,4 +44,20 @@ public interface ICompanyRegistryCacheStore
         DateTimeOffset fetchedAt,
         DateTimeOffset expiresAt,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Delete every cache row fetched strictly before
+    /// <paramref name="fetchedBefore"/> — rows past the stale-fallback
+    /// window, which can no longer serve even as a stale hit
+    /// (the read path in <c>AresCompanyRegistry</c> only accepts a stale
+    /// row while <c>FetchedAt &gt; now - StaleFallbackDays</c>). Called by
+    /// the <c>EvictExpiredRegistryCache</c> background Function (T-0113,
+    /// ADR 0018 §"Caching policy") so the table does not grow unbounded.
+    /// Bulk delete in its own DbContext scope — no request UoW, no
+    /// tracked-change flush. Returns the number of rows removed for
+    /// observability.
+    /// </summary>
+    Task<int> EvictFetchedBeforeAsync(
+        DateTimeOffset fetchedBefore,
+        CancellationToken cancellationToken);
 }

@@ -51,6 +51,9 @@ param runWeeklyPayoutBatchSchedule string = '0 0 2 * * 1'
 @description('DisputeAutoEscalation timer (daily 09:00 UTC). T-0145.')
 param disputeAutoEscalationSchedule string = '0 0 9 * * *'
 
+@description('EvictExpiredRegistryCache timer (daily 02:30 UTC, offset from CancelExpired). T-0113.')
+param evictExpiredRegistryCacheSchedule string = '0 30 2 * * *'
+
 param location string = resourceGroup().location
 
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -130,6 +133,10 @@ var baseAppSettings = [
   {
     name: 'DisputeAutoEscalation__Schedule'
     value: disputeAutoEscalationSchedule
+  }
+  {
+    name: 'EvictExpiredRegistryCache__Schedule'
+    value: evictExpiredRegistryCacheSchedule
   }
 ]
 
