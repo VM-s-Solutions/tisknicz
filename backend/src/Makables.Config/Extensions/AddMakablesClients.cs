@@ -102,7 +102,18 @@ public static class MakablesClientsExtensions
                 .Build();
         });
 
-        services.AddSingleton<IEmailProvider, SendGridEmailProvider>();
+        // Keyed registration — selection via CountryConfiguration.DefaultEmailProvider
+        // through EmailProviderFactory (T-0124, mirrors the T-0065 payments
+        // pattern). The unkeyed alias delegates to the SAME keyed singleton:
+        // the MVP send path (EmailSendService) has no recipient-country
+        // context yet (outbox payloads carry LanguageCode only), so it keeps
+        // injecting IEmailProvider until multi-country payloads land — see
+        // IEmailProviderFactory §Send-path note. One instance either way.
+        services.AddKeyedSingleton<IEmailProvider, SendGridEmailProvider>(
+            SendGridEmailProvider.ProviderCode);
+        services.AddSingleton<IEmailProvider>(sp =>
+            sp.GetRequiredKeyedService<IEmailProvider>(SendGridEmailProvider.ProviderCode));
+        services.AddScoped<IEmailProviderFactory, EmailProviderFactory>();
 
         // === Mapbox (T-0031) ===
         // ValidateOnStart so a missing/typo'd Mapbox:AccessToken crashes
@@ -168,7 +179,14 @@ public static class MakablesClientsExtensions
 
         services.AddHttpClient(AresCompanyRegistry.HttpClientName);
 
-        services.AddScoped<ICompanyRegistry, AresCompanyRegistry>();
+        // Keyed registration — selection via CountryConfiguration.DefaultRegistry
+        // through CompanyRegistryFactory (T-0124, mirrors the T-0065 payments
+        // pattern). No unkeyed alias: both consumers (RegisterMaker,
+        // RefreshMakerFromAres) resolve through the factory with their
+        // natural country context.
+        services.AddKeyedScoped<ICompanyRegistry, AresCompanyRegistry>(
+            AresCompanyRegistry.ProviderCode);
+        services.AddScoped<ICompanyRegistryFactory, CompanyRegistryFactory>();
 
         // === Comgate (T-0065) ===
         // ValidateOnStart so a missing/typo'd Comgate:MerchantId or
@@ -214,8 +232,8 @@ public static class MakablesClientsExtensions
 
         services.AddHttpClient(ComgatePaymentProvider.HttpClientName);
 
-        // Keyed registration — T-0065 introduces the keyed-services pattern
-        // for IPaymentProvider; SendGrid + ARES migration in T-0124 (Q3).
+        // Keyed registration — T-0065 introduced the keyed-services pattern
+        // for IPaymentProvider; SendGrid + ARES migrated in T-0124.
         services.AddKeyedScoped<IPaymentProvider, ComgatePaymentProvider>(
             ComgatePaymentProvider.ProviderCode);
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();

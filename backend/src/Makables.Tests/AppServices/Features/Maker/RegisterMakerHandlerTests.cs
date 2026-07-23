@@ -27,6 +27,8 @@ public class RegisterMakerHandlerTests
     private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
     private readonly IAddressRepository _addresses = Substitute.For<IAddressRepository>();
     private readonly ICompanyRegistry _companyRegistry = Substitute.For<ICompanyRegistry>();
+    private readonly ICompanyRegistryFactory _companyRegistryFactory =
+        Substitute.For<ICompanyRegistryFactory>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly IIdGenerator _ids = Substitute.For<IIdGenerator>();
     private readonly IOneTimeTokenIssuer _issuer = Substitute.For<IOneTimeTokenIssuer>();
@@ -39,8 +41,15 @@ public class RegisterMakerHandlerTests
         _ids.Next().Returns(_ => idQueue.Count > 0 ? idQueue.Dequeue() : Guid.NewGuid().ToString());
         _hasher.Hash(Arg.Any<string>()).Returns("argon2id$v=19$m=8192,t=1,p=1$AAAA$BBBB");
 
+        // T-0124: the handler resolves the registry per country via the keyed
+        // factory; tests keep stubbing the registry itself and route the
+        // factory to it.
+        _companyRegistryFactory
+            .ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(_companyRegistry));
+
         _sut = new RegisterMaker.Handler(
-            _users, _makers, _addresses, _companyRegistry, _hasher, _ids, _issuer,
+            _users, _makers, _addresses, _companyRegistryFactory, _hasher, _ids, _issuer,
             NullLogger<RegisterMaker.Handler>.Instance);
     }
 

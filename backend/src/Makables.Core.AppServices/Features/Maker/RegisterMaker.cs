@@ -112,7 +112,7 @@ public static class RegisterMaker
         IUserRepository users,
         IMakerRepository makers,
         IAddressRepository addresses,
-        ICompanyRegistry companyRegistry,
+        ICompanyRegistryFactory companyRegistryFactory,
         IPasswordHasher hasher,
         IIdGenerator ids,
         IOneTimeTokenIssuer issuer,
@@ -129,8 +129,19 @@ public static class RegisterMaker
                     Error.Validation(nameof(command.RegistrationNumber), BusinessErrorMessage.IcoFormatInvalid));
             }
 
-            // 2. ARES lookup (cache or fresh fetch).
-            var registryResult = await companyRegistry.LookupByRegistrationNumberAsync(
+            // 2. Registry lookup (cache or fresh fetch). The adapter is
+            // selected per country (CountryConfiguration.DefaultRegistry)
+            // via the keyed factory — T-0124; a misconfigured country
+            // surfaces as the factory's typed Configuration/NotFound
+            // failure.
+            var registryResolve = await companyRegistryFactory.ResolveAsync(
+                command.CountryCodePrimary, cancellationToken);
+            if (!registryResolve.IsSuccess)
+            {
+                return BusinessResult.Failure<Response>(registryResolve.Error!);
+            }
+
+            var registryResult = await registryResolve.Value!.LookupByRegistrationNumberAsync(
                 command.RegistrationNumber, cancellationToken);
             if (!registryResult.IsSuccess)
             {

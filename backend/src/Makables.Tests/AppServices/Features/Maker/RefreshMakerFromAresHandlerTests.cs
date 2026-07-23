@@ -19,14 +19,22 @@ public class RefreshMakerFromAresHandlerTests
     private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
     private readonly IAddressRepository _addresses = Substitute.For<IAddressRepository>();
     private readonly ICompanyRegistry _registry = Substitute.For<ICompanyRegistry>();
+    private readonly ICompanyRegistryFactory _registryFactory =
+        Substitute.For<ICompanyRegistryFactory>();
     private readonly IUserSessionProvider _session = Substitute.For<IUserSessionProvider>();
     private readonly RefreshMakerFromAres.Handler _sut;
 
     public RefreshMakerFromAresHandlerTests()
     {
         _session.GetUserId().Returns("admin-1");
+        // T-0124: registry resolved per the maker's country via the keyed
+        // factory; tests keep stubbing the registry itself and route the
+        // factory to it.
+        _registryFactory
+            .ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(_registry));
         _sut = new RefreshMakerFromAres.Handler(
-            _makers, _addresses, _registry, _session, NullLogger<RefreshMakerFromAres.Handler>.Instance);
+            _makers, _addresses, _registryFactory, _session, NullLogger<RefreshMakerFromAres.Handler>.Instance);
     }
 
     private static Makables.Core.Domain.Makers.Maker ExistingMaker() =>
