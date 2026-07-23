@@ -166,6 +166,38 @@ public class AresCompanyRegistryTests
         _handler.CallCount.Should().Be(1, "the second lookup must be served by the in-memory cache");
     }
 
+    // ---- T-0160: cache-store failures degrade, never fail the lookup ----
+
+    [Fact]
+    public async Task Cache_read_failure_is_treated_as_a_miss_and_ARES_still_serves()
+    {
+        _cacheStore.GetAsync(AresCompanyRegistry.ProviderCode, ValidIco, Arg.Any<CancellationToken>())
+            .Returns<Task<CompanyRegistryCacheEntry?>>(_ => throw new InvalidOperationException("db down"));
+        _handler.Response = Json(HttpStatusCode.OK, ValidAresPayload());
+
+        var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue("a cache read failure is an availability degradation, not a lookup failure");
+        _handler.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Cache_write_failure_still_returns_the_fetched_record()
+    {
+        // The exact live-dev failure (T-0160): the jsonb/text upsert mismatch
+        // threw AFTER a successful ARES fetch and 500'd the whole request.
+        _cacheStore.UpsertAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new InvalidOperationException("42804 column payload is of type jsonb"));
+        _handler.Response = Json(HttpStatusCode.OK, ValidAresPayload());
+
+        var result = await _sut.LookupByRegistrationNumberAsync(ValidIco, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue("the lookup already succeeded; a cache write failure must not undo it");
+        result.Value!.CompanyName.Should().NotBeNullOrEmpty();
+    }
+
     [Fact]
     public async Task Fresh_DB_cache_row_is_served_without_HTTP()
     {

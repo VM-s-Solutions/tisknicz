@@ -92,7 +92,25 @@ public sealed class AresCompanyRegistry(
         }
 
         // 2. DB cache (via the dedicated store — independent DbContext scope).
-        var dbEntry = await cacheStore.GetAsync(ProviderCode, registrationNumber, cancellationToken);
+        // Guarded (T-0160): a cache-store failure is an availability
+        // degradation, never a lookup failure — "no exceptions cross the
+        // boundary". A read failure is a cache miss; ARES is still the
+        // source of truth.
+        CompanyRegistryCacheEntry? dbEntry = null;
+        try
+        {
+            dbEntry = await cacheStore.GetAsync(ProviderCode, registrationNumber, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Registry cache read failed for {Registry}/{Ico}; treating as cache miss.",
+                ProviderCode, registrationNumber);
+        }
         var now = clock.UtcNow;
         if (dbEntry is not null && dbEntry.ExpiresAt > now)
         {
@@ -116,7 +134,24 @@ public sealed class AresCompanyRegistry(
         if (httpResult.IsSuccess)
         {
             var record = httpResult.Value!;
-            await PersistAsync(record, opts, cancellationToken);
+            // Guarded (T-0160): the lookup already succeeded — a cache-WRITE
+            // failure must not turn it into a 500. This exact path blew up
+            // live on dev (42804 jsonb/text mismatch in the upsert) and took
+            // the registry-preview endpoint down with it.
+            try
+            {
+                await PersistAsync(record, opts, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Registry cache write failed for {Registry}/{Ico}; serving the fetched record uncached.",
+                    ProviderCode, registrationNumber);
+            }
             StoreInMemory(memoryKey, record, opts);
             return BusinessResult.Success(record);
         }
