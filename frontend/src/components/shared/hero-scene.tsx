@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -483,12 +483,37 @@ function ShootingStar({ initialDelay }: { initialDelay: number }) {
 }
 
 export function HeroScene() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Render-loop gate (T-0155, dopady §4.9): a decorative background must
+  // not burn GPU at 60 fps while the hero is scrolled out of view — on
+  // the landing page that is most of the visit. `frameloop='never'`
+  // freezes the last composited frame (the canvas stays as-is, which is
+  // fine off-screen) and the loop resumes the moment the hero re-enters
+  // the viewport. Animations key off absolute elapsed time (sin(t) drifts,
+  // next-meteor-at timestamps), so the time jump on resume is harmless.
+  const [frameloop, setFrameloop] = useState<'always' | 'never'>('always');
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFrameloop(entry.isIntersecting ? 'always' : 'never'),
+      { threshold: 0 },
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-0">
+    <div ref={containerRef} className="absolute inset-0 z-0">
       <Canvas
         camera={{ position: [0, 0, 8.3], fov: 44 }}
         dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true }}
+        frameloop={frameloop}
+        // 'low-power' nudges dual-GPU machines to the integrated GPU —
+        // right for an ambient background; the scene is a handful of
+        // line/point primitives and comfortably within iGPU budget.
+        gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
         style={{ background: 'transparent' }}
       >
         <CameraRig />
