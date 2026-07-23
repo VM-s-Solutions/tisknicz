@@ -1,5 +1,7 @@
 using Makables.Core.Domain.Configuration;
+using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Payments;
+using Makables.Core.Domain.Registry;
 using Makables.Core.Domain.Shipping;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,27 +13,21 @@ namespace Makables.Infra.Database.Configuration;
 /// invariant on <see cref="CountryConfiguration"/> provider codes.
 ///
 /// <para>
-/// Payment + shipping codes are discovered from the keyed
+/// All four provider kinds are discovered from the keyed
 /// <see cref="ServiceDescriptor.ServiceKey"/>s registered for
-/// <see cref="IPaymentProvider"/> / <see cref="IShippingCarrier"/> (T-0065 /
-/// T-0070) — the same discovery the webhook integration tests use. Registry
-/// + email fall back to a static known-codes set until they are keyed
-/// (T-0124). Sets are case-insensitive — provider codes are lowercase
-/// constants but admin input matches leniently.
+/// <see cref="IPaymentProvider"/> / <see cref="IShippingCarrier"/>
+/// (T-0065 / T-0070) / <see cref="ICompanyRegistry"/> /
+/// <see cref="IEmailProvider"/> (T-0124) — the same discovery the webhook
+/// integration tests use. Sets are case-insensitive — provider codes are
+/// lowercase constants but admin input matches leniently.
 /// </para>
 /// </summary>
 public sealed class ProviderRegistry : IProviderRegistry
 {
     private readonly IReadOnlySet<string> _payment;
     private readonly IReadOnlySet<string> _shipping;
-
-    // TODO(T-0124): replace these static fallbacks with a keyed-container
-    // probe once IEmailProvider + ICompanyRegistry are keyed-registered.
-    private static readonly IReadOnlySet<string> RegistryCodes =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ares" };
-
-    private static readonly IReadOnlySet<string> EmailCodes =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "sendgrid" };
+    private readonly IReadOnlySet<string> _registry;
+    private readonly IReadOnlySet<string> _email;
 
     /// <summary>
     /// Built from the composition root's <see cref="IServiceCollection"/> so
@@ -43,6 +39,8 @@ public sealed class ProviderRegistry : IProviderRegistry
     {
         _payment = DiscoverKeys(services, typeof(IPaymentProvider));
         _shipping = DiscoverKeys(services, typeof(IShippingCarrier));
+        _registry = DiscoverKeys(services, typeof(ICompanyRegistry));
+        _email = DiscoverKeys(services, typeof(IEmailProvider));
     }
 
     private static IReadOnlySet<string> DiscoverKeys(IServiceCollection services, Type serviceType)
@@ -64,8 +62,8 @@ public sealed class ProviderRegistry : IProviderRegistry
     {
         ProviderKind.Payment => _payment,
         ProviderKind.Shipping => _shipping,
-        ProviderKind.Registry => RegistryCodes,
-        ProviderKind.Email => EmailCodes,
+        ProviderKind.Registry => _registry,
+        ProviderKind.Email => _email,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown provider kind."),
     };
 }

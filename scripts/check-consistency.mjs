@@ -453,6 +453,8 @@ const T8_NO_KEY_REQUIRED = new Set([
     'company.notFound',
     'company.registryTransient',
     'company.registryPermanent',
+    // T-0124 factory misconfig — Configuration-type generic fallback.
+    'company.registryNotRegistered',
     // Country / config — ops-facing.
     'country.notServiced',
     'country.configMissing',
@@ -468,6 +470,8 @@ const T8_NO_KEY_REQUIRED = new Set([
     'email.payloadMalformed',
     'email.payloadMissingFields',
     'email.eventTypeUnknown',
+    // T-0124 factory misconfig — outbox/log-only.
+    'email.providerNotRegistered',
     // Outbox processor — admin/log-only.
     'outbox.queuePublishFailed',
     // Geocoder — surfaced via the generic transient/permanent copy.
