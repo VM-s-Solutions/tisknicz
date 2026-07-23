@@ -1,7 +1,7 @@
 ---
 id: T-0156
 title: Cookie → JWT bridge — JwtBearer never read the HttpOnly access cookie; every [Authorize] endpoint 401'd for browsers
-status: in_review
+status: done
 size: S
 owner: dotnet-backend
 created: 2026-07-23
@@ -84,3 +84,4 @@ Release. Live re-verify = T-0153 walk row 1.10 after merge + deploy.
   blocker of the day (after T-0154); this one is THE reason no
   authenticated page ever worked in a browser. PR left open for operator
   merge.
+- 2026-07-23 `in_review → done` — merged to master by operator authorization ("merge everything"); deployed to dev via Deploy → dev.

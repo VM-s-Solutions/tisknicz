@@ -1,7 +1,7 @@
 ---
 id: T-0124
 title: Migrate IEmailProvider + ICompanyRegistry to keyed-services-with-factory (ADR 0008 alignment)
-status: in_review
+status: done
 size: M
 owner: dotnet-backend
 created: 2026-07-23
@@ -119,3 +119,4 @@ shifts only).
 - 2026-07-23 `draft → in_progress → in_review` — built while the T-0153 walk
   waits on the operator's email-confirmation click; PR opened and left for
   operator merge (agent self-merge intentionally not exercised).
+- 2026-07-23 `in_review → done` — merged to master by operator authorization ("merge everything"); deployed to dev via Deploy → dev.

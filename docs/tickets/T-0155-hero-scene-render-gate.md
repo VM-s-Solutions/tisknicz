@@ -1,7 +1,7 @@
 ---
 id: T-0155
 title: Hero 3D scene — pause the render loop off-screen + low-power GPU hint (dopady §4.9)
-status: in_review
+status: done
 size: S
 owner: frontend
 created: 2026-07-23
@@ -78,3 +78,4 @@ when the hero is scrolled out (fold into the T-0153 walk evidence).
 
 - 2026-07-23 `draft → in_progress → in_review` — closes the last unticketed
   dopady §4 finding; PR left open for operator merge.
+- 2026-07-23 `in_review → done` — merged to master by operator authorization ("merge everything"); deployed to dev via Deploy → dev.
