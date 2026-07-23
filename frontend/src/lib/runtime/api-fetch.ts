@@ -151,6 +151,50 @@ export async function apiFetch<TValue>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<Result<TValue, ApiError>> {
+  return apiFetchCore<TValue>(host, path, options, /* allowAuthRetry */ true);
+}
+
+/**
+ * In-flight client-side refresh de-dupe (T-0154). Refresh-token reuse
+ * detection revokes the whole token family (ADR 0012), so several
+ * concurrently-401ing calls (an order page fires multiple requests)
+ * must collapse into ONE refresh round trip per host.
+ */
+const clientRefreshInflight = new Map<ApiHost, Promise<boolean>>();
+
+function refreshClientSession(host: ApiHost): Promise<boolean> {
+  const existing = clientRefreshInflight.get(host);
+  if (existing) return existing;
+
+  const attempt = (async () => {
+    try {
+      const response = await fetch(`${resolveBaseUrl(host)}/api/v1/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  clientRefreshInflight.set(host, attempt);
+  void attempt.finally(() => clientRefreshInflight.delete(host));
+  return attempt;
+}
+
+/** Auth endpoints never trigger the 401 → refresh → retry loop (retrying login/refresh is meaningless). */
+function isAuthPath(path: string): boolean {
+  return path.replace(/^\/+/, '').startsWith('api/v1/auth/');
+}
+
+async function apiFetchCore<TValue>(
+  host: ApiHost,
+  path: string,
+  options: ApiFetchOptions,
+  allowAuthRetry: boolean,
+): Promise<Result<TValue, ApiError>> {
   const baseUrl = resolveBaseUrl(host);
   // Belt-and-braces: helper modules pass paths starting with "/" (and
   // a Copilot reviewer would catch one that doesn't), but a missing
@@ -232,6 +276,26 @@ export async function apiFetch<TValue>(
   }
 
   const correlationId = response.headers.get('x-correlation-id') ?? undefined;
+
+  // 401 → refresh → retry-once (T-0154), browser only: the 15-minute
+  // access cookie can expire under a long-lived page (order-detail
+  // message polling is the platform's only polling surface); one
+  // refresh + one retry recovers it. Server renders don't need this —
+  // the edge middleware refreshes the cookie before the render, and a
+  // fetch here couldn't persist rotated cookies anyway. Public host has
+  // no session; auth endpoints are excluded to prevent loops.
+  if (
+    response.status === 401 &&
+    allowAuthRetry &&
+    typeof window !== 'undefined' &&
+    host !== 'public' &&
+    !isAuthPath(path)
+  ) {
+    const refreshed = await refreshClientSession(host);
+    if (refreshed) {
+      return apiFetchCore<TValue>(host, path, options, /* allowAuthRetry */ false);
+    }
+  }
 
   if (response.ok) {
     if (response.status === 204) {
