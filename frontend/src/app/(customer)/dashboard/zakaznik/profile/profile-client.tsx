@@ -1,16 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
 import { logout } from '@/lib/api-client-helpers/auth';
 import {
   changePassword,
-  getMyProfile,
   type MyProfile,
   updateMyProfile,
 } from '@/lib/api-client-helpers/profile';
@@ -26,43 +24,19 @@ const Host = 'customer' as const;
  *
  * Email is read-only; an email change needs re-confirmation and refresh-
  * family invalidation (separate flow, not in T-0036).
+ *
+ * The profile itself arrives as a prop from the Server Component page
+ * (T-0158 perf pass) — no client-side fetch, no loading state; this
+ * boundary exists only for the form interactivity.
  */
-export function CustomerProfileClient() {
+export function CustomerProfileClient({ initialProfile }: { initialProfile: MyProfile }) {
   const router = useRouter();
-  const [profile, setProfile] = useState<MyProfile | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const result = await getMyProfile(Host);
-      if (cancelled) return;
-      if (result.success) {
-        setProfile(result.value);
-      } else {
-        setLoadError(result.error.message);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const [profile, setProfile] = useState<MyProfile>(initialProfile);
 
   async function handleLogout() {
     await logout(Host);
     router.push('/login');
-  }
-
-  if (loadError) {
-    return <Alert variant="error">{loadError}</Alert>;
-  }
-  if (!profile) {
-    return (
-      <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
-        <Spinner />
-        <span>{t('common.loading')}</span>
-      </Card>
-    );
+    router.refresh();
   }
 
   return (

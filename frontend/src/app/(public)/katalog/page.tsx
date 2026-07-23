@@ -72,9 +72,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const rawMinRating = readString(sp.minRating);
   const rawPage = readString(sp.page);
 
-  const categoryOptions = await loadCategoryOptions();
-  const validCategorySlugs = new Set(categoryOptions.map((c) => c.slug));
-  const category = validCategorySlugs.has(rawCategory) ? rawCategory : '';
   const minRatingStarsParsed = Number.parseInt(rawMinRating, 10);
   const minRatingStars =
     Number.isFinite(minRatingStarsParsed) && minRatingStarsParsed >= 1 && minRatingStarsParsed <= 5
@@ -82,16 +79,37 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       : undefined;
   const page = parsePositiveInt(rawPage, 1);
 
-  const filter: CatalogFilterInput = {
+  const buildFilter = (category: string): CatalogFilterInput => ({
     country: 'CZ',
     category: category || undefined,
     city: rawCity || undefined,
     minRatingStars,
     page,
     pageSize: CATALOG_DEFAULT_PAGE_SIZE,
-  };
+  });
 
-  const result = await getPagedMakers(filter);
+  // Perf (T-0158): the two backend reads used to run serially — two full
+  // round trips before first byte. Without a `category` param (the hot
+  // path) the makers query doesn't depend on the category list, so both
+  // run concurrently; a category-filtered URL keeps the original order
+  // because the slug must canonicalise against the fetched list first
+  // (invalid slug → unfiltered, not empty).
+  const categoriesPromise = loadCategoryOptions();
+  let categoryOptions: Awaited<typeof categoriesPromise>;
+  let category: string;
+  let result: Awaited<ReturnType<typeof getPagedMakers>>;
+  if (rawCategory === '') {
+    category = '';
+    [categoryOptions, result] = await Promise.all([
+      categoriesPromise,
+      getPagedMakers(buildFilter('')),
+    ]);
+  } else {
+    categoryOptions = await categoriesPromise;
+    const validCategorySlugs = new Set(categoryOptions.map((c) => c.slug));
+    category = validCategorySlugs.has(rawCategory) ? rawCategory : '';
+    result = await getPagedMakers(buildFilter(category));
+  }
 
   // Filters component reads URL state; canonicalised values keep its
   // initial render in sync with what the server actually used.
