@@ -31,6 +31,7 @@ zero silent skips).
 | 1.6 | Confirmation email arrives + link works | 🟡 | Outbox → SendGrid → operator inbox; **manual: click the link in the `vitchvoj+t0153@gmail.com` confirmation email**. If nothing arrives, check `/dashboard/admin/outbox` for a parked event |
 | 1.7 | Login sets first-party session cookies; navbar shows "Můj účet"; dashboard reachable | 🟡 | Blocked on 1.6. Expected: `Set-Cookie makables_access_customer` (no `Domain` → host-only on the web origin), navbar account menu (T-0152), `/dashboard/zakaznik/objednavky` renders |
 | 1.8 | Google OAuth through the proxy | 🟡 | Blocked on the manual Google-console redirect-URI allowlist entry (see T-0153 status log) |
+| 1.10 | Authenticated pages actually work (profile, orders) | ❌→fix | Operator report 2026-07-23: logged in, but Profile bounces to login and Orders says "please log in". Root cause: `AddMakablesAuth` wired stock JwtBearer (Authorization-header-only) while the session JWT lives in an HttpOnly cookie the browser can't convert — **every `[Authorize]` endpoint 401'd for every browser session since T-0027**; test rigs pass Bearer headers so the suite never saw it. Fix = [T-0156](../tickets/T-0156-cookie-jwt-bridge.md) (OnMessageReceived cookie→JWT bridge, header precedence, audience-order probe). Re-verify after merge+deploy: log in on dev → open `/dashboard/zakaznik/profile` + `objednavky` → both render |
 
 ## Phase 2 — Maker journey (AC-2)
 
