@@ -1,13 +1,47 @@
 ---
 id: 0019
-title: Email — SendGrid Dynamic Templates + DB-backed translation (originally Resend + MJML)
+title: Email — Resend transport + DB-backed translation (was SendGrid Dynamic Templates; originally Resend + MJML)
 status: amended
 date: 2026-05-21
-amended: 2026-05-24
+amended: 2026-07-23
 deciders: [Architect, user]
 ---
 
 # 0019 — Email
+
+## Amendment 2026-07-23 (T-0157) — provider back to Resend
+
+Operator directive ("Change email service to RESEND") — and the confirmed
+processor list from the 2026-07-04 business meeting (Q17) names **Resend**,
+which the GDPR page already advertises. The provider swap rides the
+T-0124 keyed-services-with-factory seam:
+
+1. **Active provider: SendGrid → Resend.** New `ResendEmailProvider`
+   (`Infra.Clients/Resend/`, keyed `"resend"`); CZ
+   `CountryConfiguration.DefaultEmailProvider` reseeded to `"resend"`
+   (data migration `SwitchDefaultEmailProviderToResend`). SendGrid stays
+   registered as an inactive keyed adapter (Comgate precedent) — flipping
+   back is a seed change, not a code change.
+2. **Rendering moves fully local.** SendGrid's hosted dynamic-template
+   HTML is gone; Resend receives the locally substituted
+   `Subject` + `PlainTextBody` (`SubstitutePlainTextPlaceholders`) as a
+   plain-text email. The DB model (`EmailTemplate` +
+   `EmailTemplateTranslation`, subject + plain-text per language) is
+   unchanged — it never stored HTML. A local HTML layout (single branded
+   wrapper) is a candidate follow-up ticket, not part of the swap.
+3. **`EmailMessage` contract unchanged** — `ProviderTemplateId`/`Data`
+   are simply ignored by the Resend adapter, so every `EmailSendService`
+   branch and seed row keeps working and a future provider can use them
+   again.
+4. **Secrets:** `Resend--ApiKey` joins the Key Vault inventory + both
+   deploy workflows (dev boot-stub `re_dev_boot_stub`; prod fail-closed).
+   Sender domain (`makables.cz`) must be verified in Resend before real
+   mail flows; dev can use `onboarding@resend.dev` as
+   `Resend:DefaultFromAddress` until then.
+
+The 2026-05-24 SendGrid amendment below is preserved for context; its
+DB-translation half remains in force — only the transport + remote-HTML
+half is reversed.
 
 ## Amendment 2026-05-24 (T-0028)
 

@@ -49,7 +49,7 @@ public static class CountrySeed
                 defaultPaymentProvider: "comgate",
                 defaultShippingCarrier: "packeta",
                 defaultRegistry: "ares",
-                defaultEmailProvider: "sendgrid",
+                defaultEmailProvider: "resend",  // T-0157: ADR 0019 re-amended to Resend
                 // T-0068b locked decision 8: CZ seed issuer = JVM YORE s.r.o.
                 // IČO ships with placeholder '00000000' per user direction;
                 // a one-line data migration replaces it pre-production-launch
