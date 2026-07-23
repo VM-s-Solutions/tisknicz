@@ -55,6 +55,7 @@ zero silent skips).
 | # | Step | Result | Evidence |
 |---|---|---|---|
 | 2.1 | Maker registration via `/register/maker` (real IČO → ARES prefill) | 🟡 | Needs a real IČO the operator controls — manual |
+| 2.0 | ARES lookup path works against real Postgres (walk-surfaced BLOCKER) | ❌→fix | First live ARES call (registry-preview, 2026-07-23) → bodiless 500: `42804 column "payload" is of type jsonb but expression is of type text` in the T-0032 cache upsert (SQLite tests masked it). Would also break real maker REGISTRATION. Fix = [T-0160](../tickets/T-0160-registry-cache-jsonb.md); diagnosed via the new ops-diagnostics workflow. Re-verify: `GET /api-proxy/public/api/v1/makers/registry-preview?registrationNumber=27074358&countryCode=CZ` → 200 with the Avast record |
 | 2.2 | Maker email confirm + admin verification | 🟡 | Admin host/dashboard step |
 | 2.3 | Product created with image + price | 🟡 | |
 | 2.4 | Product appears on `/katalog` + `/produkt/[id]` | 🟡 | |
