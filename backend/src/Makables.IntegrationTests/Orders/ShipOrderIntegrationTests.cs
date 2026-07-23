@@ -86,6 +86,8 @@ public sealed class ShipOrderIntegrationTests : IAsyncLifetime
                         ["Jwt:Issuer"] = TestIssuer,
                         ["Jwt:SigningKeyBase64"] = TestKeyBase64,
                         ["SendGrid:ApiKey"] = "SG.integration-test-stub",
+                        ["Resend:ApiKey"] = "re_integration_test_stub",
+                        ["Resend:DefaultFromAddress"] = "no-reply@makables.test",
                         ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
                         ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                         ["Mapbox:AccessToken"] = "pk.integration-test-stub",
