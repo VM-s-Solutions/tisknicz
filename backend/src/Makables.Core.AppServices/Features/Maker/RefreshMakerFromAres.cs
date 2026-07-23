@@ -80,7 +80,7 @@ public static class RefreshMakerFromAres
     public sealed class Handler(
         IMakerRepository makers,
         IAddressRepository addresses,
-        ICompanyRegistry companyRegistry,
+        ICompanyRegistryFactory companyRegistryFactory,
         IUserSessionProvider session,
         ILogger<Handler> logger)
         : IRequestHandler<Command, BusinessResult<RefreshMakerFromAresResponse>>
@@ -104,7 +104,17 @@ public static class RefreshMakerFromAres
                 return BusinessResult.Failure<RefreshMakerFromAresResponse>(Error.NotFound("maker"));
             }
 
-            var registryResult = await companyRegistry.LookupByRegistrationNumberAsync(
+            // Registry adapter selected by the maker's country
+            // (CountryConfiguration.DefaultRegistry) via the keyed factory —
+            // T-0124.
+            var registryResolve = await companyRegistryFactory.ResolveAsync(
+                maker.CountryCode, cancellationToken);
+            if (!registryResolve.IsSuccess)
+            {
+                return BusinessResult.Failure<RefreshMakerFromAresResponse>(registryResolve.Error!);
+            }
+
+            var registryResult = await registryResolve.Value!.LookupByRegistrationNumberAsync(
                 maker.RegistrationNumber, cancellationToken);
             if (!registryResult.IsSuccess)
             {

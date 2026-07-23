@@ -293,6 +293,9 @@ public static class BusinessErrorMessage
     public const string CompanyNotFound = "company.notFound";
     public const string CompanyRegistryTransient = "company.registryTransient";
     public const string CompanyRegistryPermanent = "company.registryPermanent";
+    /// <summary>The country's <c>DefaultRegistry</c> code does not match any
+    /// registered keyed <c>ICompanyRegistry</c> (T-0124 factory).</summary>
+    public const string CompanyRegistryNotRegistered = "company.registryNotRegistered";
 
     // === Country / config ===
     public const string CountryNotServiced = "country.notServiced";
@@ -669,6 +672,9 @@ public static class BusinessErrorMessage
     public const string EmailTemplateTranslationMissing = "email.translationMissing";
     public const string EmailProviderTransientFailure = "email.providerTransient";
     public const string EmailProviderPermanentFailure = "email.providerPermanent";
+    /// <summary>The country's <c>DefaultEmailProvider</c> code does not match
+    /// any registered keyed <c>IEmailProvider</c> (T-0124 factory).</summary>
+    public const string EmailProviderNotRegistered = "email.providerNotRegistered";
     // Split per T-0028 CQ reviewer N-4: T-0029's outbox-row triage UI needs
     // to distinguish "decode crashed" (malformed JSON) from "decode succeeded
     // but fields are blank" (producer wrote a partial payload).

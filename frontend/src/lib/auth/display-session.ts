@@ -1,3 +1,4 @@
+import { decodeJwtPayload } from './jwt-expiry';
 import { accessCookieName, type Audience } from './session';
 
 /**
@@ -16,12 +17,6 @@ export interface DisplaySession {
   readonly userId: string;
   readonly email: string;
   readonly audience: Audience;
-}
-
-interface JwtPayload {
-  readonly sub?: string;
-  readonly email?: string;
-  readonly exp?: number;
 }
 
 /**
@@ -53,24 +48,13 @@ export async function getDisplaySession(): Promise<DisplaySession | null> {
 
     const payload = decodeJwtPayload(cookie.value);
     if (!payload || typeof payload.sub !== 'string' || typeof payload.email !== 'string') continue;
-    // An expired access token usually still has a live refresh sibling —
-    // apiFetch's 401 → refresh path recovers the API session, but for
-    // pure display we treat it as logged-out only when clearly stale.
+    // The middleware refreshes an expired access cookie BEFORE the render
+    // (T-0154), so an expired token reaching this point means the refresh
+    // was rejected/unavailable — render logged-out.
     if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) continue;
 
     return { userId: payload.sub, email: payload.email, audience };
   }
 
   return null;
-}
-
-function decodeJwtPayload(token: string): JwtPayload | null {
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const json = Buffer.from(parts[1], 'base64url').toString('utf8');
-    return JSON.parse(json) as JwtPayload;
-  } catch {
-    return null;
-  }
 }
