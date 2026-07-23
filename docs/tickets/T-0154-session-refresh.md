@@ -1,7 +1,7 @@
 ---
 id: T-0154
 title: Session refresh — frontend never called /auth/refresh, sessions evaporated after 15 minutes
-status: in_review
+status: done
 size: M
 owner: frontend
 created: 2026-07-23
@@ -109,3 +109,4 @@ compiles for the edge bundle) all clean.
 - 2026-07-23 `draft → in_progress → in_review` — operator bug report
   ("it does not hold logged in state on frontend") root-caused and fixed
   same session; PR left open for operator merge.
+- 2026-07-23 `in_review → done` — merged to master by operator authorization ("merge everything"); deployed to dev via Deploy → dev.
