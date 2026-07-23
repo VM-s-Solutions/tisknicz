@@ -14,6 +14,10 @@ on:
         description: 'Look-back window in hours'
         required: false
         default: '2'
+      app:
+        description: 'App Service name for the log download (empty = skip)'
+        required: false
+        default: 'app-makables-public-weu-dev'
 
 jobs:
   diagnostics:
@@ -53,3 +57,18 @@ jobs:
             | project timestamp, cloud_RoleName, name, resultCode, duration, operation_Id
             | order by timestamp desc
             | take 30" -o table
+
+      # App Insights ingestion can lag or drop; the App Service filesystem
+      # logs (Serilog console → docker log, enabled in bicep siteLogs) are
+      # the ground truth. Print the exception tail of the newest instance log.
+      - name: App Service log download (exception tail)
+        if: ${{ github.event.inputs.app != '' }}
+        run: |
+          set -euo pipefail
+          APP='${{ github.event.inputs.app }}'
+          az webapp log download --name "$APP" -g rg-makables-weu-dev --log-file /tmp/logs.zip --only-show-errors
+          mkdir -p /tmp/logs && cd /tmp/logs && unzip -oq /tmp/logs.zip
+          NEWEST=$(ls -t LogFiles/*default_docker.log 2>/dev/null | head -1 || true)
+          if [ -z "$NEWEST" ]; then NEWEST=$(find . -name '*docker*.log' -o -name '*.log' | xargs ls -t 2>/dev/null | head -1); fi
+          echo "== newest log: $NEWEST =="
+          tail -c 300000 "$NEWEST" | grep -aE "ERR|Exception|fail:|   at " -A 2 | tail -140 || echo "(no exception lines found)"
