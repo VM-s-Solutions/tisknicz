@@ -73,6 +73,7 @@ jobs:
         env:
           JWT_SIGNING_KEY_BASE64: ${{ secrets.JWT_SIGNING_KEY_BASE64 }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           COMGATE_MERCHANT_ID: ${{ secrets.COMGATE_MERCHANT_ID }}
           COMGATE_SECRET: ${{ secrets.COMGATE_SECRET }}
           PACKETA_API_KEY: ${{ secrets.PACKETA_API_KEY }}
@@ -111,6 +112,7 @@ jobs:
           }
           set_secret "Jwt--SigningKeyBase64"      "$JWT_SIGNING_KEY_BASE64"
           set_secret "SendGrid--ApiKey"           "$SENDGRID_API_KEY"
+          set_secret "Resend--ApiKey"             "$RESEND_API_KEY"
           set_secret "Comgate--MerchantId"        "$COMGATE_MERCHANT_ID"
           set_secret "Comgate--Secret"            "$COMGATE_SECRET"
           set_secret "Packeta--ApiKey"            "$PACKETA_API_KEY"
@@ -136,7 +138,7 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
-          for name in "Jwt--SigningKeyBase64" "SendGrid--ApiKey" "Comgate--MerchantId" \
+          for name in "Jwt--SigningKeyBase64" "SendGrid--ApiKey" "Resend--ApiKey" "Comgate--MerchantId" \
                       "Comgate--Secret" "Packeta--ApiKey" "Packeta--PublicWidgetKey" \
                       "Mapbox--AccessToken" "ConnectionStrings--Postgres" \
                       "Storage--ConnectionString" "OutboxQueues--ConnectionString" \

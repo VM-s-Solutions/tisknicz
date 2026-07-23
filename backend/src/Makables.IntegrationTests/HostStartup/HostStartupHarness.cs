@@ -58,6 +58,10 @@ internal static class HostStartupHarness
                     // ValidateOnStart per sec reviewer M-3 / B-2.
                     ["SendGrid:ApiKey"] = "SG.integration-test-stub",
                     ["SendGrid:DefaultFromAddress"] = "no-reply@makables.test",
+                    // T-0157: ResendOptions ValidateOnStart (the active email
+                    // provider; SendGrid stays as the inactive keyed adapter).
+                    ["Resend:ApiKey"] = "re_integration_test_stub",
+                    ["Resend:DefaultFromAddress"] = "no-reply@makables.test",
                     ["PublicAppUrls:WebBaseUrl"] = "https://makables.test",
                     ["Mapbox:AccessToken"] = "pk.integration-test-stub",
                     ["Ares:BaseUrl"] = "https://ares.integration-test.local",

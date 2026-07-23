@@ -198,6 +198,10 @@ var apiSecretSettings = [
     value: kvRef(kvUri, 'SendGrid--ApiKey')
   }
   {
+    name: 'Resend__ApiKey'
+    value: kvRef(kvUri, 'Resend--ApiKey')
+  }
+  {
     name: 'Comgate__MerchantId'
     value: kvRef(kvUri, 'Comgate--MerchantId')
   }
@@ -263,6 +267,10 @@ var functionsSecretSettings = [
   {
     name: 'SendGrid__ApiKey'
     value: kvRef(kvUri, 'SendGrid--ApiKey')
+  }
+  {
+    name: 'Resend__ApiKey'
+    value: kvRef(kvUri, 'Resend--ApiKey')
   }
   {
     name: 'Comgate__MerchantId'

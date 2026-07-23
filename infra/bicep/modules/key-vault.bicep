@@ -67,6 +67,7 @@ var secretNames = [
   'Jwt--Issuer'
   'Jwt--Audience'
   'SendGrid--ApiKey'
+  'Resend--ApiKey'
   'Comgate--MerchantId'
   'Comgate--Secret'
   'Packeta--ApiKey'

@@ -10,6 +10,7 @@ using Makables.Infra.Clients.Comgate;
 using Makables.Infra.Clients.Google;
 using Makables.Infra.Clients.Mapbox;
 using Makables.Infra.Clients.Packeta;
+using Makables.Infra.Clients.Resend;
 using Makables.Infra.Clients.SendGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,17 +103,47 @@ public static class MakablesClientsExtensions
                 .Build();
         });
 
+        // === Resend (T-0157) ===
+        // The ACTIVE email provider per ADR 0019 (re-amended to Resend —
+        // the 2026-07-04 processor list names Resend; operator-directed
+        // switch). ValidateOnStart so a missing Resend:ApiKey crashes the
+        // host at boot, not on the first send.
+        services.AddOptions<ResendOptions>()
+            .Bind(configuration.GetSection(ResendOptions.SectionName))
+            .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey),
+                "Resend:ApiKey is required.")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.DefaultFromAddress),
+                "Resend:DefaultFromAddress is required.")
+            .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _),
+                "Resend:BaseUrl must be an absolute URL.")
+            .Validate(o => o.RetryCount >= 0 && o.RetryCount <= 10,
+                "Resend:RetryCount must be 0..10.")
+            .Validate(o => o.PerSendTimeoutSeconds is >= 1 and <= 60,
+                "Resend:PerSendTimeoutSeconds must be 1..60.")
+            .ValidateOnStart();
+
+        services.AddHttpClient(ResendEmailProvider.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // Keyed registration — selection via CountryConfiguration.DefaultEmailProvider
         // through EmailProviderFactory (T-0124, mirrors the T-0065 payments
-        // pattern). The unkeyed alias delegates to the SAME keyed singleton:
-        // the MVP send path (EmailSendService) has no recipient-country
-        // context yet (outbox payloads carry LanguageCode only), so it keeps
-        // injecting IEmailProvider until multi-country payloads land — see
-        // IEmailProviderFactory §Send-path note. One instance either way.
+        // pattern). Resend is the active adapter (CZ seed "resend",
+        // T-0157); SendGrid stays registered as an inactive keyed adapter
+        // exactly like Comgate after the Stripe decision — flipping back is
+        // a seed change, not a code change. The unkeyed alias delegates to
+        // the ACTIVE keyed singleton: the MVP send path (EmailSendService)
+        // has no recipient-country context yet (outbox payloads carry
+        // LanguageCode only), so it keeps injecting IEmailProvider until
+        // multi-country payloads land — see IEmailProviderFactory
+        // §Send-path note. One instance either way.
+        services.AddKeyedSingleton<IEmailProvider, ResendEmailProvider>(
+            ResendEmailProvider.ProviderCode);
         services.AddKeyedSingleton<IEmailProvider, SendGridEmailProvider>(
             SendGridEmailProvider.ProviderCode);
         services.AddSingleton<IEmailProvider>(sp =>
-            sp.GetRequiredKeyedService<IEmailProvider>(SendGridEmailProvider.ProviderCode));
+            sp.GetRequiredKeyedService<IEmailProvider>(ResendEmailProvider.ProviderCode));
         services.AddScoped<IEmailProviderFactory, EmailProviderFactory>();
 
         // === Mapbox (T-0031) ===
@@ -304,6 +335,16 @@ public static class MakablesClientsExtensions
                 PacketaShippingCarrier.HttpClientName,
                 (builder, _) => builder.AddRetry(HttpRetryStrategy(
                     retryCount: 3, baseDelayMs: 200)));
+
+            // Resend (T-0157): per-options retry like Mapbox/ARES — the
+            // outbox processor owns the authoritative retry budget, the
+            // in-provider retry rides out a single blip (SendGrid
+            // precedent, T-0028 sec reviewer M-4).
+            var resendOpts = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
+            registry.TryAddBuilder<HttpResponseMessage>(
+                ResendEmailProvider.HttpClientName,
+                (builder, _) => builder.AddRetry(HttpRetryStrategy(
+                    resendOpts.RetryCount, resendOpts.RetryBaseDelayMs)));
 
             return registry;
         });
