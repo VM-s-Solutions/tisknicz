@@ -35,4 +35,11 @@
     <PackageReference Include="QuestPDF" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- T-0156: Makables.Tests pins the internal cookie→JWT bridge
+         (MakablesAuthExtensions.ResolveTokenFromCookies) without widening
+         it to public — mirrors the Makables.Core.Domain precedent. -->
+    <InternalsVisibleTo Include="Makables.Tests" />
+  </ItemGroup>
+
 </Project>
