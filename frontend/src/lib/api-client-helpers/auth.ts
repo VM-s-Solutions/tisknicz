@@ -34,6 +34,12 @@ export interface RegisterCustomerInput {
   password: string;
   fullName: string;
   countryCodePrimary: string;
+  /**
+   * T-0162 "Jsem firma": optional IČO of a company customer. The backend
+   * re-fetches the company name + DIČ from ARES authoritatively; omit the
+   * field entirely for private persons.
+   */
+  companyRegistrationNumber?: string;
 }
 
 export async function registerCustomer(host: ApiHost, input: RegisterCustomerInput): Promise<Result<{ userId: string }, ApiError>> {

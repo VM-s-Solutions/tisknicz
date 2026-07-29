@@ -5491,6 +5491,7 @@ export class RegisterRequest implements IRegisterRequest {
     password!: string;
     fullName!: string;
     countryCodePrimary!: string;
+    companyRegistrationNumber?: string | undefined;
 
     [key: string]: any;
 
@@ -5513,6 +5514,7 @@ export class RegisterRequest implements IRegisterRequest {
             this.password = _data["password"];
             this.fullName = _data["fullName"];
             this.countryCodePrimary = _data["countryCodePrimary"];
+            this.companyRegistrationNumber = _data["companyRegistrationNumber"];
         }
     }
 
@@ -5533,6 +5535,7 @@ export class RegisterRequest implements IRegisterRequest {
         data["password"] = this.password;
         data["fullName"] = this.fullName;
         data["countryCodePrimary"] = this.countryCodePrimary;
+        data["companyRegistrationNumber"] = this.companyRegistrationNumber;
         return data;
     }
 }
@@ -5542,6 +5545,7 @@ export interface IRegisterRequest {
     password: string;
     fullName: string;
     countryCodePrimary: string;
+    companyRegistrationNumber?: string | undefined;
 
     [key: string]: any;
 }
