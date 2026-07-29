@@ -43,9 +43,10 @@ is a *consumer* of that seam — no extension point is created or modified.
   (DIČ), `CompanySnapshotFetchedAt`; attached via a dedicated
   `User.AttachCompanySnapshot(...)` mutator (keeps `User.Create` signature
   stable for the password/OAuth paths that never carry a company).
-- **DB** — EF migration `AddUserCompanySnapshot`: 3 nullable text columns +
-  1 nullable timestamptz on `users`; no index (no read path filters by IČO —
-  uniqueness is NOT enforced: two employees of one company may both register).
+- **DB** — EF migration `AddUserCompanySnapshot`: 3 nullable text columns
+  and 1 nullable timestamptz on `users`; no index (no read path filters by
+  IČO — uniqueness is NOT enforced: two employees of one company may both
+  register).
 - **AppServices (`Features/Auth/Register.cs`)** — `Command` gains
   `string? CompanyRegistrationNumber` (null = private person, exact current
   behavior). `Validator`: when non-null → `.Length(8)` + `^[0-9]+$` (mirror of

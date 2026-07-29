@@ -43,7 +43,12 @@ namespace Makables.Config.Controllers.Auth;
 [EnableRateLimiting(MakablesRateLimitingExtensions.AuthPolicyName)]
 public sealed class AuthController(IHostAudience hostAudience) : MakablesApiController
 {
-    public sealed record RegisterRequest(string Email, string Password, string FullName, string CountryCodePrimary);
+    public sealed record RegisterRequest(
+        string Email,
+        string Password,
+        string FullName,
+        string CountryCodePrimary,
+        string? CompanyRegistrationNumber = null);
     public sealed record LoginRequest(string Email, string Password);
     public sealed record ConfirmEmailRequest(string Token);
     public sealed record RequestPasswordResetRequest(string Email);
@@ -64,7 +69,8 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
             Password: body.Password,
             FullName: body.FullName,
             CountryCodePrimary: body.CountryCodePrimary,
-            Role: UserRole.Customer), ct);
+            Role: UserRole.Customer,
+            CompanyRegistrationNumber: body.CompanyRegistrationNumber), ct);
         return HandleResult(result);
     }
 

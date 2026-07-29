@@ -296,6 +296,11 @@ public static class BusinessErrorMessage
     /// <summary>The country's <c>DefaultRegistry</c> code does not match any
     /// registered keyed <c>ICompanyRegistry</c> (T-0124 factory).</summary>
     public const string CompanyRegistryNotRegistered = "company.registryNotRegistered";
+    /// <summary>T-0162: a customer ticked "Jsem firma" with an IČO whose
+    /// company the registry reports as dissolved. Customer-scoped sibling of
+    /// <see cref="MakerCompanyDissolved"/> (different audience, different
+    /// i18n copy).</summary>
+    public const string CustomerCompanyDissolved = "user.companyDissolved";
 
     // === Country / config ===
     public const string CountryNotServiced = "country.notServiced";
