@@ -208,3 +208,24 @@ cannot flush the half-built `User` aggregate.
   integration tests compile-verified; execute in CI (no local Docker).
   AC-6 clarified during implementation: dissolved = `Permanent` (422),
   mirroring the maker precedent, not 409.
+- 2026-07-29 gate fan-out results (PR #112): **optimizer PASS 5/5**;
+  **secops PASS** (2 LOW pre-existing parity findings on the shared ARES
+  mapper — spun off as T-0163; T-0161 merge-ordering note recorded below);
+  **qa PASS** (5 minor); **reviewer REQUEST CHANGES** (1 MAJOR: role-file
+  parity). Fold commit closes: reviewer MAJOR (`docs/architecture/roles/
+  user.md` updated — company snapshot in Knows, Does-NOT-know qualified,
+  `Register.Command` naming + implementation-pointer drift fixed), QA F-1
+  (debounce two-keystroke pin), F-2 (server-error mapping tests ×2), F-3
+  (dissolved preview test), F-4 (test-plan V-3 wording). Accepted as-is
+  with rationale: QA F-5 (empty-IČO shows checksum copy — blocks correctly,
+  copy nuance) and the optimizer/reviewer debounce-unmount NIT (byte-for-
+  byte the accepted T-0159 shape; fold both forms together in a future FE
+  hygiene pass). **T-0161 sequencing (secops F-3):** whichever of PR #112 /
+  T-0161 lands second must include `Register.cs` mod-11 gate in the
+  checksum-demotion rewire — the gate is deliberately shaped like
+  `RegisterMaker.Handler`'s so one sweep covers both.
+- 2026-07-29 CI note: GitHub Actions org billing broken (all jobs die at
+  start: "recent account payments have failed…" — also kills Deploy → dev
+  since 2026-07-27). Local substitute recorded on the PR; Testcontainers
+  suite + NSwag parity job + manual M-1..M-4 (dev preview is also down)
+  remain OWED once billing is fixed.

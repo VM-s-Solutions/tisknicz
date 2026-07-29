@@ -28,17 +28,25 @@ Represent the identity behind every action on the platform. Owns credentials, ro
 - `AppleSub` if linked (T-0139, mirrors `GoogleSub`)
 - Lockout state (`FailedLoginCount`, `LockedUntil`)
 - Refresh-token family (via separate `RefreshToken` aggregate referencing UserId)
+- Company snapshot (T-0162 "Jsem firma"; nullable, null for private persons):
+  `CompanyRegistrationNumber` (IČO), `CompanyName`, `CompanyVatId` (DIČ — an
+  OSVČ DIČ is birth-number-derived, i.e. PII), `CompanySnapshotFetchedAt`.
+  Attached once at registration via `AttachCompanySnapshot` from the
+  registry-verified ARES `CompanyRecord`; write-only as of T-0162 (no read
+  surface yet). Deliberately NOT unique — several employees of one company
+  may each hold a customer account. Dies with the row on GDPR hard-delete.
 
 ## Does NOT know
 
 - Which orders, products, or messages exist for this user (those are queried from the respective aggregates)
 - Session state in detail — `RefreshToken` is a separate aggregate
-- Maker-specific data (bio, IČO, bank account) — that's on `Maker`
+- Maker-specific business identity (bio, bank account, verification state, catalog slug, legal-seat address) — that's on `Maker`. Since T-0162 the *customer company snapshot* (IČO / name / DIČ) DOES live on `User`; the maker's own IČO-anchored selling identity stays on `Maker`.
 
 ## Lifecycle
 
 - **Created by:**
-  - `RegisterCustomer.Command` (email + password)
+  - `Register.Command` (email + password; when an IČO is provided — T-0162
+    "Jsem firma" — the handler attaches the ARES company snapshot before add)
   - `MagicLinkLogin.Command` (first-time magic link from a never-registered email)
   - `GoogleOAuthCallback.Command` (first-time Google login)
   - `CompleteAppleOAuth.Command` (first-time Apple login, T-0139 — mirrors `GoogleOAuthCallback`)
@@ -86,7 +94,7 @@ The `User` is the **anchor row** of the erasure seam (patterns §A.23, extension
 
 ## Implementation pointer
 
-`backend/src/Makables.Core.Domain/Users/User.cs`.
+`backend/src/Makables.Core.Domain/Identity/User.cs`.
 
 ## Related
 

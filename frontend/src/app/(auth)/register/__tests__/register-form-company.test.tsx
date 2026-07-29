@@ -149,6 +149,86 @@ describe('RegisterForm — Jsem firma (T-0162)', () => {
     expect(payload.companyRegistrationNumber).toBe('27074358');
   });
 
+  it('debounce collapses rapid retypes into a single preview call (QA fold F-1)', async () => {
+    vi.useFakeTimers();
+    render(<RegisterForm />);
+
+    fireEvent.click(screen.getByLabelText('Jsem firma'));
+    // First full valid IČO arms the timer; a second valid IČO typed 200 ms
+    // later must CANCEL it (clearTimeout) — without the cancel the mock
+    // would record two calls even though the seq guard hides the first
+    // result. 00006947 = Ministerstvo financí (czech-ico.test.ts fixture).
+    fireEvent.change(screen.getByLabelText('IČO'), { target: { value: '27074358' } });
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+    fireEvent.change(screen.getByLabelText('IČO'), { target: { value: '00006947' } });
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    vi.useRealTimers();
+
+    await screen.findByText('Avast Software s.r.o.');
+    expect(lookupCompanyPreview).toHaveBeenCalledTimes(1);
+    expect(lookupCompanyPreview).toHaveBeenCalledWith('00006947');
+  });
+
+  it('renders the dissolved alert when the preview reports an inactive company (QA fold F-3)', async () => {
+    lookupCompanyPreview.mockResolvedValue({
+      success: true,
+      value: { ...preview, isActiveInRegistry: false },
+    });
+    vi.useFakeTimers();
+    render(<RegisterForm />);
+
+    fireEvent.click(screen.getByLabelText('Jsem firma'));
+    fireEvent.change(screen.getByLabelText('IČO'), { target: { value: '27074358' } });
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    vi.useRealTimers();
+
+    expect(
+      await screen.findByText('Tato firma je v ARES vedena jako zaniklá — registrace nebude možná.'),
+    ).toBeInTheDocument();
+  });
+
+  it('maps user.companyDissolved submit reject to its Czech copy (QA fold F-2)', async () => {
+    registerCustomer.mockResolvedValue({
+      success: false,
+      error: { code: 'user.companyDissolved', message: 'raw-server-text', type: 'Permanent' },
+    });
+    render(<RegisterForm />);
+
+    fireEvent.click(screen.getByLabelText('Jsem firma'));
+    fillBaseFields();
+    fireEvent.change(screen.getByLabelText('IČO'), { target: { value: '27074358' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vytvořit účet' }));
+
+    expect(
+      await screen.findByText(
+        'Tato firma je v ARES vedena jako zaniklá. Firemní účet na ni nelze založit.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('maps company.notFound submit reject to the invalid-IČO copy (QA fold F-2)', async () => {
+    registerCustomer.mockResolvedValue({
+      success: false,
+      error: { code: 'company.notFound', message: 'raw-server-text', type: 'NotFound' },
+    });
+    render(<RegisterForm />);
+
+    fireEvent.click(screen.getByLabelText('Jsem firma'));
+    fillBaseFields();
+    fireEvent.change(screen.getByLabelText('IČO'), { target: { value: '27074358' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vytvořit účet' }));
+
+    expect(
+      await screen.findByText('IČO je neplatné nebo neexistuje v rejstříku ARES.'),
+    ).toBeInTheDocument();
+  });
+
   it('unchecking the box drops previously typed company state from the payload', async () => {
     vi.useFakeTimers();
     render(<RegisterForm />);
