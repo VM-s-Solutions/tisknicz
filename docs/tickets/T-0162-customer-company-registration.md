@@ -147,8 +147,9 @@ cannot flush the half-built `User` aggregate.
   then `company.notFound` returns and renders as Czech copy under the IČO
   field; no user row is created.
 - **AC-6** Given a dissolved company's IČO, when registration submits, then
-  the customer-scoped dissolved code returns (409) with Czech copy; no user
-  row is created.
+  the customer-scoped dissolved code returns as `Permanent` (422, mirroring
+  the `MakerCompanyDissolved` precedent) with Czech copy; no user row is
+  created.
 - **AC-7** Given ARES is unreachable, when a DB-cached record ≤7 days old
   exists, then registration succeeds with the stale snapshot; when no cache
   exists, then the transient error surfaces and no user row is created.
