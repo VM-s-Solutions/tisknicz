@@ -59,7 +59,8 @@ is a *consumer* of that seam — no extension point is created or modified.
   verification lane, and blocking registration on ARES downtime is worse.
 - **Web (`Config/Controllers/Auth/AuthController.cs`)** — register action's
   request record gains the optional field; endpoint remains `[AllowAnonymous]`
-  + auth rate bucket on all four hosts; `Role` stays hardcoded `Customer`.
+  with the auth rate bucket on all four hosts; `Role` stays hardcoded
+  `Customer`.
 - **Errors + i18n** — reuse registry codes surfaced by the maker flow
   (`company.notFound`, transient/permanent passthrough); the dissolved gate
   gets a customer-scoped code (the existing one is maker-scoped) + `cs-CZ` key.
@@ -199,3 +200,11 @@ cannot flush the half-built `User` aggregate.
   is the maker-side sibling), G/W/T AC, sized M, deps all done, manual steps
   listed, security_touching: true (auth flow + new PII columns), layers set.
 - 2026-07-29 `ready → in_progress`, owner dotnet-backend.
+- 2026-07-29 `in_progress → in_review` — TDD red→green (17 new unit tests:
+  9 handler + 5 validator shape + 4 domain snapshot; suite 1927/1927), EF
+  migration `AddUserCompanySnapshot`, NSwag regen all four hosts, FE form +
+  6 vitest tests (93/93), eslint + next build clean, check-consistency
+  parity with master (27 pre-existing findings, 0 new). Postgres-harness
+  integration tests compile-verified; execute in CI (no local Docker).
+  AC-6 clarified during implementation: dissolved = `Permanent` (422),
+  mirroring the maker precedent, not 409.
