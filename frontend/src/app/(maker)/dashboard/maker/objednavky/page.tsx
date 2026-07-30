@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
-import { Icon } from '@/components/ui/icon';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   getMakerOrders,
   MAKER_ORDERS_DEFAULT_PAGE_SIZE,
@@ -146,14 +147,12 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
   return (
     <section className="bg-surface-primary py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {t('dashboard.maker.orders.title')}
-          </h1>
-          <p className="mt-3 max-w-2xl text-base text-zinc-400">
-            {t('dashboard.maker.orders.subtitle')}
-          </p>
-        </header>
+        <div className="mb-8">
+          <PageHeader
+            title={t('dashboard.maker.orders.title')}
+            subtitle={t('dashboard.maker.orders.subtitle')}
+          />
+        </div>
 
         <OrderTabs activeTab={tab} baseParams={filterParams} />
 
@@ -245,15 +244,7 @@ const EMPTY_COPY: Record<OrderListTab, EmptyCopy> = {
 function OrdersEmpty({ tab }: { readonly tab: OrderListTab }) {
   const copy = EMPTY_COPY[tab];
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
-        <Icon name={copy.icon} size={28} />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-100">{t(copy.titleKey)}</h2>
-        <p className="mt-2 max-w-md text-sm text-zinc-400">{t(copy.descriptionKey)}</p>
-      </div>
-    </div>
+    <EmptyState icon={copy.icon} title={t(copy.titleKey)} description={t(copy.descriptionKey)} />
   );
 }
 

@@ -33,7 +33,7 @@ export default async function MakerProductCreatePage() {
           </Link>
         </div>
         <header>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('dashboard.maker.products.create.title')}
           </h1>
           <p className="mt-3 max-w-2xl text-base text-zinc-400">

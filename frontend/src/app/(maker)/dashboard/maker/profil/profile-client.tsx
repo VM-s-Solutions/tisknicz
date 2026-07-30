@@ -5,6 +5,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,7 +53,7 @@ export function MakerProfileClient() {
   }
   if (!profile) {
     return (
-      <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+      <Card variant="elevated" padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
         <Spinner />
         <span>{t('common.loading')}</span>
       </Card>
@@ -69,9 +70,14 @@ export function MakerProfileClient() {
 
 function CompanySection({ profile }: { profile: MyMakerProfile }) {
   return (
-    <Card padding="lg" className="flex flex-col gap-4">
+    <Card variant="accent" padding="lg" className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_company')}</h2>
+        <div className="flex items-center gap-3">
+          <span className="icon-tile h-9 w-9" aria-hidden="true">
+            <Icon name="verified" size={16} />
+          </span>
+          <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_company')}</h2>
+        </div>
         <div className="flex flex-col items-end gap-1">
           {profile.isVerified ? (
             <Badge variant="success">{t('dashboard.maker.profile.verified')}</Badge>
@@ -145,13 +151,18 @@ function EditableSection({
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-        {saved && <Alert variant="success">{t('dashboard.maker.profile.saved')}</Alert>}
-        {serverError && <Alert variant="error">{serverError}</Alert>}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+      {saved && <Alert variant="success">{t('dashboard.maker.profile.saved')}</Alert>}
+      {serverError && <Alert variant="error">{serverError}</Alert>}
 
+      <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_about')}</h2>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-9 w-9" aria-hidden="true">
+              <Icon name="user" size={16} />
+            </span>
+            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_about')}</h2>
+          </div>
           <Textarea
             label={t('dashboard.maker.profile.bio')}
             value={bio}
@@ -161,9 +172,16 @@ function EditableSection({
             disabled={submitting}
           />
         </section>
+      </Card>
 
+      <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_bank')}</h2>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-9 w-9" aria-hidden="true">
+              <Icon name="creditCard" size={16} />
+            </span>
+            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_bank')}</h2>
+          </div>
           <Input
             type="text"
             label={t('dashboard.maker.profile.bank_account')}
@@ -173,9 +191,16 @@ function EditableSection({
             disabled={submitting}
           />
         </section>
+      </Card>
 
+      <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_pickup')}</h2>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-9 w-9" aria-hidden="true">
+              <Icon name="mapPin" size={16} />
+            </span>
+            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_pickup')}</h2>
+          </div>
           <label className="flex items-center gap-2 text-sm text-zinc-200">
             <input
               type="checkbox"
@@ -195,12 +220,12 @@ function EditableSection({
             disabled={submitting || !personalPickupEnabled}
           />
         </section>
+      </Card>
 
-        <Button type="submit" loading={submitting} className="self-start">
-          {submitting ? t('dashboard.maker.profile.saving') : t('dashboard.maker.profile.save')}
-        </Button>
-      </form>
-    </Card>
+      <Button type="submit" loading={submitting} className="self-start">
+        {submitting ? t('dashboard.maker.profile.saving') : t('dashboard.maker.profile.save')}
+      </Button>
+    </form>
   );
 }
 

@@ -120,7 +120,7 @@ export default async function PaymentConfirmationPage({ params, searchParams }: 
   if (detail.state !== OrderState.PendingPayment) {
     return (
       <Frame>
-        <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
+        <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-4 text-center">
           <Badge variant="default">{t(orderStateLabelKey(detail.state))}</Badge>
           <p className="text-sm text-zinc-400">{t('order.page.banner.detailComing')}</p>
           <Link

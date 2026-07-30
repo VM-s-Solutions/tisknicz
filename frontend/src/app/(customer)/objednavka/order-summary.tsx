@@ -21,8 +21,10 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
   const imageUrl = buildProductImageUrl(product.images[0]?.blobPath);
 
   return (
-    <Card padding="md" className="flex flex-col gap-4 lg:sticky lg:top-8">
-      <h2 className="text-lg font-semibold text-white">{t('checkout.summary.product')}</h2>
+    <Card variant="accent" padding="md" className="flex flex-col gap-4 lg:sticky lg:top-8">
+      <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+        {t('checkout.summary.product')}
+      </h2>
 
       <div className="flex items-start gap-4">
         <div className="relative h-18 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
@@ -55,11 +57,13 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
         </div>
       </div>
 
-      <p className="text-xl font-semibold text-brand-400">
+      <p className="text-2xl font-bold text-brand-400">
         <SummaryPrice product={product} />
       </p>
 
-      <div className="flex flex-col gap-2 border-t border-zinc-800 pt-4 text-xs text-zinc-500">
+      <div aria-hidden="true" className="divider-glow" />
+
+      <div className="flex flex-col gap-2 text-xs leading-relaxed text-zinc-500">
         <p>{t('checkout.summary.shippingNote')}</p>
         <p>{t('checkout.summary.totalNote')}</p>
       </div>

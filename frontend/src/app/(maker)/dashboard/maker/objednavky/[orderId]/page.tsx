@@ -132,7 +132,7 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
 
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('order.page.title', { orderNumber: detail.orderNumber })}
           </h1>
           <Badge variant={orderStateBadgeVariant(detail.state)}>
@@ -159,11 +159,11 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
 
       <PayoutBreakdown detail={detail} />
 
-      <Card padding="md">
+      <Card variant="elevated" padding="md">
         <OrderTimeline detail={detail} />
       </Card>
 
-      <Card padding="md" className="flex flex-col gap-2">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-zinc-400">
           {t('dashboard.maker.orderDetail.shipping.heading')}
         </h2>
@@ -190,7 +190,7 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
 
       {/* Contact card — name + phone ONLY; the DTO has no email field
           (T-0082 AC-4) and no mailto: is rendered (AC-9). */}
-      <Card padding="md" className="flex flex-col gap-2">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-zinc-400">
           {t('dashboard.maker.orderDetail.contact.heading')}
         </h2>
@@ -204,7 +204,7 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
       </Card>
 
       {detail.attachments.length > 0 ? (
-        <Card padding="md" className="flex flex-col gap-3">
+        <Card variant="elevated" padding="md" className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-zinc-400">
             {t('dashboard.maker.orderDetail.attachments.heading')}
           </h2>
@@ -233,7 +233,7 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
       ) : null}
 
       {hasValue(detail.invoicePdfUrl) ? (
-        <Card padding="md" className="flex items-center justify-between gap-3">
+        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-zinc-400">
             {t('dashboard.maker.orderDetail.invoice.heading')}
           </h2>
@@ -245,7 +245,7 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
         </Card>
       ) : null}
 
-      <Card padding="md">
+      <Card variant="elevated" padding="md">
         <OrderThreadClient
           orderId={detail.orderId}
           initialPage={initialThreadPage}
@@ -269,12 +269,12 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerOrderDetail }) {
   );
 
   return (
-    <Card padding="md" className="flex flex-col gap-4">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-sm font-semibold text-zinc-400">
           {t('dashboard.maker.orderDetail.payout.heading')}
         </h2>
-        <p className="text-2xl font-bold text-brand-400">
+        <p className="text-2xl font-bold text-brand-400 sm:text-3xl">
           {formatCzk(detail.makerPayoutAmountMinor, detail.currency)}
         </p>
       </div>

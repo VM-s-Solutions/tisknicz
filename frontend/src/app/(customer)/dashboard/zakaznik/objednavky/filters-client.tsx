@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { OrderSort, OrderState } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
@@ -101,39 +102,46 @@ export function OrdersFilters({
   };
 
   return (
-    <div className="grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:grid-cols-2 lg:grid-cols-5">
-      <Dropdown
-        label={t('customer.orders.filter.state')}
-        value={state}
-        onChange={handleStateChange}
-        options={STATE_OPTIONS}
-        placeholder={t('customer.orders.filter.state_any')}
-      />
+    <div className="panel flex flex-col gap-4 rounded-2xl border border-zinc-800 p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="icon-tile h-9 w-9" aria-hidden="true">
+          <Icon name="filter" size={16} />
+        </span>
+        <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
+          {t('customer.orders.filter.reset')}
+        </Button>
+      </div>
 
-      <Input
-        label={t('customer.orders.filter.dateFrom')}
-        type="date"
-        value={dateFrom}
-        onChange={(e) => handleDateFromChange(e.target.value)}
-      />
+      <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Dropdown
+          label={t('customer.orders.filter.state')}
+          value={state}
+          onChange={handleStateChange}
+          options={STATE_OPTIONS}
+          placeholder={t('customer.orders.filter.state_any')}
+        />
 
-      <Input
-        label={t('customer.orders.filter.dateTo')}
-        type="date"
-        value={dateTo}
-        onChange={(e) => handleDateToChange(e.target.value)}
-      />
+        <Input
+          label={t('customer.orders.filter.dateFrom')}
+          type="date"
+          value={dateFrom}
+          onChange={(e) => handleDateFromChange(e.target.value)}
+        />
 
-      <Dropdown
-        label={t('customer.orders.filter.sort')}
-        value={sort}
-        onChange={handleSortChange}
-        options={SORT_OPTIONS}
-      />
+        <Input
+          label={t('customer.orders.filter.dateTo')}
+          type="date"
+          value={dateTo}
+          onChange={(e) => handleDateToChange(e.target.value)}
+        />
 
-      <Button type="button" variant="ghost" onClick={handleReset}>
-        {t('customer.orders.filter.reset')}
-      </Button>
+        <Dropdown
+          label={t('customer.orders.filter.sort')}
+          value={sort}
+          onChange={handleSortChange}
+          options={SORT_OPTIONS}
+        />
+      </div>
     </div>
   );
 }

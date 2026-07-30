@@ -23,12 +23,16 @@ function orderDetailHref(orderId: string): string {
 /** Optimistic "Děkujeme — ověřujeme platbu" frame (poll in progress). */
 export function VerifyingView() {
   return (
-    <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
-      <Spinner size="lg" />
-      <h1 className="text-2xl font-semibold text-white">
+    <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-5 text-center">
+      <span className="icon-tile h-16 w-16" aria-hidden="true">
+        <Spinner size="lg" />
+      </span>
+      <h1 className="text-shine text-2xl font-semibold">
         {t('checkout.confirm.verifying.title')}
       </h1>
-      <p className="max-w-md text-sm text-zinc-400">{t('checkout.confirm.verifying.subtitle')}</p>
+      <p className="max-w-md text-sm leading-relaxed text-zinc-400">
+        {t('checkout.confirm.verifying.subtitle')}
+      </p>
     </Card>
   );
 }
@@ -42,23 +46,23 @@ export function SuccessView({
   readonly orderNumber: string;
 }) {
   return (
-    <Card padding="lg" className="flex flex-col items-center gap-5 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-950/50 text-emerald-400">
-        <Icon name="checkCircle" size={28} />
+    <Card variant="accent" padding="lg" className="flex flex-col items-center gap-6 text-center">
+      <span className="icon-tile h-16 w-16" aria-hidden="true">
+        <Icon name="checkCircle" size={30} className="text-emerald-400" />
       </span>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-white">
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-shine text-2xl font-semibold">
           {t('checkout.confirm.success.title')}
         </h1>
         <p className="text-sm text-zinc-400">
           {t('checkout.confirm.success.orderNumber', { orderNumber })}
         </p>
       </div>
-      <div className="flex w-full max-w-sm flex-col gap-2 text-left">
-        <h2 className="text-sm font-semibold text-zinc-400">
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-xl border border-zinc-800 bg-surface-elevated p-4 text-left">
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
           {t('checkout.confirm.success.whatNext')}
         </h2>
-        <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm text-zinc-300">
+        <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-sm text-zinc-300">
           <li>{t('checkout.confirm.success.step1')}</li>
           <li>{t('checkout.confirm.success.step2')}</li>
           <li>{t('checkout.confirm.success.step3')}</li>
@@ -80,12 +84,14 @@ export function SuccessView({
 /** ~30s cap reached — verification continues; the T-0067 email confirms. */
 export function CapReachedView({ orderId }: { readonly orderId: string }) {
   return (
-    <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-950/50 text-amber-400">
-        <Icon name="clock" size={28} />
+    <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-5 text-center">
+      <span className="icon-tile h-16 w-16" aria-hidden="true">
+        <Icon name="clock" size={30} className="text-amber-400" />
       </span>
-      <h1 className="text-2xl font-semibold text-white">{t('checkout.confirm.pendingTitle')}</h1>
-      <p className="max-w-md text-sm text-zinc-400">{t('checkout.confirm.pendingEmailNote')}</p>
+      <h1 className="text-shine text-2xl font-semibold">{t('checkout.confirm.pendingTitle')}</h1>
+      <p className="max-w-md text-sm leading-relaxed text-zinc-400">
+        {t('checkout.confirm.pendingEmailNote')}
+      </p>
       <Link href={orderDetailHref(orderId)} className={SECONDARY_CTA_CLASSES}>
         {t('checkout.confirm.pendingDetailLink')}
       </Link>
@@ -96,12 +102,14 @@ export function CapReachedView({ orderId }: { readonly orderId: string }) {
 /** Cancelled/failed gateway flow — retry lives on the order page (T-0084b). */
 export function FailureView({ orderId }: { readonly orderId: string }) {
   return (
-    <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-950/50 text-red-400">
-        <Icon name="xCircle" size={28} />
+    <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-5 text-center">
+      <span className="icon-tile h-16 w-16" aria-hidden="true">
+        <Icon name="xCircle" size={30} className="text-red-400" />
       </span>
-      <h1 className="text-2xl font-semibold text-white">{t('checkout.confirm.failed.title')}</h1>
-      <p className="max-w-md text-sm text-zinc-400">{t('checkout.confirm.failed.heldNote')}</p>
+      <h1 className="text-shine text-2xl font-semibold">{t('checkout.confirm.failed.title')}</h1>
+      <p className="max-w-md text-sm leading-relaxed text-zinc-400">
+        {t('checkout.confirm.failed.heldNote')}
+      </p>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link href={orderDetailHref(orderId)} className={PRIMARY_CTA_CLASSES}>
           {t('checkout.confirm.failed.retryCta')}

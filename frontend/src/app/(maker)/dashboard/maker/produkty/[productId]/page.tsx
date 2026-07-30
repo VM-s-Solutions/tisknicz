@@ -96,7 +96,7 @@ export default async function MakerProductEditPage({ params }: PageProps) {
         </div>
 
         <header>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('dashboard.maker.products.edit.title')}
           </h1>
           <p className="mt-3 text-base text-zinc-400">{product.title}</p>

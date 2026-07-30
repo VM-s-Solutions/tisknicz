@@ -133,7 +133,7 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
 
       <PayButtonClient orderId={detail.orderId} />
 
-      <Card padding="md">
+      <Card variant="elevated" padding="md">
         <AttachmentManagerClient
           orderId={detail.orderId}
           initialAttachments={detail.attachments}
@@ -234,35 +234,39 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
     <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('order.page.title', { orderNumber: detail.orderNumber })}
           </h1>
           <Badge variant={orderStateBadgeVariant(detail.state)}>
             {t(orderStateLabelKey(detail.state))}
           </Badge>
         </div>
-        <p className="text-sm text-zinc-400">
+        <p className="flex items-center gap-2 text-sm text-zinc-400">
+          <Icon name="user" size={14} className="shrink-0 text-zinc-500" />
           {t('customer.orderDetail.makerLine', { name: detail.makerName })}
         </p>
-        <p className="text-sm text-zinc-400">
+        <p className="flex items-center gap-2 text-sm text-zinc-400">
+          <Icon name="package" size={14} className="shrink-0 text-zinc-500" />
           {t('customer.orderDetail.productLine', {
             title: detail.productTitle ?? t('order.page.breakdown.customOrderFallback'),
           })}
         </p>
       </header>
 
-      <Card padding="md">
+      <Card variant="elevated" padding="md">
         <OrderTimeline detail={detail} />
       </Card>
 
       {detail.state === OrderState.Shipped ? (
-        <MarkDeliveredButton orderId={detail.orderId} />
+        <Card variant="elevated" padding="md">
+          <MarkDeliveredButton orderId={detail.orderId} />
+        </Card>
       ) : null}
 
       <OrderPriceCards detail={detail} />
 
-      <Card padding="md" className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
           {t('customer.orderDetail.shipping.heading')}
         </h2>
         <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
@@ -280,8 +284,8 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
       </Card>
 
       {detail.attachments.length > 0 ? (
-        <Card padding="md" className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-zinc-400">
+        <Card variant="elevated" padding="md" className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
             {t('customer.orderDetail.attachments.heading')}
           </h2>
           <ul className="flex flex-col gap-2">
@@ -309,8 +313,9 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
       ) : null}
 
       {hasUrl(detail.invoicePdfUrl) ? (
-        <Card padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-zinc-400">
+        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <Icon name="receipt" size={14} className="shrink-0" />
             {t('customer.orderDetail.invoice.heading')}
           </h2>
           <FileDownloadButton
@@ -322,8 +327,9 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
       ) : null}
 
       {hasUrl(detail.returnLabelUrl) ? (
-        <Card padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-zinc-400">
+        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <Icon name="package" size={14} className="shrink-0" />
             {t('customer.orderDetail.returnLabel.heading')}
           </h2>
           <FileDownloadButton
@@ -334,7 +340,7 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
         </Card>
       ) : null}
 
-      <Card padding="md" className="flex flex-col gap-4">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <OrderThreadClient
           orderId={detail.orderId}
           initialPage={initialThreadPage}

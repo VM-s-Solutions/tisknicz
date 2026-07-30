@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 import { getProductById, type ProductDetail } from '@/lib/api-client-helpers/catalog';
@@ -99,12 +100,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
       </div>
 
       {description ? (
-        <div className="flex flex-col gap-3">
+        <Card padding="md" className="flex flex-col gap-4">
           <h2 className="text-xl font-semibold text-white">
             {t('catalog.product_detail.description.heading')}
           </h2>
+          <div aria-hidden="true" className="divider-glow" />
           <p className="whitespace-pre-line text-base text-zinc-300">{description}</p>
-        </div>
+        </Card>
       ) : null}
 
       <div className="pt-2">
@@ -127,16 +129,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
  */
 export function ProductInfo({ product }: { readonly product: ProductDetail }) {
   return (
-    <div className="flex flex-col gap-5">
+    <Card variant="accent" padding="md" className="flex h-fit flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
           {product.title}
         </h1>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-2xl font-semibold text-brand-400">
+          <p className="text-3xl font-semibold text-brand-400">
             <ProductPrice product={product} />
           </p>
-          <Badge variant={product.fulfillmentType === 'InStock' ? 'success' : 'default'}>
+          <Badge variant={product.fulfillmentType === 'InStock' ? 'success' : 'info'}>
             {t(`product.fulfillmentType.${product.fulfillmentType}`)}
           </Badge>
         </div>
@@ -170,7 +172,7 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
           <Icon name="arrowRight" size={16} />
         </Link>
       </div>
-    </div>
+    </Card>
   );
 }
 

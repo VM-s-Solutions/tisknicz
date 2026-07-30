@@ -11,8 +11,11 @@ import { t } from '@/lib/i18n';
 export default function OrderNotFound() {
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
-      <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-2xl font-semibold text-white">{t('order.page.notFound.title')}</h1>
+      <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-4 text-center">
+        <span className="icon-tile h-16 w-16" aria-hidden="true">
+          <Icon name="search" size={28} />
+        </span>
+        <h1 className="text-shine text-2xl font-semibold">{t('order.page.notFound.title')}</h1>
         <p className="text-sm text-zinc-400">{t('order.page.notFound.body')}</p>
         <Link
           href="/katalog"

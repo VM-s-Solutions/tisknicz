@@ -12,11 +12,11 @@ import { getDisplaySession } from '@/lib/auth/display-session';
  * navbar account menu.
  */
 const MAKER_NAV_ITEMS: readonly DashboardNavItem[] = [
-  { href: '/dashboard/maker/objednavky', labelKey: 'nav.maker.orders' },
-  { href: '/dashboard/maker/produkty', labelKey: 'nav.maker.products' },
-  { href: '/dashboard/maker/vyplaty', labelKey: 'nav.maker.payouts' },
-  { href: '/dashboard/maker/recenze', labelKey: 'nav.maker.reviews' },
-  { href: '/dashboard/maker/profil', labelKey: 'nav.maker.profile' },
+  { href: '/dashboard/maker/objednavky', labelKey: 'nav.maker.orders', icon: 'package' },
+  { href: '/dashboard/maker/produkty', labelKey: 'nav.maker.products', icon: 'grid' },
+  { href: '/dashboard/maker/vyplaty', labelKey: 'nav.maker.payouts', icon: 'wallet' },
+  { href: '/dashboard/maker/recenze', labelKey: 'nav.maker.reviews', icon: 'starOutline' },
+  { href: '/dashboard/maker/profil', labelKey: 'nav.maker.profile', icon: 'user' },
 ];
 
 export default async function MakerDashboardLayout({ children }: { children: ReactNode }) {

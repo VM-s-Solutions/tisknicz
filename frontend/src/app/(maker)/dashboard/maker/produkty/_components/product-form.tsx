@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -208,17 +209,22 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
   const isOnRequest = priceType === PriceTypeValues.OnRequest;
 
   return (
-    <Card padding="lg">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-        {topError ? <Alert variant="error">{topError}</Alert> : null}
-        {savedFlash ? (
-          <Alert variant="success">{t('dashboard.maker.products.form.success.updated')}</Alert>
-        ) : null}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+      {topError ? <Alert variant="error">{topError}</Alert> : null}
+      {savedFlash ? (
+        <Alert variant="success">{t('dashboard.maker.products.form.success.updated')}</Alert>
+      ) : null}
 
+      <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-white">
-            {t('dashboard.maker.products.form.section_basic')}
-          </h2>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-9 w-9">
+              <Icon name="edit" size={16} />
+            </span>
+            <h2 className="text-lg font-semibold text-white">
+              {t('dashboard.maker.products.form.section_basic')}
+            </h2>
+          </div>
           <Input
             id="product-title"
             label={t('dashboard.maker.products.form.field.title')}
@@ -266,11 +272,18 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
             </p>
           </div>
         </section>
+      </Card>
 
+      <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-white">
-            {t('dashboard.maker.products.form.section_pricing')}
-          </h2>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-9 w-9">
+              <Icon name="creditCard" size={16} />
+            </span>
+            <h2 className="text-lg font-semibold text-white">
+              {t('dashboard.maker.products.form.section_pricing')}
+            </h2>
+          </div>
           <Select
             id="product-price-type"
             label={t('dashboard.maker.products.form.field.price_type')}
@@ -318,17 +331,17 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
             </p>
           </div>
         </section>
+      </Card>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button type="submit" loading={submitting} variant="primary">
-            {submitting
-              ? t('dashboard.maker.products.form.submit.saving')
-              : mode === 'create'
-                ? t('dashboard.maker.products.form.submit.create')
-                : t('dashboard.maker.products.form.submit.update')}
-          </Button>
-        </div>
-      </form>
-    </Card>
+      <div className="flex items-center justify-end gap-3">
+        <Button type="submit" loading={submitting} variant="primary">
+          {submitting
+            ? t('dashboard.maker.products.form.submit.saving')
+            : mode === 'create'
+              ? t('dashboard.maker.products.form.submit.create')
+              : t('dashboard.maker.products.form.submit.update')}
+        </Button>
+      </div>
+    </form>
   );
 }

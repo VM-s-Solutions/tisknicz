@@ -49,7 +49,10 @@ export function OrderTabs({ activeTab, baseParams }: OrderTabsProps) {
   };
 
   return (
-    <nav className="flex gap-2 border-b border-zinc-800" aria-label={t('dashboard.maker.orders.title')}>
+    <nav
+      className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-zinc-800 bg-surface-card p-1"
+      aria-label={t('dashboard.maker.orders.title')}
+    >
       {TAB_VALUES.map((tab) => {
         const isActive = tab === activeTab;
         return (
@@ -57,10 +60,10 @@ export function OrderTabs({ activeTab, baseParams }: OrderTabsProps) {
             key={tab}
             href={hrefFor(tab)}
             aria-current={isActive ? 'page' : undefined}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+            className={`rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors ${
               isActive
-                ? 'border-brand-400 text-brand-400'
-                : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                ? 'border-brand-500/40 bg-brand-400/10 text-brand-200'
+                : 'border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
             }`}
           >
             {t(TAB_LABEL_KEYS[tab])}

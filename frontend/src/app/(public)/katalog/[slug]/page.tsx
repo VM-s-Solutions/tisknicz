@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 import {
@@ -108,43 +109,52 @@ function ProfileHeader({
   readonly ratingDisplay: string;
 }) {
   return (
-    <Card padding="lg" className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {profile.companyName}
-          </h1>
-          {profile.isVerified ? (
-            <Badge variant="brand">
-              <Icon name="verified" size={14} />
-              {t('catalog.maker.verified')}
-            </Badge>
-          ) : null}
-          {profile.personalPickupEnabled ? (
-            <Badge variant="success">{t('catalog.maker.personal_pickup_badge')}</Badge>
-          ) : null}
-        </div>
+    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+        <span
+          aria-hidden="true"
+          className="icon-tile h-16 w-16 shrink-0 text-2xl font-bold"
+        >
+          {profile.companyName.charAt(0).toUpperCase()}
+        </span>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">
-          <span className="inline-flex items-center gap-1">
-            <Icon name="mapPin" size={14} />
-            {profile.city}
-          </span>
-          {profile.legalForm ? <span>{profile.legalForm}</span> : null}
-          <span className="inline-flex items-center gap-2">
-            <Stars value={profile.ratingAverageBp / RATING_BP_PER_STAR} />
-            {profile.ratingCount > 0 ? (
-              <span>
-                {t('catalog.maker.stats.rating', {
-                  rating: ratingDisplay,
-                  count: profile.ratingCount,
-                })}
-              </span>
-            ) : (
-              <span>{t('catalog.maker.stats.rating_none')}</span>
-            )}
-          </span>
-          <span>{t('catalog.maker.stats.orders', { count: profile.totalOrders })}</span>
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
+              {profile.companyName}
+            </h1>
+            {profile.isVerified ? (
+              <Badge variant="brand">
+                <Icon name="verified" size={14} />
+                {t('catalog.maker.verified')}
+              </Badge>
+            ) : null}
+            {profile.personalPickupEnabled ? (
+              <Badge variant="success">{t('catalog.maker.personal_pickup_badge')}</Badge>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">
+            <span className="inline-flex items-center gap-1">
+              <Icon name="mapPin" size={14} />
+              {profile.city}
+            </span>
+            {profile.legalForm ? <span>{profile.legalForm}</span> : null}
+            <span className="inline-flex items-center gap-2">
+              <Stars value={profile.ratingAverageBp / RATING_BP_PER_STAR} />
+              {profile.ratingCount > 0 ? (
+                <span>
+                  {t('catalog.maker.stats.rating', {
+                    rating: ratingDisplay,
+                    count: profile.ratingCount,
+                  })}
+                </span>
+              ) : (
+                <span>{t('catalog.maker.stats.rating_none')}</span>
+              )}
+            </span>
+            <span>{t('catalog.maker.stats.orders', { count: profile.totalOrders })}</span>
+          </div>
         </div>
       </div>
 
@@ -157,19 +167,26 @@ function ProfileHeader({
 
 function ProductsGrid({ profile }: { readonly profile: MakerProfile }) {
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="text-xl font-semibold text-white">{t('catalog.maker.products.heading')}</h2>
-      {profile.products.length === 0 ? (
-        <Card padding="md">
-          <p className="text-sm text-zinc-400">{t('catalog.maker.products.empty')}</p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {profile.products.map((item) => (
-            <ProductCard key={item.productId} item={item} />
-          ))}
+    <Card padding="md" className="flex flex-col gap-5">
+      <section className="flex flex-col gap-5">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="icon-tile h-9 w-9">
+            <Icon name="grid" size={16} />
+          </span>
+          <h2 className="text-xl font-semibold text-white">
+            {t('catalog.maker.products.heading')}
+          </h2>
         </div>
-      )}
-    </section>
+        {profile.products.length === 0 ? (
+          <EmptyState icon="grid" title={t('catalog.maker.products.empty')} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {profile.products.map((item) => (
+              <ProductCard key={item.productId} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
+    </Card>
   );
 }
