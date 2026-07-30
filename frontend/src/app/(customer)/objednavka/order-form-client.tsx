@@ -5,7 +5,9 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { Radio } from '@/components/ui/radio';
 import { Textarea } from '@/components/ui/textarea';
 import { ZasilkovnaWidget } from '@/components/shared/zasilkovna-widget';
 import {
@@ -231,7 +233,10 @@ export function OrderFormClient({
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-4">
-          <legend className="text-lg font-semibold text-white">
+          <legend className="flex items-center gap-3 text-lg font-semibold text-white">
+            <span className="icon-tile h-9 w-9" aria-hidden="true">
+              <Icon name="user" size={16} />
+            </span>
             {t('checkout.contact.legend')}
           </legend>
           <Input
@@ -290,68 +295,71 @@ export function OrderFormClient({
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-lg font-semibold text-white">
+          <legend className="flex items-center gap-3 text-lg font-semibold text-white">
+            <span className="icon-tile h-9 w-9" aria-hidden="true">
+              <Icon name="truck" size={16} />
+            </span>
             {t('checkout.shipping.legend')}
           </legend>
 
-          <label
-            className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+          {/* Selectable card — the Radio primitive owns its own <label>,
+              so the card wrapper is a <div> (no nested labels). */}
+          <div
+            className={`flex flex-col gap-2 rounded-xl border px-4 py-3 transition-colors ${
               shippingMethod === ShippingMethod.ZasilkovnaPickupPoint
                 ? 'border-brand-400 bg-brand-400/5'
                 : 'border-zinc-800'
-            } ${zasilkovnaAvailable && !submitting ? 'cursor-pointer hover:border-zinc-600' : 'cursor-not-allowed opacity-60'}`}
+            } ${zasilkovnaAvailable && !submitting ? 'hover:border-zinc-600' : 'opacity-60'}`}
           >
-            <input
-              type="radio"
+            <Radio
               name="shippingMethod"
-              className="mt-1 accent-brand-400"
               checked={shippingMethod === ShippingMethod.ZasilkovnaPickupPoint}
               onChange={() => setShippingMethod(ShippingMethod.ZasilkovnaPickupPoint)}
               disabled={!zasilkovnaAvailable || submitting}
-            />
-            <span className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-zinc-100">
-                {t('checkout.shipping.zasilkovna')}
-              </span>
-              {shippingMethod === ShippingMethod.ZasilkovnaPickupPoint && zasilkovnaAvailable ? (
-                <span className="flex flex-col gap-2">
-                  {pickupPoint ? (
-                    <span className="text-sm text-zinc-300">
-                      {t('checkout.pickupPoint.chosen', { name: pickupPoint.name })}
-                    </span>
-                  ) : null}
-                  {widgetConfig ? (
-                    <span>
-                      <ZasilkovnaWidget
-                        scriptUrl={widgetConfig.scriptUrl}
-                        publicKey={widgetConfig.publicKey}
-                        options={widgetConfig.options}
-                        onPick={(point) => {
-                          setPickupPoint(point);
-                          setFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.zasilkovnaPickupPointId;
-                            return next;
-                          });
-                        }}
-                        onError={handleWidgetError}
-                        label={
-                          pickupPoint
-                            ? t('checkout.pickupPoint.change')
-                            : t('checkout.pickupPoint.choose')
-                        }
-                      />
-                    </span>
-                  ) : null}
-                  {fieldErrors.zasilkovnaPickupPointId ? (
-                    <span className="text-sm text-error">
-                      {fieldErrors.zasilkovnaPickupPointId}
-                    </span>
-                  ) : null}
+              label={
+                <span className="font-medium text-zinc-100">
+                  {t('checkout.shipping.zasilkovna')}
                 </span>
-              ) : null}
-            </span>
-          </label>
+              }
+            />
+            {shippingMethod === ShippingMethod.ZasilkovnaPickupPoint && zasilkovnaAvailable ? (
+              <div className="flex flex-col gap-2 pl-8">
+                {pickupPoint ? (
+                  <p className="text-sm text-zinc-300">
+                    {t('checkout.pickupPoint.chosen', { name: pickupPoint.name })}
+                  </p>
+                ) : null}
+                {widgetConfig ? (
+                  <div>
+                    <ZasilkovnaWidget
+                      scriptUrl={widgetConfig.scriptUrl}
+                      publicKey={widgetConfig.publicKey}
+                      options={widgetConfig.options}
+                      onPick={(point) => {
+                        setPickupPoint(point);
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.zasilkovnaPickupPointId;
+                          return next;
+                        });
+                      }}
+                      onError={handleWidgetError}
+                      label={
+                        pickupPoint
+                          ? t('checkout.pickupPoint.change')
+                          : t('checkout.pickupPoint.choose')
+                      }
+                    />
+                  </div>
+                ) : null}
+                {fieldErrors.zasilkovnaPickupPointId ? (
+                  <p className="text-sm text-error">
+                    {fieldErrors.zasilkovnaPickupPointId}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
 
           {!zasilkovnaAvailable ? (
             <Alert variant="warning">
@@ -364,39 +372,37 @@ export function OrderFormClient({
             </Alert>
           ) : null}
 
-          <label
+          <div
             title={personalPickupEnabled ? undefined : t('checkout.shipping.personalPickupDisabled')}
-            className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+            className={`flex flex-col gap-1 rounded-xl border px-4 py-3 transition-colors ${
               shippingMethod === ShippingMethod.PersonalPickup
                 ? 'border-brand-400 bg-brand-400/5'
                 : 'border-zinc-800'
-            } ${personalPickupEnabled && !submitting ? 'cursor-pointer hover:border-zinc-600' : 'cursor-not-allowed opacity-60'}`}
+            } ${personalPickupEnabled && !submitting ? 'hover:border-zinc-600' : 'opacity-60'}`}
           >
-            <input
-              type="radio"
+            <Radio
               name="shippingMethod"
-              className="mt-1 accent-brand-400"
               checked={shippingMethod === ShippingMethod.PersonalPickup}
               onChange={() => setShippingMethod(ShippingMethod.PersonalPickup)}
               disabled={!personalPickupEnabled || submitting}
+              label={
+                <span className="font-medium text-zinc-100">
+                  {t('checkout.shipping.personalPickup')}
+                </span>
+              }
+              description={
+                personalPickupEnabled
+                  ? undefined
+                  : t('checkout.shipping.personalPickupDisabled')
+              }
             />
-            <span className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-zinc-100">
-                {t('checkout.shipping.personalPickup')}
-              </span>
-              {!personalPickupEnabled ? (
-                <span className="text-xs text-zinc-500">
-                  {t('checkout.shipping.personalPickupDisabled')}
-                </span>
-              ) : null}
-              {shippingMethod === ShippingMethod.PersonalPickup && personalPickupEnabled ? (
-                <span className="flex flex-col gap-1 text-sm text-zinc-400">
-                  <span>{t('checkout.shipping.pickupInfo', { city: pickupCity })}</span>
-                  {pickupNote ? <span className="whitespace-pre-line">{pickupNote}</span> : null}
-                </span>
-              ) : null}
-            </span>
-          </label>
+            {shippingMethod === ShippingMethod.PersonalPickup && personalPickupEnabled ? (
+              <div className="flex flex-col gap-1 pl-8 text-sm text-zinc-400">
+                <p>{t('checkout.shipping.pickupInfo', { city: pickupCity })}</p>
+                {pickupNote ? <p className="whitespace-pre-line">{pickupNote}</p> : null}
+              </div>
+            ) : null}
+          </div>
         </fieldset>
       </Card>
 
@@ -421,6 +427,11 @@ export function OrderFormClient({
       <div className="flex flex-col gap-2">
         <Button type="submit" size="lg" loading={submitting} disabled={noShippingSelectable}>
           {submitting ? t('checkout.submitting') : t('checkout.submit')}
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="arrowRight" size={16} />
+            </span>
+          ) : null}
         </Button>
         {uploadProgress && uploadProgress.total > 0 ? (
           <p className="text-center text-sm text-zinc-400">

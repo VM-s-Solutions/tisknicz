@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { createCategory } from '@/lib/api-client-helpers/admin-categories';
@@ -59,7 +60,10 @@ export function CreateCategoryForm() {
 
   return (
     <Card className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+        <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
+          <Icon name="plus" size={16} />
+        </span>
         {t('dashboard.admin.categories.form.title')}
       </h2>
       {error ? <Alert variant="error">{error}</Alert> : null}
@@ -99,6 +103,7 @@ export function CreateCategoryForm() {
         </div>
         <div>
           <Button type="submit" loading={submitting} disabled={!name.trim() || submitting}>
+            {!submitting ? <Icon name="plus" size={16} /> : null}
             {t('dashboard.admin.categories.form.submit')}
           </Button>
         </div>

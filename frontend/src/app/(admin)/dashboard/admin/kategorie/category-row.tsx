@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -104,6 +105,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
               setArmDeactivate(false);
             }}
           >
+            {!editing ? <Icon name="edit" size={14} /> : null}
             {editing
               ? t('dashboard.admin.categories.row.cancel')
               : t('dashboard.admin.categories.row.edit')}
@@ -116,6 +118,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
               loading={busy && armDeactivate}
               onClick={handleDeactivate}
             >
+              <Icon name="trash" size={14} />
               {armDeactivate
                 ? t('dashboard.admin.categories.row.deactivate_confirm')
                 : t('dashboard.admin.categories.row.deactivate')}
@@ -152,6 +155,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
           <p className="text-xs text-zinc-500">{t('dashboard.admin.categories.row.slug_note')}</p>
           <div>
             <Button type="submit" size="sm" loading={busy} disabled={!name.trim() || busy}>
+              {!busy ? <Icon name="save" size={14} /> : null}
               {t('dashboard.admin.categories.row.save')}
             </Button>
           </div>

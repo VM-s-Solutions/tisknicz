@@ -35,12 +35,18 @@
 
   /* Animations */
   --animate-fade-in: fade-in 0.6s ease-out;
+  --animate-tooltip-in: tooltip-in 0.15s ease-out;
   --animate-slide-up: slide-up 0.6s ease-out;
   --animate-float: float 6s ease-in-out infinite;
   --animate-shimmer: shimmer 2s ease-in-out infinite;
 }
 
 @keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tooltip-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
@@ -273,6 +279,31 @@ body {
     var(--color-surface-elevated);
   color: var(--color-brand-300);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Ambient page backdrop — layered teal/amber glows plus a faint dot
+   grid so the dark canvas reads as depth instead of flat black. Fixed,
+   non-interactive, behind all content (z-index -1). Rendered once per
+   layout as an aria-hidden sibling of the page chrome. */
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(45, 212, 191, 0.08), transparent 60%),
+    radial-gradient(50rem 36rem at -12% 35%, rgba(20, 184, 166, 0.06), transparent 60%),
+    radial-gradient(44rem 30rem at 55% 115%, rgba(251, 191, 36, 0.04), transparent 65%),
+    var(--color-surface-primary);
+}
+.page-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
+  -webkit-mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
 }
 
 /* Soft teal glow along the top edge of empty-state panels. */

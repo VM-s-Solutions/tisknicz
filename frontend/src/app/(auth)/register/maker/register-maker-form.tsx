@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import {
   type CompanyPreview,
@@ -144,6 +145,7 @@ export function RegisterMakerForm() {
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
           type="text"
+          icon="building"
           label={t('auth.register_maker.ico')}
           value={ico}
           onChange={(e) => handleIcoChange(e.target.value)}
@@ -196,6 +198,7 @@ export function RegisterMakerForm() {
         )}
         <Input
           type="text"
+          icon="user"
           label={t('auth.register.full_name')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -205,6 +208,7 @@ export function RegisterMakerForm() {
         />
         <Input
           type="email"
+          icon="mail"
           label={t('auth.register.email')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -214,6 +218,7 @@ export function RegisterMakerForm() {
         />
         <Input
           type="password"
+          icon="lock"
           label={t('auth.register.password')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -225,6 +230,11 @@ export function RegisterMakerForm() {
         <p className="text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
         <Button type="submit" loading={submitting} className="mt-2">
           {submitting ? t('auth.register.submitting') : t('auth.register_maker.submit')}
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="arrowRight" size={16} />
+            </span>
+          ) : null}
         </Button>
       </form>
       <p className="text-center text-sm text-zinc-400">

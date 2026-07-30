@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   changeOrderState,
@@ -242,16 +243,18 @@ function RefundModal({
       />
 
       {requiresAck ? (
-        <label className="flex items-start gap-3 rounded-xl border border-amber-900/50 bg-amber-950/30 p-3 text-sm text-amber-200">
-          <input
-            type="checkbox"
+        <div className="rounded-xl border border-amber-900/50 bg-amber-950/30 p-3">
+          <Checkbox
             checked={acknowledge}
             onChange={(event) => setAcknowledge(event.target.checked)}
             disabled={busy}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-600 bg-zinc-900"
+            label={
+              <span className="text-amber-200">
+                {t('dashboard.admin.orderActions.refund.postPayoutAck')}
+              </span>
+            }
           />
-          <span>{t('dashboard.admin.orderActions.refund.postPayoutAck')}</span>
-        </label>
+        </div>
       ) : null}
 
       <div className="mt-2 flex items-center justify-end gap-3">
@@ -357,10 +360,10 @@ function StateChangeModal({
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <Select
+      <Dropdown
         label={t('dashboard.admin.orderActions.state.targetLabel')}
         value={targetState}
-        onChange={(event) => setTargetState(event.target.value)}
+        onChange={setTargetState}
         disabled={busy}
         options={candidates.map((s) => ({ value: s, label: t(orderStateLabelKey(s)) }))}
       />

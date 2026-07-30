@@ -122,6 +122,7 @@ export function CatalogFilters({
         <Input
           label={t('catalog.filter.city')}
           type="text"
+          icon="search"
           value={city}
           onChange={(e) => handleCityChange(e.target.value)}
           placeholder={t('catalog.filter.city_placeholder')}

@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import {
   confirmPasswordReset,
@@ -71,6 +72,7 @@ function RequestReset() {
           {serverError && <Alert variant="error">{serverError}</Alert>}
           <Input
             type="email"
+            icon="mail"
             label={t('auth.login.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -79,6 +81,11 @@ function RequestReset() {
             disabled={submitting}
           />
           <Button type="submit" loading={submitting} className="mt-2">
+            {!submitting ? (
+              <span aria-hidden="true">
+                <Icon name="send" size={16} />
+              </span>
+            ) : null}
             {t('auth.reset.request_submit')}
           </Button>
         </form>
@@ -131,6 +138,7 @@ function ConfirmReset({ token }: { token: string }) {
           {serverError && <Alert variant="error">{serverError}</Alert>}
           <Input
             type="password"
+            icon="lock"
             label={t('auth.register.password')}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
@@ -140,6 +148,11 @@ function ConfirmReset({ token }: { token: string }) {
             disabled={submitting}
           />
           <Button type="submit" loading={submitting} className="mt-2">
+            {!submitting ? (
+              <span aria-hidden="true">
+                <Icon name="check" size={16} />
+              </span>
+            ) : null}
             {t('auth.reset.confirm_submit')}
           </Button>
         </form>

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
 import {
   DisputeCategory,
@@ -130,10 +131,10 @@ export function DisputeEscalationClient({
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <Select
+      <Dropdown
         label={t('customer.orderDetail.dispute.categoryLabel')}
         value={category}
-        onChange={(event) => setCategory(event.target.value)}
+        onChange={setCategory}
         disabled={submitting}
         options={CATEGORY_VALUES.map((c) => ({ value: c, label: t(CATEGORY_LABEL_KEYS[c]) }))}
       />
@@ -154,6 +155,11 @@ export function DisputeEscalationClient({
           disabled={!canSubmit}
           onClick={() => void handleSubmit()}
         >
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="alertTriangle" size={14} />
+            </span>
+          ) : null}
           {submitting
             ? t('customer.orderDetail.dispute.escalateSubmitting')
             : t('customer.orderDetail.dispute.escalateButton')}

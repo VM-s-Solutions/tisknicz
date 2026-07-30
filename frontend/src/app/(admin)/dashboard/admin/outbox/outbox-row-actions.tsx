@@ -103,7 +103,7 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
           disabled={busy}
           onClick={() => void handleRetry()}
         >
-          <Icon name="arrowRight" size={16} />
+          <Icon name="refresh" size={16} />
           {submitting === 'retry'
             ? t('dashboard.admin.ops.outbox.retry.pending')
             : t('dashboard.admin.ops.outbox.retry.button')}

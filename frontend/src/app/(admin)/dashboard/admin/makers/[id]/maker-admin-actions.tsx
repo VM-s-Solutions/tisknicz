@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import {
   deactivateMaker,
   refreshMakerFromAres,
@@ -56,7 +57,10 @@ export function MakerAdminActions({
 
   return (
     <Card className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+        <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
+          <Icon name="settings" size={16} />
+        </span>
         {t('dashboard.admin.ops.makers.actions.title')}
       </h2>
       {error ? <Alert variant="error">{error}</Alert> : null}
@@ -72,6 +76,7 @@ export function MakerAdminActions({
               run('verify', () => verifyMaker(makerId), t('dashboard.admin.ops.makers.actions.verifySuccess'))
             }
           >
+            {busy !== 'verify' ? <Icon name="verified" size={16} /> : null}
             {t('dashboard.admin.ops.makers.actions.verify')}
           </Button>
         ) : null}
@@ -89,6 +94,7 @@ export function MakerAdminActions({
             )
           }
         >
+          {busy !== 'refresh' ? <Icon name="refresh" size={16} /> : null}
           {t('dashboard.admin.ops.makers.actions.refresh')}
         </Button>
 
@@ -110,6 +116,7 @@ export function MakerAdminActions({
               );
             }}
           >
+            {busy !== 'deactivate' ? <Icon name="xCircle" size={16} /> : null}
             {armDeactivate
               ? t('dashboard.admin.ops.makers.actions.deactivateConfirm')
               : t('dashboard.admin.ops.makers.actions.deactivate')}

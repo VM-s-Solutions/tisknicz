@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
 import { respondToReview } from '@/lib/api-client-helpers/reviews-client';
 import { t } from '@/lib/i18n';
@@ -81,6 +82,7 @@ export function ReplyForm({ reviewId, initialReply = '' }: ReplyFormProps) {
         onClick={() => void handleSubmit()}
         className="self-start"
       >
+        {!submitting ? <Icon name="send" size={14} /> : null}
         {submitting
           ? t('dashboard.maker.reviews.reply.submitting')
           : t('dashboard.maker.reviews.reply.submit')}

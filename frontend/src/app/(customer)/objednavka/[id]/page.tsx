@@ -266,7 +266,8 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
       <OrderPriceCards detail={detail} />
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          <Icon name="truck" size={14} className="shrink-0" />
           {t('customer.orderDetail.shipping.heading')}
         </h2>
         <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
@@ -285,7 +286,8 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
 
       {detail.attachments.length > 0 ? (
         <Card variant="elevated" padding="md" className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <Icon name="file" size={14} className="shrink-0" />
             {t('customer.orderDetail.attachments.heading')}
           </h2>
           <ul className="flex flex-col gap-2">
@@ -384,6 +386,7 @@ function LoadErrorState({ orderId }: { readonly orderId: string }) {
           href={`/objednavka/${encodeURIComponent(orderId)}`}
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
         >
+          <Icon name="refresh" size={14} className="shrink-0" />
           {t('order.page.loadErrorRetry')}
         </Link>
       </div>

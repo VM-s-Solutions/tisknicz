@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
+import { Tooltip } from '@/components/ui/tooltip';
 import type { CustomerOrderListItem } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
@@ -83,8 +84,10 @@ function UnreadBadge({ count }: { readonly count: number }) {
     return null;
   }
   return (
-    <Badge variant="brand" aria-label={t('customer.orders.unreadAria', { count })}>
-      {count}
-    </Badge>
+    <Tooltip content={t('customer.orders.unreadAria', { count })}>
+      <Badge variant="brand" aria-label={t('customer.orders.unreadAria', { count })}>
+        {count}
+      </Badge>
+    </Tooltip>
   );
 }

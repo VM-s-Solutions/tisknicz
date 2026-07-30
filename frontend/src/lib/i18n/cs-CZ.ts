@@ -22,6 +22,18 @@ export const messages = {
   'common.save': 'Uložit',
   'common.delete': 'Smazat',
   'common.edit': 'Upravit',
+  'common.close': 'Zavřít',
+
+  // Shared UI primitives (components/ui)
+  'ui.datePicker.placeholder': 'Vyberte datum',
+  'ui.datePicker.open': 'Otevřít kalendář',
+  'ui.datePicker.prevMonth': 'Předchozí měsíc',
+  'ui.datePicker.nextMonth': 'Další měsíc',
+  'ui.datePicker.today': 'Dnes',
+  'ui.datePicker.clear': 'Vymazat',
+  'ui.datePicker.timeLabel': 'Čas',
+  'ui.datePicker.hourLabel': 'Hodiny',
+  'ui.datePicker.minuteLabel': 'Minuty',
 
   // Errors (mirror ApiError.type)
   'error.validation': 'Některé údaje neprošly validací.',
@@ -287,6 +299,8 @@ export const messages = {
   'catalog.filter.min_rating': 'Minimální hodnocení',
   'catalog.filter.min_rating_any': 'Bez omezení',
   'catalog.filter.min_rating_stars': '{stars}+ hvězd',
+  'catalog.filter.price_min': 'Cena od (Kč)',
+  'catalog.filter.price_max': 'Cena do (Kč)',
   'catalog.filter.apply': 'Použít filtry',
   'catalog.filter.reset': 'Vymazat filtry',
 
@@ -305,6 +319,7 @@ export const messages = {
   // every {count} label takes a "Label: N" shape that's grammatical for
   // every count.
   'catalog.card.verified': 'Ověřený výrobce',
+  'catalog.card.verified_tooltip': 'Výrobce byl ověřen provozovatelem platformy.',
   'catalog.card.orders': 'Objednávek: {count}',
   'catalog.card.rating_none': 'Bez hodnocení',
   'catalog.card.rating_count': '({count})',
@@ -334,8 +349,14 @@ export const messages = {
   'catalog.maker.stats.rating_none': 'Bez hodnocení',
   'catalog.maker.stats.orders': 'Dokončených objednávek: {count}',
   'catalog.maker.pickup.heading': 'Osobní odběr',
+  'catalog.maker.filter.heading': 'Filtr produktů',
   'catalog.maker.products.heading': 'Produkty',
   'catalog.maker.products.empty': 'Tento výrobce zatím nemá žádné aktivní produkty.',
+  // Plural-neutral "Label: N" shape per the catalog-card block comment.
+  'catalog.maker.products.filtered_count': 'Zobrazeno: {shown} z {total}',
+  'catalog.maker.products.empty_filtered.title': 'Žádný produkt neodpovídá filtru',
+  'catalog.maker.products.empty_filtered.description':
+    'Zkuste upravit cenové rozpětí nebo minimální hodnocení.',
   'catalog.maker.reviews.heading': 'Hodnocení zákazníků',
   'catalog.maker.reviews.empty': 'Tento výrobce zatím nemá žádná hodnocení.',
   'catalog.maker.reviews.reply_label': 'Odpověď výrobce',
@@ -366,6 +387,9 @@ export const messages = {
   // applies here too — keep any future {count} keys in the "Label: N"
   // shape until t() learns Intl.PluralRules.
   'catalog.product_detail.heading.by_maker': 'Vyrobeno {maker}',
+  // Plural-neutral "hodnocení: N" shape, mirrors catalog.maker.stats.rating.
+  'catalog.product_detail.rating': '{rating} (hodnocení: {count})',
+  'catalog.product_detail.rating_none': 'Zatím bez hodnocení',
   'catalog.product_detail.cta.order': 'Objednat',
   'catalog.product_detail.weight': 'Hmotnost: {value}',
   'catalog.product_detail.description.heading': 'Popis',
@@ -1359,6 +1383,7 @@ export const messages = {
   // ===========================================================================
 
   // Admin shell — nav + header
+  'dashboard.admin.common.filterHeading': 'Filtry',
   'dashboard.admin.shell.brand': 'Makables Admin',
   'dashboard.admin.shell.identityFallback': 'Administrátor',
   'dashboard.admin.shell.logout': 'Odhlásit se',

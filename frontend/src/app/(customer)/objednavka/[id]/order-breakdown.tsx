@@ -1,6 +1,7 @@
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import {
   type CustomerOrderDetail,
   OrderState,
@@ -111,7 +112,8 @@ export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDeta
       </Card>
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          <Icon name="user" size={14} className="shrink-0" />
           {t('order.page.breakdown.contact')}
         </h2>
         <p className="text-sm text-zinc-200">{detail.contactName}</p>

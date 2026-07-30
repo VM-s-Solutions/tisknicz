@@ -29,6 +29,7 @@ export function MakerSearchForm({ initialSearch }: { readonly initialSearch: str
     <form onSubmit={handleSubmit} className="flex items-end gap-2" noValidate>
       <div className="flex-1">
         <Input
+          icon="search"
           label={t('dashboard.admin.ops.makers.list.searchLabel')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}

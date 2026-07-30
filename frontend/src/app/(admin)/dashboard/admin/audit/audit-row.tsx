@@ -1,3 +1,4 @@
+import { Tooltip } from '@/components/ui/tooltip';
 import type { AdminAuditLogItem } from '@/lib/api-client-helpers/admin-client';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils/dates';
@@ -46,11 +47,17 @@ function AuditRow({ item }: { readonly item: AdminAuditLogItem }) {
       <div className="flex items-center justify-between gap-3 md:contents">
         <span className="text-sm text-zinc-400">{formatDateTime(item.createdAt)}</span>
         <span className="text-sm font-semibold text-zinc-100 md:truncate">{item.actionCode}</span>
-        <span className="hidden truncate text-sm text-zinc-300 md:block">
-          {item.targetEntity}
-          <span className="text-zinc-500"> · {item.targetId}</span>
-        </span>
-        <span className="hidden truncate text-sm text-zinc-400 md:block">{item.adminUserId}</span>
+        {/* Tooltips carry the FULL ids (data, not new copy) — the grid
+            columns truncate GUIDs beyond usefulness at md+. */}
+        <Tooltip content={`${item.targetEntity} · ${item.targetId}`} className="min-w-0 max-md:hidden">
+          <span className="min-w-0 truncate text-sm text-zinc-300">
+            {item.targetEntity}
+            <span className="text-zinc-500"> · {item.targetId}</span>
+          </span>
+        </Tooltip>
+        <Tooltip content={item.adminUserId} className="min-w-0 max-md:hidden">
+          <span className="min-w-0 truncate text-sm text-zinc-400">{item.adminUserId}</span>
+        </Tooltip>
         <span className="hidden truncate text-sm text-zinc-400 md:block">{notes}</span>
       </div>
 

@@ -176,6 +176,7 @@ export function OrderActions({
             disabled={busy}
             onClick={() => void runTransition('accept', () => acceptOrder(orderId))}
           >
+            {pending !== 'accept' ? <Icon name="check" size={16} /> : null}
             {pending === 'accept'
               ? t('dashboard.maker.orderDetail.action.accepting')
               : t('dashboard.maker.orderDetail.action.accept')}
@@ -205,6 +206,7 @@ export function OrderActions({
             disabled={busy}
             onClick={() => void runTransition('handover', () => handOverOrder(orderId))}
           >
+            {pending !== 'handover' ? <Icon name="package" size={16} /> : null}
             {pending === 'handover'
               ? t('dashboard.maker.orderDetail.action.handingOver')
               : t('dashboard.maker.orderDetail.action.handover')}
