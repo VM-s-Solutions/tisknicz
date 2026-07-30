@@ -40,6 +40,7 @@ jobs:
   bicep:
     name: Bicep infrastructure
     runs-on: ubuntu-latest
+    environment: dev
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -196,6 +197,7 @@ jobs:
   migrate:
     name: EF Core migrations → Postgres
     runs-on: ubuntu-latest
+    environment: dev
     needs: [bicep]
     timeout-minutes: 20
     permissions:
@@ -278,7 +280,7 @@ jobs:
   backend:
     name: Backend (.NET) → App Services
     runs-on: ubuntu-latest
-
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -318,6 +320,7 @@ jobs:
   functions:
     name: Functions (.NET isolated) → Functions App
     runs-on: ubuntu-latest
+    environment: dev
     needs: [migrate]
     timeout-minutes: 30
     permissions:
@@ -346,6 +349,7 @@ jobs:
   frontend:
     name: Frontend (Next.js) → App Service
     runs-on: ubuntu-latest
+    environment: dev
     needs: [bicep]
     timeout-minutes: 20
     permissions:
