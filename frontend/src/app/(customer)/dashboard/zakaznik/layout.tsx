@@ -9,8 +9,8 @@ import { getDisplaySession } from '@/lib/auth/display-session';
  * cookie; the display session here only feeds the navbar account menu.
  */
 const CUSTOMER_NAV_ITEMS: readonly DashboardNavItem[] = [
-  { href: '/dashboard/zakaznik/objednavky', labelKey: 'nav.customer.orders' },
-  { href: '/dashboard/zakaznik/profile', labelKey: 'nav.customer.profile' },
+  { href: '/dashboard/zakaznik/objednavky', labelKey: 'nav.customer.orders', icon: 'shoppingBag' },
+  { href: '/dashboard/zakaznik/profile', labelKey: 'nav.customer.profile', icon: 'user' },
 ];
 
 export default async function CustomerDashboardLayout({ children }: { children: ReactNode }) {

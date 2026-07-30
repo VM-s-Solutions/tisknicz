@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import {
   getMyProducts,
@@ -56,23 +58,21 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
   return (
     <section className="bg-surface-primary py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              {t('dashboard.maker.products.title')}
-            </h1>
-            <p className="mt-3 max-w-2xl text-base text-zinc-400">
-              {t('dashboard.maker.products.subtitle')}
-            </p>
-          </div>
-          <Link
-            href="/dashboard/maker/produkty/novy"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
-          >
-            <Icon name="plus" size={16} />
-            {t('dashboard.maker.products.cta.create')}
-          </Link>
-        </header>
+        <div className="mb-8">
+          <PageHeader
+            title={t('dashboard.maker.products.title')}
+            subtitle={t('dashboard.maker.products.subtitle')}
+            actions={
+              <Link
+                href="/dashboard/maker/produkty/novy"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+              >
+                <Icon name="plus" size={16} />
+                {t('dashboard.maker.products.cta.create')}
+              </Link>
+            }
+          />
+        </div>
 
         {result.success ? (
           <MakerProductsResults data={result.value} />
@@ -103,7 +103,7 @@ function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
       <p className="mb-6 text-sm text-zinc-500">
         {t('dashboard.maker.products.count', { count: data.totalCount })}
       </p>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {data.items.map((item) => (
           <MakerProductCard key={item.productId} item={item} />
         ))}
@@ -122,26 +122,20 @@ function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
 
 function MakerProductsEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
-        <Icon name="package" size={28} />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-100">
-          {t('dashboard.maker.products.empty.title')}
-        </h2>
-        <p className="mt-2 max-w-md text-sm text-zinc-400">
-          {t('dashboard.maker.products.empty.description')}
-        </p>
-      </div>
-      <Link
-        href="/dashboard/maker/produkty/novy"
-        className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
-      >
-        <Icon name="plus" size={16} />
-        {t('dashboard.maker.products.empty.cta')}
-      </Link>
-    </div>
+    <EmptyState
+      icon="package"
+      title={t('dashboard.maker.products.empty.title')}
+      description={t('dashboard.maker.products.empty.description')}
+      action={
+        <Link
+          href="/dashboard/maker/produkty/novy"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+        >
+          <Icon name="plus" size={16} />
+          {t('dashboard.maker.products.empty.cta')}
+        </Link>
+      }
+    />
   );
 }
 

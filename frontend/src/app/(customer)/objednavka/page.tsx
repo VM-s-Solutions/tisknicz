@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { getMakerBySlug, getProductById } from '@/lib/api-client-helpers/catalog';
 import { getMyProfile } from '@/lib/api-client-helpers/profile';
@@ -100,12 +101,7 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          {t('checkout.title')}
-        </h1>
-        <p className="max-w-2xl text-base text-zinc-400">{t('checkout.subtitle')}</p>
-      </header>
+      <PageHeader title={t('checkout.title')} subtitle={t('checkout.subtitle')} />
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         {/* Mobile/tablet: summary above the form (AC-2); desktop: sticky right column. */}
@@ -131,16 +127,19 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
 function InvalidLinkState() {
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
-      <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-2xl font-semibold text-white">{t('checkout.invalidLink.title')}</h1>
-        <Link
-          href="/katalog"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
-        >
-          {t('checkout.invalidLink.cta')}
-          <Icon name="arrowRight" size={16} />
-        </Link>
-      </Card>
+      <EmptyState
+        icon="alertCircle"
+        title={t('checkout.invalidLink.title')}
+        action={
+          <Link
+            href="/katalog"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+          >
+            {t('checkout.invalidLink.cta')}
+            <Icon name="arrowRight" size={16} />
+          </Link>
+        }
+      />
     </section>
   );
 }

@@ -229,7 +229,7 @@ export function OrderFormClient({
         <Alert variant="error">{t('checkout.shipping.unavailable')}</Alert>
       ) : null}
 
-      <Card padding="md" className="flex flex-col gap-4">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-4">
           <legend className="text-lg font-semibold text-white">
             {t('checkout.contact.legend')}
@@ -286,7 +286,9 @@ export function OrderFormClient({
         </fieldset>
       </Card>
 
-      <Card padding="md" className="flex flex-col gap-4">
+      <div aria-hidden="true" className="divider-glow" />
+
+      <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-3">
           <legend className="text-lg font-semibold text-white">
             {t('checkout.shipping.legend')}
@@ -398,7 +400,9 @@ export function OrderFormClient({
         </fieldset>
       </Card>
 
-      <Card padding="md">
+      <div aria-hidden="true" className="divider-glow" />
+
+      <Card variant="elevated" padding="md">
         <AttachmentPicker
           attachments={attachments}
           onAdd={(files) =>

@@ -12,7 +12,7 @@ import { t } from '@/lib/i18n';
 export default function MakerPayoutNotFound() {
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
-      <Card padding="lg" className="flex flex-col items-center gap-4 text-center">
+      <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-4 text-center">
         <h1 className="text-2xl font-semibold text-white">
           {t('dashboard.maker.payoutDetail.notFound.title')}
         </h1>

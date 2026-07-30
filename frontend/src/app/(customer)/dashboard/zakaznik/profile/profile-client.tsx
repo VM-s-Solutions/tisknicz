@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { logout } from '@/lib/api-client-helpers/auth';
 import {
@@ -41,14 +42,39 @@ export function CustomerProfileClient({ initialProfile }: { initialProfile: MyPr
 
   return (
     <>
+      <ProfileHero profile={profile} />
       <PersonalInfoSection profile={profile} onUpdated={setProfile} />
       <PasswordSection />
-      <Card padding="lg">
+      <Card variant="elevated" padding="lg">
         <Button variant="outline" onClick={handleLogout} className="w-full">
           {t('dashboard.customer.profile.logout')}
         </Button>
       </Card>
     </>
+  );
+}
+
+/** Presentation-only initials for the avatar tile (first + last word of the name). */
+function avatarInitials(fullName: string): string {
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  const first = words[0].charAt(0);
+  const last = words.length > 1 ? words[words.length - 1].charAt(0) : '';
+  return `${first}${last}`.toUpperCase();
+}
+
+function ProfileHero({ profile }: { profile: MyProfile }) {
+  const initials = avatarInitials(profile.fullName);
+  return (
+    <Card variant="accent" padding="md" className="flex items-center gap-4">
+      <span className="icon-tile h-14 w-14 shrink-0 text-lg font-semibold" aria-hidden="true">
+        {initials !== '' ? initials : <Icon name="user" size={24} />}
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-lg font-semibold text-white">{profile.fullName}</p>
+        <p className="truncate text-sm text-zinc-400">{profile.email}</p>
+      </div>
+    </Card>
   );
 }
 
@@ -84,8 +110,13 @@ function PersonalInfoSection({
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <h2 className="text-lg font-semibold">{t('dashboard.customer.profile.section_personal')}</h2>
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
+      <h2 className="flex items-center gap-3 text-lg font-semibold">
+        <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
+          <Icon name="user" size={16} />
+        </span>
+        {t('dashboard.customer.profile.section_personal')}
+      </h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {saved && <Alert variant="success">{t('dashboard.customer.profile.saved')}</Alert>}
         {serverError && <Alert variant="error">{serverError}</Alert>}
@@ -147,8 +178,13 @@ function PasswordSection() {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <h2 className="text-lg font-semibold">{t('dashboard.customer.profile.section_password')}</h2>
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
+      <h2 className="flex items-center gap-3 text-lg font-semibold">
+        <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
+          <Icon name="settings" size={16} />
+        </span>
+        {t('dashboard.customer.profile.section_password')}
+      </h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {saved && <Alert variant="success">{t('dashboard.customer.profile.password_changed')}</Alert>}
         {serverError && <Alert variant="error">{serverError}</Alert>}

@@ -43,7 +43,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-500/40 hover:bg-brand-400/5 hover:text-brand-300"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.orders.pagination.previous')}
@@ -51,7 +51,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.orders.pagination.previous')}
@@ -65,7 +65,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-500/40 hover:bg-brand-400/5 hover:text-brand-300"
         >
           {t('dashboard.maker.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />
@@ -73,7 +73,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
         >
           {t('dashboard.maker.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />

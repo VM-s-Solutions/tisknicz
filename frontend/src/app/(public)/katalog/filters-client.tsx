@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
 
@@ -98,13 +99,15 @@ export function CatalogFilters({
   }));
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="border-y border-zinc-800 py-5"
-    >
-      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">
-        {t('catalog.filter.heading')}
-      </h2>
+    <form onSubmit={handleSubmit}>
+      <div className="flex items-center gap-2.5">
+        <span aria-hidden="true" className="icon-tile h-8 w-8">
+          <Icon name="filter" size={15} />
+        </span>
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+          {t('catalog.filter.heading')}
+        </h2>
+      </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end">
         <Dropdown

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { Icon } from '@/components/ui/icon';
 import {
   type MakerPayoutListItem,
   PayoutBatchState,
@@ -10,18 +11,15 @@ import { formatCzk } from '@/lib/money/formatter';
 import { formatDate } from '@/lib/utils/dates';
 
 /**
- * Presentational payout-batch rows for the maker dashboard list (T-0116,
- * mirroring the objednavky order-row). Server-safe: pure formatting + a row
- * `<Link>` to the batch detail. Two layouts: stacked cards below `md`, a
- * grid "table" at `md+` (the whole row is the `<Link>` target — a CSS grid,
- * not a `<tr>`). State maps to two values only — Processing → "Připravujeme"
- * (warning), Completed → "Vyplaceno" (success); no `Pending`. The money
- * column is the per-maker total computed by the backend (formatCzk only
- * formats). NO CSV anywhere.
+ * Presentational payout-batch rows for the maker dashboard list (T-0116).
+ * Server-safe: pure formatting + a row `<Link>` to the batch detail. Each
+ * row is a lifted panel card with a wallet icon tile, the batch number +
+ * state badge, order count, date, and the per-maker total prominent on
+ * the trailing edge. State maps to two values only — Processing →
+ * "Připravujeme" (warning), Completed → "Vyplaceno" (success); no
+ * `Pending`. The money column is the per-maker total computed by the
+ * backend (formatCzk only formats). NO CSV anywhere.
  */
-
-const GRID_COLUMNS =
-  'md:grid md:grid-cols-[minmax(0,1fr)_8rem_6.5rem_7rem_7rem] md:items-center md:gap-4';
 
 /** Two-value state → badge variant / label (presentation routing, not a rule). */
 function payoutStateBadgeVariant(state: PayoutBatchState): 'success' | 'warning' {
@@ -36,16 +34,7 @@ function payoutStateLabelKey(state: PayoutBatchState): MessageKey {
 
 export function PayoutRows({ items }: { readonly items: readonly MakerPayoutListItem[] }) {
   return (
-    <div className="flex flex-col gap-3 md:gap-0">
-      <div
-        className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
-      >
-        <span>{t('dashboard.maker.payouts.table.number')}</span>
-        <span className="md:text-right">{t('dashboard.maker.payouts.table.total')}</span>
-        <span className="md:text-right">{t('dashboard.maker.payouts.table.orders')}</span>
-        <span>{t('dashboard.maker.payouts.table.state')}</span>
-        <span className="md:text-right">{t('dashboard.maker.payouts.table.date')}</span>
-      </div>
+    <div className="flex flex-col gap-3">
       {items.map((item) => (
         <PayoutRow key={item.batchId} item={item} />
       ))}
@@ -61,35 +50,35 @@ function PayoutRow({ item }: { readonly item: MakerPayoutListItem }) {
   return (
     <Link
       href={`/dashboard/maker/vyplaty/${encodeURIComponent(item.batchId)}`}
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
+      className="group panel card-lift flex flex-col gap-3 rounded-2xl border border-zinc-800 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
     >
-      <div className="flex items-center justify-between gap-3 md:contents">
-        <span className="text-sm font-semibold text-zinc-100">{item.batchNumber}</span>
-        <span className="hidden text-sm font-semibold text-zinc-100 md:block md:text-right">
-          {formatCzk(item.makerTotalPaidMinor, item.currency)}
-        </span>
-        <span className="hidden text-sm text-zinc-300 md:block md:text-right">
-          {item.orderCount}
-        </span>
-        <span>
+      <span className="icon-tile hidden h-11 w-11 shrink-0 sm:inline-flex" aria-hidden="true">
+        <Icon name="wallet" size={20} />
+      </span>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-sm font-bold text-zinc-100">{item.batchNumber}</span>
           <Badge variant={payoutStateBadgeVariant(item.state)}>
             {t(payoutStateLabelKey(item.state))}
           </Badge>
-        </span>
-        <span className="hidden text-sm text-zinc-400 md:block md:text-right">{dateLabel}</span>
-      </div>
-
-      {/* Mobile-only detail block — hidden at md+ where the grid columns above render. */}
-      <div className="flex flex-col gap-1 md:hidden">
+        </div>
         <p className="text-sm text-zinc-400">
           {t('dashboard.maker.payouts.orderCount', { count: item.orderCount })}
         </p>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <span className="text-sm text-zinc-400">{dateLabel}</span>
-          <span className="text-sm font-semibold text-zinc-100">
-            {formatCzk(item.makerTotalPaidMinor, item.currency)}
-          </span>
-        </div>
+        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <Icon name="calendar" size={13} className="shrink-0" />
+          {dateLabel}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center justify-between gap-4 border-t border-zinc-800 pt-3 sm:border-t-0 sm:pt-0">
+        <span className="text-lg font-bold text-zinc-100">
+          {formatCzk(item.makerTotalPaidMinor, item.currency)}
+        </span>
+        <span aria-hidden="true" className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-brand-400">
+          <Icon name="chevronRight" size={18} />
+        </span>
       </div>
     </Link>
   );

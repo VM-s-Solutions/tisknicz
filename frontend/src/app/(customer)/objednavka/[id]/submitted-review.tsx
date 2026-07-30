@@ -24,9 +24,9 @@ function hasText(value: string | undefined): value is string {
 
 export function SubmittedReview({ review }: { readonly review: SubmittedReview }) {
   return (
-    <Card padding="md" className="flex flex-col gap-3">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
           {t('customer.review.submittedHeading')}
         </h2>
         <span className="text-xs text-zinc-500">

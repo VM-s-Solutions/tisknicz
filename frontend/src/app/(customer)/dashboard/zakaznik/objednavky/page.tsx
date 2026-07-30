@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import {
   type CustomerOrdersInput,
@@ -102,14 +104,12 @@ export default async function CustomerOrdersPage({ searchParams }: PageProps) {
   return (
     <section className="bg-surface-primary py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {t('customer.orders.title')}
-          </h1>
-          <p className="mt-3 max-w-2xl text-base text-zinc-400">
-            {t('customer.orders.subtitle')}
-          </p>
-        </header>
+        <div className="mb-8">
+          <PageHeader
+            title={t('customer.orders.title')}
+            subtitle={t('customer.orders.subtitle')}
+          />
+        </div>
 
         <OrdersFilters
           initialState={state ?? ''}
@@ -170,50 +170,38 @@ function OrdersResults({ data, baseParams, hasActiveFilters }: OrdersResultsProp
 
 function OrdersEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
-        <Icon name="shoppingBag" size={28} />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-100">
-          {t('customer.orders.empty.title')}
-        </h2>
-        <p className="mt-2 max-w-md text-sm text-zinc-400">
-          {t('customer.orders.empty.description')}
-        </p>
-      </div>
-      <Link
-        href="/katalog"
-        className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
-      >
-        {t('customer.orders.empty.cta')}
-        <Icon name="arrowRight" size={16} />
-      </Link>
-    </div>
+    <EmptyState
+      icon="shoppingBag"
+      title={t('customer.orders.empty.title')}
+      description={t('customer.orders.empty.description')}
+      action={
+        <Link
+          href="/katalog"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+        >
+          {t('customer.orders.empty.cta')}
+          <Icon name="arrowRight" size={16} />
+        </Link>
+      }
+    />
   );
 }
 
 function OrdersNoMatch() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
-        <Icon name="search" size={28} />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-100">
-          {t('customer.orders.noMatch.title')}
-        </h2>
-        <p className="mt-2 max-w-md text-sm text-zinc-400">
-          {t('customer.orders.noMatch.description')}
-        </p>
-      </div>
-      <Link
-        href={ROUTE_PATH}
-        className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-400/10"
-      >
-        {t('customer.orders.noMatch.clear')}
-      </Link>
-    </div>
+    <EmptyState
+      icon="search"
+      title={t('customer.orders.noMatch.title')}
+      description={t('customer.orders.noMatch.description')}
+      action={
+        <Link
+          href={ROUTE_PATH}
+          className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-400/10"
+        >
+          {t('customer.orders.noMatch.clear')}
+        </Link>
+      }
+    />
   );
 }
 

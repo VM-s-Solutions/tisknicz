@@ -57,9 +57,11 @@ export function ReviewFormClient({ orderId }: { readonly orderId: string }) {
   }
 
   return (
-    <Card padding="md" className="flex flex-col gap-4">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-semibold text-zinc-400">{t('customer.review.heading')}</h2>
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          {t('customer.review.heading')}
+        </h2>
         <p className="text-sm text-zinc-300">{t('customer.review.prompt')}</p>
       </div>
 

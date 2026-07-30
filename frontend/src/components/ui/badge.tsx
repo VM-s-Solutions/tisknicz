@@ -1,11 +1,12 @@
 import { type HTMLAttributes } from 'react';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'brand';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'brand' | 'info';
 }
 
 const variantStyles: Record<NonNullable<BadgeProps['variant']>, string> = {
-  default: 'bg-zinc-800 text-zinc-300',
+  default: 'border border-zinc-700/60 bg-zinc-800/80 text-zinc-300',
+  info: 'bg-sky-950/50 text-sky-300 border border-sky-900/50',
   success: 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50',
   warning: 'bg-amber-950/50 text-amber-400 border border-amber-900/50',
   error: 'bg-red-950/50 text-red-400 border border-red-900/50',

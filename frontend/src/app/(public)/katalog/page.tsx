@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
-import { Icon } from '@/components/ui/icon';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   CATALOG_DEFAULT_PAGE_SIZE,
   type CatalogFilterInput,
@@ -124,23 +126,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   return (
     <section className="bg-surface-primary py-20 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="max-w-4xl">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            {t('catalog.title')}
-          </h1>
-          <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-400">
-            {t('catalog.subtitle')}
-          </p>
-        </header>
+        <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle')} />
 
-        <div className="mt-14">
+        <Card variant="elevated" padding="sm" className="mt-12 sm:p-5">
           <CatalogFilters
             categories={categoryOptions}
             initialCategory={category}
             initialCity={rawCity}
             initialMinRating={initialMinRating}
           />
-        </div>
+        </Card>
 
         <div className="mt-10">
           {result.success ? (
@@ -190,9 +185,9 @@ function CatalogResults({
       <p className="mb-5 text-sm text-zinc-500">
         {t('catalog.pagination.results', { count: totalCount })}
       </p>
-      <ul className="divide-y divide-zinc-800 border-y border-zinc-800">
+      <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
         {items.map((item) => (
-          <li key={item.makerId}>
+          <li key={item.makerId} className="min-w-0">
             <MakerCard item={item} />
           </li>
         ))}
@@ -210,25 +205,19 @@ function CatalogResults({
 
 function CatalogEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 border-y border-dashed border-zinc-800 px-6 py-16 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500">
-        <Icon name="search" size={28} />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-zinc-100">
-          {t('catalog.empty.title')}
-        </h2>
-        <p className="mt-2 text-sm text-zinc-400">
-          {t('catalog.empty.description')}
-        </p>
-      </div>
-      <Link
-        href="/katalog"
-        className="inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-5 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
-      >
-        {t('catalog.empty.reset')}
-      </Link>
-    </div>
+    <EmptyState
+      icon="search"
+      title={t('catalog.empty.title')}
+      description={t('catalog.empty.description')}
+      action={
+        <Link
+          href="/katalog"
+          className="inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-5 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
+        >
+          {t('catalog.empty.reset')}
+        </Link>
+      }
+    />
   );
 }
 

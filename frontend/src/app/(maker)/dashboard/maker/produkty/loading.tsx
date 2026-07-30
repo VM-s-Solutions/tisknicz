@@ -11,7 +11,7 @@ export default function MakerProductsLoading() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
               {t('dashboard.maker.products.title')}
             </h1>
             <p className="mt-3 max-w-2xl text-base text-zinc-400">
@@ -22,11 +22,11 @@ export default function MakerProductsLoading() {
         </header>
 
         <div className="mb-6 h-4 w-32 animate-pulse rounded bg-surface-elevated" />
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, idx) => (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
-              className="h-80 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card"
+              className="h-96 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card"
             />
           ))}
         </div>

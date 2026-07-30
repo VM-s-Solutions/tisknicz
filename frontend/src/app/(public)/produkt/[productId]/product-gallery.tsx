@@ -40,7 +40,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   if (images.length === 0) {
     return (
-      <div className="flex aspect-square w-full items-center justify-center rounded-2xl border border-zinc-800 bg-surface-elevated text-sm text-zinc-500">
+      <div className="panel flex aspect-square w-full items-center justify-center rounded-2xl border border-zinc-800 text-sm text-zinc-500">
         {t('catalog.product_detail.gallery.no_image')}
       </div>
     );
@@ -55,7 +55,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-zinc-800 bg-surface-elevated">
+      <div className="panel relative aspect-square w-full overflow-hidden rounded-2xl border border-zinc-800">
         {primaryUrl ? (
           <Image
             src={primaryUrl}

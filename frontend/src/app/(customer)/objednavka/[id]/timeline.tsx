@@ -1,11 +1,13 @@
+import { Icon } from '@/components/ui/icon';
 import type { CustomerOrderDetail } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils/dates';
 
 /**
  * Vertical lifecycle timeline (T-0086b §C) — pure presentation over the
- * five nullable T-0082 timestamps. Steps with a timestamp render filled
- * + Czech date-time; future steps render muted. When `cancelledAt` is
+ * five nullable T-0082 timestamps. Completed steps render a teal check
+ * in a ring, the active (latest filled) step renders a solid teal dot,
+ * future steps render muted zinc circles. When `cancelledAt` is
  * non-null the remaining steps are replaced by a terminal "Zrušeno"
  * node. `Completed`/`Refunded`/`Disputed` carry no dedicated timestamps
  * — the header state badge represents them; the timeline simply ends at
@@ -50,38 +52,76 @@ export function OrderTimeline({ detail }: { readonly detail: CustomerOrderDetail
       ]
     : lifecycle;
 
+  // Display-only: the latest filled, non-cancelled step is "active".
+  const activeIndex = steps.reduce(
+    (acc, step, index) => (hasTimestamp(step.timestamp) && !step.cancelled ? index : acc),
+    -1,
+  );
+
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-zinc-400">
+    <div className="flex flex-col gap-4">
+      <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
         {t('customer.orderDetail.timeline.heading')}
       </h2>
       <ol className="flex flex-col">
         {steps.map((step, index) => (
-          <TimelineNode key={step.label} step={step} isLast={index === steps.length - 1} />
+          <TimelineNode
+            key={step.label}
+            step={step}
+            isActive={index === activeIndex}
+            connectorFilled={
+              index + 1 < steps.length && hasTimestamp(steps[index + 1].timestamp)
+            }
+            isLast={index === steps.length - 1}
+          />
         ))}
       </ol>
     </div>
   );
 }
 
-function TimelineNode({ step, isLast }: { readonly step: TimelineStep; readonly isLast: boolean }) {
+function TimelineNode({
+  step,
+  isActive,
+  connectorFilled,
+  isLast,
+}: {
+  readonly step: TimelineStep;
+  readonly isActive: boolean;
+  readonly connectorFilled: boolean;
+  readonly isLast: boolean;
+}) {
   const filled = hasTimestamp(step.timestamp);
+
   const dotClass = step.cancelled
-    ? 'border-red-900/50 bg-red-950 text-red-400'
-    : filled
-      ? 'border-brand-400/50 bg-brand-400/10 text-brand-400'
-      : 'border-zinc-800 bg-zinc-900 text-zinc-600';
+    ? 'border-red-900/60 bg-red-950 text-red-400'
+    : isActive
+      ? 'border-brand-400 bg-brand-400 text-zinc-950'
+      : filled
+        ? 'border-brand-400/40 bg-brand-400/10 text-brand-400'
+        : 'border-zinc-800 bg-zinc-900 text-zinc-700';
 
   return (
-    <li className="flex gap-3">
+    <li className="flex gap-4">
       <div className="flex flex-col items-center">
         <span
-          className={`flex h-3.5 w-3.5 shrink-0 rounded-full border-2 ${dotClass}`}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${dotClass}`}
           aria-hidden="true"
-        />
-        {!isLast ? <span className="w-px grow bg-zinc-800" aria-hidden="true" /> : null}
+        >
+          {step.cancelled ? (
+            <Icon name="x" size={12} />
+          ) : filled ? (
+            <Icon name="check" size={12} />
+          ) : null}
+        </span>
+        {!isLast ? (
+          <span
+            className={`w-px grow ${connectorFilled ? 'bg-brand-400/40' : 'bg-zinc-800'}`}
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
-      <div className={`flex flex-col gap-0.5 ${isLast ? 'pb-0' : 'pb-5'} -mt-0.5`}>
+      <div className={`flex flex-col gap-0.5 pt-0.5 ${isLast ? 'pb-0' : 'pb-6'}`}>
         <span
           className={`text-sm font-semibold ${
             step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-600'

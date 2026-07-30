@@ -82,24 +82,25 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-white">
-          {t('dashboard.maker.products.images.title')}
-        </h2>
-        <p className="text-sm text-zinc-400">
-          {t('dashboard.maker.products.images.description')}
-        </p>
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
+      <div className="flex items-center gap-3">
+        <span className="icon-tile h-9 w-9">
+          <Icon name="image" size={16} />
+        </span>
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-lg font-semibold text-white">
+            {t('dashboard.maker.products.images.title')}
+          </h2>
+          <p className="text-sm text-zinc-400">
+            {t('dashboard.maker.products.images.description')}
+          </p>
+        </div>
       </div>
 
       {uploadError ? <Alert variant="error">{uploadError}</Alert> : null}
       {removeError ? <Alert variant="error">{removeError}</Alert> : null}
 
-      {images.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-800 bg-surface-elevated px-6 py-10 text-center text-sm text-zinc-500">
-          {t('dashboard.maker.products.images.empty')}
-        </div>
-      ) : (
+      {images.length > 0 ? (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {images.map((image, index) => {
             const url = buildProductImageUrl(image.blobPath);
@@ -144,9 +145,21 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
             );
           })}
         </ul>
-      )}
+      ) : null}
 
-      <div className="flex items-center gap-3">
+      <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-zinc-700 px-6 py-8 text-center">
+        <div
+          aria-hidden="true"
+          className="empty-glow pointer-events-none absolute inset-x-0 top-0 h-24"
+        />
+        <span className="icon-tile relative h-12 w-12">
+          <Icon name="upload" size={20} />
+        </span>
+        {images.length === 0 ? (
+          <p className="relative text-sm text-zinc-500">
+            {t('dashboard.maker.products.images.empty')}
+          </p>
+        ) : null}
         <input
           ref={fileInputRef}
           type="file"
@@ -156,24 +169,26 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
           className="hidden"
           id="product-image-upload"
         />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          loading={uploading}
-          disabled={uploading}
-        >
-          <Icon name="upload" size={16} />
-          {uploading
-            ? t('dashboard.maker.products.images.uploading')
-            : t('dashboard.maker.products.images.upload_button')}
-        </Button>
-        {uploading ? (
-          <span className="flex items-center gap-2 text-sm text-zinc-400">
-            <Spinner size="sm" />
-            {t('dashboard.maker.products.images.uploading')}
-          </span>
-        ) : null}
+        <div className="relative flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            loading={uploading}
+            disabled={uploading}
+          >
+            <Icon name="upload" size={16} />
+            {uploading
+              ? t('dashboard.maker.products.images.uploading')
+              : t('dashboard.maker.products.images.upload_button')}
+          </Button>
+          {uploading ? (
+            <span className="flex items-center gap-2 text-sm text-zinc-400">
+              <Spinner size="sm" />
+              {t('dashboard.maker.products.images.uploading')}
+            </span>
+          ) : null}
+        </div>
       </div>
     </Card>
   );

@@ -88,11 +88,16 @@ function PayoutSummary({ detail }: { readonly detail: MakerPayoutDetail }) {
     : t('dashboard.maker.payouts.datePlaceholder');
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
+    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-white">
-          {t('dashboard.maker.payoutDetail.summary.heading')}
-        </h1>
+        <div className="flex items-center gap-3">
+          <span className="icon-tile h-10 w-10" aria-hidden="true">
+            <Icon name="wallet" size={18} />
+          </span>
+          <h1 className="text-shine text-2xl font-bold">
+            {t('dashboard.maker.payoutDetail.summary.heading')}
+          </h1>
+        </div>
         <Badge variant={payoutStateBadgeVariant(detail.state)}>
           {t(payoutStateLabelKey(detail.state))}
         </Badge>
@@ -131,12 +136,17 @@ const BREAKDOWN_GRID =
 function PayoutBreakdown({ detail }: { readonly detail: MakerPayoutDetail }) {
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">
-        {t('dashboard.maker.payoutDetail.breakdown.heading')}
-      </h2>
-      <div className="flex flex-col gap-3 md:gap-0">
+      <div className="flex items-center gap-3">
+        <span className="icon-tile h-9 w-9" aria-hidden="true">
+          <Icon name="receipt" size={16} />
+        </span>
+        <h2 className="text-lg font-semibold text-white">
+          {t('dashboard.maker.payoutDetail.breakdown.heading')}
+        </h2>
+      </div>
+      <Card variant="elevated" padding="none" className="flex flex-col overflow-hidden">
         <div
-          className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${BREAKDOWN_GRID}`}
+          className={`hidden border-b border-zinc-800 px-5 pt-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${BREAKDOWN_GRID}`}
         >
           <span>{t('dashboard.maker.payoutDetail.breakdown.order')}</span>
           <span className="md:text-right">
@@ -155,7 +165,7 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerPayoutDetail }) {
         {detail.orders.map((line) => (
           <div
             key={line.orderId}
-            className={`flex flex-col gap-2 rounded-2xl border border-zinc-800 bg-surface-card p-4 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${BREAKDOWN_GRID}`}
+            className={`flex flex-col gap-2 border-b border-zinc-800 px-5 py-4 last:border-b-0 ${BREAKDOWN_GRID}`}
           >
             <span className="text-sm font-semibold text-zinc-100">{line.orderNumber}</span>
             <BreakdownCell
@@ -177,7 +187,7 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerPayoutDetail }) {
             />
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }

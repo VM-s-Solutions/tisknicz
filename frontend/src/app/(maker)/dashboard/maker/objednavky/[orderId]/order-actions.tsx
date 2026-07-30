@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import {
   acceptOrder,
@@ -163,7 +164,7 @@ export function OrderActions({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <Card variant="accent" padding="md" className="flex flex-col gap-4">
       {error ? <Alert variant="error">{error}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">
@@ -234,7 +235,7 @@ export function OrderActions({
           onConfirm={() => void handleShipConfirmed()}
         />
       ) : null}
-    </div>
+    </Card>
   );
 }
 

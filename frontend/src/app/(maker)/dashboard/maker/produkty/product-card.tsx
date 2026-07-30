@@ -48,13 +48,15 @@ export function MakerProductCard({ item }: ProductCardProps) {
   return (
     <Card
       padding="none"
+      variant="elevated"
+      hover
       className={`flex flex-col overflow-hidden ${item.isActive ? '' : 'opacity-70'}`}
     >
       <Link
         href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
         className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
       >
-        <div className="relative aspect-[4/3] w-full bg-surface-elevated">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-surface-elevated">
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -91,7 +93,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
           <p className="text-xs uppercase tracking-wide text-zinc-500">{categoryLabel}</p>
         </div>
 
-        <p className="text-sm font-medium text-brand-400">
+        <p className="text-lg font-bold text-brand-400">
           <ProductPrice item={item} />
         </p>
 
@@ -104,17 +106,17 @@ export function MakerProductCard({ item }: ProductCardProps) {
           <li>{t('dashboard.maker.products.card.image_count', { count: item.imageCount })}</li>
           <li>{t('dashboard.maker.products.card.created', { date: createdDate })}</li>
         </ul>
+      </div>
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <Link
-            href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
-          >
-            <Icon name="edit" size={14} />
-            {t('dashboard.maker.products.actions.edit')}
-          </Link>
-          <DeleteProductButton productId={item.productId} variant="card" />
-        </div>
+      <div className="flex items-center justify-between gap-2 border-t border-zinc-800 px-4 py-3">
+        <Link
+          href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+        >
+          <Icon name="edit" size={14} />
+          {t('dashboard.maker.products.actions.edit')}
+        </Link>
+        <DeleteProductButton productId={item.productId} variant="card" />
       </div>
     </Card>
   );

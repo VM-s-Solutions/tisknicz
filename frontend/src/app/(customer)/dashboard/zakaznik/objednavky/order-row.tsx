@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { Icon } from '@/components/ui/icon';
 import type { CustomerOrderListItem } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
@@ -8,33 +9,22 @@ import { formatDate } from '@/lib/utils/dates';
 
 /**
  * Presentational order rows for the customer dashboard list (T-0086a).
- * Server-safe — pure formatting + links, no client logic. Two layouts:
- * stacked cards below `md`, a grid "table" at `md+` (the whole row is
- * the `<Link>` target per AC-9 — a real `<tr>` cannot be an anchor, so
- * the desktop layout is a CSS grid with a header row).
+ * Server-safe — pure formatting + links, no client logic. Each order is
+ * a lifted card (`.panel .card-lift`, the whole card is the `<Link>`
+ * target per AC-9): number + state badge on top, product/maker/date
+ * meta below, the total prominent on the right and a chevron that
+ * slides on hover.
  */
-
-const GRID_COLUMNS =
-  'md:grid md:grid-cols-[7.5rem_8rem_minmax(0,1fr)_minmax(0,1fr)_6.5rem_6.5rem_4.5rem] md:items-center md:gap-4';
 
 export function OrderRows({ items }: { readonly items: readonly CustomerOrderListItem[] }) {
   return (
-    <div className="flex flex-col gap-3 md:gap-0">
-      <div
-        className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
-      >
-        <span>{t('customer.orders.table.number')}</span>
-        <span>{t('customer.orders.table.state')}</span>
-        <span>{t('customer.orders.table.maker')}</span>
-        <span>{t('customer.orders.table.product')}</span>
-        <span className="md:text-right">{t('customer.orders.table.total')}</span>
-        <span className="md:text-right">{t('customer.orders.table.created')}</span>
-        <span className="md:text-right">{t('customer.orders.table.unread')}</span>
-      </div>
+    <ul className="flex flex-col gap-3">
       {items.map((item) => (
-        <OrderRow key={item.orderId} item={item} />
+        <li key={item.orderId}>
+          <OrderRow item={item} />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -44,41 +34,40 @@ function OrderRow({ item }: { readonly item: CustomerOrderListItem }) {
   return (
     <Link
       href={`/objednavka/${encodeURIComponent(item.orderId)}`}
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
+      className="group panel card-lift flex flex-col gap-4 rounded-2xl border border-zinc-800 p-5"
     >
-      <div className="flex items-center justify-between gap-3 md:contents">
-        <span className="text-sm font-semibold text-zinc-100">{item.orderNumber}</span>
-        <span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <span className="text-sm font-semibold text-zinc-100">{item.orderNumber}</span>
           <Badge variant={orderStateBadgeVariant(item.state)}>
             {t(orderStateLabelKey(item.state))}
           </Badge>
-        </span>
-        <span className="hidden truncate text-sm text-zinc-300 md:block">{item.makerName}</span>
-        <span className="hidden truncate text-sm text-zinc-300 md:block">{productLabel}</span>
-        <span className="hidden text-sm text-zinc-100 md:block md:text-right">
-          {formatCzk(item.totalAmountMinor, item.currency)}
-        </span>
-        <span className="hidden text-sm text-zinc-400 md:block md:text-right">
-          {formatDate(item.createdAt)}
-        </span>
-        <span className="hidden md:flex md:justify-end">
           <UnreadBadge count={item.unreadMessageCount} />
-        </span>
+        </div>
+        <Icon
+          name="chevronRight"
+          size={18}
+          className="shrink-0 text-zinc-600 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand-400"
+        />
       </div>
 
-      {/* Mobile-only detail block — hidden at md+ where the grid columns above render. */}
-      <div className="flex flex-col gap-1 md:hidden">
-        <p className="truncate text-sm text-zinc-300">{item.makerName}</p>
-        <p className="truncate text-sm text-zinc-400">{productLabel}</p>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <span className="text-sm text-zinc-400">{formatDate(item.createdAt)}</span>
-          <span className="flex items-center gap-2">
-            <UnreadBadge count={item.unreadMessageCount} />
-            <span className="text-sm font-semibold text-zinc-100">
-              {formatCzk(item.totalAmountMinor, item.currency)}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p className="truncate text-base font-semibold text-white">{productLabel}</p>
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <Icon name="user" size={14} className="shrink-0 text-zinc-500" />
+              <span className="truncate">{item.makerName}</span>
             </span>
-          </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="calendar" size={14} className="shrink-0 text-zinc-500" />
+              {formatDate(item.createdAt)}
+            </span>
+          </p>
         </div>
+        <p className="shrink-0 text-lg font-semibold text-brand-400">
+          {formatCzk(item.totalAmountMinor, item.currency)}
+        </p>
       </div>
     </Link>
   );

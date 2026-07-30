@@ -35,7 +35,7 @@ export function OrderBreakdown({ detail }: { readonly detail: CustomerOrderDetai
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
           {t('order.page.title', { orderNumber: detail.orderNumber })}
         </h1>
         <Badge variant={detail.state === OrderState.PendingPayment ? 'warning' : 'default'}>
@@ -70,7 +70,7 @@ export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDeta
 
   return (
     <div className="flex flex-col gap-6">
-      <Card padding="md" className="flex flex-col gap-3">
+      <Card variant="accent" padding="md" className="flex flex-col gap-3">
         <dl className="flex flex-col gap-3 text-sm">
           <div className="flex items-start justify-between gap-4">
             <dt className="text-zinc-400">
@@ -98,19 +98,20 @@ export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDeta
               {formatCzk(detail.vatAmountMinor, detail.currency)}
             </dd>
           </div>
-          <div className="flex items-start justify-between gap-4 border-t border-zinc-800 pt-3">
-            <dt className="text-base font-semibold text-white">
-              {t('order.page.breakdown.total')}
-            </dt>
-            <dd className="shrink-0 text-base font-semibold text-brand-400">
-              {formatCzk(detail.totalAmountMinor, detail.currency)}
-            </dd>
-          </div>
         </dl>
+        <div aria-hidden="true" className="divider-glow" />
+        <p className="flex items-start justify-between gap-4">
+          <span className="text-base font-semibold text-white">
+            {t('order.page.breakdown.total')}
+          </span>
+          <span className="shrink-0 text-xl font-bold text-brand-400">
+            {formatCzk(detail.totalAmountMinor, detail.currency)}
+          </span>
+        </p>
       </Card>
 
-      <Card padding="md" className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">
+      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
           {t('order.page.breakdown.contact')}
         </h2>
         <p className="text-sm text-zinc-200">{detail.contactName}</p>

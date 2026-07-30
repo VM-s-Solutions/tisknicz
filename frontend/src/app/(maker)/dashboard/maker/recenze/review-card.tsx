@@ -24,7 +24,7 @@ export function ReviewCard({ review }: { readonly review: MakerReceivedReview })
   const hasReply = hasText(review.makerReply);
 
   return (
-    <Card padding="md" className="flex flex-col gap-4">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <StarRating value={review.rating} size="md" />
@@ -43,25 +43,25 @@ export function ReviewCard({ review }: { readonly review: MakerReceivedReview })
         </p>
       )}
 
-      <div className="rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-3">
-        {hasReply ? (
-          <div className="mb-3 flex flex-col gap-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold text-zinc-400">
-                {t('dashboard.maker.reviews.reply.heading')}
-              </h3>
-              {hasText(review.makerReplyAt) ? (
-                <span className="text-xs text-zinc-500">
-                  {t('dashboard.maker.reviews.reply.answeredOn', {
-                    date: formatDate(review.makerReplyAt),
-                  })}
-                </span>
-              ) : null}
-            </div>
-            <p className="whitespace-pre-wrap text-sm text-zinc-200">{review.makerReply}</p>
+      {hasReply ? (
+        <div className="flex flex-col gap-1 border-l-2 border-brand-400/40 pl-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xs font-semibold text-brand-300">
+              {t('dashboard.maker.reviews.reply.heading')}
+            </h3>
+            {hasText(review.makerReplyAt) ? (
+              <span className="text-xs text-zinc-500">
+                {t('dashboard.maker.reviews.reply.answeredOn', {
+                  date: formatDate(review.makerReplyAt),
+                })}
+              </span>
+            ) : null}
           </div>
-        ) : null}
+          <p className="whitespace-pre-wrap text-sm text-zinc-200">{review.makerReply}</p>
+        </div>
+      ) : null}
 
+      <div className="rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-3">
         <ReplyForm
           reviewId={review.reviewId}
           initialReply={hasReply ? review.makerReply : ''}
