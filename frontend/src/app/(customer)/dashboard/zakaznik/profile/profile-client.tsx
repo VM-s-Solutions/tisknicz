@@ -47,6 +47,9 @@ export function CustomerProfileClient({ initialProfile }: { initialProfile: MyPr
       <PasswordSection />
       <Card variant="elevated" padding="lg">
         <Button variant="outline" onClick={handleLogout} className="w-full">
+          <span aria-hidden="true">
+            <Icon name="logOut" size={16} />
+          </span>
           {t('dashboard.customer.profile.logout')}
         </Button>
       </Card>
@@ -122,6 +125,7 @@ function PersonalInfoSection({
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
           type="email"
+          icon="mail"
           label={t('dashboard.customer.profile.email_readonly')}
           value={profile.email}
           readOnly
@@ -130,6 +134,7 @@ function PersonalInfoSection({
         <p className="-mt-2 text-xs text-zinc-500">{t('dashboard.customer.profile.email_change_hint')}</p>
         <Input
           type="text"
+          icon="user"
           label={t('dashboard.customer.profile.full_name')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -139,6 +144,7 @@ function PersonalInfoSection({
         />
         <Input
           type="tel"
+          icon="phone"
           label={t('dashboard.customer.profile.phone')}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
@@ -190,6 +196,7 @@ function PasswordSection() {
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
           type="password"
+          icon="lock"
           label={t('dashboard.customer.profile.current_password')}
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
@@ -199,6 +206,7 @@ function PasswordSection() {
         />
         <Input
           type="password"
+          icon="key"
           label={t('dashboard.customer.profile.new_password')}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}

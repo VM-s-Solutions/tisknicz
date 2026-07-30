@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Icon } from '@/components/ui/icon';
 import { CookieSettingsLink } from '@/components/shared/cookie-settings-link';
 import { t } from '@/lib/i18n';
 
@@ -31,9 +32,14 @@ export default function PrivacyPage() {
   return (
     <section className="bg-surface-primary py-16 lg:py-24">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          {t('static.privacy.title')}
-        </h1>
+        <div className="flex items-center gap-4">
+          <span className="icon-tile h-11 w-11" aria-hidden="true">
+            <Icon name="shield" size={20} />
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            {t('static.privacy.title')}
+          </h1>
+        </div>
 
         <Alert variant="info">
           <p className="font-semibold">{t('static.privacy.disclaimer')}</p>

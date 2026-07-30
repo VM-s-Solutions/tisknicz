@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
   getMyMakerProfile,
@@ -201,16 +202,12 @@ function EditableSection({
             </span>
             <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_pickup')}</h2>
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-200">
-            <input
-              type="checkbox"
-              checked={personalPickupEnabled}
-              onChange={(e) => setPersonalPickupEnabled(e.target.checked)}
-              disabled={submitting}
-              className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-brand-400 focus:ring-brand-400/40"
-            />
-            {t('dashboard.maker.profile.pickup_enabled')}
-          </label>
+          <Switch
+            checked={personalPickupEnabled}
+            onChange={(e) => setPersonalPickupEnabled(e.target.checked)}
+            disabled={submitting}
+            label={t('dashboard.maker.profile.pickup_enabled')}
+          />
           <Textarea
             label={t('dashboard.maker.profile.pickup_note')}
             value={pickupNote}
@@ -223,6 +220,7 @@ function EditableSection({
       </Card>
 
       <Button type="submit" loading={submitting} className="self-start">
+        {!submitting ? <Icon name="save" size={16} /> : null}
         {submitting ? t('dashboard.maker.profile.saving') : t('dashboard.maker.profile.save')}
       </Button>
     </form>

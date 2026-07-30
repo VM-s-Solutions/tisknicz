@@ -164,7 +164,10 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
       </Card>
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+          <span aria-hidden="true" className="text-zinc-500">
+            <Icon name="truck" size={14} />
+          </span>
           {t('dashboard.maker.orderDetail.shipping.heading')}
         </h2>
         <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
@@ -191,7 +194,10 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
       {/* Contact card — name + phone ONLY; the DTO has no email field
           (T-0082 AC-4) and no mailto: is rendered (AC-9). */}
       <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+          <span aria-hidden="true" className="text-zinc-500">
+            <Icon name="user" size={14} />
+          </span>
           {t('dashboard.maker.orderDetail.contact.heading')}
         </h2>
         <p className="text-sm text-zinc-200">{detail.customerContactName}</p>
@@ -205,7 +211,10 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
 
       {detail.attachments.length > 0 ? (
         <Card variant="elevated" padding="md" className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-zinc-400">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+            <span aria-hidden="true" className="text-zinc-500">
+              <Icon name="file" size={14} />
+            </span>
             {t('dashboard.maker.orderDetail.attachments.heading')}
           </h2>
           <ul className="flex flex-col gap-2">
@@ -234,7 +243,10 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
 
       {hasValue(detail.invoicePdfUrl) ? (
         <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-zinc-400">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+            <span aria-hidden="true" className="text-zinc-500">
+              <Icon name="receipt" size={14} />
+            </span>
             {t('dashboard.maker.orderDetail.invoice.heading')}
           </h2>
           <FileDownloadButton
@@ -271,7 +283,10 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerOrderDetail }) {
   return (
     <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <h2 className="text-sm font-semibold text-zinc-400">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+          <span aria-hidden="true" className="text-zinc-500">
+            <Icon name="wallet" size={14} />
+          </span>
           {t('dashboard.maker.orderDetail.payout.heading')}
         </h2>
         <p className="text-2xl font-bold text-brand-400 sm:text-3xl">

@@ -77,7 +77,7 @@ describe('CookieConsentBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nastavit předvolby' }));
     expect(await screen.findByText('Nastavení souhlasu s cookies')).toBeInTheDocument();
 
-    const [analyticsToggle, marketingToggle] = screen.getAllByRole('checkbox');
+    const [analyticsToggle, marketingToggle] = screen.getAllByRole('switch');
     fireEvent.click(analyticsToggle);
 
     fireEvent.click(screen.getByRole('button', { name: 'Uložit nastavení' }));
@@ -98,7 +98,7 @@ describe('CookieConsentBanner', () => {
     // Make an initial choice (analytics on, marketing off) and dismiss.
     await screen.findByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'Nastavit předvolby' }));
-    const [analyticsToggle] = screen.getAllByRole('checkbox');
+    const [analyticsToggle] = screen.getAllByRole('switch');
     fireEvent.click(analyticsToggle);
     fireEvent.click(screen.getByRole('button', { name: 'Uložit nastavení' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -108,7 +108,7 @@ describe('CookieConsentBanner', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
-    const [reopenedAnalytics, reopenedMarketing] = screen.getAllByRole('checkbox');
+    const [reopenedAnalytics, reopenedMarketing] = screen.getAllByRole('switch');
     expect(reopenedAnalytics).toBeChecked();
     expect(reopenedMarketing).not.toBeChecked();
 

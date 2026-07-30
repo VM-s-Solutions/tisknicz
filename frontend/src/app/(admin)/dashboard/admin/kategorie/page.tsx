@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Icon } from '@/components/ui/icon';
 import { getAdminCategories } from '@/lib/api-client-helpers/admin-categories';
 import { t } from '@/lib/i18n';
 import { CategoryRow } from './category-row';
@@ -34,9 +35,14 @@ export default async function AdminCategoriesPage() {
     <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <header>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {t('dashboard.admin.categories.title')}
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
+              <Icon name="tag" size={18} />
+            </span>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              {t('dashboard.admin.categories.title')}
+            </h1>
+          </div>
           <p className="mt-3 max-w-2xl text-base text-zinc-400">
             {t('dashboard.admin.categories.subtitle')}
           </p>
@@ -46,7 +52,12 @@ export default async function AdminCategoriesPage() {
 
         {result.success ? (
           result.value.items.length === 0 ? (
-            <p className="text-sm text-zinc-400">{t('dashboard.admin.categories.list.empty')}</p>
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
+              <span className="icon-tile h-12 w-12" aria-hidden="true">
+                <Icon name="tag" size={20} />
+              </span>
+              <p className="text-sm text-zinc-400">{t('dashboard.admin.categories.list.empty')}</p>
+            </div>
           ) : (
             <ul className="flex flex-col gap-3">
               {result.value.items.map((item) => (

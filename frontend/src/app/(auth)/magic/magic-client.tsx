@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -57,6 +58,7 @@ function RequestLink() {
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
           type="email"
+          icon="mail"
           label={t('auth.login.email')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -65,6 +67,11 @@ function RequestLink() {
           disabled={submitting}
         />
         <Button type="submit" loading={submitting} className="mt-2">
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="send" size={16} />
+            </span>
+          ) : null}
           {t('auth.login.magic_link')}
         </Button>
       </form>

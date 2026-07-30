@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 import { DeleteUserPanel } from './delete-user-panel';
 
@@ -41,9 +42,14 @@ export default function AdminUsersPage() {
     <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            {t('dashboard.admin.ops.users.title')}
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
+              <Icon name="users" size={18} />
+            </span>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              {t('dashboard.admin.ops.users.title')}
+            </h1>
+          </div>
           <p className="mt-3 max-w-2xl text-base text-zinc-400">
             {t('dashboard.admin.ops.users.subtitle')}
           </p>

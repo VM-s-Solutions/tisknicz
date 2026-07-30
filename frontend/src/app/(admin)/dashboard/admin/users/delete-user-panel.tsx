@@ -151,6 +151,7 @@ export function DeleteUserPanel() {
           disabled={userId.trim() === '' || userEmail.trim() === '' || probing}
           onClick={() => void handleLookupSubmit()}
         >
+          {!probing ? <Icon name="search" size={16} /> : null}
           {probing
             ? t('dashboard.admin.ops.users.lookup.checking')
             : t('dashboard.admin.ops.users.lookup.submit')}

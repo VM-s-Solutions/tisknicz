@@ -1,21 +1,22 @@
 import Link from 'next/link';
 import { CookieSettingsLink } from '@/components/shared/cookie-settings-link';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 
 const CUSTOMER_LINKS = [
-  { href: '/katalog', key: 'footer.link.catalog' as const },
-  { href: '/jak-to-funguje', key: 'footer.link.how_it_works' as const },
+  { href: '/katalog', key: 'footer.link.catalog' as const, icon: 'search' as const },
+  { href: '/jak-to-funguje', key: 'footer.link.how_it_works' as const, icon: 'helpCircle' as const },
 ];
 
 const MAKER_LINKS = [
-  { href: '/pro-makery', key: 'footer.link.for_makers' as const },
-  { href: '/register?type=maker', key: 'footer.link.maker_registration' as const },
+  { href: '/pro-makery', key: 'footer.link.for_makers' as const, icon: 'users' as const },
+  { href: '/register?type=maker', key: 'footer.link.maker_registration' as const, icon: 'user' as const },
 ];
 
 const INFO_LINKS = [
-  { href: '/vop', key: 'footer.link.terms' as const },
-  { href: '/gdpr', key: 'footer.link.privacy' as const },
-  { href: '/kontakt', key: 'footer.link.contact' as const },
+  { href: '/vop', key: 'footer.link.terms' as const, icon: 'file' as const },
+  { href: '/gdpr', key: 'footer.link.privacy' as const, icon: 'shield' as const },
+  { href: '/kontakt', key: 'footer.link.contact' as const, icon: 'mail' as const },
 ];
 
 function FooterColumn({
@@ -24,7 +25,7 @@ function FooterColumn({
   extra,
 }: {
   title: string;
-  links: ReadonlyArray<{ href: string; key: Parameters<typeof t>[0] }>;
+  links: ReadonlyArray<{ href: string; key: Parameters<typeof t>[0]; icon: IconName }>;
   extra?: React.ReactNode;
 }) {
   return (
@@ -33,7 +34,13 @@ function FooterColumn({
       <ul className="space-y-2">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="text-sm text-zinc-300 transition-colors hover:text-white">
+            <Link
+              href={link.href}
+              className="inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
+            >
+              <span aria-hidden="true" className="text-zinc-500">
+                <Icon name={link.icon} size={14} />
+              </span>
               {t(link.key)}
             </Link>
           </li>

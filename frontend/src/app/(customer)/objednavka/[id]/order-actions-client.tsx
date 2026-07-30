@@ -47,6 +47,11 @@ export function MarkDeliveredButton({ orderId }: { readonly orderId: string }) {
     <div className="flex flex-col gap-3">
       {error ? <Alert variant="error">{error}</Alert> : null}
       <Button type="button" size="lg" loading={submitting} onClick={() => void handleClick()}>
+        {!submitting ? (
+          <span aria-hidden="true">
+            <Icon name="checkCircle" size={16} />
+          </span>
+        ) : null}
         {submitting
           ? t('customer.orderDetail.markDelivered.inFlight')
           : t('customer.orders.markDeliveredButton')}

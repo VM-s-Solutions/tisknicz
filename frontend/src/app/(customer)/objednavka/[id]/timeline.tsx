@@ -60,7 +60,8 @@ export function OrderTimeline({ detail }: { readonly detail: CustomerOrderDetail
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+      <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+        <Icon name="clock" size={14} className="shrink-0" />
         {t('customer.orderDetail.timeline.heading')}
       </h2>
       <ol className="flex flex-col">

@@ -5,9 +5,9 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createProduct,
@@ -235,25 +235,23 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
             maxLength={200}
             error={fieldErrors.title}
           />
-          <Select
+          <Dropdown
             id="product-category"
             label={t('dashboard.maker.products.form.field.category')}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            options={[...categoryOptions]}
+            onChange={setCategoryId}
+            options={categoryOptions}
             placeholder={t('dashboard.maker.products.form.field.category_placeholder')}
             disabled={submitting}
-            required
             error={fieldErrors.categoryId}
           />
-          <Select
+          <Dropdown
             id="product-fulfillment-type"
             label={t('dashboard.maker.products.form.field.fulfillment_type')}
             value={fulfillmentType}
-            onChange={(e) => setFulfillmentType(e.target.value as FulfillmentType)}
+            onChange={(value) => setFulfillmentType(value as FulfillmentType)}
             options={fulfillmentTypeOptions}
             disabled={submitting}
-            required
             error={fieldErrors.fulfillmentType}
           />
           <div className="flex flex-col gap-1.5">
@@ -284,14 +282,13 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
               {t('dashboard.maker.products.form.section_pricing')}
             </h2>
           </div>
-          <Select
+          <Dropdown
             id="product-price-type"
             label={t('dashboard.maker.products.form.field.price_type')}
             value={priceType}
-            onChange={(e) => setPriceType(e.target.value as PriceType)}
+            onChange={(value) => setPriceType(value as PriceType)}
             options={priceTypeOptions}
             disabled={submitting}
-            required
             error={fieldErrors.priceType}
           />
           <div className="flex flex-col gap-1.5">
@@ -335,6 +332,9 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
 
       <div className="flex items-center justify-end gap-3">
         <Button type="submit" loading={submitting} variant="primary">
+          {!submitting ? (
+            <Icon name={mode === 'create' ? 'plus' : 'save'} size={16} />
+          ) : null}
           {submitting
             ? t('dashboard.maker.products.form.submit.saving')
             : mode === 'create'

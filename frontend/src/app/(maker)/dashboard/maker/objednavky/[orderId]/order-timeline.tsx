@@ -60,7 +60,10 @@ export function OrderTimeline({ detail }: { readonly detail: MakerOrderDetail })
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-zinc-400">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
+        <span aria-hidden="true" className="text-zinc-500">
+          <Icon name="clock" size={14} />
+        </span>
         {t('dashboard.maker.orderDetail.timeline.heading')}
       </h2>
       <ol className="flex flex-col">

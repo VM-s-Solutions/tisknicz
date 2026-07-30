@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
+import { Dropdown } from '@/components/ui/dropdown';
 import { Textarea } from '@/components/ui/textarea';
 import {
   DisputeCategory,
@@ -118,10 +118,10 @@ function OpenDisputeForm({ orderId }: { readonly orderId: string }) {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <Select
+      <Dropdown
         label={t('dashboard.admin.orderActions.dispute.categoryLabel')}
         value={category}
-        onChange={(event) => setCategory(event.target.value)}
+        onChange={setCategory}
         disabled={busy}
         options={CATEGORY_VALUES.map((c) => ({ value: c, label: t(CATEGORY_LABEL_KEYS[c]) }))}
       />
@@ -191,10 +191,10 @@ function ResolveDisputeForm({ orderId }: { readonly orderId: string }) {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <Select
+      <Dropdown
         label={t('dashboard.admin.orderActions.dispute.outcomeLabel')}
         value={outcome}
-        onChange={(event) => setOutcome(event.target.value)}
+        onChange={setOutcome}
         disabled={busy}
         options={OUTCOME_VALUES.map((o) => ({ value: o, label: t(OUTCOME_LABEL_KEYS[o]) }))}
       />

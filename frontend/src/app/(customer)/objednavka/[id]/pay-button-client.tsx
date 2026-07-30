@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { createPaymentSession } from '@/lib/api-client-helpers/payments-client';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
@@ -54,6 +55,11 @@ export function PayButtonClient({ orderId }: { readonly orderId: string }) {
     <div className="flex flex-col gap-3">
       {error ? <Alert variant="error">{error}</Alert> : null}
       <Button type="button" size="lg" loading={paying} onClick={handlePay}>
+        {!paying ? (
+          <span aria-hidden="true">
+            <Icon name="creditCard" size={16} />
+          </span>
+        ) : null}
         {paying ? t('order.page.paying') : t('order.page.payCta')}
       </Button>
     </div>

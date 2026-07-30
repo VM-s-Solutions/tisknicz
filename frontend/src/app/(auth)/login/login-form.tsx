@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { login } from '@/lib/api-client-helpers/auth';
@@ -72,6 +73,7 @@ export function LoginForm() {
           {serverError && <Alert variant="error">{serverError}</Alert>}
           <Input
             type="email"
+            icon="mail"
             label={t('auth.login.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -81,6 +83,7 @@ export function LoginForm() {
           />
           <Input
             type="password"
+            icon="lock"
             label={t('auth.login.password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -90,6 +93,11 @@ export function LoginForm() {
           />
           <Button type="submit" loading={submitting} className="mt-2">
             {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
+            {!submitting ? (
+              <span aria-hidden="true">
+                <Icon name="arrowRight" size={16} />
+              </span>
+            ) : null}
           </Button>
         </form>
         <div className="flex items-center gap-3 text-xs text-zinc-500">
