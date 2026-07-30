@@ -3,9 +3,9 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Dropdown } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
-import { Input } from '@/components/ui/input';
 import { OrderSort, OrderState } from '@/lib/api-client-helpers/orders-client';
 import { t } from '@/lib/i18n';
 import { orderStateLabelKey } from '@/lib/orders/state-labels';
@@ -121,18 +121,16 @@ export function OrdersFilters({
           placeholder={t('customer.orders.filter.state_any')}
         />
 
-        <Input
+        <DatePicker
           label={t('customer.orders.filter.dateFrom')}
-          type="date"
           value={dateFrom}
-          onChange={(e) => handleDateFromChange(e.target.value)}
+          onChange={handleDateFromChange}
         />
 
-        <Input
+        <DatePicker
           label={t('customer.orders.filter.dateTo')}
-          type="date"
           value={dateTo}
-          onChange={(e) => handleDateToChange(e.target.value)}
+          onChange={handleDateToChange}
         />
 
         <Dropdown

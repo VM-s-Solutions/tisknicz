@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   type CountryConfig,
@@ -313,10 +314,10 @@ export function CountryConfigForm({
             {t('dashboard.admin.ops.country.shippingPriceHint')}
           </p>
         </div>
-        <Select
+        <Dropdown
           label={t('dashboard.admin.ops.country.invoicingModeLabel')}
           value={form.invoicingMode}
-          onChange={(e) => setForm((f) => ({ ...f, invoicingMode: e.target.value as InvoicingMode }))}
+          onChange={(value) => setForm((f) => ({ ...f, invoicingMode: value as InvoicingMode }))}
           disabled={busy}
           options={INVOICING_MODE_VALUES.map((m) => ({
             value: m,
@@ -381,6 +382,7 @@ export function CountryConfigForm({
           disabled={!baseValid || busy}
           onClick={handlePrimaryClick}
         >
+          {!busy ? <Icon name="save" size={16} /> : null}
           {busy
             ? t('dashboard.admin.ops.country.saving')
             : t('dashboard.admin.ops.country.save')}

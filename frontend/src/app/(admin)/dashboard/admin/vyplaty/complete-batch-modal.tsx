@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import {
   type CompletePayoutBatchResult,
@@ -125,11 +126,10 @@ export function CompleteBatchModal({
           </div>
 
           <div>
-            <Input
-              type="date"
+            <DatePicker
               label={t('dashboard.admin.ops.payouts.complete.paymentDateLabel')}
               value={paymentDate}
-              onChange={(e) => setPaymentDate(e.target.value)}
+              onChange={setPaymentDate}
               disabled={submitting}
             />
             <p className="mt-1 text-xs text-zinc-500">

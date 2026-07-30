@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { setMakerFeeOverride } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
@@ -125,10 +126,10 @@ export function MakerFeeOverrideForm({
         </p>
       </div>
 
-      <Select
+      <Dropdown
         label={t('dashboard.admin.ops.makers.feeOverride.modeLabel')}
         value={mode}
-        onChange={(e) => setMode(e.target.value as Mode)}
+        onChange={(value) => setMode(value as Mode)}
         disabled={submitting}
         options={[
           { value: 'set', label: t('dashboard.admin.ops.makers.feeOverride.modeSet') },
@@ -179,6 +180,7 @@ export function MakerFeeOverrideForm({
 
       <div className="flex justify-end">
         <Button type="button" loading={submitting} disabled={!canSubmit} onClick={() => void handleSubmit()}>
+          {!submitting ? <Icon name="save" size={16} /> : null}
           {submitting
             ? t('dashboard.admin.ops.makers.feeOverride.submitting')
             : mode === 'set'

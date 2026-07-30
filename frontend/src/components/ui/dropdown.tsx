@@ -22,12 +22,11 @@ interface DropdownProps {
 }
 
 /**
- * Custom select styled to the hairline design system (native
- * `<select>` popups can't be themed). Implements the WAI-ARIA
- * combobox/listbox pattern: ArrowUp/Down move the active option,
- * Enter/Space select, Escape/outside-click close, Home/End jump.
- * For plain data entry in dense dashboard forms the native
- * `components/ui/select.tsx` remains available.
+ * Custom select on the solid dark surface system (native `<select>`
+ * popups can't be themed). Implements the WAI-ARIA combobox/listbox
+ * pattern: ArrowUp/Down move the active option, Enter/Space select,
+ * Escape/outside-click close, Home/End jump. This is THE select of the
+ * design system — use it everywhere instead of a native `<select>`.
  */
 export function Dropdown({
   options,
@@ -133,11 +132,12 @@ export function Dropdown({
   }, [open]);
 
   // Keep the active option in view while navigating with the keyboard.
+  // Optional call: jsdom elements have no scrollIntoView.
   useEffect(() => {
     if (!open) return;
     listRef.current
       ?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
-      ?.scrollIntoView({ block: 'nearest' });
+      ?.scrollIntoView?.({ block: 'nearest' });
   }, [open, activeIndex]);
 
   return (
@@ -158,7 +158,7 @@ export function Dropdown({
           disabled={disabled}
           onClick={() => (open ? setOpen(false) : openList())}
           onKeyDown={onTriggerKeyDown}
-          className={`flex w-full items-center justify-between gap-2 rounded-xl border bg-transparent px-4 py-2.5 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/30 disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex w-full items-center justify-between gap-2 rounded-xl border bg-zinc-900 px-4 py-2.5 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/30 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:opacity-50 ${
             error
               ? 'border-error text-zinc-100'
               : 'border-zinc-700 text-zinc-100 hover:border-zinc-500 focus-visible:border-brand-400'
@@ -181,7 +181,7 @@ export function Dropdown({
             id={listboxId}
             role="listbox"
             aria-labelledby={triggerId}
-            className="glass absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-zinc-700 py-1.5 shadow-2xl motion-safe:animate-fade-in"
+            className="absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 py-1.5 shadow-2xl shadow-black/50 motion-safe:animate-tooltip-in"
           >
             {allOptions.map((option, index) => {
               const isSelected = index === selectedIndex;
@@ -195,7 +195,7 @@ export function Dropdown({
                   onPointerMove={() => setActiveIndex(index)}
                   onClick={() => selectAt(index)}
                   className={`flex cursor-pointer items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
-                    isActive ? 'text-white' : 'text-zinc-400'
+                    isActive ? 'bg-zinc-800 text-white' : 'text-zinc-400'
                   } ${isSelected ? 'text-brand-300' : ''}`}
                 >
                   <span className="truncate">{option.label}</span>

@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { StarRating } from '@/components/ui/star-rating';
 import { Textarea } from '@/components/ui/textarea';
 import { submitReview } from '@/lib/api-client-helpers/reviews-client';
@@ -59,7 +60,8 @@ export function ReviewFormClient({ orderId }: { readonly orderId: string }) {
   return (
     <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          <Icon name="star" size={14} className="shrink-0" />
           {t('customer.review.heading')}
         </h2>
         <p className="text-sm text-zinc-300">{t('customer.review.prompt')}</p>

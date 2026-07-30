@@ -3,8 +3,8 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Dropdown } from '@/components/ui/dropdown';
-import { Input } from '@/components/ui/input';
 import { OrderSort } from '@/lib/api-client-helpers/maker-orders';
 import { t } from '@/lib/i18n';
 
@@ -103,18 +103,16 @@ export function OrdersFilters({
 
   return (
     <div className="panel grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
-      <Input
+      <DatePicker
         label={t('dashboard.maker.orders.filter.dateFrom')}
-        type="date"
         value={dateFrom}
-        onChange={(e) => handleDateFromChange(e.target.value)}
+        onChange={handleDateFromChange}
       />
 
-      <Input
+      <DatePicker
         label={t('dashboard.maker.orders.filter.dateTo')}
-        type="date"
         value={dateTo}
-        onChange={(e) => handleDateToChange(e.target.value)}
+        onChange={handleDateToChange}
       />
 
       <Dropdown

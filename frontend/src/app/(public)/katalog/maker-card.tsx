@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
+import { Tooltip } from '@/components/ui/tooltip';
 import { RATING_BP_PER_STAR, type MakerListItem } from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
 
@@ -40,10 +41,12 @@ export function MakerCard({ item }: MakerCardProps) {
                 {item.companyName}
               </h3>
               {item.isVerified && (
-                <Badge variant="brand" className="shrink-0">
-                  <Icon name="verified" size={12} />
-                  {t('catalog.card.verified')}
-                </Badge>
+                <Tooltip content={t('catalog.card.verified_tooltip')} className="shrink-0">
+                  <Badge variant="brand">
+                    <Icon name="verified" size={12} />
+                    {t('catalog.card.verified')}
+                  </Badge>
+                </Tooltip>
               )}
             </div>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500">

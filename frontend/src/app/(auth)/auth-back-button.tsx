@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 
 /**
@@ -28,7 +29,9 @@ export function AuthBackButton() {
       onClick={handleBack}
       className="mb-4 w-fit px-1 text-brand-300 hover:text-brand-200"
     >
-      <span aria-hidden="true">←</span>
+      <span aria-hidden="true">
+        <Icon name="arrowLeft" size={16} />
+      </span>
       <span>{t('common.back')}</span>
     </Button>
   );

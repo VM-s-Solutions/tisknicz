@@ -44,7 +44,7 @@ const ROUTE_PATH = '/dashboard/zakaznik/objednavky';
 
 const ORDER_STATE_VALUES = new Set<string>(Object.values(OrderState));
 const ORDER_SORT_VALUES = new Set<string>(Object.values(OrderSort));
-/** Display-side shape gate for `<input type="date">` round-trips — backend binder is the authority. */
+/** Display-side shape gate for `DatePicker` (`yyyy-MM-dd`) round-trips — backend binder is the authority. */
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 interface PageProps {

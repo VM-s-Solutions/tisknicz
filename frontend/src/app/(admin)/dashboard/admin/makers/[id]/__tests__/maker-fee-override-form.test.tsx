@@ -72,7 +72,10 @@ describe('MakerFeeOverrideForm', () => {
     setMakerFeeOverride.mockResolvedValue({ success: true, value: undefined });
     render(<MakerFeeOverrideForm makerId="maker-1" countryCode="CZ" countryDefaultBp={700} />);
 
-    fireEvent.change(screen.getByLabelText('Akce'), { target: { value: 'clear' } });
+    // The mode picker is the custom Dropdown (WAI-ARIA combobox/listbox),
+    // not a native <select> — open it and click the "clear" option.
+    fireEvent.click(screen.getByRole('combobox', { name: 'Akce' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Zrušit override' }));
     fireEvent.change(screen.getByLabelText('Důvod'), { target: { value: 'Konec spolupráce' } });
 
     const submit = screen.getByRole('button', { name: 'Zrušit override' });

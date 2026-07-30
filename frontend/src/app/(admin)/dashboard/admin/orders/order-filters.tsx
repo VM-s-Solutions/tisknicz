@@ -1,19 +1,24 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Dropdown } from '@/components/ui/dropdown';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { OrderState } from '@/lib/api-client-helpers/admin-client';
 import { t } from '@/lib/i18n';
 import { orderStateLabelKey } from '@/lib/orders/state-labels';
 
 /**
- * Admin all-orders filter bar (T-0118a, AC-5/AC-6). A server-rendered
- * native `<form method="get">` that writes the URL `searchParams` on
- * submit — no client state (Option G rejected: URL is the single source
- * of truth, deep-links + back/forward round-trip). The `Select`/`Input`
- * primitives are client components but carry no event handlers here; the
- * native GET submit serialises their values. `page` is intentionally NOT
- * a field, so a new filter submit resets to page 1.
+ * Admin all-orders filter bar (T-0118a, AC-5/AC-6). A native
+ * `<form method="get">` that writes the URL `searchParams` on submit —
+ * the URL stays the single source of truth (Option G rejected:
+ * deep-links + back/forward round-trip). The custom `Dropdown` primitive
+ * is controlled, so the state value bridges into the native GET submit
+ * via a hidden input (same wire shape as the previous native
+ * `<select>`). `page` is intentionally NOT a field, so a new filter
+ * submit resets to page 1.
  *
  * No date-range fields here (unlike the invoices/audit bars): the
  * generated `adminOrders(page,pageSize,state,country,makerId,customerEmail)`
@@ -27,13 +32,10 @@ import { orderStateLabelKey } from '@/lib/orders/state-labels';
 
 const ROUTE_PATH = '/dashboard/admin/orders';
 
-const STATE_OPTIONS = [
-  { value: '', label: t('dashboard.admin.orders.filter.stateAll') },
-  ...Object.values(OrderState).map((state) => ({
-    value: state,
-    label: t(orderStateLabelKey(state)),
-  })),
-];
+const STATE_OPTIONS = Object.values(OrderState).map((state) => ({
+  value: state,
+  label: t(orderStateLabelKey(state)),
+}));
 
 interface OrderFiltersProps {
   readonly state: string;
@@ -43,17 +45,29 @@ interface OrderFiltersProps {
 }
 
 export function OrderFilters({ state, country, makerId, customerEmail }: OrderFiltersProps) {
+  const [stateValue, setStateValue] = useState(state);
+
   return (
     <form
       method="get"
       action={ROUTE_PATH}
       className="grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:grid-cols-2 lg:grid-cols-3"
     >
-      <Select
-        name="state"
+      <div className="flex items-center gap-2.5 sm:col-span-2 lg:col-span-3">
+        <span aria-hidden="true" className="icon-tile h-8 w-8">
+          <Icon name="filter" size={15} />
+        </span>
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+          {t('dashboard.admin.common.filterHeading')}
+        </h2>
+      </div>
+      <input type="hidden" name="state" value={stateValue} />
+      <Dropdown
         label={t('dashboard.admin.orders.filter.state')}
-        defaultValue={state}
+        value={stateValue}
+        onChange={setStateValue}
         options={STATE_OPTIONS}
+        placeholder={t('dashboard.admin.orders.filter.stateAll')}
       />
       <Input
         name="country"

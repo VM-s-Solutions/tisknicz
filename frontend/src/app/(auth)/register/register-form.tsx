@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import {
@@ -155,6 +156,7 @@ export function RegisterForm() {
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
           type="text"
+          icon="user"
           label={t('auth.register.full_name')}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -164,6 +166,7 @@ export function RegisterForm() {
         />
         <Input
           type="email"
+          icon="mail"
           label={t('auth.register.email')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -173,6 +176,7 @@ export function RegisterForm() {
         />
         <Input
           type="password"
+          icon="lock"
           label={t('auth.register.password')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -254,6 +258,11 @@ export function RegisterForm() {
 
         <Button type="submit" loading={submitting} className="mt-2">
           {submitting ? t('auth.register.submitting') : t('auth.register.submit')}
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="arrowRight" size={16} />
+            </span>
+          ) : null}
         </Button>
       </form>
       <div className="flex items-center gap-3 text-xs text-zinc-500">

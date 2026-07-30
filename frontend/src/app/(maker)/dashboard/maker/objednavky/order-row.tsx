@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
+import { Tooltip } from '@/components/ui/tooltip';
 import type { MakerOrderListItem } from '@/lib/api-client-helpers/maker-orders';
 import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
@@ -78,8 +79,10 @@ function UnreadBadge({ count }: { readonly count: number | undefined }) {
     return null;
   }
   return (
-    <Badge variant="brand" aria-label={t('dashboard.maker.orders.unreadAria', { count })}>
-      {count}
-    </Badge>
+    <Tooltip content={t('dashboard.maker.orders.unreadAria', { count })}>
+      <Badge variant="brand" aria-label={t('dashboard.maker.orders.unreadAria', { count })}>
+        {count}
+      </Badge>
+    </Tooltip>
   );
 }

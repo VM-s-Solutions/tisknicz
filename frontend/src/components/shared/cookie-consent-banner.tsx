@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   ACCEPT_ALL_CHOICES,
   CONSENT_VERSION,
@@ -254,15 +255,12 @@ function ConsentCategoryRow({
           {t('cookieConsent.alwaysOn')}
         </span>
       ) : (
-        <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-200">
-          <span className="sr-only">{label}</span>
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(event) => onChange?.(event.target.checked)}
-            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-brand-400 focus:ring-brand-400/40"
-          />
-        </label>
+        <Switch
+          aria-label={label}
+          checked={checked}
+          onChange={(event) => onChange?.(event.target.checked)}
+          className="shrink-0"
+        />
       )}
     </div>
   );

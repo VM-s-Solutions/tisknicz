@@ -119,7 +119,10 @@ export function AttachmentManagerClient({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+          <span className="icon-tile h-9 w-9" aria-hidden="true">
+            <Icon name="upload" size={16} />
+          </span>
           {t('order.page.attachments.heading')}
         </h2>
         <p className="text-xs text-zinc-500">{t('checkout.attachments.hint')}</p>
