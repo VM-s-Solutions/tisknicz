@@ -5,7 +5,7 @@
  */
 export default function CustomerOrdersLoading() {
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3">
           <div className="h-10 w-72 max-w-full animate-pulse rounded-xl bg-zinc-800" />

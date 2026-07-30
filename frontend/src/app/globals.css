@@ -202,16 +202,19 @@ body {
   }
 }
 
-/* Elevated panel surface — soft top-light gradient over the card color
-   plus an inset top highlight, so panels read as lit objects instead of
-   flat rectangles. Pair with a border utility (border-zinc-800 etc.). */
+/* Elevated panel surface — translucent glass over the ambient backdrop:
+   a soft top-light gradient on a semi-opaque zinc base with a slight
+   blur, so panels pick up the page glows instead of reading as flat
+   mismatched rectangles. Pair with a border utility (border-zinc-800). */
 .panel {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 42%),
-    var(--color-surface-card);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 45%),
+    rgba(24, 24, 27, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 32px -16px rgba(0, 0, 0, 0.55);
 }
 
 /* Panel with a teal hairline accent along the top edge — for the one
@@ -281,29 +284,49 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Ambient page backdrop — layered teal/amber glows plus a faint dot
-   grid so the dark canvas reads as depth instead of flat black. Fixed,
+/* Ambient page backdrop — layered teal / indigo / amber aurora over the
+   dark canvas plus a faint masked dot grid, with a slow-drifting glow
+   layer so the background reads as depth instead of flat black. Fixed,
    non-interactive, behind all content (z-index -1). Rendered once per
    layout as an aria-hidden sibling of the page chrome. */
 .page-backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(60rem 40rem at 85% -10%, rgba(45, 212, 191, 0.08), transparent 60%),
-    radial-gradient(50rem 36rem at -12% 35%, rgba(20, 184, 166, 0.06), transparent 60%),
-    radial-gradient(44rem 30rem at 55% 115%, rgba(251, 191, 36, 0.04), transparent 65%),
+    radial-gradient(64rem 42rem at 82% -14%, rgba(45, 212, 191, 0.13), transparent 62%),
+    radial-gradient(52rem 38rem at -14% 30%, rgba(129, 140, 248, 0.1), transparent 62%),
+    radial-gradient(46rem 32rem at 60% 114%, rgba(251, 191, 36, 0.07), transparent 66%),
     var(--color-surface-primary);
+}
+.page-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(38rem 26rem at 24% 22%, rgba(20, 184, 166, 0.1), transparent 60%),
+    radial-gradient(34rem 26rem at 78% 68%, rgba(99, 102, 241, 0.09), transparent 60%);
+  filter: blur(40px);
 }
 .page-backdrop::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 28px 28px;
-  mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
-  -webkit-mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
+  mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.7), transparent 74%);
+  -webkit-mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.7), transparent 74%);
+}
+@keyframes backdrop-drift {
+  from { transform: translate3d(-2%, -1.5%, 0) scale(1); }
+  to { transform: translate3d(2%, 2%, 0) scale(1.06); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .page-backdrop::before {
+    animation: backdrop-drift 24s ease-in-out infinite alternate;
+  }
 }
 
 /* Soft teal glow along the top edge of empty-state panels. */

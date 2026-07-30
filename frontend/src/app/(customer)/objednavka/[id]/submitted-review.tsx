@@ -43,7 +43,7 @@ export function SubmittedReview({ review }: { readonly review: SubmittedReview }
       ) : null}
 
       {hasText(review.makerReply) ? (
-        <div className="mt-1 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-3">
+        <div className="mt-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
           <h3 className="text-xs font-semibold text-zinc-400">
             {t('customer.review.makerReplyHeading')}
           </h3>

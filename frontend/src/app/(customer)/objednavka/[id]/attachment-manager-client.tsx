@@ -141,7 +141,7 @@ export function AttachmentManagerClient({
           {initialAttachments.map((attachment) => (
             <li
               key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5"
             >
               <div className="flex min-w-0 items-center gap-2">
                 <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
@@ -161,7 +161,7 @@ export function AttachmentManagerClient({
           {uploads.map((upload) => (
             <li
               key={upload.id}
-              className="flex flex-col gap-1 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
+              className="flex flex-col gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">

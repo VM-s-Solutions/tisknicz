@@ -29,7 +29,7 @@ export default function TermsPage() {
   ] as const;
 
   return (
-    <section className="bg-surface-primary py-16 lg:py-24">
+    <section className="py-16 lg:py-24">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <span className="icon-tile h-11 w-11" aria-hidden="true">

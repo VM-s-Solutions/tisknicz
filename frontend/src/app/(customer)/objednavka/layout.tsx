@@ -4,15 +4,12 @@ import { PublicNavbar } from '@/components/shared/public-navbar';
 import { getDisplaySession } from '@/lib/auth/display-session';
 
 /**
- * Layout for the unauthenticated public surfaces: landing, /katalog,
- * /katalog/[slug], /produkt/[id], /jak-to-funguje, /pro-makery, /vop,
- * /gdpr. Per CLAUDE.md project structure + ADR 0005.
- *
- * The navbar is session-aware: the display session (decoded from the
- * audience JWT cookie, display-only) switches the login CTA to the
- * account menu for signed-in visitors.
+ * Chrome for /objednavka/* — checkout, order detail and payment
+ * confirmation. Same shell as the public surfaces (session-aware
+ * navbar, ambient backdrop, footer) so the order flow no longer floats
+ * on a bare black canvas.
  */
-export default async function PublicLayout({ children }: { children: ReactNode }) {
+export default async function OrderFlowLayout({ children }: { children: ReactNode }) {
   const session = await getDisplaySession();
   return (
     <div className="relative min-h-screen text-zinc-100">

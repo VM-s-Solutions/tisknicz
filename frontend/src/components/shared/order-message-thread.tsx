@@ -268,7 +268,7 @@ export function OrderMessageThread({
               className={`flex flex-col gap-1 rounded-2xl border px-4 py-3 ${
                 message.isMine
                   ? 'ml-8 items-end border-brand-400/20 bg-brand-400/5 sm:ml-16'
-                  : 'mr-8 border-zinc-800 bg-surface-elevated sm:mr-16'
+                  : 'mr-8 border-zinc-800 bg-zinc-800/50 sm:mr-16'
               }`}
             >
               <div className="flex items-baseline gap-2 text-xs text-zinc-500">

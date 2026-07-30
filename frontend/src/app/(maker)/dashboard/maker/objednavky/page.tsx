@@ -145,7 +145,7 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
   if (tab !== DEFAULT_ORDER_LIST_TAB) paginationParams.tab = tab;
 
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <PageHeader

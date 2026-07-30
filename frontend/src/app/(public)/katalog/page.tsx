@@ -124,33 +124,37 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   if (initialMinRating) baseParams.minRating = initialMinRating;
 
   return (
-    <section className="bg-surface-primary py-20 lg:py-24">
+    <section className="py-14 lg:py-18">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle')} />
 
-        <Card variant="elevated" padding="sm" className="mt-12 sm:p-5">
-          <CatalogFilters
-            categories={categoryOptions}
-            initialCategory={category}
-            initialCity={rawCity}
-            initialMinRating={initialMinRating}
-          />
-        </Card>
+        <div className="mt-10 flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <aside className="lg:sticky lg:top-24">
+            <Card variant="elevated" padding="sm" className="sm:p-5">
+              <CatalogFilters
+                categories={categoryOptions}
+                initialCategory={category}
+                initialCity={rawCity}
+                initialMinRating={initialMinRating}
+              />
+            </Card>
+          </aside>
 
-        <div className="mt-10">
-          {result.success ? (
-            <CatalogResults
-              items={result.value.items}
-              page={result.value.page}
-              totalPages={result.value.totalPages}
-              hasNext={result.value.hasNext}
-              hasPrevious={result.value.hasPrevious}
-              totalCount={result.value.totalCount}
-              baseParams={baseParams}
-            />
-          ) : (
-            <CatalogError />
-          )}
+          <div className="min-w-0">
+            {result.success ? (
+              <CatalogResults
+                items={result.value.items}
+                page={result.value.page}
+                totalPages={result.value.totalPages}
+                hasNext={result.value.hasNext}
+                hasPrevious={result.value.hasPrevious}
+                totalCount={result.value.totalCount}
+                baseParams={baseParams}
+              />
+            ) : (
+              <CatalogError />
+            )}
+          </div>
         </div>
       </div>
     </section>
@@ -185,7 +189,7 @@ function CatalogResults({
       <p className="mb-5 text-sm text-zinc-500">
         {t('catalog.pagination.results', { count: totalCount })}
       </p>
-      <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
+      <ul className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
         {items.map((item) => (
           <li key={item.makerId} className="min-w-0">
             <MakerCard item={item} />

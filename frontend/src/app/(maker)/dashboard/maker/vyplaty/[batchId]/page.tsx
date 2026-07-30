@@ -65,7 +65,7 @@ export default async function MakerPayoutDetailPage({ params }: PageProps) {
   const detail = result.value;
 
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <Link
           href={ROUTE_PATH}

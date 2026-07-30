@@ -30,7 +30,8 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   }
 
   return (
-    <div className="min-h-screen bg-surface-primary text-zinc-100">
+    <div className="relative min-h-screen text-zinc-100">
+      <div aria-hidden="true" className="page-backdrop" />
       <AdminShellNav identity={t('dashboard.admin.shell.identityFallback')} />
       <main>{children}</main>
     </div>

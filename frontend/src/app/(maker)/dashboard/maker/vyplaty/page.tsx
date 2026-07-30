@@ -62,7 +62,7 @@ export default async function MakerPayoutsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <PageHeader
           title={t('dashboard.maker.payouts.title')}

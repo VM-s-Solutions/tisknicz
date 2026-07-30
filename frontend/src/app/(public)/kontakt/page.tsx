@@ -21,7 +21,7 @@ export function generateMetadata(): Metadata {
 
 export default function ContactPage() {
   return (
-    <section className="bg-surface-primary py-16 lg:py-24">
+    <section className="py-16 lg:py-24">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{t('static.contact.title')}</h1>
 

@@ -38,8 +38,8 @@ export function generateMetadata(): Metadata {
 
 export default function ForMakersPage() {
   return (
-    <div className="bg-surface-primary">
-      <section className="border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
+    <div>
+      <section className="border-b border-zinc-800 py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="max-w-4xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Makables</p>
@@ -100,7 +100,7 @@ export default function ForMakersPage() {
         </div>
       </section>
 
-      <section className="bg-surface-primary py-16 sm:py-20">
+      <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <h2 className="text-xl font-semibold text-white">{t('static.for_makers.example_heading')}</h2>

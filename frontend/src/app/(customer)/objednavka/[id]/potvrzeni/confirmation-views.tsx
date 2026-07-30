@@ -58,7 +58,7 @@ export function SuccessView({
           {t('checkout.confirm.success.orderNumber', { orderNumber })}
         </p>
       </div>
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-xl border border-zinc-800 bg-surface-elevated p-4 text-left">
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-left">
         <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
           {t('checkout.confirm.success.whatNext')}
         </h2>
