@@ -38,4 +38,23 @@ public sealed class ProductRepository(MakablesDbContext db) : IProductRepository
         return db.Set<Product>()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
+
+    public Task<Product?> GetByIdForUpdateAsync(string id, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Product?>(null);
+
+        // SELECT ... FOR UPDATE row-lock held for the surrounding UoW
+        // transaction — serializes concurrent rating recomputes to the
+        // same product (mirrors MakerRepository.GetByIdForUpdateAsync).
+        // FromSqlInterpolated bypasses the global soft-delete query
+        // filter, so the is_active predicate is restated. The returned
+        // instance IS tracked (the handler mutates it via
+        // Product.RecomputeRating).
+        return db.Set<Product>()
+            .FromSqlInterpolated($@"
+                SELECT * FROM products
+                WHERE id = {id} AND is_active
+                FOR UPDATE")
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

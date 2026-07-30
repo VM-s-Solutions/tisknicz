@@ -59,7 +59,8 @@ public class CatalogDetailHandlerTests
     {
         var detail = new ProductDetail(
             "p1", "Hrnek", "popis", 25000, "CZK", "Fixed", "MadeToOrder", 400, "cat-1",
-            "m1", "keramika", "Keramika s.r.o.", true,
+            42000, 7,
+            "m1", "keramika", "Keramika s.r.o.", true, true, "Odběr Po–Pá 9–17",
             Array.Empty<ProductImageItem>());
         _catalog.GetProductByIdAsync("p1", Arg.Any<CancellationToken>()).Returns(detail);
         var sut = new GetProductById.Handler(_catalog);

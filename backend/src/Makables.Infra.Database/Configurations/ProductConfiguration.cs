@@ -49,6 +49,19 @@ internal sealed class ProductEntityConfiguration : IEntityTypeConfiguration<Prod
 
         builder.Property(p => p.WeightGrams).HasColumnName("weight_grams").IsRequired();
 
+        // Denormalized per-product rating (recompute-from-rows via
+        // Product.RecomputeRating, same discipline as makers.rating_*).
+        // DEFAULT 0 so the migration backfills pre-existing rows without
+        // a manual data fix.
+        builder.Property(p => p.RatingAverageBp)
+            .HasColumnName("rating_average_bp")
+            .HasDefaultValue(0)
+            .IsRequired();
+        builder.Property(p => p.RatingCount)
+            .HasColumnName("rating_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
         // Owned collection: product_images in a separate table. The DB
         // FK is cascade-delete (the rows go when the product row is hard-
         // deleted). NOTE: blob cleanup is NOT performed here and is NOT

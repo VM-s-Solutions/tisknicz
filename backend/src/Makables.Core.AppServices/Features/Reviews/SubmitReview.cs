@@ -3,6 +3,7 @@ using Makables.Core.AppServices.Abstractions;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Reviews;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -60,6 +61,7 @@ public static class SubmitReview
         IOrderRepository orders,
         IReviewRepository reviews,
         IMakerRepository makers,
+        IProductRepository products,
         IUserSessionProvider session,
         IIdGenerator ids,
         ILogger<Handler> logger)
@@ -108,7 +110,8 @@ public static class SubmitReview
                 customerUserId: customerUserId,
                 rating: command.Rating,
                 body: command.Body,
-                countryCode: order.CountryCode);
+                countryCode: order.CountryCode,
+                productId: order.ProductId);
             await reviews.AddAsync(review, cancellationToken);
 
             // Step 6: Recompute-from-rows (Q5). Row-lock the Maker so
@@ -145,7 +148,39 @@ public static class SubmitReview
                 50_000);
             maker.RecomputeRating(totalCount, ratingAverageBp);
 
-            // Step 7: UoW pipeline commits the insert + recompute atomically.
+            // Step 7: Per-product recompute — same fold discipline as the
+            // maker's (the just-added review is tracked but unflushed, so
+            // its contribution is folded in memory). Custom orders carry
+            // no ProductId and never touch a product aggregate. A product
+            // soft-deleted after the order was placed skips silently — the
+            // recompute-from-rows model self-heals on the next review if
+            // the product is reactivated.
+            if (order.ProductId is not null)
+            {
+                var product = await products.GetByIdForUpdateAsync(order.ProductId, cancellationToken);
+                if (product is not null)
+                {
+                    var (productCount, productAverage) = await reviews.GetProductRatingAggregateAsync(
+                        order.ProductId, cancellationToken);
+                    var productTotalCount = productCount + 1;
+                    var productFoldedAverage =
+                        ((productAverage * productCount) + review.Rating) / productTotalCount;
+                    var productAverageBp = Math.Clamp(
+                        (int)Math.Round(productFoldedAverage * 10_000, MidpointRounding.AwayFromZero),
+                        0,
+                        50_000);
+                    product.RecomputeRating(productTotalCount, productAverageBp);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "SubmitReview: product {ProductId} for order {OrderId} is missing or inactive — " +
+                        "skipping the product rating recompute (maker recompute already applied).",
+                        order.ProductId, order.Id);
+                }
+            }
+
+            // Step 8: UoW pipeline commits the insert + recomputes atomically.
             return BusinessResult.Success(
                 new SubmitReviewResponse(review.Id, review.Rating, review.CreatedAt));
         }

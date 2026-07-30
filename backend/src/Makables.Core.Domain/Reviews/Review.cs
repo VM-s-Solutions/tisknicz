@@ -62,6 +62,16 @@ public sealed class Review : Auditable
     /// </summary>
     public string MakerId { get; private set; } = default!;
 
+    /// <summary>
+    /// The reviewed catalog product, denormalized off the order at
+    /// <see cref="Create"/> so the per-product rating recompute
+    /// <c>AVG(rating)</c> doesn't JOIN through Order. Null for custom
+    /// orders placed without a catalog product (mirrors
+    /// <c>Order.ProductId</c>'s nullability). No enforced FK — same
+    /// posture as <c>orders.product_id</c>. Immutable.
+    /// </summary>
+    public string? ProductId { get; private set; }
+
     /// <summary>FK to the reviewing <c>users.id</c> — audit-trail identity. Never exposed to the maker.</summary>
     public string CustomerUserId { get; private set; } = default!;
 
@@ -97,7 +107,8 @@ public sealed class Review : Auditable
         string customerUserId,
         short rating,
         string? body,
-        string countryCode)
+        string countryCode,
+        string? productId = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Id is required.", nameof(id));
@@ -128,6 +139,7 @@ public sealed class Review : Auditable
             Id = id,
             OrderId = orderId,
             MakerId = makerId,
+            ProductId = string.IsNullOrWhiteSpace(productId) ? null : productId,
             CustomerUserId = customerUserId,
             Rating = rating,
             Body = trimmedBody,

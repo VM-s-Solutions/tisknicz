@@ -66,4 +66,29 @@ public sealed class ReviewRepository(MakablesDbContext db) : IReviewRepository
 
         return (aggregate.Count, aggregate.Average ?? 0d);
     }
+
+    public async Task<(int Count, double AverageStars)> GetProductRatingAggregateAsync(
+        string productId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(productId))
+            return (0, 0d);
+
+        // Same one-round-trip COUNT + AVG shape as the maker aggregate,
+        // keyed on the denormalized product_id (null for custom orders,
+        // which therefore never enter any product aggregate).
+        var aggregate = await db.Set<Review>()
+            .Where(r => r.ProductId == productId)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Count = g.Count(),
+                Average = (double?)g.Average(r => (double)r.Rating),
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (aggregate is null)
+            return (0, 0d);
+
+        return (aggregate.Count, aggregate.Average ?? 0d);
+    }
 }

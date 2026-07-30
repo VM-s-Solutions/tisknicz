@@ -33,4 +33,13 @@ public interface IProductRepository
     /// </para>
     /// </summary>
     Task<Product?> GetByIdAsync(string id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Load the product by primary key under a <c>SELECT … FOR UPDATE</c>
+    /// row-lock held for the surrounding UoW transaction — serializes
+    /// concurrent rating recomputes to the same product (mirrors
+    /// <c>IMakerRepository.GetByIdForUpdateAsync</c>, T-0100 §A.5).
+    /// Active-only; returns <c>null</c> for unknown or soft-deleted ids.
+    /// </summary>
+    Task<Product?> GetByIdForUpdateAsync(string id, CancellationToken cancellationToken);
 }

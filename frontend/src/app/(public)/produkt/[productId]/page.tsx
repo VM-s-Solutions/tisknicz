@@ -5,8 +5,13 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
+import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
-import { getProductById, type ProductDetail } from '@/lib/api-client-helpers/catalog';
+import {
+  getProductById,
+  RATING_BP_PER_STAR,
+  type ProductDetail,
+} from '@/lib/api-client-helpers/catalog';
 import { formatWeight } from '@/lib/format/weight';
 import { formatCzk } from '@/lib/money/formatter';
 import { canonicalUrl } from '@/lib/seo/site-url';
@@ -134,6 +139,19 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
         <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
           {product.title}
         </h1>
+        <p className="flex items-center gap-2 text-sm text-zinc-400">
+          <Stars value={product.ratingAverageBp / RATING_BP_PER_STAR} size={15} />
+          {product.ratingCount > 0 ? (
+            <span>
+              {t('catalog.product_detail.rating', {
+                rating: (product.ratingAverageBp / RATING_BP_PER_STAR).toFixed(1),
+                count: product.ratingCount,
+              })}
+            </span>
+          ) : (
+            <span>{t('catalog.product_detail.rating_none')}</span>
+          )}
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-3xl font-semibold text-brand-400">
             <ProductPrice product={product} />
@@ -144,24 +162,42 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
         </div>
       </div>
 
-      <Link
-        href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
-        className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
-      >
-        <span>
-          {t('catalog.product_detail.heading.by_maker', { maker: product.makerCompanyName })}
-        </span>
-        {product.makerIsVerified ? (
-          <Badge variant="brand">
-            <Icon name="verified" size={14} />
-            {t('catalog.maker.verified')}
-          </Badge>
-        ) : null}
-      </Link>
+      <div aria-hidden="true" className="divider-glow" />
 
-      <p className="text-sm text-zinc-400">
-        {t('catalog.product_detail.weight', { value: formatWeight(product.weightGrams) })}
-      </p>
+      <div className="flex flex-col gap-3">
+        <Link
+          href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
+          className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+        >
+          <span>
+            {t('catalog.product_detail.heading.by_maker', { maker: product.makerCompanyName })}
+          </span>
+          {product.makerIsVerified ? (
+            <Badge variant="brand">
+              <Icon name="verified" size={14} />
+              {t('catalog.maker.verified')}
+            </Badge>
+          ) : null}
+        </Link>
+
+        {product.makerPersonalPickupEnabled ? (
+          <div className="flex flex-col gap-1">
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-zinc-200">
+              <Icon name="mapPin" size={15} className="text-brand-400" />
+              {t('catalog.maker.pickup.heading')}
+            </p>
+            {product.makerPickupNote?.trim() ? (
+              <p className="whitespace-pre-line pl-6 text-sm text-zinc-400">
+                {product.makerPickupNote.trim()}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <p className="text-sm text-zinc-400">
+          {t('catalog.product_detail.weight', { value: formatWeight(product.weightGrams) })}
+        </p>
+      </div>
 
       <div className="pt-2">
         <Link

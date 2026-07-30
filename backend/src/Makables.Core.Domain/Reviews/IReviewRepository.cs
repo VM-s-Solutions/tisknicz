@@ -50,4 +50,14 @@ public interface IReviewRepository
     /// resulting stored values so an off-by-one cannot ship silently.
     /// </summary>
     Task<(int Count, double AverageStars)> GetMakerRatingAggregateAsync(string makerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// <c>COUNT(*)</c> + <c>AVG(rating)</c> over <paramref name="productId"/>'s
+    /// ACTIVE reviews (rows whose denormalized <see cref="Review.ProductId"/>
+    /// matches), computed in SQL. Same recompute-from-rows contract as
+    /// <see cref="GetMakerRatingAggregateAsync"/> — feeds
+    /// <c>Product.RecomputeRating</c>; reviews on custom orders
+    /// (<c>ProductId == null</c>) never enter any product aggregate.
+    /// </summary>
+    Task<(int Count, double AverageStars)> GetProductRatingAggregateAsync(string productId, CancellationToken cancellationToken);
 }

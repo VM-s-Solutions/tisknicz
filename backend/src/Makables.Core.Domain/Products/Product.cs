@@ -61,6 +61,17 @@ public sealed class Product : Auditable
     /// <summary>Item shipping weight in grams (Zásilkovna / Comgate input).</summary>
     public int WeightGrams { get; private set; }
 
+    /// <summary>
+    /// Denormalized average rating in basis points of a star (0..50000,
+    /// i.e. 0..5.0 stars) over the product's ACTIVE reviews. Written only
+    /// via <see cref="RecomputeRating"/> (recompute-from-rows, same Q5
+    /// discipline as <c>Maker.RecomputeRating</c>).
+    /// </summary>
+    public int RatingAverageBp { get; private set; }
+
+    /// <summary>Denormalized count of the product's ACTIVE reviews.</summary>
+    public int RatingCount { get; private set; }
+
     private readonly List<ProductImage> _images = new();
     public IReadOnlyList<ProductImage> Images => _images;
 
@@ -168,6 +179,26 @@ public sealed class Product : Auditable
         PriceType = priceType;
         FulfillmentType = fulfillmentType;
         WeightGrams = weightGrams;
+        return this;
+    }
+
+    /// <summary>
+    /// Recompute the denormalized rating from the review rows. The caller
+    /// (the <c>SubmitReview</c> handler) supplies values computed by an
+    /// <c>AVG(rating)</c> over the product's ACTIVE reviews —
+    /// recompute-from-rows is self-healing under soft-delete, a running
+    /// average would drift after any admin deactivation (mirrors
+    /// <c>Maker.RecomputeRating</c>).
+    /// </summary>
+    public Product RecomputeRating(int ratingCount, int ratingAverageBp)
+    {
+        if (ratingAverageBp is < 0 or > 50_000)
+            throw new ArgumentOutOfRangeException(nameof(ratingAverageBp), "Rating average must be 0..50000 bp (0..5.0 stars).");
+        if (ratingCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(ratingCount), "Rating count cannot be negative.");
+
+        RatingCount = ratingCount;
+        RatingAverageBp = ratingAverageBp;
         return this;
     }
 

@@ -3,6 +3,7 @@ using Makables.Core.AppServices.Features.Reviews;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
+using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Reviews;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -28,6 +29,7 @@ public class SubmitReviewHandlerTests
     private readonly IOrderRepository _orders = Substitute.For<IOrderRepository>();
     private readonly IReviewRepository _reviews = Substitute.For<IReviewRepository>();
     private readonly IMakerRepository _makers = Substitute.For<IMakerRepository>();
+    private readonly IProductRepository _products = Substitute.For<IProductRepository>();
     private readonly IUserSessionProvider _session = Substitute.For<IUserSessionProvider>();
     private readonly IIdGenerator _ids = Substitute.For<IIdGenerator>();
     private readonly SubmitReview.Handler _sut;
@@ -37,7 +39,7 @@ public class SubmitReviewHandlerTests
         _session.GetUserId().Returns(CustomerUserId);
         _ids.Next().Returns("rev-1");
         _sut = new SubmitReview.Handler(
-            _orders, _reviews, _makers, _session, _ids,
+            _orders, _reviews, _makers, _products, _session, _ids,
             NullLogger<SubmitReview.Handler>.Instance);
     }
 
@@ -143,6 +145,62 @@ public class SubmitReviewHandlerTests
         result.IsSuccess.Should().BeTrue();
         maker.RatingCount.Should().Be(3);
         maker.RatingAverageBp.Should().Be(40_000, "(5*2 + 2)/3 = 4.0 → 40000 bp");
+    }
+
+    [Fact]
+    public async Task Recomputes_product_rating_when_order_has_catalog_product()
+    {
+        var order = BuildOrder(OrderState.Delivered);
+        var maker = BuildMaker();
+        var product = Product.Create(
+            id: "prod-1", makerId: MakerId, categoryId: "cat-1",
+            title: "Hrnek", description: null,
+            price: new Core.Domain.Money.Money(25000, "CZK"),
+            priceType: PriceType.Fixed, weightGrams: 400, countryCode: "CZ");
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _reviews.ExistsForOrderAsync(OrderId, Arg.Any<CancellationToken>()).Returns(false);
+        _makers.GetByIdForUpdateAsync(MakerId, Arg.Any<CancellationToken>()).Returns(maker);
+        _reviews.GetMakerRatingAggregateAsync(MakerId, Arg.Any<CancellationToken>())
+            .Returns((0, 0d));
+        _products.GetByIdForUpdateAsync("prod-1", Arg.Any<CancellationToken>()).Returns(product);
+        // 1 existing active 5-star product review; the new 4-star folds
+        // to (5*1 + 4) / 2 = 4.5 → 45000 bp, count 2.
+        _reviews.GetProductRatingAggregateAsync("prod-1", Arg.Any<CancellationToken>())
+            .Returns((1, 5.0d));
+        Review? added = null;
+        await _reviews.AddAsync(Arg.Do<Review>(r => added = r), Arg.Any<CancellationToken>());
+
+        var result = await _sut.Handle(
+            new SubmitReview.Command(OrderId, 4, null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        added!.ProductId.Should().Be("prod-1", "product_id is denormalized off the order");
+        product.RatingCount.Should().Be(2);
+        product.RatingAverageBp.Should().Be(45_000, "(5*1 + 4)/2 = 4.5 → 45000 bp");
+    }
+
+    [Fact]
+    public async Task Missing_or_inactive_product_skips_product_recompute_but_still_succeeds()
+    {
+        var order = BuildOrder(OrderState.Delivered);
+        var maker = BuildMaker();
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _reviews.ExistsForOrderAsync(OrderId, Arg.Any<CancellationToken>()).Returns(false);
+        _makers.GetByIdForUpdateAsync(MakerId, Arg.Any<CancellationToken>()).Returns(maker);
+        _reviews.GetMakerRatingAggregateAsync(MakerId, Arg.Any<CancellationToken>())
+            .Returns((0, 0d));
+        _products.GetByIdForUpdateAsync("prod-1", Arg.Any<CancellationToken>())
+            .Returns((Product?)null);
+
+        var result = await _sut.Handle(
+            new SubmitReview.Command(OrderId, 4, null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue("a deactivated product must not block the review");
+        maker.RatingCount.Should().Be(1, "the maker recompute still applies");
+        await _reviews.DidNotReceive()
+            .GetProductRatingAggregateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -3,7 +3,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { t } from '@/lib/i18n';
 import type { MakerReviewItem } from '@/lib/api-client-helpers/catalog';
-import { Stars } from './stars';
+import { Stars } from '@/components/ui/stars';
 
 interface ReviewsSectionProps {
   readonly reviews: readonly MakerReviewItem[];
