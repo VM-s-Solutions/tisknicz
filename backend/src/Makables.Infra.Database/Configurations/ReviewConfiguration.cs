@@ -41,6 +41,10 @@ internal sealed class ReviewEntityConfiguration : IEntityTypeConfiguration<Revie
 
         builder.Property(r => r.OrderId).HasColumnName("order_id").HasMaxLength(40).IsRequired();
         builder.Property(r => r.MakerId).HasColumnName("maker_id").HasMaxLength(40).IsRequired();
+        // Denormalized off orders.product_id at Create; null for custom
+        // orders. No enforced FK — mirrors orders.product_id (a product
+        // hard-delete must not take the review corpus with it).
+        builder.Property(r => r.ProductId).HasColumnName("product_id").HasMaxLength(40);
         builder.Property(r => r.CustomerUserId).HasColumnName("customer_user_id").HasMaxLength(40).IsRequired();
 
         builder.Property(r => r.Rating)
@@ -77,6 +81,12 @@ internal sealed class ReviewEntityConfiguration : IEntityTypeConfiguration<Revie
         // submitted-reviews list).
         builder.HasIndex(r => r.CustomerUserId)
             .HasDatabaseName("ix_reviews_customer_user");
+
+        // Backs the per-product recompute AVG(rating) scan. Partial —
+        // custom-order reviews (product_id IS NULL) never enter the scan.
+        builder.HasIndex(r => r.ProductId)
+            .HasDatabaseName("ix_reviews_product")
+            .HasFilter("product_id IS NOT NULL");
 
         // === FKs (shadow relationships — no navigation properties) ===
         builder.HasOne<Order>()

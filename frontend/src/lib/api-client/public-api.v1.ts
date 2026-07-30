@@ -1953,6 +1953,8 @@ export class MakerProductItem implements IMakerProductItem {
     priceCurrency!: string;
     priceType!: string;
     fulfillmentType!: string;
+    ratingAverageBp!: number;
+    ratingCount!: number;
     primaryImageBlobPath!: string | undefined;
 
     [key: string]: any;
@@ -1978,6 +1980,8 @@ export class MakerProductItem implements IMakerProductItem {
             this.priceCurrency = _data["priceCurrency"];
             this.priceType = _data["priceType"];
             this.fulfillmentType = _data["fulfillmentType"];
+            this.ratingAverageBp = _data["ratingAverageBp"];
+            this.ratingCount = _data["ratingCount"];
             this.primaryImageBlobPath = _data["primaryImageBlobPath"];
         }
     }
@@ -2001,6 +2005,8 @@ export class MakerProductItem implements IMakerProductItem {
         data["priceCurrency"] = this.priceCurrency;
         data["priceType"] = this.priceType;
         data["fulfillmentType"] = this.fulfillmentType;
+        data["ratingAverageBp"] = this.ratingAverageBp;
+        data["ratingCount"] = this.ratingCount;
         data["primaryImageBlobPath"] = this.primaryImageBlobPath;
         return data;
     }
@@ -2013,6 +2019,8 @@ export interface IMakerProductItem {
     priceCurrency: string;
     priceType: string;
     fulfillmentType: string;
+    ratingAverageBp: number;
+    ratingCount: number;
     primaryImageBlobPath: string | undefined;
 
     [key: string]: any;
@@ -2434,10 +2442,14 @@ export class ProductDetail implements IProductDetail {
     fulfillmentType!: string;
     weightGrams!: number;
     categoryId!: string;
+    ratingAverageBp!: number;
+    ratingCount!: number;
     makerId!: string;
     makerSlug!: string;
     makerCompanyName!: string;
     makerIsVerified!: boolean;
+    makerPersonalPickupEnabled!: boolean;
+    makerPickupNote!: string | undefined;
     images!: ProductImageItem[];
 
     [key: string]: any;
@@ -2469,10 +2481,14 @@ export class ProductDetail implements IProductDetail {
             this.fulfillmentType = _data["fulfillmentType"];
             this.weightGrams = _data["weightGrams"];
             this.categoryId = _data["categoryId"];
+            this.ratingAverageBp = _data["ratingAverageBp"];
+            this.ratingCount = _data["ratingCount"];
             this.makerId = _data["makerId"];
             this.makerSlug = _data["makerSlug"];
             this.makerCompanyName = _data["makerCompanyName"];
             this.makerIsVerified = _data["makerIsVerified"];
+            this.makerPersonalPickupEnabled = _data["makerPersonalPickupEnabled"];
+            this.makerPickupNote = _data["makerPickupNote"];
             if (Array.isArray(_data["images"])) {
                 this.images = [] as any;
                 for (let item of _data["images"])
@@ -2503,10 +2519,14 @@ export class ProductDetail implements IProductDetail {
         data["fulfillmentType"] = this.fulfillmentType;
         data["weightGrams"] = this.weightGrams;
         data["categoryId"] = this.categoryId;
+        data["ratingAverageBp"] = this.ratingAverageBp;
+        data["ratingCount"] = this.ratingCount;
         data["makerId"] = this.makerId;
         data["makerSlug"] = this.makerSlug;
         data["makerCompanyName"] = this.makerCompanyName;
         data["makerIsVerified"] = this.makerIsVerified;
+        data["makerPersonalPickupEnabled"] = this.makerPersonalPickupEnabled;
+        data["makerPickupNote"] = this.makerPickupNote;
         if (Array.isArray(this.images)) {
             data["images"] = [];
             for (let item of this.images)
@@ -2526,10 +2546,14 @@ export interface IProductDetail {
     fulfillmentType: string;
     weightGrams: number;
     categoryId: string;
+    ratingAverageBp: number;
+    ratingCount: number;
     makerId: string;
     makerSlug: string;
     makerCompanyName: string;
     makerIsVerified: boolean;
+    makerPersonalPickupEnabled: boolean;
+    makerPickupNote: string | undefined;
     images: ProductImageItem[];
 
     [key: string]: any;

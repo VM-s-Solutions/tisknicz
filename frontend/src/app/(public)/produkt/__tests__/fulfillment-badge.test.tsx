@@ -19,10 +19,14 @@ const baseProduct: ProductDetail = {
   fulfillmentType: 'MadeToOrder',
   weightGrams: 120,
   categoryId: 'cat-1',
+  ratingAverageBp: 0,
+  ratingCount: 0,
   makerId: 'm1',
   makerSlug: 'alfa-tisk',
   makerCompanyName: 'Alfa Tisk s.r.o.',
   makerIsVerified: true,
+  makerPersonalPickupEnabled: false,
+  makerPickupNote: null,
   images: [],
 };
 

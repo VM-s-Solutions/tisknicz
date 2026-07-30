@@ -24,10 +24,14 @@ const baseProduct: ProductDetail = {
   fulfillmentType: 'MadeToOrder',
   weightGrams: 120,
   categoryId: 'cat-1',
+  ratingAverageBp: 45000,
+  ratingCount: 7,
   makerId: 'm1',
   makerSlug: 'alfa-tisk',
   makerCompanyName: 'Alfa Tisk s.r.o.',
   makerIsVerified: true,
+  makerPersonalPickupEnabled: true,
+  makerPickupNote: 'Odběr možný Po–Pá 9–17 na provozovně.',
   images: [{ imageId: 'i1', blobPath: 'products/p1/img.jpg', sortOrder: 0 }],
 };
 

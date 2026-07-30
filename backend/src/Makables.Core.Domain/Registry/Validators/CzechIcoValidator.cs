@@ -35,6 +35,24 @@ public static class CzechIcoValidator
     /// have a user input with a 7-digit IČO (rare, legacy), normalise
     /// to 8 digits BEFORE calling this.
     /// </summary>
+    /// <summary>
+    /// True when <paramref name="ico"/> is exactly 8 ASCII digits — the
+    /// canonical wire shape ARES accepts. T-0161: this is the HARD gate
+    /// (budget guard per ADR 0018); the mod-11 checksum
+    /// (<see cref="IsValid"/>) is a typo HEURISTIC only — an
+    /// operator-reported false rejection of a real Czech IČO demoted it
+    /// from gate to warning, and the registry lookup is authoritative.
+    /// </summary>
+    public static bool HasValidShape(string? ico)
+    {
+        if (string.IsNullOrEmpty(ico) || ico.Length != 8) return false;
+        foreach (var c in ico)
+        {
+            if (c < '0' || c > '9') return false;
+        }
+        return true;
+    }
+
     public static bool IsValid(string? ico)
     {
         if (string.IsNullOrEmpty(ico) || ico.Length != 8) return false;

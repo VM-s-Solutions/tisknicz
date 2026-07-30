@@ -75,6 +75,9 @@ export interface MakerProductItem {
   readonly priceCurrency: string;
   readonly priceType: 'Fixed' | 'From' | 'OnRequest';
   readonly fulfillmentType: FulfillmentType;
+  /** Denormalized product rating in basis points (0..50000); see RATING_BP_PER_STAR. */
+  readonly ratingAverageBp: number;
+  readonly ratingCount: number;
   readonly primaryImageBlobPath: string | null;
 }
 
@@ -142,10 +145,15 @@ export interface ProductDetail {
   readonly fulfillmentType: FulfillmentType;
   readonly weightGrams: number;
   readonly categoryId: string;
+  /** Denormalized product rating in basis points (0..50000); see RATING_BP_PER_STAR. */
+  readonly ratingAverageBp: number;
+  readonly ratingCount: number;
   readonly makerId: string;
   readonly makerSlug: string;
   readonly makerCompanyName: string;
   readonly makerIsVerified: boolean;
+  readonly makerPersonalPickupEnabled: boolean;
+  readonly makerPickupNote: string | null;
   readonly images: readonly ProductImageItem[];
 }
 

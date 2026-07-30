@@ -98,7 +98,11 @@ public sealed record MakerProfile(
     IReadOnlyList<MakerProductItem> Products,
     IReadOnlyList<MakerReviewItem> Reviews);
 
-/// <summary>An active product on a maker's public profile.</summary>
+/// <summary>
+/// An active product on a maker's public profile. Carries the product's
+/// denormalized rating so the profile grid can render stars + support
+/// the client-side min-rating filter without an extra query.
+/// </summary>
 public sealed record MakerProductItem(
     string ProductId,
     string Title,
@@ -106,6 +110,8 @@ public sealed record MakerProductItem(
     string PriceCurrency,
     string PriceType,
     string FulfillmentType,
+    int RatingAverageBp,
+    int RatingCount,
     string? PrimaryImageBlobPath);
 
 /// <summary>
@@ -129,7 +135,9 @@ public sealed record MakerReviewItem(
 /// <summary>
 /// Public product-detail view (US-customer-0009). The product fields +
 /// all images + the owning maker's display info for the "by {maker}"
-/// link back to the profile page.
+/// link back to the profile page. Carries the product's denormalized
+/// rating plus the maker's personal-pickup info so the detail page can
+/// surface both without a second query.
 /// </summary>
 public sealed record ProductDetail(
     string ProductId,
@@ -141,10 +149,14 @@ public sealed record ProductDetail(
     string FulfillmentType,
     int WeightGrams,
     string CategoryId,
+    int RatingAverageBp,
+    int RatingCount,
     string MakerId,
     string MakerSlug,
     string MakerCompanyName,
     bool MakerIsVerified,
+    bool MakerPersonalPickupEnabled,
+    string? MakerPickupNote,
     IReadOnlyList<ProductImageItem> Images);
 
 /// <summary>One image on the product detail page, ordered by sort order.</summary>

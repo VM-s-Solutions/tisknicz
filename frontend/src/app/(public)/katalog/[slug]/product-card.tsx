@@ -1,9 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
+import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
 import {
   buildProductImageUrl,
+  RATING_BP_PER_STAR,
   type MakerProductItem,
 } from '@/lib/api-client-helpers/catalog';
 import { formatCzk } from '@/lib/money/formatter';
@@ -53,6 +55,19 @@ export function ProductCard({ item }: ProductCardProps) {
         </div>
         <div className="flex flex-1 flex-col gap-2 p-4">
           <h3 className="text-base font-semibold text-white line-clamp-2">{item.title}</h3>
+          <p className="flex items-center gap-1.5 text-xs text-zinc-400">
+            {item.ratingCount > 0 ? (
+              <>
+                <Stars value={item.ratingAverageBp / RATING_BP_PER_STAR} size={13} />
+                <span>
+                  {(item.ratingAverageBp / RATING_BP_PER_STAR).toFixed(1)}{' '}
+                  {t('catalog.card.rating_count', { count: item.ratingCount })}
+                </span>
+              </>
+            ) : (
+              <span>{t('catalog.card.rating_none')}</span>
+            )}
+          </p>
           <p className="mt-auto text-sm font-medium text-brand-400">
             <ProductPrice item={item} />
           </p>
