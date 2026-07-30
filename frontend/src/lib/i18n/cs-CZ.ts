@@ -102,6 +102,25 @@ export const messages = {
   'auth.register.modal_close': 'Zavřít registraci',
   'auth.register.modal_how_it_works_question': 'Want to know how it works?',
   'auth.register.modal_how_it_works_link': 'Pro Makery',
+  // T-0162 "Jsem firma" — company customer opt-in with ARES autofill.
+  'auth.register.is_company': 'Jsem firma',
+  'auth.register.is_company_hint': 'Zadejte IČO — název firmy a DIČ doplníme z ARES.',
+  'auth.register.company_ico': 'IČO',
+  'auth.register.company_ico_hint': '8 číslic, např. 27074358.',
+  'auth.register.company_ico_checksum_invalid':
+    'Toto není platné české IČO — zkontrolujte prosím překlepy.',
+  'auth.register.company_ico_invalid': 'IČO je neplatné nebo neexistuje v rejstříku ARES.',
+  'auth.register.company_preview_loading': 'Hledám firmu v ARES…',
+  'auth.register.company_preview_heading': 'Firma podle ARES',
+  'auth.register.company_preview_vat_id': 'DIČ',
+  'auth.register.company_preview_no_vat_id': 'Neplátce DPH',
+  'auth.register.company_preview_not_found': 'Firma s tímto IČO nebyla v ARES nalezena.',
+  'auth.register.company_preview_unavailable':
+    'ARES je momentálně nedostupný. Registraci to neblokuje — údaje ověříme při odeslání.',
+  'auth.register.company_preview_dissolved':
+    'Tato firma je v ARES vedena jako zaniklá — registrace nebude možná.',
+  'auth.register.company_preview_confirm_hint':
+    'Zkontrolujte, že registrujete správnou firmu — název a DIČ převezmeme z ARES.',
 
   // Auth — register maker
   'auth.register_maker.title': 'Registrace výrobce',
@@ -854,6 +873,11 @@ export const messages = {
   'user.notFound': 'Uživatel nebyl nalezen.',
   'user.deleteConfirmationMismatch':
     'Zadaný e-mail neodpovídá uživateli — smazání nebylo potvrzeno.',
+
+  // T-0162 customer "Jsem firma" registration (parity with
+  // BusinessErrorMessage.CustomerCompanyDissolved).
+  'user.companyDissolved':
+    'Tato firma je v ARES vedena jako zaniklá. Firemní účet na ni nelze založit.',
   'user.cannotDeleteWithInFlightOrders':
     'Uživatele nelze smazat — má rozpracované objednávky. Nejprve je vyřešte.',
 

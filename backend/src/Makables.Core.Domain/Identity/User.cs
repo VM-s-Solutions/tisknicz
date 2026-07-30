@@ -38,6 +38,20 @@ public sealed class User : Auditable
     /// </summary>
     public string? PreferredLanguage { get; private set; }
 
+    /// <summary>
+    /// T-0162 "Jsem firma" — optional company snapshot captured at customer
+    /// registration from the ARES <c>CompanyRecord</c> (ADR 0018). All four
+    /// fields are null for private persons; set only via
+    /// <see cref="AttachCompanySnapshot"/>. NOT unique across users — two
+    /// employees of one company may both register. An OSVČ DIČ is
+    /// birth-number-derived, so the snapshot is PII; GDPR erasure hard-deletes
+    /// the row (extension-points §14), taking the snapshot with it.
+    /// </summary>
+    public string? CompanyRegistrationNumber { get; private set; }
+    public string? CompanyName { get; private set; }
+    public string? CompanyVatId { get; private set; }
+    public DateTimeOffset? CompanySnapshotFetchedAt { get; private set; }
+
     private User() { }
 
     /// <summary>
@@ -160,6 +174,24 @@ public sealed class User : Auditable
                 $"Preferred language '{bcp47}' is not a recognised BCP-47 tag. Expected e.g. 'cs-CZ' or 'en-US'.",
                 nameof(bcp47));
         PreferredLanguage = bcp47;
+        return this;
+    }
+
+    /// <summary>
+    /// Attaches the ARES company snapshot at registration (T-0162 "Jsem
+    /// firma"). Blank <paramref name="vatId"/> normalizes to null (neplátce
+    /// DPH). Blank IČO / company name are programmer errors — the handler
+    /// only calls this with a registry-verified <c>CompanyRecord</c>.
+    /// </summary>
+    public User AttachCompanySnapshot(
+        string registrationNumber, string companyName, string? vatId, DateTimeOffset fetchedAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(registrationNumber);
+        ArgumentException.ThrowIfNullOrWhiteSpace(companyName);
+        CompanyRegistrationNumber = registrationNumber.Trim();
+        CompanyName = companyName.Trim();
+        CompanyVatId = string.IsNullOrWhiteSpace(vatId) ? null : vatId.Trim();
+        CompanySnapshotFetchedAt = fetchedAt;
         return this;
     }
 

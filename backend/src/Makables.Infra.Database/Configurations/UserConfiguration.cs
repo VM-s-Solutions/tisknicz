@@ -57,6 +57,17 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
         // to CountryConfiguration.DefaultLanguageCode (T-0028).
         builder.Property(u => u.PreferredLanguage).HasColumnName("preferred_language").HasMaxLength(16);
 
+        // T-0162 "Jsem firma" company snapshot (ARES at registration).
+        // Widths mirror MakerConfiguration: IČO reserves 32 chars for future
+        // SK/PL registration numbers, DIČ 32, name 300. Deliberately NOT
+        // unique and NOT indexed — no read path filters by customer IČO, and
+        // two employees of one company may both register.
+        builder.Property(u => u.CompanyRegistrationNumber)
+            .HasColumnName("company_registration_number").HasMaxLength(32);
+        builder.Property(u => u.CompanyName).HasColumnName("company_name").HasMaxLength(300);
+        builder.Property(u => u.CompanyVatId).HasColumnName("company_vat_id").HasMaxLength(32);
+        builder.Property(u => u.CompanySnapshotFetchedAt).HasColumnName("company_snapshot_fetched_at");
+
         ConfigureAuditable(builder);
     }
 

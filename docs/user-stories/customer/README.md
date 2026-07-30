@@ -23,7 +23,7 @@ As a customer, I want to register an account with my email so that I can place o
 - **AC-5** Given the registration succeeds, when the customer attempts to place an order before confirming their email, then the order placement is blocked with `auth.emailNotConfirmed`.
 
 ### Out of scope
-- B2B account fields (IČO/DIČ on the user) — those are optional on the order, not on the account.
+- ~~B2B account fields (IČO/DIČ on the user) — those are optional on the order, not on the account.~~ Superseded 2026-07-29 by operator directive → [US-customer-0025](#us-customer-0025--register-as-a-company-customer-jsem-firma) (T-0162): optional company capture at registration. B2B fields on the *order* remain out of scope (see US-customer-0010).
 - Multi-user customer accounts.
 - Username-based login (email-only).
 
@@ -579,3 +579,32 @@ As a customer, I want to log out so my session ends.
 ### Related
 - ADRs: 0012
 - Roles: `auth-service`
+
+## US-customer-0025 — Register as a company customer (Jsem firma)
+
+### Narrative
+As a customer buying on behalf of a company, I want to tick "Jsem firma" during registration and enter my IČO so that the company name and DIČ are fetched from ARES and stored on my account, ready for company invoicing later.
+
+### Roles in play
+- **User** — gains an optional company snapshot (IČO, company name, DIČ, snapshot-fetched-at) attached by `Register.Command` when the IČO is provided.
+- **CompanyRegistry** (ADR 0018) — authoritative lookup by IČO through the cached, rate-limited registry seam; ARES at launch. The client-side preview reuses the T-0159 `registry-preview` endpoint; the server-side lookup at submit is the gate.
+
+### Acceptance criteria
+- **AC-1** Given the customer registration form, when "Jsem firma" is unchecked, then no IČO field shows and the account is created exactly as today (no company columns set).
+- **AC-2** Given the checkbox is checked and a shape+checksum-valid IČO is typed, when the debounce fires, then the ARES company name and DIČ (or a "neplátce DPH" note) render read-only for confirmation before submit.
+- **AC-3** Given a valid IČO of an active company, when the registration is submitted, then the backend re-fetches the company authoritatively and persists the snapshot on the `users` row.
+- **AC-4** Given an IČO that is not found, dissolved, or the registry is unavailable with no usable cache, when the registration is submitted, then a Czech error explains the reason and no account is created.
+- **AC-5** Given ARES is down but a ≤7-day cached record exists, when the registration is submitted, then the account is created with the cached snapshot (stale accepted silently — no admin verification lane for customers).
+
+### Out of scope
+- Editing/removing the company snapshot after registration (follow-up ticket).
+- Company data on orders/invoices (US-customer-0010 deferral stands).
+- Company registered-address capture on the customer account.
+
+### Alternatives considered
+- **Company fields captured only at checkout** (the original US-customer-0001 out-of-scope cut) — superseded by the operator directive of 2026-07-29: account-level capture at registration was explicitly requested; checkout/invoice prefill becomes a follow-up consumer of the account snapshot.
+
+### Related
+- ADRs: 0018 (company registry), 0012 (auth)
+- Ticket: T-0162
+- Roles: `user`, `company-registry`
