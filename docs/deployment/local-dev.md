@@ -45,6 +45,39 @@ dotnet run --project backend/src/Makables.Web.Customer --launch-profile http
 The frontend (`cd frontend; npm run dev`) defaults to exactly these ports, so no
 `NEXT_PUBLIC_API_*_BASE_URL` env vars are required for local dev.
 
+## Seed dev/test data
+
+`Makables.Tools.Seeder` builds a realistic CZ dataset on top of the reference
+data the migrations already seed (country CZ, CountryConfiguration, the six
+launch categories): 10 users (1 admin, 4 customers, 5 makers), 5 makers
+(4 verified + 1 in the admin verification queue), 15 products across every
+category (including one `OnRequest`, one soft-deleted, one from the unverified
+maker), 14 orders covering **every** `OrderState`, message threads with unread
+counters, 4 reviews with recomputed maker catalog stats, and one open dispute.
+
+```powershell
+dotnet run --project backend/src/Makables.Tools.Seeder                 # seed (no-op if already seeded)
+dotnet run --project backend/src/Makables.Tools.Seeder -- --reset      # delete seed-* rows and reseed
+dotnet run --project backend/src/Makables.Tools.Seeder -- --migrate    # apply pending migrations first
+```
+
+- **Credentials:** every seeded account uses the password `SeedHeslo.123`.
+  Admin: `admin@makables.test`; customers: `jana.novakova@` / `petr.svoboda@` /
+  `eva.dvorakova@` / `tomas.marek@` (unconfirmed) `makables.test`; makers:
+  `karel.tiskar@` (PrintLab), `marie.vltavska@` (Tiskárna Vltava),
+  `ondrej.barvir@` (Textilka Brno), `lucie.rezava@` (LaserCut Ostrava),
+  `alena.lipova@` (Dílna U Lípy, unverified) `makables.test`.
+- **Idempotent:** all ids are deterministic (`seed-*`); a rerun without
+  `--reset` is a no-op (sentinel `seed-user-admin`).
+- **Safety:** refuses non-local hosts unless `--allow-remote`, and always
+  refuses any host/database whose name contains `prod`.
+- **Order numbers** use the reserved `M-CZ-{YYYY}9NNN` range so the live
+  `IOrderNumberGenerator` sequence (which starts at `0001`) cannot collide
+  with them in dev.
+- The connection string comes from the seeder's `appsettings.json`
+  (`makables_dev` on localhost) and can be overridden via
+  `ConnectionStrings__Postgres`.
+
 ## Why the hosts need stub secrets to boot
 
 Every host wires several option groups with `.ValidateOnStart()` — `Jwt`,
