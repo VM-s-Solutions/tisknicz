@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { DeleteAccountSection } from '@/components/shared/delete-account-section';
 import { logout } from '@/lib/api-client-helpers/auth';
 import {
   changePassword,
@@ -53,6 +54,7 @@ export function CustomerProfileClient({ initialProfile }: { initialProfile: MyPr
           {t('dashboard.customer.profile.logout')}
         </Button>
       </Card>
+      <DeleteAccountSection host={Host} />
     </>
   );
 }

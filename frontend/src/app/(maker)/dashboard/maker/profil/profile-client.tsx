@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { DeleteAccountSection } from '@/components/shared/delete-account-section';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -65,6 +66,7 @@ export function MakerProfileClient() {
     <>
       <CompanySection profile={profile} />
       <EditableSection profile={profile} onUpdated={setProfile} />
+      <DeleteAccountSection host={Host} />
     </>
   );
 }

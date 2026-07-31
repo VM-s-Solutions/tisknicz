@@ -219,6 +219,24 @@ export const messages = {
   'dashboard.customer.profile.password_wrong': 'Současné heslo není správné.',
   'dashboard.customer.profile.logout': 'Odhlásit se',
 
+  // Self-service GDPR account deletion (shared by the customer and
+  // maker profile pages; POST /me/delete). Error keys map the backend
+  // BusinessErrorMessage codes to self-service wording — the parity
+  // keys user.deleteConfirmationMismatch / user.cannotDeleteWithInFlightOrders
+  // are admin-worded (T-0118) and stay untouched.
+  'profile.delete_account.title': 'Smazání účtu',
+  'profile.delete_account.description':
+    'Smazáním bude váš účet trvale deaktivován a budete odhlášeni ze všech zařízení. Osobní údaje zpracováváme podle zásad ochrany osobních údajů.',
+  'profile.delete_account.gdpr_link': 'Ochrana osobních údajů',
+  'profile.delete_account.maker_note':
+    'Deaktivací účtu výrobce se vaše produkty skryjí z katalogu. Již dokončené objednávky a vystavené doklady zůstávají zachovány podle zákonných povinností.',
+  'profile.delete_account.confirm_label': 'Pro potvrzení zadejte e-mail svého účtu',
+  'profile.delete_account.submit': 'Smazat účet',
+  'profile.delete_account.submitting': 'Mažeme účet…',
+  'profile.delete_account.email_mismatch': 'Zadaný e-mail neodpovídá vašemu účtu.',
+  'profile.delete_account.in_flight_orders':
+    'Účet nelze smazat, dokud máte rozpracované objednávky. Nejprve je prosím dokončete nebo vyřešte.',
+
   // Dashboard — maker profile
   'dashboard.maker.profile.title': 'Profil výrobce',
   'dashboard.maker.profile.section_company': 'Firemní údaje (ARES)',
@@ -818,6 +836,21 @@ export const messages = {
   // days from delivery (admin channel stays unlimited).
   'order.dispute.windowExpired':
     'Lhůta pro podání reklamace přes platformu (14 dní od doručení) už vypršela.',
+  // T-0146 — IDOR-leak-resistant shape mirroring order.notFound: unknown
+  // id and someone else's dispute read the same.
+  'order.dispute.notFound':
+    'Tato reklamace neexistuje nebo k ní nemáte přístup.',
+
+  // T-0146 dispute return-shipment codes (parity with
+  // BusinessErrorMessage). PM/UX to refine on PR review.
+  'dispute.return.categoryNotEligible':
+    'U této kategorie reklamace se zboží nevrací — štítek pro zpětné zaslání nelze vygenerovat.',
+  'dispute.return.shipmentAlreadySet':
+    'Štítek pro zpětné zaslání už byl vygenerován a nelze ho nahradit.',
+  'dispute.return.shipmentNotGenerated':
+    'Štítek pro zpětné zaslání zatím nebyl vygenerován — není co potvrdit.',
+  'dispute.return.alreadyReceived':
+    'Přijetí vráceného zboží už bylo potvrzeno.',
 
   // T-0100 review error codes (parity with BusinessErrorMessage —
   // resolveErrorMessage maps the dotted code 1:1). Vykání on the customer
@@ -870,6 +903,9 @@ export const messages = {
   // formatter is deterministic so a real overwrite is a programmer error.
   'payoutBatch.csvPathAlreadySet':
     'Cesta k CSV souboru výplatní dávky už byla nastavena. Tým byl informován.',
+  // T-0146 — a deduction is consumed by exactly one payout batch.
+  'payoutDeduction.alreadyApplied':
+    'Tato srážka už byla uplatněna v jiné výplatní dávce a nelze ji použít znovu.',
 
   // T-0109 admin outbox retry/acknowledge codes (parity with
   // BusinessErrorMessage). Admin-surface only (T-0118 outbox UI).
