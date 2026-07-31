@@ -125,7 +125,7 @@ export function RegisterMakerForm() {
   if (doneState) {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <h2 className="text-lg font-semibold">{t('auth.register.success_title')}</h2>
+        <h2 className="text-lg font-semibold text-white">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         {doneState.stale && (
           <Alert variant="warning">{t('auth.register_maker.snapshot_stale_notice')}</Alert>
@@ -172,16 +172,16 @@ export function RegisterMakerForm() {
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               {t('auth.register_maker.preview_heading')}
             </p>
-            <p className="mt-1 font-semibold text-zinc-100">{preview.company.companyName}</p>
+            <p className="mt-1 break-words font-semibold text-zinc-100">{preview.company.companyName}</p>
             {preview.company.legalForm && (
               <p className="text-xs text-zinc-400">{preview.company.legalForm}</p>
             )}
-            <p className="mt-1 text-zinc-300">
+            <p className="mt-1 break-words text-zinc-300">
               {preview.company.street} {preview.company.houseNumber}, {preview.company.zip}{' '}
               {preview.company.city}
             </p>
             {preview.company.vatId && (
-              <p className="text-zinc-300">
+              <p className="break-words text-zinc-300">
                 {t('auth.register_maker.preview_vat_id')}: {preview.company.vatId}
               </p>
             )}

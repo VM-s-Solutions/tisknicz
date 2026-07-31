@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
@@ -66,6 +67,15 @@ export default async function AdminCountryConfigPage({ params }: PageProps) {
   return (
     <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href="/dashboard/admin"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+          >
+            <Icon name="chevronLeft" size={16} />
+            {t('common.back')}
+          </Link>
+        </div>
         <header className="mb-8">
           <div className="flex items-center gap-3">
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">

@@ -10,13 +10,13 @@ export default function AdminOrderDetailLoading() {
         <div className="h-5 w-32 animate-pulse rounded-xl bg-zinc-800/60" />
         <div className="flex flex-col gap-4">
           <div className="h-10 w-64 max-w-full animate-pulse rounded-xl bg-zinc-800" />
-          <div className="h-32 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
+          <div className="h-32 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
         </div>
         <div className="h-14 w-80 max-w-full animate-pulse rounded-xl bg-zinc-800/60" />
-        <div className="h-44 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
+        <div className="h-44 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
         <div className="flex flex-col gap-3">
-          <div className="h-20 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
-          <div className="h-20 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
+          <div className="h-20 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
+          <div className="h-20 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
         </div>
       </div>
     </section>

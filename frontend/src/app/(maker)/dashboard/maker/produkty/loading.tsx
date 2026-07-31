@@ -7,7 +7,7 @@ import { t } from '@/lib/i18n';
  */
 export default function MakerProductsLoading() {
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -18,7 +18,7 @@ export default function MakerProductsLoading() {
               {t('dashboard.maker.products.subtitle')}
             </p>
           </div>
-          <div className="h-10 w-40 animate-pulse rounded-xl bg-surface-elevated" />
+          <div className="h-10 w-40 animate-pulse rounded-lg bg-surface-elevated" />
         </header>
 
         <div className="mb-6 h-4 w-32 animate-pulse rounded bg-surface-elevated" />
@@ -26,7 +26,7 @@ export default function MakerProductsLoading() {
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
-              className="h-96 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card"
+              className="h-96 animate-pulse rounded-xl border border-zinc-800 bg-surface-card"
             />
           ))}
         </div>

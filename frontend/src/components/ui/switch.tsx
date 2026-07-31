@@ -37,7 +37,7 @@ export function Switch({ label, description, className = '', id, disabled, ...pr
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-zinc-100 shadow-md transition-transform duration-200 peer-checked:translate-x-5"
+          className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-zinc-100 shadow-md peer-checked:translate-x-5"
         />
       </span>
       {(label || description) && (

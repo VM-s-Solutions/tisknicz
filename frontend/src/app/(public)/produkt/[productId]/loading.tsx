@@ -11,10 +11,10 @@ export default function Loading() {
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
         <div className="flex flex-col gap-4">
-          <div className="panel aspect-square w-full animate-pulse rounded-2xl border border-zinc-800" />
-          <div className="flex gap-2">
+          <div className="panel aspect-square w-full animate-pulse rounded-xl border border-zinc-800" />
+          <div className="flex flex-wrap gap-2">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-20 w-20 animate-pulse rounded-xl border border-zinc-800 bg-surface-elevated" />
+              <div key={i} className="h-20 w-20 animate-pulse rounded-lg border border-zinc-800 bg-surface-elevated" />
             ))}
           </div>
         </div>
@@ -24,7 +24,7 @@ export default function Loading() {
           <div className="h-8 w-1/2 animate-pulse rounded bg-surface-elevated" />
           <div className="h-4 w-2/3 animate-pulse rounded bg-surface-elevated" />
           <div className="h-4 w-1/3 animate-pulse rounded bg-surface-elevated" />
-          <div className="mt-2 h-12 w-full animate-pulse rounded-lg bg-surface-elevated sm:w-40" />
+          <div className="mt-2 h-10 w-40 animate-pulse rounded-lg bg-surface-elevated" />
         </Card>
       </div>
 

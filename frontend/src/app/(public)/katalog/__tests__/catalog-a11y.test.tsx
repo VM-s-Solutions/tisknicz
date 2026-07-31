@@ -23,6 +23,7 @@ const verifiedRated: MakerListItem = {
   ratingAverageBp: 47000,
   ratingCount: 128,
   totalOrders: 540,
+  logoBlobPath: null,
 };
 
 const unverifiedUnrated: MakerListItem = {
@@ -35,6 +36,7 @@ const unverifiedUnrated: MakerListItem = {
   ratingAverageBp: 0,
   ratingCount: 0,
   totalOrders: 0,
+  logoBlobPath: null,
 };
 
 describe('catalog MakerCard a11y', () => {

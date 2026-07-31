@@ -67,67 +67,65 @@ export function LoginForm() {
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-5">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          {serverError && <Alert variant="error">{serverError}</Alert>}
-          <Input
-            type="email"
-            icon="mail"
-            label={t('auth.login.email')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-            disabled={submitting}
-          />
-          <Input
-            type="password"
-            icon="lock"
-            label={t('auth.login.password')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-            disabled={submitting}
-          />
-          <Button type="submit" loading={submitting} className="mt-2">
-            {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
-            {!submitting ? (
-              <span aria-hidden="true">
-                <Icon name="arrowRight" size={16} />
-              </span>
-            ) : null}
-          </Button>
-        </form>
-        <div className="flex items-center gap-3 text-xs text-zinc-500">
-          <div className="h-px flex-1 bg-zinc-800" />
-          {t('auth.oauth.orDivider')}
-          <div className="h-px flex-1 bg-zinc-800" />
-        </div>
-        <GoogleSignInButton host="customer" onError={setServerError} />
-        <div className="flex flex-col gap-2 text-sm text-zinc-400">
-          <Link href="/reset" className="text-brand-400 hover:underline">
-            {t('auth.login.forgot_password')}
-          </Link>
-          <Link href="/magic" className="text-brand-400 hover:underline">
-            {t('auth.login.magic_link')}
-          </Link>
-          <div className="mt-2 border-t border-zinc-800 pt-3">
-            <p>{t('auth.login.no_account')}</p>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-              <Link href="/register?type=customer" className="text-brand-400 hover:underline">
-                {t('auth.login.register_customer_link')}
-              </Link>
-              <span aria-hidden="true">•</span>
-              <Link href="/register?type=maker" className="text-brand-400 hover:underline">
-                {t('auth.login.register_maker_link')}
-              </Link>
-            </div>
+    <div className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {serverError && <Alert variant="error">{serverError}</Alert>}
+        <Input
+          type="email"
+          icon="mail"
+          label={t('auth.login.email')}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+          disabled={submitting}
+        />
+        <Input
+          type="password"
+          icon="lock"
+          label={t('auth.login.password')}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+          disabled={submitting}
+        />
+        <Button type="submit" loading={submitting} className="mt-2">
+          {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
+          {!submitting ? (
+            <span aria-hidden="true">
+              <Icon name="arrowRight" size={16} />
+            </span>
+          ) : null}
+        </Button>
+      </form>
+      <div className="flex items-center gap-3 text-xs text-zinc-500">
+        <div className="h-px flex-1 bg-zinc-800" />
+        {t('auth.oauth.orDivider')}
+        <div className="h-px flex-1 bg-zinc-800" />
+      </div>
+      <GoogleSignInButton host="customer" onError={setServerError} />
+      <div className="flex flex-col gap-2 text-sm text-zinc-400">
+        <Link href="/reset" className="text-brand-400 hover:underline">
+          {t('auth.login.forgot_password')}
+        </Link>
+        <Link href="/magic" className="text-brand-400 hover:underline">
+          {t('auth.login.magic_link')}
+        </Link>
+        <div className="mt-2 border-t border-zinc-800 pt-3">
+          <p>{t('auth.login.no_account')}</p>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+            <Link href="/register?type=customer" className="text-brand-400 hover:underline">
+              {t('auth.login.register_customer_link')}
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link href="/register?type=maker" className="text-brand-400 hover:underline">
+              {t('auth.login.register_maker_link')}
+            </Link>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

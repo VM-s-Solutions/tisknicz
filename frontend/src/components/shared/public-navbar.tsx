@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { MakablesLogo } from '@/components/shared/makables-logo';
+import { Icon, type IconName } from '@/components/ui/icon';
 import type { DisplaySession } from '@/lib/auth/display-session';
 import { logout } from '@/lib/api-client-helpers/auth';
 import { t, type MessageKey } from '@/lib/i18n';
@@ -18,19 +19,20 @@ const NAV_LINKS = [
 interface AccountLink {
   readonly href: string;
   readonly key: MessageKey;
+  readonly icon: IconName;
 }
 
 const CUSTOMER_ACCOUNT_LINKS: readonly AccountLink[] = [
-  { href: '/dashboard/zakaznik/objednavky', key: 'nav.customer.orders' },
-  { href: '/dashboard/zakaznik/profile', key: 'nav.customer.profile' },
+  { href: '/dashboard/zakaznik/objednavky', key: 'nav.customer.orders', icon: 'package' },
+  { href: '/dashboard/zakaznik/profile', key: 'nav.customer.profile', icon: 'user' },
 ];
 
 const MAKER_ACCOUNT_LINKS: readonly AccountLink[] = [
-  { href: '/dashboard/maker/objednavky', key: 'nav.maker.orders' },
-  { href: '/dashboard/maker/produkty', key: 'nav.maker.products' },
-  { href: '/dashboard/maker/vyplaty', key: 'nav.maker.payouts' },
-  { href: '/dashboard/maker/recenze', key: 'nav.maker.reviews' },
-  { href: '/dashboard/maker/profil', key: 'nav.maker.profile' },
+  { href: '/dashboard/maker/objednavky', key: 'nav.maker.orders', icon: 'package' },
+  { href: '/dashboard/maker/produkty', key: 'nav.maker.products', icon: 'grid' },
+  { href: '/dashboard/maker/vyplaty', key: 'nav.maker.payouts', icon: 'wallet' },
+  { href: '/dashboard/maker/recenze', key: 'nav.maker.reviews', icon: 'star' },
+  { href: '/dashboard/maker/profil', key: 'nav.maker.profile', icon: 'user' },
 ];
 
 interface PublicNavbarProps {
@@ -83,18 +85,20 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
     <div className="relative">
       <button
         type="button"
-        className="group inline-flex items-center gap-1.5 rounded-full border border-zinc-700 px-4 py-1.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:text-white"
+        className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 py-1.5 pl-2 pr-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
         aria-expanded={isAccountMenuOpen}
         aria-haspopup="menu"
         onClick={() => setIsAccountMenuOpen((current) => !current)}
       >
-        {t('nav.account')}
-        <span
-          aria-hidden="true"
-          className={`text-xs transition-transform duration-200 ${isAccountMenuOpen ? 'rotate-180' : ''}`}
-        >
-          ▾
+        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand-500/15 text-brand-300">
+          <Icon name="user" size={13} strokeWidth={1.75} />
         </span>
+        {t('nav.account')}
+        <Icon
+          name="chevronDown"
+          size={14}
+          className={`text-zinc-500 transition-transform duration-150 ${isAccountMenuOpen ? 'rotate-180' : ''}`}
+        />
       </button>
       {isAccountMenuOpen && (
         <>
@@ -107,35 +111,49 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           />
           <div
             role="menu"
-            className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-950/95 p-2 shadow-xl shadow-black/40 backdrop-blur"
+            className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-zinc-700 bg-surface-card shadow-xl shadow-black/50"
           >
-            <p className="truncate border-b border-zinc-800/80 px-3 pb-2 pt-1 text-xs text-zinc-500">
-              {session.email}
-            </p>
-            <div className="flex flex-col py-1">
+            <div className="flex items-center gap-2.5 border-b border-zinc-800 bg-surface-elevated px-3 py-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
+                <Icon name="user" size={15} strokeWidth={1.75} />
+              </span>
+              <p className="min-w-0 truncate text-xs text-zinc-400">{session.email}</p>
+            </div>
+            <div className="flex flex-col p-1.5">
               {accountLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   role="menuitem"
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive(link.href) ? 'text-white' : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? 'bg-zinc-800 text-white'
+                      : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
                   }`}
                   onClick={() => setIsAccountMenuOpen(false)}
                 >
+                  <Icon
+                    name={link.icon}
+                    size={16}
+                    className={isActive(link.href) ? 'text-brand-300' : 'text-zinc-500'}
+                  />
                   {t(link.key)}
                 </Link>
               ))}
             </div>
-            <button
-              type="button"
-              role="menuitem"
-              className="w-full rounded-lg border-t border-zinc-800/80 px-3 py-2 text-left text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white disabled:opacity-60"
-              disabled={loggingOut}
-              onClick={handleLogout}
-            >
-              {loggingOut ? t('nav.logging_out') : t('nav.logout')}
-            </button>
+            <div className="h-px bg-zinc-800" />
+            <div className="p-1.5">
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-60"
+                disabled={loggingOut}
+                onClick={handleLogout}
+              >
+                <Icon name="logOut" size={16} />
+                {loggingOut ? t('nav.logging_out') : t('nav.logout')}
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -143,11 +161,11 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
   );
 
   return (
-    <header className="relative sticky top-0 z-50 border-b border-zinc-800/80 bg-surface-primary/95 backdrop-blur supports-[backdrop-filter]:bg-surface-primary/80">
+    <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-surface-primary/95 backdrop-blur supports-[backdrop-filter]:bg-surface-primary/80">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="inline-flex items-center transition-opacity hover:opacity-90"
+          className="inline-flex items-center hover:opacity-90"
           aria-label="Makables"
         >
           <MakablesLogo textClassName="text-lg font-semibold tracking-tight text-zinc-100 leading-none" />
@@ -181,12 +199,10 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="group inline-flex items-center gap-1.5 rounded-full border border-brand-500/60 px-4 py-1.5 text-sm font-medium text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
               >
                 {t('nav.start_selling')}
-                <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
-                  →
-                </span>
+                <span aria-hidden="true">→</span>
               </Link>
             </>
           )}
@@ -203,13 +219,13 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           <span className="sr-only">{isMobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}</span>
           <span className="relative block h-4 w-5" aria-hidden="true">
             <span
-              className={`absolute left-0 top-0 block h-0.5 w-5 bg-current transition-transform duration-300 ${isMobileMenuOpen ? 'translate-y-2 rotate-45' : ''}`}
+              className={`absolute left-0 top-0 block h-0.5 w-5 bg-current transition-transform duration-200 ${isMobileMenuOpen ? 'translate-y-2 rotate-45' : ''}`}
             />
             <span
-              className={`absolute left-0 top-2 block h-0.5 w-5 bg-current transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}
+              className={`absolute left-0 top-2 block h-0.5 w-5 bg-current transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}
             />
             <span
-              className={`absolute left-0 top-4 block h-0.5 w-5 bg-current transition-transform duration-300 ${isMobileMenuOpen ? '-translate-y-2 -rotate-45' : ''}`}
+              className={`absolute left-0 top-4 block h-0.5 w-5 bg-current transition-transform duration-200 ${isMobileMenuOpen ? '-translate-y-2 -rotate-45' : ''}`}
             />
           </span>
         </button>
@@ -217,7 +233,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
 
       <div
         id="public-mobile-menu"
-        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur transition-all duration-300 md:hidden ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'}`}
+        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}
       >
         <div className="px-4 pb-5 sm:px-6">
           <nav className="flex flex-col pt-2" aria-label={t('nav.public_aria')}>
@@ -238,25 +254,36 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
 
           {session ? (
             <div className="mt-4 flex flex-col px-1">
-              <p className="truncate pb-2 text-xs text-zinc-500">{session.email}</p>
+              <div className="flex items-center gap-2.5 pb-3 pt-1">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
+                  <Icon name="user" size={15} strokeWidth={1.75} />
+                </span>
+                <p className="min-w-0 truncate text-xs text-zinc-400">{session.email}</p>
+              </div>
               {accountLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`border-b border-zinc-800/60 px-1 py-3 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 border-t border-zinc-800/60 px-1 py-3 text-sm font-medium transition-colors ${
                     isActive(link.href) ? 'text-white' : 'text-zinc-300 hover:text-white'
                   }`}
                   onClick={closeMobileMenu}
                 >
+                  <Icon
+                    name={link.icon}
+                    size={16}
+                    className={isActive(link.href) ? 'text-brand-300' : 'text-zinc-500'}
+                  />
                   {t(link.key)}
                 </Link>
               ))}
               <button
                 type="button"
-                className="px-1 py-3 text-left text-sm font-medium text-zinc-400 transition-colors hover:text-white disabled:opacity-60"
+                className="flex items-center gap-3 border-t border-zinc-800/60 px-1 py-3 text-left text-sm font-medium text-error transition-colors hover:text-error/80 disabled:opacity-60"
                 disabled={loggingOut}
                 onClick={handleLogout}
               >
+                <Icon name="logOut" size={16} />
                 {loggingOut ? t('nav.logging_out') : t('nav.logout')}
               </button>
             </div>
@@ -271,13 +298,11 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="group inline-flex items-center gap-1.5 rounded-full border border-brand-500/60 px-4 py-1.5 text-sm font-medium text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
                 onClick={closeMobileMenu}
               >
                 {t('nav.start_selling')}
-                <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-0.5">
-                  →
-                </span>
+                <span aria-hidden="true">→</span>
               </Link>
             </div>
           )}

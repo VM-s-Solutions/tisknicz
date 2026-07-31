@@ -890,6 +890,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("apple_sub");
 
+                    b.Property<string>("AvatarBlobPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("avatar_blob_path");
+
                     b.Property<string>("CompanyName")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -1290,6 +1295,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("legal_form");
+
+                    b.Property<string>("LogoBlobPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("logo_blob_path");
 
                     b.Property<bool>("PersonalPickupEnabled")
                         .HasColumnType("boolean")

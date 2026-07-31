@@ -56,7 +56,7 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
   const result = await getMyProducts({ page, pageSize });
 
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <PageHeader
@@ -65,7 +65,7 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
             actions={
               <Link
                 href="/dashboard/maker/produkty/novy"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
               >
                 <Icon name="plus" size={16} />
                 {t('dashboard.maker.products.cta.create')}
@@ -129,7 +129,7 @@ function MakerProductsEmpty() {
       action={
         <Link
           href="/dashboard/maker/produkty/novy"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
         >
           <Icon name="plus" size={16} />
           {t('dashboard.maker.products.empty.cta')}
@@ -149,7 +149,7 @@ function MakerProductsError() {
         </div>
         <Link
           href="/dashboard/maker/produkty"
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
           {t('dashboard.maker.products.error.retry')}
         </Link>

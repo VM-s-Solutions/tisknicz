@@ -10,18 +10,14 @@ interface EmptyStateProps {
 }
 
 /**
- * Shared empty / no-match surface: dashed panel with a glowing icon
+ * Shared empty / no-match surface: flat dashed panel with a teal icon
  * tile. Strings arrive pre-translated; the CTA stays a caller-owned
  * slot so each page keeps its own link target and copy.
  */
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div
-        aria-hidden="true"
-        className="empty-glow pointer-events-none absolute inset-x-0 top-0 h-40"
-      />
-      <div className="relative flex flex-col items-center gap-5">
+    <div className="rounded-xl border border-dashed border-zinc-700 bg-surface-card px-6 py-16 text-center sm:py-20">
+      <div className="flex flex-col items-center gap-5">
         <div className="icon-tile h-16 w-16">
           <Icon name={icon} size={28} />
         </div>

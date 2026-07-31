@@ -10,7 +10,7 @@ export default function Loading() {
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <Card variant="accent" padding="lg" className="flex flex-col gap-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
-          <div className="h-16 w-16 shrink-0 animate-pulse rounded-2xl bg-surface-elevated" />
+          <div className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-surface-elevated" />
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <div className="h-9 w-2/3 animate-pulse rounded bg-surface-elevated" />
             <div className="h-4 w-1/3 animate-pulse rounded bg-surface-elevated" />
@@ -25,7 +25,7 @@ export default function Loading() {
 
       <Card padding="md" className="flex flex-col gap-5">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 animate-pulse rounded-2xl bg-surface-elevated" />
+          <div className="h-9 w-9 animate-pulse rounded-xl bg-surface-elevated" />
           <div className="h-6 w-32 animate-pulse rounded bg-surface-elevated" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

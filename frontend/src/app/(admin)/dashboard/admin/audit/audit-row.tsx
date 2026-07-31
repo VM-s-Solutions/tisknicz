@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { AdminAuditLogItem } from '@/lib/api-client-helpers/admin-client';
 import { t } from '@/lib/i18n';
@@ -8,19 +9,37 @@ import { formatDateTime } from '@/lib/utils/dates';
  * Server-safe: pure formatting. The row is NOT a `<Link>` in slice a —
  * the diff-detail route (`/dashboard/admin/audit/[id]`) does not exist
  * until slice c (the side-by-side before/after JSON diff), so a live link
- * would 404 (review L4). Slice c re-wraps it. Two layouts: stacked cards below `md`,
- * a grid "table" at `md+`. `createdAt` shows Czech short date + time via
- * `formatDateTime`.
+ * would 404 (review L4). Slice c re-wraps it. Rendered as one
+ * GitHub-style "box": a single bordered container with a header row
+ * (title + count) and `divide-y` rows — not floating cards. Two row
+ * layouts: stacked cards below `md`, a grid "table" at `md+`. `createdAt`
+ * shows Czech short date + time via `formatDateTime`.
  */
 
 const GRID_COLUMNS =
   'md:grid md:grid-cols-[9.5rem_minmax(0,1fr)_minmax(0,1fr)_8rem_minmax(0,1fr)] md:items-center md:gap-4';
 
-export function AuditRows({ items }: { readonly items: readonly AdminAuditLogItem[] }) {
+export function AuditRows({
+  items,
+  totalCount,
+}: {
+  readonly items: readonly AdminAuditLogItem[];
+  readonly totalCount: number;
+}) {
   return (
-    <div className="flex flex-col gap-3 md:gap-0">
+    <div className="rounded-xl border border-zinc-800 bg-surface-card">
+      <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            {t('dashboard.admin.audit.title')}
+          </h2>
+          <Badge dot={false} aria-label={t('dashboard.admin.audit.count', { count: totalCount })}>
+            {totalCount}
+          </Badge>
+        </div>
+      </div>
       <div
-        className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
+        className={`hidden border-b border-zinc-800 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
       >
         <span>{t('dashboard.admin.audit.table.created')}</span>
         <span>{t('dashboard.admin.audit.table.action')}</span>
@@ -28,9 +47,11 @@ export function AuditRows({ items }: { readonly items: readonly AdminAuditLogIte
         <span>{t('dashboard.admin.audit.table.adminUser')}</span>
         <span>{t('dashboard.admin.audit.table.notes')}</span>
       </div>
-      {items.map((item) => (
-        <AuditRow key={item.id} item={item} />
-      ))}
+      <div className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <AuditRow key={item.id} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -41,9 +62,7 @@ function AuditRow({ item }: { readonly item: AdminAuditLogItem }) {
     : t('dashboard.admin.audit.notesPlaceholder');
 
   return (
-    <div
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
-    >
+    <div className={`flex flex-col gap-3 p-4 ${GRID_COLUMNS}`}>
       <div className="flex items-center justify-between gap-3 md:contents">
         <span className="text-sm text-zinc-400">{formatDateTime(item.createdAt)}</span>
         <span className="text-sm font-semibold text-zinc-100 md:truncate">{item.actionCode}</span>

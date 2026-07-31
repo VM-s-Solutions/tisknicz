@@ -34,11 +34,13 @@ export function EmailConfirmationBanner({ email, host = 'customer' }: EmailConfi
   }
 
   return (
-    <Alert variant="warning" className="flex items-center justify-between gap-4">
-      <span>{t('auth.verify.banner')}</span>
-      <Button variant="outline" size="sm" disabled={busy || sent} onClick={handleResend}>
-        {sent ? t('auth.verify.banner_sent') : t('auth.verify.banner_action')}
-      </Button>
+    <Alert variant="warning">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="min-w-0">{t('auth.verify.banner')}</span>
+        <Button variant="outline" size="sm" disabled={busy || sent} onClick={handleResend}>
+          {sent ? t('auth.verify.banner_sent') : t('auth.verify.banner_action')}
+        </Button>
+      </div>
     </Alert>
   );
 }

@@ -144,10 +144,7 @@ function OrdersResults({ data, baseParams }: OrdersResultsProps) {
 
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
-        {t('dashboard.admin.orders.count', { count: data.totalCount })}
-      </p>
-      <OrderRows items={data.items} />
+      <OrderRows items={data.items} totalCount={data.totalCount} />
       <Pagination
         page={data.page}
         totalPages={totalPages}
@@ -161,10 +158,10 @@ function OrdersResults({ data, baseParams }: OrdersResultsProps) {
 
 function OrdersEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
+      <span className="icon-tile h-14 w-14" aria-hidden="true">
         <Icon name="shoppingBag" size={28} />
-      </div>
+      </span>
       <div>
         <h2 className="text-lg font-semibold text-zinc-100">
           {t('dashboard.admin.orders.empty.title')}
@@ -187,7 +184,7 @@ function OrdersError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
           {t('dashboard.admin.orders.error.retry')}
         </Link>

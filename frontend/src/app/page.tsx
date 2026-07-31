@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Icon } from '@/components/ui/icon';
-import { PublicFooter } from '@/components/shared/public-footer';
 import { HeroSceneWrapper } from '@/components/shared/hero-scene-wrapper';
+import { PublicFooter } from '@/components/shared/public-footer';
 import { PublicNavbar } from '@/components/shared/public-navbar';
 import { getDisplaySession } from '@/lib/auth/display-session';
 import { t } from '@/lib/i18n';
@@ -36,42 +36,42 @@ export default async function HomePage() {
     <div className="min-h-screen bg-surface-primary">
       <PublicNavbar session={session} />
 
-      <section className="hero-section relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
+      <section className="relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-16 sm:py-20 lg:py-24">
+        {/* Animated wireframe knot + black hole. Self-gating: the wrapper
+            only mounts it on wide viewports, on idle, with motion allowed
+            and enough cores — so it never costs mobile or LCP. */}
         <div className="pointer-events-none absolute inset-0 z-0 motion-reduce:hidden" aria-hidden="true">
           <HeroSceneWrapper />
         </div>
 
-        <div className="hero-glow hero-glow-left" aria-hidden="true" />
-        <div className="hero-glow hero-glow-right" aria-hidden="true" />
-
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl">
-            <p className="reveal-up text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Makables</p>
+            <p className="reveal-up text-sm font-semibold text-brand-400">Makables</p>
             <h1 className="reveal-up reveal-delay-1 mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
               Kde nápady dostávají tvar
             </h1>
             <p className="reveal-up reveal-delay-2 mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
               Marketplace pro makery a tiskaře v ČR. Vybereš si tvůrce, odešleš poptávku nebo objednávku a my zajistíme bezpečnou platbu i doručení.
             </p>
-            <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-6">
+            <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link
                 href="/katalog"
-                className="hero-cta-glow group inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-6 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-colors duration-200 hover:border-brand-400 hover:text-brand-200"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-6 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
               >
                 Prohlédnout katalog
-                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+                <Icon name="arrowRight" size={16} />
               </Link>
               <Link
                 href="/jak-to-funguje"
-                className="group inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
               >
                 Jak to funguje
-                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+                <Icon name="arrowRight" size={16} />
               </Link>
             </div>
           </div>
 
-          <div className="reveal-up reveal-delay-4 mt-12 grid grid-cols-1 border-y border-zinc-800 sm:grid-cols-3">
+          <div className="mt-12 grid grid-cols-1 border-y border-zinc-800 sm:grid-cols-3">
             <Metric value="Nová platforma" label="Buď mezi prvními makery" />
             <Metric value="6" label="Hlavních kategorií" />
             <Metric value="7 % > 3,5 %" label="Provize platformy" />
@@ -81,14 +81,14 @@ export default async function HomePage() {
 
       <section className="bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl reveal-up">
+          <div className="max-w-3xl">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Jak to funguje</p>
+              <p className="text-sm font-semibold text-brand-400">Jak to funguje</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Od zadání po doručení</h2>
             </div>
           </div>
 
-          <ol className="reveal-up reveal-delay-1 mt-10 border-y border-zinc-800">
+          <ol className="mt-10 border-y border-zinc-800">
             <StepLine
               step={1}
               icon="search"
@@ -109,13 +109,13 @@ export default async function HomePage() {
             />
           </ol>
 
-          <div className="reveal-up reveal-delay-2 mt-8">
+          <div className="mt-8">
             <Link
               href="/jak-to-funguje"
-              className="group inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+              className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
             >
               Zobrazit celý postup
-              <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+              <Icon name="arrowRight" size={16} />
             </Link>
           </div>
         </div>
@@ -123,10 +123,10 @@ export default async function HomePage() {
 
       <section className="bg-surface-primary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="reveal-up text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Kategorie</p>
-          <h2 className="reveal-up reveal-delay-1 mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
+          <p className="text-sm font-semibold text-brand-400">Kategorie</p>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
 
-          <div className="reveal-up reveal-delay-2 mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-y-0">
+          <div className="mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-y-0">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}
@@ -140,7 +140,7 @@ export default async function HomePage() {
                   <span className="block text-sm font-semibold text-zinc-100">{cat.name}</span>
                   <span className="mt-1 block text-xs leading-relaxed text-zinc-400">{cat.description}</span>
                 </span>
-                <span className="mt-0.5 text-zinc-500 transition-transform group-hover:translate-x-1 group-hover:text-brand-300">
+                <span className="mt-0.5 text-zinc-500 group-hover:text-brand-300">
                   <Icon name="arrowRight" size={16} />
                 </span>
               </Link>
@@ -150,17 +150,17 @@ export default async function HomePage() {
       </section>
 
       <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
-        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center sm:px-6 lg:px-8 reveal-up">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Pro makery</h2>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-zinc-300">
             Máš vlastní výrobu a chceš získávat nové zakázky bez budování vlastního e-shopu? Přidej se na Makables.
           </p>
           <Link
             href="/pro-makery"
-            className="group mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             Více informací pro makery
-            <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
+            <Icon name="arrowRight" size={18} />
           </Link>
         </div>
       </section>

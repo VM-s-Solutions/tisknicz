@@ -58,6 +58,8 @@ export interface MakerListItem {
   readonly ratingAverageBp: number;
   readonly ratingCount: number;
   readonly totalOrders: number;
+  /** Blob path of the maker's logo; use {@link buildMakerLogoUrl}. Null → initial tile. */
+  readonly logoBlobPath: string | null;
 }
 
 /**
@@ -93,6 +95,13 @@ export interface MakerReviewItem {
   readonly createdAt: string;
   readonly replyBody: string | null;
   readonly replyCreatedAt: string | null;
+  /**
+   * The review author's avatar blob path; use {@link buildAvatarUrl}.
+   * Null when they never uploaded one, deactivated, or were erased —
+   * the only author-identifying field on this DTO by design (see the
+   * C# record's remarks).
+   */
+  readonly authorAvatarBlobPath: string | null;
 }
 
 /**
@@ -112,6 +121,8 @@ export interface MakerProfile {
   readonly ratingAverageBp: number;
   readonly ratingCount: number;
   readonly totalOrders: number;
+  /** Blob path of the maker's logo; use {@link buildMakerLogoUrl}. Null → initial tile. */
+  readonly logoBlobPath: string | null;
   readonly products: readonly MakerProductItem[];
   readonly reviews: readonly MakerReviewItem[];
 }
@@ -154,6 +165,8 @@ export interface ProductDetail {
   readonly makerIsVerified: boolean;
   readonly makerPersonalPickupEnabled: boolean;
   readonly makerPickupNote: string | null;
+  /** Blob path of the maker's logo; use {@link buildMakerLogoUrl}. Null → initial tile. */
+  readonly makerLogoBlobPath: string | null;
   readonly images: readonly ProductImageItem[];
 }
 
@@ -298,9 +311,44 @@ export async function getProductById(
  * placeholder.
  */
 export function buildProductImageUrl(blobPath: string | null | undefined): string | null {
+  return buildFileUrl('products', blobPath);
+}
+
+/**
+ * Build the public URL for a maker's catalog logo. Blob path is
+ * <c>{country}/makers/{makerId}/{filename}</c>, served by
+ * <c>ProfileImageController.GetMakerLogo</c>. Returns <c>null</c> when
+ * the maker has no logo, so callers fall back to the initial tile.
+ */
+export function buildMakerLogoUrl(blobPath: string | null | undefined): string | null {
+  return buildFileUrl('makers', blobPath);
+}
+
+/**
+ * Build the public URL for a user's avatar. Blob path is
+ * <c>{country}/avatars/{userId}/{filename}</c>, served by
+ * <c>ProfileImageController.GetAvatar</c>. Returns <c>null</c> when the
+ * user has no avatar, so callers fall back to initials.
+ */
+export function buildAvatarUrl(blobPath: string | null | undefined): string | null {
+  return buildFileUrl('avatars', blobPath);
+}
+
+/**
+ * Shared blob-path → public-URL mapping for the three
+ * <c>/api/v1/files/{folder}/…</c> streaming routes. The DTO blob path
+ * already carries the folder segment after the country
+ * (<c>cz/makers/…</c>), while the route puts the folder BEFORE the
+ * country (<c>/files/makers/cz/…</c>) — so the segment is stripped once
+ * to avoid doubling it.
+ */
+function buildFileUrl(
+  folder: 'products' | 'makers' | 'avatars',
+  blobPath: string | null | undefined,
+): string | null {
   if (!blobPath) return null;
   // Defense-in-depth: reject any path segment that could traverse out
-  // of /products/ (T-0047 security review — non-exploitable because
+  // of the folder (T-0047 security review — non-exploitable because
   // next/image anchors on remotePatterns.hostname, but better to refuse
   // a suspicious blob path than emit a URL the optimizer will normalize
   // to a same-host 404).
@@ -310,6 +358,6 @@ export function buildProductImageUrl(blobPath: string | null | undefined): strin
     'http://localhost:5104';
   const normalised = blobPath
     .replace(/^\/+/, '')
-    .replace(/^([^/]+)\/products\//, '$1/');
-  return `${baseUrl}/api/v1/files/products/${normalised}`;
+    .replace(new RegExp(`^([^/]+)/${folder}/`), '$1/');
+  return `${baseUrl}/api/v1/files/${folder}/${normalised}`;
 }

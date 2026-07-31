@@ -38,11 +38,11 @@ export function generateMetadata(): Metadata {
 
 export default function ForMakersPage() {
   return (
-    <div className="bg-surface-primary">
-      <section className="border-b border-zinc-800 bg-surface-primary py-20 sm:py-24">
+    <div>
+      <section className="border-b border-zinc-800 py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="max-w-4xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">Makables</p>
+            <p className="text-sm font-semibold text-brand-400">Makables</p>
             <h1 className="mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
               {t('static.for_makers.title')}
             </h1>
@@ -50,17 +50,17 @@ export default function ForMakersPage() {
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/register?type=maker"
-                className="group inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-6 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-6 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
               >
                 {t('static.for_makers.cta')}
-                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+                <Icon name="arrowRight" size={16} />
               </Link>
               <Link
                 href="/jak-to-funguje"
-                className="group inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
               >
                 {t('nav.how_it_works')}
-                <Icon name="arrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
+                <Icon name="arrowRight" size={16} />
               </Link>
             </div>
           </header>
@@ -69,7 +69,7 @@ export default function ForMakersPage() {
 
       <section className="bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-400">
+          <h2 className="text-sm font-semibold text-brand-400">
             {t('static.for_makers.benefits_heading')}
           </h2>
           <div className="mt-10">
@@ -100,24 +100,25 @@ export default function ForMakersPage() {
         </div>
       </section>
 
-      <section className="bg-surface-primary py-16 sm:py-20">
+      <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h2 className="text-xl font-semibold text-white">{t('static.for_makers.example_heading')}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{t('static.for_makers.example_intro')}</p>
-            <ul className="mt-6 border-y border-zinc-800">
-              {EXAMPLE_LINES.map((lineKey) => (
-                <li
-                  key={lineKey}
-                  className="flex items-start gap-3 px-1 py-3 text-sm text-zinc-300 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-zinc-800"
-                >
-                  <span className="mt-0.5 text-brand-400">
-                    <Icon name="arrowRight" size={16} />
-                  </span>
-                  {t(lineKey)}
-                </li>
-              ))}
-            </ul>
+            <div className="rounded-xl border border-zinc-800 bg-surface-card">
+              <div className="rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+                <h2 className="text-sm font-semibold text-zinc-100">{t('static.for_makers.example_heading')}</h2>
+                <p className="mt-1 text-xs text-zinc-500">{t('static.for_makers.example_intro')}</p>
+              </div>
+              <ul className="divide-y divide-zinc-800">
+                {EXAMPLE_LINES.map((lineKey) => (
+                  <li key={lineKey} className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-300">
+                    <span className="mt-0.5 text-brand-400">
+                      <Icon name="arrowRight" size={16} />
+                    </span>
+                    {t(lineKey)}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <p className="mt-3 text-xs text-zinc-500">{t('static.for_makers.example_note')}</p>
           </div>
         </div>
@@ -125,14 +126,14 @@ export default function ForMakersPage() {
 
       <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 text-center sm:px-6 lg:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-400/80">{t('static.for_makers.benefits_heading')}</p>
+          <p className="text-xs font-semibold text-brand-400/80">{t('static.for_makers.benefits_heading')}</p>
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{t('static.for_makers.cta_heading')}</h2>
           <Link
             href="/register?type=maker"
-            className="group mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             {t('static.for_makers.cta')}
-            <Icon name="arrowRight" size={18} className="transition-transform group-hover:translate-x-1" />
+            <Icon name="arrowRight" size={18} />
           </Link>
         </div>
       </section>

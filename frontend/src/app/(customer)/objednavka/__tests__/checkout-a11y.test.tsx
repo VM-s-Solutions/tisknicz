@@ -32,6 +32,7 @@ const baseProduct: ProductDetail = {
   makerIsVerified: true,
   makerPersonalPickupEnabled: true,
   makerPickupNote: 'Odběr možný Po–Pá 9–17 na provozovně.',
+  makerLogoBlobPath: null,
   images: [{ imageId: 'i1', blobPath: 'products/p1/img.jpg', sortOrder: 0 }],
 };
 

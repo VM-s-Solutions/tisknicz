@@ -20,7 +20,7 @@ public class GetPagedMakersHandlerTests
     public async Task Forwards_filter_to_catalog_queries_and_returns_page()
     {
         var page = new PagedData<MakerListItem>(
-            new[] { new MakerListItem("m1", "slug", "Co", null, "Praha", true, 40000, 5, 10) },
+            new[] { new MakerListItem("m1", "slug", "Co", null, "Praha", true, 40000, 5, 10, null) },
             Page: 1, PageSize: 24, TotalCount: 1);
         _catalog.GetPagedMakersAsync(Arg.Any<CatalogFilter>(), Arg.Any<CancellationToken>()).Returns(page);
 

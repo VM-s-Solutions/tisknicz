@@ -21,17 +21,15 @@ export function generateMetadata(): Metadata {
 export default async function MakerProductCreatePage() {
   const categoryOptions = await loadProductCategoryOptions();
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 sm:px-6 lg:px-8">
-        <div>
-          <Link
-            href="/dashboard/maker/produkty"
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-          >
-            <Icon name="arrowLeft" size={16} />
-            {t('dashboard.maker.products.create.back')}
-          </Link>
-        </div>
+        <Link
+          href="/dashboard/maker/produkty"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <Icon name="chevronLeft" size={16} />
+          {t('dashboard.maker.products.create.back')}
+        </Link>
         <header>
           <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('dashboard.maker.products.create.title')}

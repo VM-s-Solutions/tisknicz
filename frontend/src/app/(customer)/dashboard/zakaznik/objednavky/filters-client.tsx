@@ -102,11 +102,16 @@ export function OrdersFilters({
   };
 
   return (
-    <div className="panel flex flex-col gap-4 rounded-2xl border border-zinc-800 p-4 sm:p-5">
+    <div className="panel flex flex-col gap-4 rounded-xl border border-zinc-800 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="icon-tile h-9 w-9" aria-hidden="true">
-          <Icon name="filter" size={16} />
-        </span>
+        <div className="flex items-center gap-2.5">
+          <span className="icon-tile h-8 w-8" aria-hidden="true">
+            <Icon name="filter" size={15} />
+          </span>
+          <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            {t('catalog.filter.heading')}
+          </h2>
+        </div>
         <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
           {t('customer.orders.filter.reset')}
         </Button>

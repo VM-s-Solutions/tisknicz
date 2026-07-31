@@ -27,7 +27,7 @@ export function AuthBackButton() {
       variant="ghost"
       size="sm"
       onClick={handleBack}
-      className="mb-4 w-fit px-1 text-brand-300 hover:text-brand-200"
+      className="mb-4 w-fit px-1 text-brand-300"
     >
       <span aria-hidden="true">
         <Icon name="arrowLeft" size={16} />

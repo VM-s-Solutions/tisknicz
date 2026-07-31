@@ -15,8 +15,7 @@ import { getDisplaySession } from '@/lib/auth/display-session';
 export default async function PublicLayout({ children }: { children: ReactNode }) {
   const session = await getDisplaySession();
   return (
-    <div className="relative min-h-screen bg-surface-primary">
-      <div aria-hidden="true" className="page-backdrop" />
+    <div className="relative min-h-screen text-zinc-100">
       <PublicNavbar session={session} />
       <main>{children}</main>
       <PublicFooter />

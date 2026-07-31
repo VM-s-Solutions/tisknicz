@@ -46,14 +46,14 @@ function RequestLink() {
 
   if (done) {
     return (
-      <Card padding="lg" className="flex flex-col gap-3">
+      <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
         <p className="text-sm text-zinc-300">{t('auth.magic.request_done_body')}</p>
       </Card>
     );
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-4">
+    <Card padding="lg" variant="elevated" className="flex flex-col gap-4">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
@@ -101,15 +101,15 @@ function Consume({ token }: { token: string }) {
 
   if (error) {
     return (
-      <Card padding="lg" className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">{t('auth.magic.failed_title')}</h2>
+      <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-white">{t('auth.magic.failed_title')}</h2>
         <p className="text-sm text-zinc-300">{error}</p>
       </Card>
     );
   }
 
   return (
-    <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+    <Card padding="lg" variant="elevated" className="flex items-center gap-3 text-sm text-zinc-300">
       <Spinner />
       <span>{t('auth.magic.consuming')}</span>
     </Card>

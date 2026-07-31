@@ -256,22 +256,4 @@ public sealed class ProductController(
         return HandleResult(result);
     }
 
-    /// <summary>
-    /// Read up to <paramref name="buffer"/>.Length bytes, tolerating
-    /// short reads (a stream may return fewer bytes per call). Returns
-    /// the number actually read — fewer than the buffer length only at
-    /// genuine end-of-stream (a file shorter than the header window,
-    /// which the magic-byte check then rejects).
-    /// </summary>
-    private static async Task<int> ReadAtLeastAsync(Stream stream, byte[] buffer, CancellationToken ct)
-    {
-        var total = 0;
-        while (total < buffer.Length)
-        {
-            var n = await stream.ReadAsync(buffer.AsMemory(total), ct);
-            if (n == 0) break;
-            total += n;
-        }
-        return total;
-    }
 }

@@ -119,18 +119,16 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
       : t('order.page.shippingMethod.zasilkovna');
 
   return (
-    <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-      <div>
-        <Link
-          href="/dashboard/maker/objednavky"
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-        >
-          <Icon name="arrowLeft" size={16} />
-          {t('dashboard.maker.orderDetail.backToList')}
-        </Link>
-      </div>
+    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <Link
+        href="/dashboard/maker/objednavky"
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+      >
+        <Icon name="chevronLeft" size={16} />
+        {t('dashboard.maker.orderDetail.backToList')}
+      </Link>
 
-      <header className="flex flex-col gap-2">
+      <header className="mt-6 flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('order.page.title', { orderNumber: detail.orderNumber })}
@@ -149,121 +147,131 @@ export default async function MakerOrderDetailPage({ params }: PageProps) {
         </p>
       </header>
 
-      <OrderActions
-        orderId={detail.orderId}
-        orderNumber={detail.orderNumber}
-        state={detail.state}
-        shippingMethod={detail.shippingMethod}
-        shippingCarrierRef={detail.shippingCarrierRef}
-      />
-
-      <PayoutBreakdown detail={detail} />
-
-      <Card variant="elevated" padding="md">
-        <OrderTimeline detail={detail} />
-      </Card>
-
-      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-          <span aria-hidden="true" className="text-zinc-500">
-            <Icon name="truck" size={14} />
-          </span>
-          {t('dashboard.maker.orderDetail.shipping.heading')}
-        </h2>
-        <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
-        {hasValue(detail.zasilkovnaPickupPointId) ? (
-          <p className="text-sm text-zinc-400">
-            {t('dashboard.maker.orderDetail.shipping.pickupPoint', {
-              id: detail.zasilkovnaPickupPointId,
-            })}
-          </p>
-        ) : null}
-        {hasValue(detail.shippingCarrierTrackingUrl) ? (
-          <a
-            href={detail.shippingCarrierTrackingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-fit items-center gap-2 text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
-          >
-            <Icon name="truck" size={16} />
-            {t('dashboard.maker.orderDetail.shipping.trackingLink')}
-          </a>
-        ) : null}
-      </Card>
-
-      {/* Contact card — name + phone ONLY; the DTO has no email field
-          (T-0082 AC-4) and no mailto: is rendered (AC-9). */}
-      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-          <span aria-hidden="true" className="text-zinc-500">
-            <Icon name="user" size={14} />
-          </span>
-          {t('dashboard.maker.orderDetail.contact.heading')}
-        </h2>
-        <p className="text-sm text-zinc-200">{detail.customerContactName}</p>
-        <a
-          href={`tel:${detail.customerContactPhone}`}
-          className="w-fit text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
-        >
-          {detail.customerContactPhone}
-        </a>
-      </Card>
-
-      {detail.attachments.length > 0 ? (
-        <Card variant="elevated" padding="md" className="flex flex-col gap-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-            <span aria-hidden="true" className="text-zinc-500">
-              <Icon name="file" size={14} />
-            </span>
-            {t('dashboard.maker.orderDetail.attachments.heading')}
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {detail.attachments.map((attachment) => (
-              <li
-                key={attachment.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
-                  <span className="truncate text-sm text-zinc-200">{attachment.filename}</span>
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {formatFileSize(attachment.sizeBytes)}
-                  </span>
-                </div>
-                <FileDownloadButton
-                  path={attachment.downloadUrl}
-                  filename={attachment.filename}
-                  label={t('dashboard.maker.orderDetail.attachments.download')}
-                />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {hasValue(detail.invoicePdfUrl) ? (
-        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-            <span aria-hidden="true" className="text-zinc-500">
-              <Icon name="receipt" size={14} />
-            </span>
-            {t('dashboard.maker.orderDetail.invoice.heading')}
-          </h2>
-          <FileDownloadButton
-            path={detail.invoicePdfUrl}
-            filename={`faktura-${detail.orderNumber}.pdf`}
-            label={t('dashboard.maker.orderDetail.invoice.download')}
+      {/* Two lanes on desktop: workflow (actions + timeline + thread)
+          left, money + shipping + contact + documents in the right
+          rail. Single stack on mobile — side-by-side only at lg:
+          (customer order-detail precedent). */}
+      <div className="mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-6">
+          <OrderActions
+            orderId={detail.orderId}
+            orderNumber={detail.orderNumber}
+            state={detail.state}
+            shippingMethod={detail.shippingMethod}
+            shippingCarrierRef={detail.shippingCarrierRef}
           />
-        </Card>
-      ) : null}
 
-      <Card variant="elevated" padding="md">
-        <OrderThreadClient
-          orderId={detail.orderId}
-          initialPage={initialThreadPage}
-          canPost={detail.state !== OrderState.PendingPayment}
-        />
-      </Card>
+          <Card variant="elevated" padding="md">
+            <OrderTimeline detail={detail} />
+          </Card>
+
+          <Card variant="elevated" padding="md">
+            <OrderThreadClient
+              orderId={detail.orderId}
+              initialPage={initialThreadPage}
+              canPost={detail.state !== OrderState.PendingPayment}
+            />
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-24">
+          <PayoutBreakdown detail={detail} />
+
+          <Card variant="elevated" padding="md" className="flex flex-col gap-1.5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              {t('dashboard.maker.orderDetail.shipping.heading')}
+            </h2>
+            <div className="divide-y divide-zinc-800">
+              <p className="py-2.5 text-sm text-zinc-100">{shippingMethodLabel}</p>
+              {hasValue(detail.zasilkovnaPickupPointId) ? (
+                <p className="py-2.5 text-sm text-zinc-400">
+                  {t('dashboard.maker.orderDetail.shipping.pickupPoint', {
+                    id: detail.zasilkovnaPickupPointId,
+                  })}
+                </p>
+              ) : null}
+              {hasValue(detail.shippingCarrierTrackingUrl) ? (
+                <div className="py-2.5">
+                  <a
+                    href={detail.shippingCarrierTrackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
+                  >
+                    <Icon name="truck" size={16} />
+                    {t('dashboard.maker.orderDetail.shipping.trackingLink')}
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+
+          {/* Contact card — name + phone ONLY; the DTO has no email field
+              (T-0082 AC-4) and no mailto: is rendered (AC-9). */}
+          <Card variant="elevated" padding="md" className="flex flex-col gap-1.5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              {t('dashboard.maker.orderDetail.contact.heading')}
+            </h2>
+            <div className="divide-y divide-zinc-800">
+              <p className="py-2.5 text-sm text-zinc-100">{detail.customerContactName}</p>
+              <div className="py-2.5">
+                <a
+                  href={`tel:${detail.customerContactPhone}`}
+                  className="text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
+                >
+                  {detail.customerContactPhone}
+                </a>
+              </div>
+            </div>
+          </Card>
+
+          {detail.attachments.length > 0 ? (
+            <Card variant="elevated" padding="md" className="flex flex-col gap-1.5">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                {t('dashboard.maker.orderDetail.attachments.heading')}
+              </h2>
+              <ul className="divide-y divide-zinc-800">
+                {detail.attachments.map((attachment) => (
+                  <li
+                    key={attachment.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
+                      <span className="truncate text-sm text-zinc-100">{attachment.filename}</span>
+                      <span className="shrink-0 text-xs text-zinc-500">
+                        {formatFileSize(attachment.sizeBytes)}
+                      </span>
+                    </div>
+                    <FileDownloadButton
+                      path={attachment.downloadUrl}
+                      filename={attachment.filename}
+                      label={t('dashboard.maker.orderDetail.attachments.download')}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {hasValue(detail.invoicePdfUrl) ? (
+            <Card
+              variant="elevated"
+              padding="md"
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                {t('dashboard.maker.orderDetail.invoice.heading')}
+              </h2>
+              <FileDownloadButton
+                path={detail.invoicePdfUrl}
+                filename={`faktura-${detail.orderNumber}.pdf`}
+                label={t('dashboard.maker.orderDetail.invoice.download')}
+              />
+            </Card>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
 }
@@ -281,44 +289,41 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerOrderDetail }) {
   );
 
   return (
-    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-          <span aria-hidden="true" className="text-zinc-500">
-            <Icon name="wallet" size={14} />
-          </span>
+        <h2 className="pt-1 text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.maker.orderDetail.payout.heading')}
         </h2>
         <p className="text-2xl font-bold text-brand-400 sm:text-3xl">
           {formatCzk(detail.makerPayoutAmountMinor, detail.currency)}
         </p>
       </div>
-      <dl className="flex flex-col gap-3 border-t border-zinc-800 pt-4 text-sm">
-        <div className="flex items-start justify-between gap-4">
-          <dt className="text-zinc-400">{t('dashboard.maker.orderDetail.payout.product')}</dt>
-          <dd className="shrink-0 text-zinc-100">
+      <dl className="divide-y divide-zinc-800 border-t border-zinc-800">
+        <div className="flex items-center justify-between gap-3 py-2.5">
+          <dt className="text-sm text-zinc-400">{t('dashboard.maker.orderDetail.payout.product')}</dt>
+          <dd className="text-right text-sm text-zinc-100">
             {formatCzk(detail.productPriceMinor, detail.currency)}
           </dd>
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <dt className="text-zinc-400">{t('dashboard.maker.orderDetail.payout.shipping')}</dt>
-          <dd className="shrink-0 text-zinc-100">
+        <div className="flex items-center justify-between gap-3 py-2.5">
+          <dt className="text-sm text-zinc-400">{t('dashboard.maker.orderDetail.payout.shipping')}</dt>
+          <dd className="text-right text-sm text-zinc-100">
             {formatCzk(detail.shippingPriceMinor, detail.currency)}
           </dd>
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <dt className="text-zinc-400">
+        <div className="flex items-center justify-between gap-3 py-2.5">
+          <dt className="text-sm text-zinc-400">
             {t('dashboard.maker.orderDetail.payout.vat', { rate: vatRate })}
           </dt>
-          <dd className="shrink-0 text-zinc-100">
+          <dd className="text-right text-sm text-zinc-100">
             {formatCzk(detail.vatAmountMinor, detail.currency)}
           </dd>
         </div>
-        <div className="flex items-start justify-between gap-4 border-t border-zinc-800 pt-3">
-          <dt className="font-semibold text-zinc-200">
+        <div className="flex items-center justify-between gap-3 py-2.5">
+          <dt className="text-sm font-medium text-zinc-200">
             {t('dashboard.maker.orderDetail.payout.total')}
           </dt>
-          <dd className="shrink-0 font-semibold text-zinc-100">
+          <dd className="text-right text-sm font-semibold text-zinc-100">
             {formatCzk(detail.totalAmountMinor, detail.currency)}
           </dd>
         </div>
@@ -337,7 +342,7 @@ function LoadErrorState({ orderId }: { readonly orderId: string }) {
       <div>
         <Link
           href={`/dashboard/maker/objednavky/${encodeURIComponent(orderId)}`}
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
         >
           {t('dashboard.maker.orderDetail.loadError.retry')}
         </Link>

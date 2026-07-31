@@ -12,8 +12,11 @@ import { formatDate } from '@/lib/utils/dates';
  * row IS a `<Link>` to the order detail route
  * (`/dashboard/admin/orders/[orderId]`) — slice b built that route, so
  * the slice-a forward-compat deferral (the row was non-Link to avoid a
- * 404) is now closed. Two layouts: stacked cards below `md`, a grid
- * "table" at `md+`.
+ * 404) is now closed.
+ *
+ * Rendered as one GitHub-style "box": a single bordered container with a
+ * header row (title + count) and `divide-y` rows — not floating cards.
+ * Two row layouts: stacked below `md`, a grid "table" at `md+`.
  *
  * Operator surface: unlike the maker DTO, the admin row shows
  * `customerEmail` (T-0118a §"Why the admin sees customerEmail" — the
@@ -23,11 +26,27 @@ import { formatDate } from '@/lib/utils/dates';
 const GRID_COLUMNS =
   'md:grid md:grid-cols-[7rem_7rem_minmax(0,1fr)_minmax(0,1fr)_4rem_6.5rem_7rem] md:items-center md:gap-4';
 
-export function OrderRows({ items }: { readonly items: readonly AdminOrderListItem[] }) {
+export function OrderRows({
+  items,
+  totalCount,
+}: {
+  readonly items: readonly AdminOrderListItem[];
+  readonly totalCount: number;
+}) {
   return (
-    <div className="flex flex-col gap-3 md:gap-0">
+    <div className="rounded-xl border border-zinc-800 bg-surface-card">
+      <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            {t('dashboard.admin.orders.title')}
+          </h2>
+          <Badge dot={false} aria-label={t('dashboard.admin.orders.count', { count: totalCount })}>
+            {totalCount}
+          </Badge>
+        </div>
+      </div>
       <div
-        className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
+        className={`hidden border-b border-zinc-800 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
       >
         <span>{t('dashboard.admin.orders.table.number')}</span>
         <span>{t('dashboard.admin.orders.table.state')}</span>
@@ -37,9 +56,11 @@ export function OrderRows({ items }: { readonly items: readonly AdminOrderListIt
         <span className="md:text-right">{t('dashboard.admin.orders.table.created')}</span>
         <span className="md:text-right">{t('dashboard.admin.orders.table.total')}</span>
       </div>
-      {items.map((item) => (
-        <OrderRow key={item.orderId} item={item} />
-      ))}
+      <div className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <OrderRow key={item.orderId} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -48,7 +69,7 @@ function OrderRow({ item }: { readonly item: AdminOrderListItem }) {
   return (
     <Link
       href={`/dashboard/admin/orders/${encodeURIComponent(item.orderId)}`}
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-800/40 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent md:p-4 md:hover:bg-zinc-800/40 ${GRID_COLUMNS}`}
+      className={`flex flex-col gap-3 p-4 transition-colors last:rounded-b-xl hover:bg-zinc-800/40 ${GRID_COLUMNS}`}
     >
       <div className="flex items-center justify-between gap-3 md:contents">
         <span className="text-sm font-semibold text-zinc-100">{item.orderNumber}</span>

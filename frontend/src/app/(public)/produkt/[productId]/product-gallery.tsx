@@ -40,7 +40,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   if (images.length === 0) {
     return (
-      <div className="panel flex aspect-square w-full items-center justify-center rounded-2xl border border-zinc-800 text-sm text-zinc-500">
+      <div className="panel flex aspect-square w-full items-center justify-center rounded-xl border border-zinc-800 text-sm text-zinc-500">
         {t('catalog.product_detail.gallery.no_image')}
       </div>
     );
@@ -55,7 +55,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="panel relative aspect-square w-full overflow-hidden rounded-2xl border border-zinc-800">
+      <div className="panel relative aspect-square w-full overflow-hidden rounded-xl border border-zinc-800">
         {primaryUrl ? (
           <Image
             src={primaryUrl}
@@ -87,9 +87,9 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
                     n: index + 1,
                   })}
                   aria-pressed={isSelected}
-                  className={`relative h-20 w-20 overflow-hidden rounded-xl border bg-surface-elevated transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary ${
+                  className={`relative h-20 w-20 overflow-hidden rounded-lg border bg-surface-elevated transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary ${
                     isSelected
-                      ? 'border-brand-400 ring-2 ring-brand-400/40'
+                      ? 'border-brand-400 ring-1 ring-brand-400'
                       : 'border-zinc-800 hover:border-zinc-600'
                   }`}
                 >

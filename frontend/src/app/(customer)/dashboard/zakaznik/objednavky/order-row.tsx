@@ -9,23 +9,36 @@ import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-l
 import { formatDate } from '@/lib/utils/dates';
 
 /**
- * Presentational order rows for the customer dashboard list (T-0086a).
- * Server-safe — pure formatting + links, no client logic. Each order is
- * a lifted card (`.panel .card-lift`, the whole card is the `<Link>`
- * target per AC-9): number + state badge on top, product/maker/date
- * meta below, the total prominent on the right and a chevron that
- * slides on hover.
+ * Presentational order list box for the customer dashboard (T-0086a).
+ * Server-safe — pure formatting + links, no client logic. GitHub-style
+ * container: one hairline-bordered box with a quiet header row (count)
+ * and hairline-divided full-width rows; the whole row is the `<Link>`
+ * target per AC-9, with a right chevron affordance and a surface-tint
+ * hover (color-only feedback, no motion).
  */
 
-export function OrderRows({ items }: { readonly items: readonly CustomerOrderListItem[] }) {
+export function OrderRows({
+  items,
+  totalCount,
+}: {
+  readonly items: readonly CustomerOrderListItem[];
+  readonly totalCount: number;
+}) {
   return (
-    <ul className="flex flex-col gap-3">
-      {items.map((item) => (
-        <li key={item.orderId}>
-          <OrderRow item={item} />
-        </li>
-      ))}
-    </ul>
+    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-surface-card">
+      <div className="border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3 sm:px-5">
+        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          {t('customer.orders.count', { count: totalCount })}
+        </h2>
+      </div>
+      <ul className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <li key={item.orderId}>
+            <OrderRow item={item} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -35,7 +48,7 @@ function OrderRow({ item }: { readonly item: CustomerOrderListItem }) {
   return (
     <Link
       href={`/objednavka/${encodeURIComponent(item.orderId)}`}
-      className="group panel card-lift flex flex-col gap-4 rounded-2xl border border-zinc-800 p-5"
+      className="group flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-secondary/60 sm:px-5"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
@@ -48,13 +61,13 @@ function OrderRow({ item }: { readonly item: CustomerOrderListItem }) {
         <Icon
           name="chevronRight"
           size={18}
-          className="shrink-0 text-zinc-600 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand-400"
+          className="shrink-0 text-zinc-500 transition-colors group-hover:text-zinc-300"
         />
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="truncate text-base font-semibold text-white">{productLabel}</p>
+          <p className="truncate text-base font-semibold text-zinc-100">{productLabel}</p>
           <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
             <span className="inline-flex min-w-0 items-center gap-1.5">
               <Icon name="user" size={14} className="shrink-0 text-zinc-500" />
@@ -66,7 +79,7 @@ function OrderRow({ item }: { readonly item: CustomerOrderListItem }) {
             </span>
           </p>
         </div>
-        <p className="shrink-0 text-lg font-semibold text-brand-400">
+        <p className="shrink-0 text-base font-semibold text-zinc-100">
           {formatCzk(item.totalAmountMinor, item.currency)}
         </p>
       </div>

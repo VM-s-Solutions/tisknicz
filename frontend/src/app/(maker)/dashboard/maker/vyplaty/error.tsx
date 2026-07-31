@@ -19,7 +19,7 @@ export default function MakerPayoutsError({
   readonly reset: () => void;
 }) {
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 sm:px-6 lg:px-8">
         <Alert variant="error">
           <p className="font-semibold">{t('dashboard.maker.payouts.error.title')}</p>
@@ -31,7 +31,7 @@ export default function MakerPayoutsError({
           </Button>
           <Link
             href="/dashboard/maker/vyplaty"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('dashboard.maker.payouts.title')}
           </Link>

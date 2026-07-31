@@ -21,21 +21,21 @@ const STATS: ReadonlyArray<{ valueKey: 'auth.shared.stat_makers_value' | 'auth.s
 ];
 
 /**
- * Minimal centered auth shell: eyebrow + heading + form column, with
- * the trust points and marketplace stats as hairline-divided strips
- * below the form. No card chrome — the (auth) layout provides the
- * fullscreen surface and ambient glows.
+ * Centered auth shell: eyebrow + heading above a `.panel` surface that
+ * holds the form, with the trust points and marketplace stats as
+ * hairline-divided strips below it. The (auth) layout provides the
+ * fullscreen backdrop and ambient glows.
  */
 export function AuthShell({ title, subtitle, children }: AuthShellProps) {
   return (
     <section className="flex flex-col">
       <header className="text-center">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand-300">{t('auth.shared.eyebrow')}</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{title}</h1>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl md:text-4xl">{title}</h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-zinc-400">{subtitle}</p>
       </header>
 
-      <div className="mt-8">{children}</div>
+      <div className="panel mt-8 rounded-xl border border-zinc-800 p-6 sm:p-8">{children}</div>
 
       <ul className="mt-10 space-y-2.5 border-t border-zinc-800/80 pt-6">
         {HIGHLIGHTS.map((item) => (

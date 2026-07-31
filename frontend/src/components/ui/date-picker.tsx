@@ -190,7 +190,7 @@ export function DatePicker({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`} ref={rootRef}>
       {label && (
-        <label htmlFor={triggerId} className="text-sm font-medium text-zinc-400">
+        <label htmlFor={triggerId} className="text-sm font-medium text-zinc-300">
           {label}
         </label>
       )}
@@ -209,7 +209,7 @@ export function DatePicker({
               setOpen(false);
             }
           }}
-          className={`flex w-full items-center gap-2.5 rounded-xl border bg-zinc-900 py-2.5 pl-4 pr-10 text-left text-sm text-zinc-100 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-500 ${
+          className={`flex w-full items-center gap-2.5 rounded-lg border bg-zinc-900 py-2.5 pl-4 pr-10 text-left text-sm text-zinc-100 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-500 ${
             error
               ? 'border-error'
               : 'border-zinc-700 hover:border-zinc-500 focus-visible:border-brand-400'
@@ -218,7 +218,7 @@ export function DatePicker({
           <span aria-hidden="true" className="shrink-0 text-zinc-500">
             <Icon name="calendar" size={16} />
           </span>
-          <span className={`grow truncate ${displayValue ? '' : 'text-zinc-600'}`}>
+          <span className={`grow truncate ${displayValue ? '' : 'text-zinc-500'}`}>
             {displayValue || placeholder || t('ui.datePicker.placeholder')}
           </span>
         </button>
@@ -234,7 +234,7 @@ export function DatePicker({
         ) : (
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 ${open ? 'rotate-180' : ''}`}
           >
             <Icon name="chevronDown" size={16} />
           </span>
@@ -248,7 +248,7 @@ export function DatePicker({
             onKeyDown={(event) => {
               if (event.key === 'Escape') setOpen(false);
             }}
-            className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-zinc-700 bg-zinc-900 p-3 shadow-2xl shadow-black/50 motion-safe:animate-tooltip-in"
+            className="absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-2xl shadow-black/50"
           >
             <div className="mb-2 flex items-center justify-between gap-2">
               <button
@@ -305,7 +305,7 @@ export function DatePicker({
                       isSelected
                         ? 'bg-brand-500 font-semibold text-zinc-950'
                         : outOfRange
-                          ? 'cursor-not-allowed text-zinc-700'
+                          ? 'cursor-not-allowed text-zinc-500'
                           : isToday
                             ? 'font-semibold text-brand-300 hover:bg-zinc-800'
                             : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -330,7 +330,7 @@ export function DatePicker({
                     value={hourValue}
                     disabled={!selectedDate}
                     onChange={(event) => onTimePartChange('hour', event.target.value)}
-                    className="w-12 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-center text-sm text-zinc-100 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-600"
+                    className="w-12 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-center text-sm text-zinc-100 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-500"
                   />
                   <span className="text-zinc-500">:</span>
                   <input
@@ -339,7 +339,7 @@ export function DatePicker({
                     value={minuteValue}
                     disabled={!selectedDate}
                     onChange={(event) => onTimePartChange('minute', event.target.value)}
-                    className="w-12 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-center text-sm text-zinc-100 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-600"
+                    className="w-12 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-center text-sm text-zinc-100 transition-colors focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20 disabled:bg-zinc-800 disabled:text-zinc-500"
                   />
                 </span>
               </div>

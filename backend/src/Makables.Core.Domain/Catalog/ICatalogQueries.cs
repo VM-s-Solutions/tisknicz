@@ -74,7 +74,8 @@ public sealed record MakerListItem(
     bool IsVerified,
     int RatingAverageBp,
     int RatingCount,
-    int TotalOrders);
+    int TotalOrders,
+    string? LogoBlobPath);
 
 /// <summary>
 /// Public maker-profile detail (US-customer-0008). The header fields +
@@ -95,6 +96,7 @@ public sealed record MakerProfile(
     int RatingAverageBp,
     int RatingCount,
     int TotalOrders,
+    string? LogoBlobPath,
     IReadOnlyList<MakerProductItem> Products,
     IReadOnlyList<MakerReviewItem> Reviews);
 
@@ -120,9 +122,18 @@ public sealed record MakerProductItem(
 /// reply when one exists. Flat nullable reply fields (not a nested
 /// record) — the reply is a single overwritable text per review
 /// (T-0100 Q4 lock), so a nested shape would add wire noise for no
-/// modelling gain. No author field: the public surface deliberately
-/// carries no customer-identifying data (GDPR data minimisation,
-/// mirrors the T-0081 customer-email lock).
+/// modelling gain.
+///
+/// <para>
+/// <b>Author identity</b> stays minimised: no name, no email, no user id
+/// — the T-0081 customer-email lock and the GDPR data-minimisation
+/// stance still hold. The single exception is
+/// <see cref="AuthorAvatarBlobPath"/>, which is opt-in by construction
+/// (null for every customer who never uploads one) and self-chosen
+/// imagery rather than an identifier we assign or derive. A customer who
+/// wants zero public presence simply keeps no avatar, and clearing it
+/// removes the exposure immediately.
+/// </para>
 /// </summary>
 public sealed record MakerReviewItem(
     string ReviewId,
@@ -130,7 +141,8 @@ public sealed record MakerReviewItem(
     string? Comment,
     DateTimeOffset CreatedAt,
     string? ReplyBody,
-    DateTimeOffset? ReplyCreatedAt);
+    DateTimeOffset? ReplyCreatedAt,
+    string? AuthorAvatarBlobPath);
 
 /// <summary>
 /// Public product-detail view (US-customer-0009). The product fields +
@@ -157,6 +169,7 @@ public sealed record ProductDetail(
     bool MakerIsVerified,
     bool MakerPersonalPickupEnabled,
     string? MakerPickupNote,
+    string? MakerLogoBlobPath,
     IReadOnlyList<ProductImageItem> Images);
 
 /// <summary>One image on the product detail page, ordered by sort order.</summary>

@@ -85,6 +85,23 @@ function readString(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
+/**
+ * Quiet back affordance to the customer order list — the first element
+ * on both order surfaces (PendingPayment and tracking), above the
+ * title/status row.
+ */
+function BackToOrdersLink() {
+  return (
+    <Link
+      href="/dashboard/zakaznik/objednavky"
+      className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+    >
+      <Icon name="chevronLeft" size={16} />
+      {t('common.back')}
+    </Link>
+  );
+}
+
 export default async function OrderPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = await searchParams;
@@ -123,6 +140,10 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
 
   return (
     <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+      <div>
+        <BackToOrdersLink />
+      </div>
+
       {Number.isFinite(attachmentsFailed) && attachmentsFailed > 0 ? (
         <Alert variant="warning">
           {t('order.page.attachments.failedHandoffAlert', { count: attachmentsFailed })}
@@ -231,8 +252,12 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
       : t('order.page.shippingMethod.zasilkovna');
 
   return (
-    <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-2">
+    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div>
+        <BackToOrdersLink />
+      </div>
+
+      <header className="mt-6 flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('order.page.title', { orderNumber: detail.orderNumber })}
@@ -253,123 +278,139 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
         </p>
       </header>
 
-      <Card variant="elevated" padding="md">
-        <OrderTimeline detail={detail} />
-      </Card>
+      {/* Two lanes on desktop: status + communication left, money +
+          shipping + documents in the right rail. Single stack on mobile. */}
+      <div className="mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-6">
+          <Card variant="elevated" padding="md">
+            <OrderTimeline detail={detail} />
+          </Card>
 
-      {detail.state === OrderState.Shipped ? (
-        <Card variant="elevated" padding="md">
-          <MarkDeliveredButton orderId={detail.orderId} />
-        </Card>
-      ) : null}
+          {detail.state === OrderState.Shipped ? (
+            <Card variant="elevated" padding="md">
+              <MarkDeliveredButton orderId={detail.orderId} />
+            </Card>
+          ) : null}
 
-      <OrderPriceCards detail={detail} />
+          <Card variant="elevated" padding="md" className="flex flex-col gap-4">
+            <OrderThreadClient
+              orderId={detail.orderId}
+              initialPage={initialThreadPage}
+              canPost={detail.state !== OrderState.PendingPayment}
+            />
 
-      <Card variant="elevated" padding="md" className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-          <Icon name="truck" size={14} className="shrink-0" />
-          {t('customer.orderDetail.shipping.heading')}
-        </h2>
-        <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
-        {hasUrl(detail.shippingCarrierTrackingUrl) ? (
-          <a
-            href={detail.shippingCarrierTrackingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-fit items-center gap-2 text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
-          >
-            <Icon name="truck" size={16} />
-            {t('customer.orderDetail.shipping.trackingLink')}
-          </a>
-        ) : null}
-      </Card>
+            {/* T-0145: "Reklamovat" lands HERE (in the thread), not in a
+                standalone form — the escalate action + category selector are
+                scoped to the Disputable allow-list mirrored from
+                Order.OpenDispute (Paid | Accepted | Shipped | Delivered),
+                plus Disputed itself (renders the read-only note). */}
+            {DISPUTABLE_STATES.has(detail.state) ? (
+              <DisputeEscalationClient
+                orderId={detail.orderId}
+                state={detail.state}
+                deliveredAt={detail.deliveredAt}
+              />
+            ) : null}
+          </Card>
 
-      {detail.attachments.length > 0 ? (
-        <Card variant="elevated" padding="md" className="flex flex-col gap-3">
-          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            <Icon name="file" size={14} className="shrink-0" />
-            {t('customer.orderDetail.attachments.heading')}
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {detail.attachments.map((attachment) => (
-              <li
-                key={attachment.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
+          {/* Terminal post-delivery action — renders last, after the thread.
+              Three states from the backend signals: form / read-only / nothing. */}
+          {reviewState.kind === 'canReview' ? (
+            <ReviewFormClient orderId={detail.orderId} />
+          ) : reviewState.kind === 'submitted' ? (
+            <SubmittedReview review={reviewState.review} />
+          ) : null}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-24">
+          <OrderPriceCards detail={detail} />
+
+          <Card variant="elevated" padding="md" className="flex flex-col gap-2">
+            <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+              <Icon name="truck" size={14} className="shrink-0" />
+              {t('customer.orderDetail.shipping.heading')}
+            </h2>
+            <p className="text-sm text-zinc-200">{shippingMethodLabel}</p>
+            {hasUrl(detail.shippingCarrierTrackingUrl) ? (
+              <a
+                href={detail.shippingCarrierTrackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-2 text-sm font-medium text-brand-400 transition-colors hover:text-brand-300"
               >
-                <div className="flex min-w-0 items-center gap-2">
-                  <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
-                  <span className="truncate text-sm text-zinc-200">{attachment.filename}</span>
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {formatFileSize(attachment.sizeBytes)}
-                  </span>
-                </div>
-                <FileDownloadButton
-                  path={attachment.downloadUrl}
-                  filename={attachment.filename}
-                  label={t('customer.orderDetail.attachments.download')}
-                />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+                <Icon name="truck" size={16} />
+                {t('customer.orderDetail.shipping.trackingLink')}
+              </a>
+            ) : null}
+          </Card>
 
-      {hasUrl(detail.invoicePdfUrl) ? (
-        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            <Icon name="receipt" size={14} className="shrink-0" />
-            {t('customer.orderDetail.invoice.heading')}
-          </h2>
-          <FileDownloadButton
-            path={detail.invoicePdfUrl}
-            filename={`faktura-${detail.orderNumber}.pdf`}
-            label={t('customer.orderDetail.invoice.download')}
-          />
-        </Card>
-      ) : null}
+          {detail.attachments.length > 0 ? (
+            <Card variant="elevated" padding="md" className="flex flex-col gap-3">
+              <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                <Icon name="file" size={14} className="shrink-0" />
+                {t('customer.orderDetail.attachments.heading')}
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {detail.attachments.map((attachment) => (
+                  <li
+                    key={attachment.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
+                      <span className="truncate text-sm text-zinc-200">{attachment.filename}</span>
+                      <span className="shrink-0 text-xs text-zinc-500">
+                        {formatFileSize(attachment.sizeBytes)}
+                      </span>
+                    </div>
+                    <FileDownloadButton
+                      path={attachment.downloadUrl}
+                      filename={attachment.filename}
+                      label={t('customer.orderDetail.attachments.download')}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
 
-      {hasUrl(detail.returnLabelUrl) ? (
-        <Card variant="elevated" padding="md" className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            <Icon name="package" size={14} className="shrink-0" />
-            {t('customer.orderDetail.returnLabel.heading')}
-          </h2>
-          <FileDownloadButton
-            path={detail.returnLabelUrl}
-            filename={`vratkovy-stitek-${detail.orderNumber}.pdf`}
-            label={t('customer.orderDetail.returnLabel.download')}
-          />
-        </Card>
-      ) : null}
+          {hasUrl(detail.invoicePdfUrl) ? (
+            <Card
+              variant="elevated"
+              padding="md"
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                <Icon name="receipt" size={14} className="shrink-0" />
+                {t('customer.orderDetail.invoice.heading')}
+              </h2>
+              <FileDownloadButton
+                path={detail.invoicePdfUrl}
+                filename={`faktura-${detail.orderNumber}.pdf`}
+                label={t('customer.orderDetail.invoice.download')}
+              />
+            </Card>
+          ) : null}
 
-      <Card variant="elevated" padding="md" className="flex flex-col gap-4">
-        <OrderThreadClient
-          orderId={detail.orderId}
-          initialPage={initialThreadPage}
-          canPost={detail.state !== OrderState.PendingPayment}
-        />
-
-        {/* T-0145: "Reklamovat" lands HERE (in the thread), not in a
-            standalone form — the escalate action + category selector are
-            scoped to the Disputable allow-list mirrored from
-            Order.OpenDispute (Paid | Accepted | Shipped | Delivered),
-            plus Disputed itself (renders the read-only note). */}
-        {DISPUTABLE_STATES.has(detail.state) ? (
-          <DisputeEscalationClient
-            orderId={detail.orderId}
-            state={detail.state}
-            deliveredAt={detail.deliveredAt}
-          />
-        ) : null}
-      </Card>
-
-      {/* Terminal post-delivery action — renders last, after the thread.
-          Three states from the backend signals: form / read-only / nothing. */}
-      {reviewState.kind === 'canReview' ? (
-        <ReviewFormClient orderId={detail.orderId} />
-      ) : reviewState.kind === 'submitted' ? (
-        <SubmittedReview review={reviewState.review} />
-      ) : null}
+          {hasUrl(detail.returnLabelUrl) ? (
+            <Card
+              variant="elevated"
+              padding="md"
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                <Icon name="package" size={14} className="shrink-0" />
+                {t('customer.orderDetail.returnLabel.heading')}
+              </h2>
+              <FileDownloadButton
+                path={detail.returnLabelUrl}
+                filename={`vratkovy-stitek-${detail.orderNumber}.pdf`}
+                label={t('customer.orderDetail.returnLabel.download')}
+              />
+            </Card>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
 }
@@ -384,7 +425,7 @@ function LoadErrorState({ orderId }: { readonly orderId: string }) {
       <div>
         <Link
           href={`/objednavka/${encodeURIComponent(orderId)}`}
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
         >
           <Icon name="refresh" size={14} className="shrink-0" />
           {t('order.page.loadErrorRetry')}

@@ -28,12 +28,12 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
   return (
     <nav
       aria-label={t('dashboard.maker.reviews.pagination.page_of', { page, total: totalPages })}
-      className="mt-10 flex items-center justify-between gap-4"
+      className="mt-10 flex flex-wrap items-center justify-between gap-3 sm:gap-4"
     >
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-500/40 hover:bg-brand-400/5 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.reviews.pagination.previous')}
@@ -41,7 +41,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-500"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.reviews.pagination.previous')}
@@ -55,7 +55,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-500/40 hover:bg-brand-400/5 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
         >
           {t('dashboard.maker.reviews.pagination.next')}
           <Icon name="arrowRight" size={16} />
@@ -63,7 +63,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-500"
         >
           {t('dashboard.maker.reviews.pagination.next')}
           <Icon name="arrowRight" size={16} />

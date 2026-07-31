@@ -132,8 +132,8 @@ function OutboxList({
 
   if (list.totalCount === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-950/50 text-emerald-400">
+      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-950/50 text-emerald-400">
           <Icon name="checkCircle" size={28} />
         </div>
         <div>
@@ -152,13 +152,23 @@ function OutboxList({
 
   return (
     <>
-      <p className="mb-4 text-sm text-zinc-500">
-        {t('dashboard.admin.ops.outbox.list.count', { count: list.totalCount })}
-      </p>
-      <ul className="flex flex-col gap-4">
-        {list.items.map((event) => (
-          <li key={event.id}>
-            <Card className="flex flex-col gap-4">
+      <div className="rounded-xl border border-zinc-800 bg-surface-card">
+        <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              {t('dashboard.admin.ops.outbox.title')}
+            </h2>
+            <Badge
+              dot={false}
+              aria-label={t('dashboard.admin.ops.outbox.list.count', { count: list.totalCount })}
+            >
+              {list.totalCount}
+            </Badge>
+          </div>
+        </div>
+        <ul className="divide-y divide-zinc-800">
+          {list.items.map((event) => (
+            <li key={event.id} className="flex flex-col gap-4 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-zinc-100">{event.eventType}</span>
@@ -197,10 +207,10 @@ function OutboxList({
               <div className="border-t border-zinc-800 pt-4">
                 <OutboxRowActions eventId={event.id} />
               </div>
-            </Card>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <OpsPagination
         page={list.page}

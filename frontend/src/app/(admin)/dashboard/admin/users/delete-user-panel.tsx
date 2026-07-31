@@ -249,8 +249,8 @@ function EraseConfirmation({
       {/* A.2a — ALWAYS visible, prominent. */}
       <IrreversibilityBanner />
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="rounded-xl border border-zinc-800 bg-surface-secondary p-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.ops.users.targetEmailLabel')}
         </p>
         <p className="mt-1 break-all font-mono text-sm text-zinc-100">{userEmail}</p>

@@ -20,7 +20,7 @@ export default function ResetPage() {
 
 function Skeleton() {
   return (
-    <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+    <Card padding="lg" variant="elevated" className="flex items-center gap-3 text-sm text-zinc-300">
       <Spinner />
       <span>{t('common.loading')}</span>
     </Card>

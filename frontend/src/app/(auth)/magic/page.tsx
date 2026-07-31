@@ -11,17 +11,19 @@ export const metadata = {
 export default function MagicPage() {
   return (
     <div className="mx-auto w-full max-w-md">
-      <h1 className="text-2xl font-semibold">{t('auth.magic.title')}</h1>
-      <Suspense fallback={<ConsumingSkeleton />}>
-        <MagicClient />
-      </Suspense>
+      <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.magic.title')}</h1>
+      <div className="mt-6">
+        <Suspense fallback={<ConsumingSkeleton />}>
+          <MagicClient />
+        </Suspense>
+      </div>
     </div>
   );
 }
 
 function ConsumingSkeleton() {
   return (
-    <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+    <Card padding="lg" variant="elevated" className="flex items-center gap-3 text-sm text-zinc-300">
       <Spinner />
       <span>{t('auth.magic.consuming')}</span>
     </Card>

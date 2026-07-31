@@ -101,7 +101,8 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 x.m.IsVerified,
                 x.m.RatingAverageBp,
                 x.m.RatingCount,
-                x.m.TotalOrders))
+                x.m.TotalOrders,
+                x.m.LogoBlobPath))
             .ToListAsync(cancellationToken);
 
         return new PagedData<MakerListItem>(items, filter.Page, filter.PageSize, totalCount);
@@ -127,6 +128,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 m.Id, m.Slug, m.CompanyName, m.Bio, m.LegalForm,
                 a.City, m.IsVerified, m.PersonalPickupEnabled, m.PickupNote,
                 m.RatingAverageBp, m.RatingCount, m.TotalOrders,
+                m.LogoBlobPath,
             }).FirstOrDefaultAsync(cancellationToken);
 
         if (header is null) return null;
@@ -172,7 +174,17 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 r.Body,
                 r.CreatedAt,
                 r.MakerReply,
-                r.MakerReplyAt))
+                r.MakerReplyAt,
+                // Author avatar via a correlated subquery rather than a
+                // join — it must behave as a LEFT JOIN. A review outlives
+                // its author: GDPR erasure hard-deletes the User row and
+                // deactivation hides it behind the soft-delete filter. In
+                // both cases this yields null (no avatar) and the review
+                // itself still renders, which an inner join would break.
+                db.Set<User>()
+                    .Where(u => u.Id == r.CustomerUserId)
+                    .Select(u => u.AvatarBlobPath)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
         return new MakerProfile(
@@ -188,6 +200,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
             RatingAverageBp: header.RatingAverageBp,
             RatingCount: header.RatingCount,
             TotalOrders: header.TotalOrders,
+            LogoBlobPath: header.LogoBlobPath,
             Products: products,
             Reviews: reviews);
     }
@@ -226,6 +239,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
                 m.IsVerified,
                 m.PersonalPickupEnabled,
                 m.PickupNote,
+                m.LogoBlobPath,
                 p.Images
                     .OrderBy(i => i.SortOrder)
                     .Select(i => new ProductImageItem(i.Id, i.BlobPath, i.SortOrder))

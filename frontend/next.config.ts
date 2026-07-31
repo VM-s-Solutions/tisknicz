@@ -1,11 +1,17 @@
 import type { NextConfig } from "next";
 
 /**
- * Whitelist of remote hosts <c>next/image</c> may optimize. The product
- * image controller on the .NET Public host streams blob content (ADR
- * 0011 — "All access through the backend"), so the catalog renders
- * <c>&lt;Image src=&quot;{publicHost}/api/v1/files/products/...&quot; /&gt;</c>.
+ * Whitelist of remote hosts <c>next/image</c> may optimize. The file
+ * controllers on the .NET Public host stream blob content (ADR 0011 —
+ * "All access through the backend"), so the catalog renders
+ * <c>&lt;Image src=&quot;{publicHost}/api/v1/files/...&quot; /&gt;</c>.
  * Without this entry the optimizer would refuse the URL.
+ *
+ * The pathname covers the whole `/api/v1/files/` tree — products,
+ * makers (logos) and avatars — rather than one entry per resource. All
+ * three are anonymous, public-read blob streams with identical caching,
+ * so narrowing per-folder would buy no security and silently break the
+ * next image added.
  *
  * The Public host base URL comes from <c>NEXT_PUBLIC_API_PUBLIC_BASE_URL</c>
  * (see <c>lib/runtime/api-fetch.ts</c>). We parse it at build time so
@@ -27,14 +33,14 @@ function publicHostRemotePattern() {
       protocol: (url.protocol.replace(':', '') as 'http' | 'https'),
       hostname: url.hostname,
       ...(port ? { port } : {}),
-      pathname: '/api/v1/files/products/**',
+      pathname: '/api/v1/files/**',
     };
   } catch {
     return {
       protocol: 'http' as const,
       hostname: 'localhost',
       port: '5104',
-      pathname: '/api/v1/files/products/**',
+      pathname: '/api/v1/files/**',
     };
   }
 }
@@ -101,6 +107,20 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [publicHostRemotePattern()].filter((pattern) => pattern !== null),
+    // Next 16 refuses to optimize an upstream image whose hostname
+    // resolves to a private IP — an SSRF guard, since the optimizer
+    // otherwise fetches any allow-listed URL server-side. In local dev
+    // the API hosts ARE private (`http://localhost:5104`), so every
+    // product image, maker logo and avatar fails with "resolved to
+    // private ip" and renders as the placeholder tile.
+    //
+    // Enabled for development ONLY. Leaving it on in production would
+    // let anyone with a matching remotePatterns URL aim the optimizer at
+    // internal addresses (link-local metadata endpoints, VNet services),
+    // which is exactly what the guard exists to stop. Deployed
+    // environments don't need it: images are served from the public API
+    // hostname, or same-origin through the /api-proxy rewrite.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
   },
 };
 

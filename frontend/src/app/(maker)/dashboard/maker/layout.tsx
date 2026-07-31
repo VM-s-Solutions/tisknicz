@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { DashboardNav, type DashboardNavItem } from '@/components/shared/dashboard-nav';
+import { PublicFooter } from '@/components/shared/public-footer';
 import { PublicNavbar } from '@/components/shared/public-navbar';
 import { getDisplaySession } from '@/lib/auth/display-session';
 
@@ -22,10 +23,11 @@ const MAKER_NAV_ITEMS: readonly DashboardNavItem[] = [
 export default async function MakerDashboardLayout({ children }: { children: ReactNode }) {
   const session = await getDisplaySession();
   return (
-    <div className="min-h-screen bg-surface-primary text-zinc-100">
+    <div className="relative min-h-screen text-zinc-100">
       <PublicNavbar session={session} />
       <DashboardNav items={MAKER_NAV_ITEMS} />
       <main>{children}</main>
+      <PublicFooter />
     </div>
   );
 }

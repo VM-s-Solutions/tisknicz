@@ -22,8 +22,8 @@ export function PageHeader({ eyebrow, eyebrowIcon, title, subtitle, actions }: P
     <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-3xl">
         {eyebrow && (
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-400/5 px-3 py-1 text-xs font-semibold tracking-widest text-brand-300 uppercase">
-            {eyebrowIcon && <Icon name={eyebrowIcon} size={13} />}
+          <p className="mb-2 flex items-center gap-2 text-sm font-medium text-brand-400">
+            {eyebrowIcon && <Icon name={eyebrowIcon} size={14} />}
             {eyebrow}
           </p>
         )}

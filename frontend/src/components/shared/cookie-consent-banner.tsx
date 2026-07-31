@@ -155,7 +155,7 @@ export function CookieConsentBanner() {
         role="dialog"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="glass pointer-events-auto mx-auto w-full max-w-3xl rounded-2xl border border-zinc-800 p-5 shadow-2xl motion-safe:animate-slide-up sm:p-6"
+        className="glass pointer-events-auto mx-auto w-full max-w-3xl rounded-xl border border-zinc-800 p-5 shadow-2xl sm:p-6"
       >
         {mode === 'summary' ? (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
@@ -251,7 +251,7 @@ function ConsentCategoryRow({
         <span className="text-xs leading-relaxed text-zinc-500">{description}</span>
       </div>
       {alwaysOn ? (
-        <span className="shrink-0 rounded-full border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400">
+        <span className="shrink-0 rounded-md border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400">
           {t('cookieConsent.alwaysOn')}
         </span>
       ) : (

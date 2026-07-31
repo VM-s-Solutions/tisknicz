@@ -265,17 +265,17 @@ export function OrderMessageThread({
           {messages.map((message) => (
             <li
               key={message.id}
-              className={`flex flex-col gap-1 rounded-2xl border px-4 py-3 ${
+              className={`flex flex-col gap-1 rounded-xl border px-4 py-3 ${
                 message.isMine
                   ? 'ml-8 items-end border-brand-400/20 bg-brand-400/5 sm:ml-16'
-                  : 'mr-8 border-zinc-800 bg-surface-elevated sm:mr-16'
+                  : 'mr-8 border-zinc-800 bg-zinc-800/50 sm:mr-16'
               }`}
             >
-              <div className="flex items-baseline gap-2 text-xs text-zinc-500">
-                <span className="font-semibold text-zinc-400">{message.authorName}</span>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-zinc-500">
+                <span className="break-words font-semibold text-zinc-400">{message.authorName}</span>
                 <span>{formatDateTime(message.createdAt)}</span>
               </div>
-              <p className="whitespace-pre-wrap text-sm text-zinc-200">{message.body}</p>
+              <p className="max-w-full whitespace-pre-wrap break-words text-sm text-zinc-200">{message.body}</p>
             </li>
           ))}
         </ul>

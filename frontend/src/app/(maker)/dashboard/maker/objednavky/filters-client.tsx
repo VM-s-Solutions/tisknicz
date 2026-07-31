@@ -102,7 +102,7 @@ export function OrdersFilters({
   };
 
   return (
-    <div className="panel grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
+    <div className="panel grid grid-cols-1 items-end gap-4 rounded-xl border border-zinc-800 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
       <DatePicker
         label={t('dashboard.maker.orders.filter.dateFrom')}
         value={dateFrom}

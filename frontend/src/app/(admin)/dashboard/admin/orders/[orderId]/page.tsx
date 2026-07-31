@@ -103,9 +103,9 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
         <div>
           <Link
             href={ROUTE_BASE}
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            <Icon name="arrowLeft" size={16} />
+            <Icon name="chevronLeft" size={16} />
             {t('dashboard.admin.orderActions.backToList')}
           </Link>
         </div>
@@ -115,7 +115,7 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
         {order ? (
           <>
             <section className="flex flex-col gap-4">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
                 {t('dashboard.admin.orderActions.section.actions')}
               </h2>
               <OrderActions
@@ -128,7 +128,7 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
             </section>
 
             <section className="flex flex-col gap-4">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
                 {t('dashboard.admin.orderActions.section.dispute')}
               </h2>
               <DisputeForm orderId={order.orderId} state={order.state} />
@@ -192,7 +192,7 @@ function OrderHeader({
       </div>
 
       <Card padding="md">
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+        <dl className="divide-y divide-zinc-800">
           <HeaderField
             label={t('dashboard.admin.orderActions.header.total')}
             value={formatCzk(order.totalAmountMinor, order.currency)}
@@ -231,10 +231,10 @@ function OrderHeader({
       </Card>
 
       <Card padding="md">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.orderActions.header.breakdown.heading')}
         </h2>
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+        <dl className="divide-y divide-zinc-800">
           <HeaderField
             label={t('dashboard.admin.orderActions.header.breakdown.productPrice')}
             value={formatCzk(order.productPriceAmountMinor, order.currency)}
@@ -263,11 +263,12 @@ function OrderHeader({
   );
 }
 
+/** iOS grouped-list row: quiet label left, value right, hairline dividers from the parent `divide-y`. */
 function HeaderField({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{label}</dt>
-      <dd className="break-words text-sm font-medium text-zinc-100">{value}</dd>
+    <div className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+      <dt className="shrink-0 text-sm text-zinc-400">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-sm text-zinc-100">{value}</dd>
     </div>
   );
 }
@@ -283,7 +284,7 @@ function AuditTrailSection({
 }) {
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
         {t('dashboard.admin.orderActions.audit.heading')}
       </h2>
 
@@ -293,16 +294,13 @@ function AuditTrailSection({
           <p className="mt-1 opacity-90">{t('dashboard.admin.orderActions.audit.error.body')}</p>
         </Alert>
       ) : auditTrail.items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
+        <div className="rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
           <p className="text-sm text-zinc-400">{t('dashboard.admin.orderActions.audit.empty')}</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-surface-card">
           {auditTrail.items.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex flex-col gap-1 rounded-2xl border border-zinc-800 bg-surface-card p-4"
-            >
+            <li key={entry.id} className="flex flex-col gap-1 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-zinc-100">{entry.actionCode}</span>
                 <span className="text-xs text-zinc-500">{formatDateTime(entry.createdAt)}</span>
@@ -349,11 +347,14 @@ function AuditPagination({
   };
 
   return (
-    <nav className="flex items-center justify-between gap-4" aria-label={t('dashboard.admin.orderActions.audit.heading')}>
+    <nav
+      className="flex flex-wrap items-center justify-between gap-3"
+      aria-label={t('dashboard.admin.orderActions.audit.heading')}
+    >
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.admin.orderActions.audit.previous')}
@@ -361,7 +362,7 @@ function AuditPagination({
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.admin.orderActions.audit.previous')}
@@ -370,7 +371,7 @@ function AuditPagination({
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
         >
           {t('dashboard.admin.orderActions.audit.next')}
           <Icon name="arrowRight" size={16} />
@@ -378,7 +379,7 @@ function AuditPagination({
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
         >
           {t('dashboard.admin.orderActions.audit.next')}
           <Icon name="arrowRight" size={16} />

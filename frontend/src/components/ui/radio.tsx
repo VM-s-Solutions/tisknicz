@@ -35,7 +35,7 @@ export function Radio({ label, description, className = '', id, disabled, ...pro
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 flex scale-50 items-center justify-center opacity-0 transition-all duration-150 peer-checked:scale-100 peer-checked:opacity-100"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100"
         >
           <span className="h-2.5 w-2.5 rounded-full bg-brand-400" />
         </span>

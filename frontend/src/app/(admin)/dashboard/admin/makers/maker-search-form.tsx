@@ -26,8 +26,8 @@ export function MakerSearchForm({ initialSearch }: { readonly initialSearch: str
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2" noValidate>
-      <div className="flex-1">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end" noValidate>
+      <div className="min-w-0 flex-1">
         <Input
           icon="search"
           label={t('dashboard.admin.ops.makers.list.searchLabel')}
@@ -37,7 +37,7 @@ export function MakerSearchForm({ initialSearch }: { readonly initialSearch: str
           autoComplete="off"
         />
       </div>
-      <Button type="submit" variant="secondary">
+      <Button type="submit" variant="secondary" className="w-full sm:w-auto">
         {t('dashboard.admin.ops.makers.list.searchSubmit')}
       </Button>
     </form>

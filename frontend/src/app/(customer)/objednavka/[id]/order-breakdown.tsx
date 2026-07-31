@@ -71,44 +71,47 @@ export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDeta
 
   return (
     <div className="flex flex-col gap-6">
-      <Card variant="accent" padding="md" className="flex flex-col gap-3">
-        <dl className="flex flex-col gap-3 text-sm">
-          <div className="flex items-start justify-between gap-4">
-            <dt className="text-zinc-400">
+      <Card variant="accent" padding="md">
+        {/* iOS grouped list — hairline-divided key-value rows, total as
+            the emphasised last row. */}
+        <dl className="divide-y divide-zinc-800">
+          <div className="flex items-center justify-between gap-3 pb-2.5">
+            <dt className="text-sm text-zinc-400">
               {t('order.page.breakdown.product')}
               <span className="mt-0.5 block text-zinc-200">
                 {detail.productTitle ?? t('order.page.breakdown.customOrderFallback')}
               </span>
             </dt>
-            <dd className="shrink-0 text-zinc-100">
+            <dd className="shrink-0 text-right text-sm text-zinc-100">
               {formatCzk(detail.productPriceMinor, detail.currency)}
             </dd>
           </div>
-          <div className="flex items-start justify-between gap-4">
-            <dt className="text-zinc-400">
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-zinc-400">
               {t('order.page.breakdown.shipping')}
               <span className="mt-0.5 block text-zinc-200">{shippingMethodLabel}</span>
             </dt>
-            <dd className="shrink-0 text-zinc-100">
+            <dd className="shrink-0 text-right text-sm text-zinc-100">
               {formatCzk(detail.shippingPriceMinor, detail.currency)}
             </dd>
           </div>
-          <div className="flex items-start justify-between gap-4">
-            <dt className="text-zinc-400">{t('order.page.breakdown.vat', { rate: vatRate })}</dt>
-            <dd className="shrink-0 text-zinc-100">
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="text-sm text-zinc-400">
+              {t('order.page.breakdown.vat', { rate: vatRate })}
+            </dt>
+            <dd className="shrink-0 text-right text-sm text-zinc-100">
               {formatCzk(detail.vatAmountMinor, detail.currency)}
             </dd>
           </div>
+          <div className="flex items-center justify-between gap-3 pt-3">
+            <dt className="text-base font-semibold text-zinc-50">
+              {t('order.page.breakdown.total')}
+            </dt>
+            <dd className="shrink-0 text-right text-xl font-bold text-brand-400">
+              {formatCzk(detail.totalAmountMinor, detail.currency)}
+            </dd>
+          </div>
         </dl>
-        <div aria-hidden="true" className="divider-glow" />
-        <p className="flex items-start justify-between gap-4">
-          <span className="text-base font-semibold text-white">
-            {t('order.page.breakdown.total')}
-          </span>
-          <span className="shrink-0 text-xl font-bold text-brand-400">
-            {formatCzk(detail.totalAmountMinor, detail.currency)}
-          </span>
-        </p>
       </Card>
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-2">

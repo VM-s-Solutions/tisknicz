@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Teal accent — refined for dark surfaces */
+  /* Brand teal — the primary. Unchanged. */
   --color-brand-50: #f0fdfa;
   --color-brand-100: #ccfbf1;
   --color-brand-200: #99f6e4;
@@ -19,59 +19,69 @@
   --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
 
-  /* Dark surfaces */
-  --color-surface-primary: #09090b;
-  --color-surface-secondary: #18181b;
-  --color-surface-card: #1c1c1e;
-  --color-surface-elevated: #27272a;
+  /* Ink neutrals — a cyan-slate override of Tailwind's zinc ramp so every
+     zinc-* utility in the app picks up the palette. Every step sits at
+     hue ~197°, roughly halfway between a neutral blue-gray and the 173°
+     brand teal: related enough that the primary reads as part of the same
+     family, cool enough that it never drifts back toward green.
 
-  /* Semantic */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
+     Mid steps are tuned for WCAG on the dark surfaces: 400 ≥ 7:1 (AAA)
+     and 500 ≥ 4.5:1 (AA) on every surface token *and* on the zinc-800
+     hover fill; 600 and below are reserved for icons, borders and
+     decoration — not body text. */
+  --color-zinc-50: #f0f7f9;
+  --color-zinc-100: #e2eef1;
+  --color-zinc-200: #cfdfe4;
+  --color-zinc-300: #b6cad1;
+  --color-zinc-400: #9db4bd;
+  --color-zinc-500: #85a0aa;
+  --color-zinc-600: #627880;
+  --color-zinc-700: #2b3a40;
+  --color-zinc-800: #212e33;
+  --color-zinc-900: #0b1417;
+  --color-zinc-950: #071013;
+
+  /* Surfaces — flat cyan-slate ink. Elevation reads through surface
+     lightness plus a hairline border, never through a gradient or glow. */
+  --color-surface-primary: #0b1417;
+  --color-surface-secondary: #0f191d;
+  --color-surface-card: #121d21;
+  --color-surface-elevated: #18262b;
+
+  /* Semantic — the single source for status colour. Every badge, alert
+     and inline message must draw from these; reaching for a stock
+     Tailwind ramp (sky-400, emerald-300, …) puts an off-hue next to the
+     197° neutrals and reads as a mistake. `info` sits at ~209°, just
+     outside the neutral band, so it stays distinct from the 173° brand.
+     All four clear AA on every surface and on a 10% tint of themselves. */
+  --color-success: #3fb950;
+  --color-warning: #d29922;
+  --color-error: #ff7b72;
+  --color-info: #79c0ff;
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-
-  /* Animations */
-  --animate-fade-in: fade-in 0.6s ease-out;
-  --animate-tooltip-in: tooltip-in 0.15s ease-out;
-  --animate-slide-up: slide-up 0.6s ease-out;
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-shimmer: shimmer 2s ease-in-out infinite;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+body {
+  font-family: var(--font-sans);
+  color: var(--color-zinc-100);
+  background: var(--color-surface-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes tooltip-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+::selection {
+  background: rgba(20, 184, 166, 0.32);
+  color: var(--color-zinc-50);
 }
 
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Transform-only variant for above-the-fold reveals: an opacity-gated
-   element is not painted until the animation runs, which pushes LCP /
-   Speed Index on throttled devices. Text must be paintable at t=0. */
+/* Hero entrance — transform-only so the text is painted (and countable
+   for LCP) at t=0; an opacity-gated reveal leaves the headline invisible
+   until the animation runs. Gated on prefers-reduced-motion. */
 @keyframes reveal-rise {
   from { transform: translateY(20px); }
   to { transform: translateY(0); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes shimmer {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -82,100 +92,64 @@
   .reveal-delay-1 { animation-delay: 0.08s; }
   .reveal-delay-2 { animation-delay: 0.16s; }
   .reveal-delay-3 { animation-delay: 0.24s; }
-  .reveal-delay-4 { animation-delay: 0.32s; }
 }
 
-@keyframes hero-glow-drift {
-  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.18; }
-  50% { transform: translate3d(0, -14px, 0) scale(1.06); opacity: 0.32; }
-  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.18; }
+/* Elevated panel surface — flat solid ink, one step above the page.
+   Elevation reads through surface lightness and the hairline border
+   (pair with border-zinc-800), not gradients or shadows. */
+.panel {
+  background: var(--color-surface-card);
 }
 
-@keyframes hero-cta-breathe {
-  0%, 100% { box-shadow: 0 0 0 rgba(20, 184, 166, 0.2); }
-  50% { box-shadow: 0 0 28px rgba(20, 184, 166, 0.35); }
-}
-
-.hero-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(900px 420px at 75% 16%, rgba(20, 184, 166, 0.12), transparent 62%),
-    radial-gradient(820px 380px at 15% 92%, rgba(161, 161, 170, 0.08), transparent 64%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.hero-glow {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(24px);
-  opacity: 0.2;
-  z-index: 1;
-}
-
-.hero-glow-left {
-  width: min(38vw, 420px);
-  height: min(38vw, 420px);
-  left: -8%;
-  top: 8%;
-  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.35) 0%, rgba(20, 184, 166, 0) 70%);
-}
-
-.hero-glow-right {
-  width: min(42vw, 520px);
-  height: min(42vw, 520px);
-  right: -10%;
-  bottom: -16%;
-  background: radial-gradient(circle at center, rgba(212, 212, 216, 0.22) 0%, rgba(212, 212, 216, 0) 72%);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero-glow-left {
-    animation: hero-glow-drift 8s ease-in-out infinite;
-  }
-
-  .hero-glow-right {
-    animation: hero-glow-drift 9.5s ease-in-out infinite 0.4s;
-  }
-
-  .hero-cta-glow {
-    animation: hero-cta-breathe 3s ease-in-out infinite;
-  }
-}
-
-body {
-  font-family: var(--font-sans);
-  color: #fafafa;
-  background: #09090b;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Subtle noise grain overlay */
-.bg-noise {
+/* Panel with a teal hairline along the top edge — for the one primary
+   surface on a page (summary, featured card, active state). */
+.panel-accent {
   position: relative;
+  overflow: hidden;
 }
-.bg-noise::after {
+.panel-accent::before {
   content: '';
   position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--color-brand-500);
   pointer-events: none;
-  z-index: 1;
 }
 
-/* Dot grid pattern — silver on dark */
-.bg-dot-pattern {
-  background-image: radial-gradient(circle, rgba(161, 161, 170, 0.12) 1px, transparent 1px);
-  background-size: 24px 24px;
+/* Interactive card emphasis — border + surface shift on hover, no
+   movement. Used by list cards that link somewhere; sits on .panel. */
+.card-lift {
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.card-lift:hover {
+  border-color: rgba(20, 184, 166, 0.45);
 }
 
-/* Animated underline — nav links + text buttons. Grows from the left
-   on hover/focus and stays visible on the active (aria-current) link. */
+/* Page titles — flat near-white. */
+.text-shine {
+  color: var(--color-zinc-50);
+}
+
+/* Hairline divider — plain rule. */
+.divider-glow {
+  height: 1px;
+  border: 0;
+  background: var(--color-zinc-800);
+}
+
+/* Icon tile — solid teal-tinted rounded square, used by empty states
+   and page-header eyebrows. */
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  background: rgba(20, 184, 166, 0.12);
+  color: var(--color-brand-300);
+}
+
+/* Nav links + text buttons: hairline underline shown on hover/focus and
+   on the active (aria-current) link. Static — no grow animation. */
 .link-underline {
   position: relative;
 }
@@ -187,157 +161,33 @@ body {
   bottom: -3px;
   height: 1px;
   background: var(--color-brand-400);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.25s ease;
+  opacity: 0;
 }
 .link-underline:hover::after,
 .link-underline:focus-visible::after,
 .link-underline[aria-current]::after {
-  transform: scaleX(1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .link-underline::after {
-    transition: none;
-  }
+  opacity: 1;
 }
 
-/* Elevated panel surface — soft top-light gradient over the card color
-   plus an inset top highlight, so panels read as lit objects instead of
-   flat rectangles. Pair with a border utility (border-zinc-800 etc.). */
-.panel {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 42%),
-    var(--color-surface-card);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-/* Panel with a teal hairline accent along the top edge — for the one
-   primary surface on a page (summary, featured card, active state). */
-.panel-accent {
-  position: relative;
-  overflow: hidden;
-}
-.panel-accent::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--color-brand-400) 35%, var(--color-brand-500) 65%, transparent 100%);
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-/* Interactive card lift — border + glow + rise on hover, used by list
-   cards that link somewhere. Sits on top of .panel. */
-.card-lift {
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.card-lift:hover {
-  transform: translateY(-2px);
-  border-color: rgba(45, 212, 191, 0.35);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 32px -12px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(45, 212, 191, 0.08);
-}
-@media (prefers-reduced-motion: reduce) {
-  .card-lift,
-  .card-lift:hover {
-    transition: none;
-    transform: none;
-  }
-}
-
-/* Headline shine — white→zinc vertical gradient for page titles. */
-.text-shine {
-  background: linear-gradient(180deg, #fafafa 30%, #a1a1aa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Glowing hairline divider — teal-tinted center fade. */
-.divider-glow {
-  height: 1px;
-  border: 0;
-  background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.35) 30%, rgba(63, 63, 70, 0.9) 50%, rgba(45, 212, 191, 0.35) 70%, transparent);
-}
-
-/* Icon tile — squircle with a soft teal wash, used by empty states and
-   page-header eyebrows. */
-.icon-tile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  border: 1px solid rgba(45, 212, 191, 0.25);
-  background:
-    radial-gradient(120% 120% at 50% 0%, rgba(45, 212, 191, 0.18) 0%, rgba(45, 212, 191, 0.04) 60%, transparent 100%),
-    var(--color-surface-elevated);
-  color: var(--color-brand-300);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-/* Ambient page backdrop — layered teal/amber glows plus a faint dot
-   grid so the dark canvas reads as depth instead of flat black. Fixed,
-   non-interactive, behind all content (z-index -1). Rendered once per
-   layout as an aria-hidden sibling of the page chrome. */
-.page-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(60rem 40rem at 85% -10%, rgba(45, 212, 191, 0.08), transparent 60%),
-    radial-gradient(50rem 36rem at -12% 35%, rgba(20, 184, 166, 0.06), transparent 60%),
-    radial-gradient(44rem 30rem at 55% 115%, rgba(251, 191, 36, 0.04), transparent 65%),
-    var(--color-surface-primary);
-}
-.page-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
-  -webkit-mask-image: radial-gradient(90rem 55rem at 50% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
-}
-
-/* Soft teal glow along the top edge of empty-state panels. */
-.empty-glow {
-  background: radial-gradient(420px 160px at 50% 0%, rgba(45, 212, 191, 0.08), transparent);
-}
-
-/* Subtle border emphasis on hover */
-.hover-glow {
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-.hover-glow:hover {
-  border-color: rgba(82, 82, 91, 1);
-  background-color: rgba(24, 24, 27, 0.6);
-}
-
-/* Glass effect */
+/* Sticky overlay surface (navbar, cookie banner) — near-opaque ink with
+   a light blur so scrolled content doesn't bleed through. */
 .glass {
-  background: rgba(24, 24, 27, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(11, 20, 23, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* Custom scrollbar for dark theme */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--color-surface-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-zinc-700);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--color-zinc-600);
 }

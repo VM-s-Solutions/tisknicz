@@ -102,7 +102,7 @@ export default async function CustomerOrdersPage({ searchParams }: PageProps) {
     state !== undefined || dateFrom !== undefined || dateTo !== undefined;
 
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <PageHeader
@@ -153,10 +153,8 @@ function OrdersResults({ data, baseParams, hasActiveFilters }: OrdersResultsProp
 
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
-        {t('customer.orders.count', { count: data.totalCount })}
-      </p>
-      <OrderRows items={data.items} />
+      {/* GitHub box — the count lives in the container's header row. */}
+      <OrderRows items={data.items} totalCount={data.totalCount} />
       <Pagination
         page={data.page}
         totalPages={totalPages}
@@ -177,7 +175,7 @@ function OrdersEmpty() {
       action={
         <Link
           href="/katalog"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-all duration-200 hover:bg-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
         >
           {t('customer.orders.empty.cta')}
           <Icon name="arrowRight" size={16} />
@@ -196,7 +194,7 @@ function OrdersNoMatch() {
       action={
         <Link
           href={ROUTE_PATH}
-          className="inline-flex items-center gap-2 rounded-xl border border-brand-400/50 px-5 py-2.5 text-sm font-semibold text-brand-400 transition-colors hover:bg-brand-400/10"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
         >
           {t('customer.orders.noMatch.clear')}
         </Link>
@@ -217,7 +215,7 @@ function OrdersError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 transition-colors duration-150 hover:border-red-400/60 hover:text-red-200"
         >
           {t('customer.orders.error.retry')}
         </Link>

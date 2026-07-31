@@ -119,10 +119,8 @@ export function AttachmentManagerClient({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
-          <span className="icon-tile h-9 w-9" aria-hidden="true">
-            <Icon name="upload" size={16} />
-          </span>
+        <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+          <Icon name="upload" size={14} className="shrink-0" />
           {t('order.page.attachments.heading')}
         </h2>
         <p className="text-xs text-zinc-500">{t('checkout.attachments.hint')}</p>
@@ -141,13 +139,13 @@ export function AttachmentManagerClient({
           {initialAttachments.map((attachment) => (
             <li
               key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5"
             >
               <div className="flex min-w-0 items-center gap-2">
                 <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
                 <a
                   href={attachment.downloadUrl}
-                  className="truncate text-sm text-zinc-200 hover:text-white hover:underline"
+                  className="truncate text-sm text-zinc-200 transition-colors hover:text-zinc-50 hover:underline"
                 >
                   {attachment.filename}
                 </a>
@@ -161,7 +159,7 @@ export function AttachmentManagerClient({
           {uploads.map((upload) => (
             <li
               key={upload.id}
-              className="flex flex-col gap-1 rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-2.5"
+              className="flex flex-col gap-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">

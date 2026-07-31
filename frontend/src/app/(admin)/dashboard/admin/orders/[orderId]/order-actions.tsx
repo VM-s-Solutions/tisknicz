@@ -131,7 +131,7 @@ function ModalShell({
         }}
         className="absolute inset-0 bg-black/70"
       />
-      <div className="relative z-10 my-8 w-full max-w-lg rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
+      <div className="relative z-10 my-8 w-full max-w-lg rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
         <h2 id={titleId} className="text-lg font-semibold text-white">
           {title}
         </h2>

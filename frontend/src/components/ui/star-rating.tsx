@@ -117,7 +117,7 @@ function StarRatingInteractive({
             onFocus={() => setHovered(star)}
             onBlur={() => setHovered(0)}
             className={`rounded-md p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40 disabled:cursor-not-allowed disabled:opacity-60 ${
-              isLit ? 'text-accent-400' : 'text-zinc-600 hover:text-accent-400/60'
+              isLit ? 'text-accent-400' : 'text-zinc-500 hover:text-accent-400/60'
             }`}
           >
             <Icon name={isLit ? 'star' : 'starOutline'} size={px} />

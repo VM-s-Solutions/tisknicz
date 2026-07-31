@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -131,10 +132,10 @@ function PayoutList({
 
   if (list.totalCount === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
+        <span className="icon-tile h-14 w-14" aria-hidden="true">
           <Icon name="creditCard" size={28} />
-        </div>
+        </span>
         <div>
           <h2 className="text-lg font-semibold text-zinc-100">
             {t('dashboard.admin.ops.payouts.list.empty.title')}
@@ -151,16 +152,28 @@ function PayoutList({
 
   return (
     <>
-      <p className="mb-4 text-sm text-zinc-500">
-        {t('dashboard.admin.ops.payouts.list.count', { count: list.totalCount })}
-      </p>
-      <ul className="flex flex-col gap-4">
-        {list.items.map((batch) => (
-          <li key={batch.batchId}>
-            <PayoutBatchCard batch={batch} />
-          </li>
-        ))}
-      </ul>
+      <div className="rounded-xl border border-zinc-800 bg-surface-card">
+        <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-sm font-semibold text-zinc-100">
+              {t('dashboard.admin.ops.payouts.title')}
+            </h2>
+            <Badge
+              dot={false}
+              aria-label={t('dashboard.admin.ops.payouts.list.count', { count: list.totalCount })}
+            >
+              {list.totalCount}
+            </Badge>
+          </div>
+        </div>
+        <ul className="divide-y divide-zinc-800">
+          {list.items.map((batch) => (
+            <li key={batch.batchId}>
+              <PayoutBatchCard batch={batch} />
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <OpsPagination
         page={list.page}

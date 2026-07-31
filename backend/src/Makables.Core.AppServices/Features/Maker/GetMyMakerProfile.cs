@@ -28,7 +28,8 @@ public static class GetMyMakerProfile
         string? Bio,
         string? BankAccount,
         bool PersonalPickupEnabled,
-        string? PickupNote);
+        string? PickupNote,
+        string? LogoBlobPath);
 
     public sealed class Handler(
         IMakerRepository makers,
@@ -62,7 +63,8 @@ public static class GetMyMakerProfile
                 Bio: maker.Bio,
                 BankAccount: maker.BankAccount,
                 PersonalPickupEnabled: maker.PersonalPickupEnabled,
-                PickupNote: maker.PickupNote));
+                PickupNote: maker.PickupNote,
+                LogoBlobPath: maker.LogoBlobPath));
         }
     }
 }

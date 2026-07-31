@@ -29,7 +29,7 @@ export default function TermsPage() {
   ] as const;
 
   return (
-    <section className="bg-surface-primary py-16 lg:py-24">
+    <section className="py-16 lg:py-24">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
           <span className="icon-tile h-11 w-11" aria-hidden="true">
@@ -44,41 +44,41 @@ export default function TermsPage() {
           <p className="font-semibold">{t('static.terms.disclaimer')}</p>
         </Alert>
 
-        <div className="space-y-6 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:p-8">
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_operator_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_operator_body')}</p>
+        <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-surface-card">
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_operator_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_operator_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_scope_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_scope_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_scope_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_scope_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_contracts_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_contracts_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_contracts_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_contracts_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_payments_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_payments_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_payments_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_payments_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_withdrawal_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_withdrawal_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_withdrawal_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_withdrawal_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_claims_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_claims_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_claims_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_claims_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.terms.section_law_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.terms.section_law_intro')}</p>
-            <ul className="list-disc space-y-2 pl-5 text-zinc-300">
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.terms.section_law_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.terms.section_law_intro')}</p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-zinc-300">
               {legalSources.map((law) => (
                 <li key={law}>{t(law)}</li>
               ))}

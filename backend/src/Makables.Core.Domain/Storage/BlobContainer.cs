@@ -11,9 +11,10 @@ namespace Makables.Core.Domain.Storage;
 ///   <item><description><see cref="OrderAttachments"/> — private. STL / 3MF / PDF customer uploads on custom orders.</description></item>
 ///   <item><description><see cref="Invoices"/> — private. PDFs generated server-side.</description></item>
 ///   <item><description><see cref="MakerDocuments"/> — private. Tax IDs / contracts (future).</description></item>
+///   <item><description><see cref="ProfileImages"/> — <b>public read</b>. Maker logos + user avatars.</description></item>
 /// </list>
 ///
-/// Even the "public" container is served by the backend per ADR 0011 —
+/// Even the "public" containers are served by the backend per ADR 0011 —
 /// the public access just lets the future image-proxy / CDN edge fetch
 /// without our own credentials. The browser only ever sees backend URLs.
 /// </summary>
@@ -23,6 +24,16 @@ public static class BlobContainer
     public const string OrderAttachments = "order-attachments";
     public const string Invoices = "invoices";
     public const string MakerDocuments = "maker-documents";
+
+    /// <summary>
+    /// <b>Public read.</b> Maker logos (<c>{country}/makers/{makerId}/{ulid}.{ext}</c>)
+    /// and user avatars (<c>{country}/avatars/{userId}/{ulid}.{ext}</c>).
+    /// Both are catalog-facing identity images — a maker logo heads their
+    /// public profile, an avatar sits next to the reviews they write — so
+    /// they share the product-image access model: public-read container,
+    /// anonymous backend streaming endpoint, CDN-cacheable.
+    /// </summary>
+    public const string ProfileImages = "profile-images";
 
     /// <summary>
     /// Private container for the weekly payout CSVs (T-0102b). Streamed to
@@ -37,9 +48,10 @@ public static class BlobContainer
         Invoices,
         MakerDocuments,
         Payouts,
+        ProfileImages,
     };
 
-    /// <summary>True for the single public-read container; false for the private three.</summary>
+    /// <summary>True for the two public-read containers; false for the private three.</summary>
     public static bool IsPublicRead(string container) =>
-        container == ProductImages;
+        container is ProductImages or ProfileImages;
 }

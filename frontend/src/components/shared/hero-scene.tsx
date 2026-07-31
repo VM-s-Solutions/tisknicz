@@ -517,7 +517,9 @@ export function HeroScene() {
         style={{ background: 'transparent' }}
       >
         <CameraRig />
-        <fog attach="fog" args={['#09090b', 6, 13.5]} />
+        {/* Must track --color-surface-primary: receding geometry fades to
+            this colour, so any mismatch shows as a halo around the scene. */}
+        <fog attach="fog" args={['#0b1417', 6, 13.5]} />
 
         <WireKnot />
         <BlackHole />

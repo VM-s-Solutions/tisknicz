@@ -44,6 +44,16 @@ export interface IPublicApi {
     /**
      * @return OK
      */
+    makers3(country: string, makerId: string, filename: string): Promise<void>;
+
+    /**
+     * @return OK
+     */
+    avatars(country: string, userId: string, filename: string): Promise<void>;
+
+    /**
+     * @return OK
+     */
     register(body: RegisterMakerRequest): Promise<void>;
 
     /**
@@ -94,6 +104,28 @@ export interface IPublicApi {
      * @return OK
      */
     makerPUT(body: UpdateMakerProfileRequest): Promise<void>;
+
+    /**
+     * @param file 
+     * @return OK
+     */
+    avatarPOST(file: FileParameter): Promise<UploadProfileImageResponse>;
+
+    /**
+     * @return OK
+     */
+    avatarDELETE(): Promise<void>;
+
+    /**
+     * @param file 
+     * @return OK
+     */
+    logoPOST(file: FileParameter): Promise<UploadProfileImageResponse>;
+
+    /**
+     * @return OK
+     */
+    logoDELETE(): Promise<void>;
 
     /**
      * @return OK
@@ -423,6 +455,90 @@ export class PublicApi implements IPublicApi {
     }
 
     protected processProducts2(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    makers3(country: string, makerId: string, filename: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/files/makers/{country}/{makerId}/{filename}";
+        if (country === undefined || country === null)
+            throw new globalThis.Error("The parameter 'country' must be defined.");
+        url_ = url_.replace("{country}", encodeURIComponent("" + country));
+        if (makerId === undefined || makerId === null)
+            throw new globalThis.Error("The parameter 'makerId' must be defined.");
+        url_ = url_.replace("{makerId}", encodeURIComponent("" + makerId));
+        if (filename === undefined || filename === null)
+            throw new globalThis.Error("The parameter 'filename' must be defined.");
+        url_ = url_.replace("{filename}", encodeURIComponent("" + filename));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMakers3(_response);
+        });
+    }
+
+    protected processMakers3(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    avatars(country: string, userId: string, filename: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/files/avatars/{country}/{userId}/{filename}";
+        if (country === undefined || country === null)
+            throw new globalThis.Error("The parameter 'country' must be defined.");
+        url_ = url_.replace("{country}", encodeURIComponent("" + country));
+        if (userId === undefined || userId === null)
+            throw new globalThis.Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        if (filename === undefined || filename === null)
+            throw new globalThis.Error("The parameter 'filename' must be defined.");
+        url_ = url_.replace("{filename}", encodeURIComponent("" + filename));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAvatars(_response);
+        });
+    }
+
+    protected processAvatars(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -834,6 +950,232 @@ export class PublicApi implements IPublicApi {
         if (status === 200) {
             return response.text().then((_responseText) => {
             return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param file 
+     * @return OK
+     */
+    avatarPOST(file: FileParameter): Promise<UploadProfileImageResponse> {
+        let url_ = this.baseUrl + "/api/v1/me/avatar";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = new FormData();
+        if (file === null || file === undefined)
+            throw new globalThis.Error("The parameter 'file' cannot be null.");
+        else
+            content_.append("file", file.data, file.fileName ? file.fileName : "file");
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAvatarPOST(_response);
+        });
+    }
+
+    protected processAvatarPOST(response: Response): Promise<UploadProfileImageResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UploadProfileImageResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UploadProfileImageResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    avatarDELETE(): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/me/avatar";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAvatarDELETE(_response);
+        });
+    }
+
+    protected processAvatarDELETE(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    /**
+     * @param file 
+     * @return OK
+     */
+    logoPOST(file: FileParameter): Promise<UploadProfileImageResponse> {
+        let url_ = this.baseUrl + "/api/v1/me/maker/logo";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = new FormData();
+        if (file === null || file === undefined)
+            throw new globalThis.Error("The parameter 'file' cannot be null.");
+        else
+            content_.append("file", file.data, file.fileName ? file.fileName : "file");
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLogoPOST(_response);
+        });
+    }
+
+    protected processLogoPOST(response: Response): Promise<UploadProfileImageResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UploadProfileImageResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UploadProfileImageResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    logoDELETE(): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/me/maker/logo";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLogoDELETE(_response);
+        });
+    }
+
+    protected processLogoDELETE(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -1966,6 +2308,7 @@ export class MakerListItem implements IMakerListItem {
     ratingAverageBp!: number;
     ratingCount!: number;
     totalOrders!: number;
+    logoBlobPath!: string | undefined;
 
     [key: string]: any;
 
@@ -1993,6 +2336,7 @@ export class MakerListItem implements IMakerListItem {
             this.ratingAverageBp = _data["ratingAverageBp"];
             this.ratingCount = _data["ratingCount"];
             this.totalOrders = _data["totalOrders"];
+            this.logoBlobPath = _data["logoBlobPath"];
         }
     }
 
@@ -2018,6 +2362,7 @@ export class MakerListItem implements IMakerListItem {
         data["ratingAverageBp"] = this.ratingAverageBp;
         data["ratingCount"] = this.ratingCount;
         data["totalOrders"] = this.totalOrders;
+        data["logoBlobPath"] = this.logoBlobPath;
         return data;
     }
 }
@@ -2032,6 +2377,7 @@ export interface IMakerListItem {
     ratingAverageBp: number;
     ratingCount: number;
     totalOrders: number;
+    logoBlobPath: string | undefined;
 
     [key: string]: any;
 }
@@ -2129,6 +2475,7 @@ export class MakerProfile implements IMakerProfile {
     ratingAverageBp!: number;
     ratingCount!: number;
     totalOrders!: number;
+    logoBlobPath!: string | undefined;
     products!: MakerProductItem[];
     reviews!: MakerReviewItem[];
 
@@ -2165,6 +2512,7 @@ export class MakerProfile implements IMakerProfile {
             this.ratingAverageBp = _data["ratingAverageBp"];
             this.ratingCount = _data["ratingCount"];
             this.totalOrders = _data["totalOrders"];
+            this.logoBlobPath = _data["logoBlobPath"];
             if (Array.isArray(_data["products"])) {
                 this.products = [] as any;
                 for (let item of _data["products"])
@@ -2203,6 +2551,7 @@ export class MakerProfile implements IMakerProfile {
         data["ratingAverageBp"] = this.ratingAverageBp;
         data["ratingCount"] = this.ratingCount;
         data["totalOrders"] = this.totalOrders;
+        data["logoBlobPath"] = this.logoBlobPath;
         if (Array.isArray(this.products)) {
             data["products"] = [];
             for (let item of this.products)
@@ -2230,6 +2579,7 @@ export interface IMakerProfile {
     ratingAverageBp: number;
     ratingCount: number;
     totalOrders: number;
+    logoBlobPath: string | undefined;
     products: MakerProductItem[];
     reviews: MakerReviewItem[];
 
@@ -2243,6 +2593,7 @@ export class MakerReviewItem implements IMakerReviewItem {
     createdAt!: Date;
     replyBody!: string | undefined;
     replyCreatedAt!: Date | undefined;
+    authorAvatarBlobPath!: string | undefined;
 
     [key: string]: any;
 
@@ -2267,6 +2618,7 @@ export class MakerReviewItem implements IMakerReviewItem {
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
             this.replyBody = _data["replyBody"];
             this.replyCreatedAt = _data["replyCreatedAt"] ? new Date(_data["replyCreatedAt"].toString()) : undefined as any;
+            this.authorAvatarBlobPath = _data["authorAvatarBlobPath"];
         }
     }
 
@@ -2289,6 +2641,7 @@ export class MakerReviewItem implements IMakerReviewItem {
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
         data["replyBody"] = this.replyBody;
         data["replyCreatedAt"] = this.replyCreatedAt ? this.replyCreatedAt.toISOString() : undefined as any;
+        data["authorAvatarBlobPath"] = this.authorAvatarBlobPath;
         return data;
     }
 }
@@ -2300,6 +2653,7 @@ export interface IMakerReviewItem {
     createdAt: Date;
     replyBody: string | undefined;
     replyCreatedAt: Date | undefined;
+    authorAvatarBlobPath: string | undefined;
 
     [key: string]: any;
 }
@@ -2540,6 +2894,7 @@ export class ProductDetail implements IProductDetail {
     makerIsVerified!: boolean;
     makerPersonalPickupEnabled!: boolean;
     makerPickupNote!: string | undefined;
+    makerLogoBlobPath!: string | undefined;
     images!: ProductImageItem[];
 
     [key: string]: any;
@@ -2579,6 +2934,7 @@ export class ProductDetail implements IProductDetail {
             this.makerIsVerified = _data["makerIsVerified"];
             this.makerPersonalPickupEnabled = _data["makerPersonalPickupEnabled"];
             this.makerPickupNote = _data["makerPickupNote"];
+            this.makerLogoBlobPath = _data["makerLogoBlobPath"];
             if (Array.isArray(_data["images"])) {
                 this.images = [] as any;
                 for (let item of _data["images"])
@@ -2617,6 +2973,7 @@ export class ProductDetail implements IProductDetail {
         data["makerIsVerified"] = this.makerIsVerified;
         data["makerPersonalPickupEnabled"] = this.makerPersonalPickupEnabled;
         data["makerPickupNote"] = this.makerPickupNote;
+        data["makerLogoBlobPath"] = this.makerLogoBlobPath;
         if (Array.isArray(this.images)) {
             data["images"] = [];
             for (let item of this.images)
@@ -2644,6 +3001,7 @@ export interface IProductDetail {
     makerIsVerified: boolean;
     makerPersonalPickupEnabled: boolean;
     makerPickupNote: string | undefined;
+    makerLogoBlobPath: string | undefined;
     images: ProductImageItem[];
 
     [key: string]: any;
@@ -3109,6 +3467,54 @@ export interface IUpdateProfileRequest {
     [key: string]: any;
 }
 
+export class UploadProfileImageResponse implements IUploadProfileImageResponse {
+    blobPath!: string;
+
+    [key: string]: any;
+
+    constructor(data?: IUploadProfileImageResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.blobPath = _data["blobPath"];
+        }
+    }
+
+    static fromJS(data: any): UploadProfileImageResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new UploadProfileImageResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["blobPath"] = this.blobPath;
+        return data;
+    }
+}
+
+export interface IUploadProfileImageResponse {
+    blobPath: string;
+
+    [key: string]: any;
+}
+
 export class Anonymous implements IAnonymous {
     code?: string;
 
@@ -3205,6 +3611,8 @@ export interface IBody extends IAnonymous {
 
     [key: string]: any;
 }
+
+export interface FileParameter { data: any; fileName?: string; }
 
 export class ApiException extends Error {
     override message: string;

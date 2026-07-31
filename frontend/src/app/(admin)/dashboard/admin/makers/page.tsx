@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import {
   type AdminMakerListItem,
@@ -78,7 +77,7 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
 
         {result.success ? (
           result.value.makers.items.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
               <span className="icon-tile h-12 w-12" aria-hidden="true">
                 <Icon name="search" size={20} />
               </span>
@@ -86,13 +85,26 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
             </div>
           ) : (
             <>
-              <ul className="flex flex-col gap-3">
-                {result.value.makers.items.map((item) => (
-                  <li key={item.makerId}>
-                    <MakerRow item={item} />
-                  </li>
-                ))}
-              </ul>
+              <div className="rounded-xl border border-zinc-800 bg-surface-card">
+                <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-sm font-semibold text-zinc-100">
+                      {t('dashboard.admin.ops.makers.lookup.title')}
+                    </h2>
+                    <Badge dot={false}>{result.value.makers.totalCount}</Badge>
+                  </div>
+                </div>
+                <ul className="divide-y divide-zinc-800">
+                  {result.value.makers.items.map((item) => (
+                    <li
+                      key={item.makerId}
+                      className="transition-colors last:rounded-b-xl hover:bg-zinc-800/40"
+                    >
+                      <MakerRow item={item} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <OpsPagination
                 routePath={ROUTE_PATH}
                 page={result.value.makers.page}
@@ -113,41 +125,40 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
 
 function MakerRow({ item }: { readonly item: AdminMakerListItem }) {
   return (
-    <Link href={`/dashboard/admin/makers/${encodeURIComponent(item.makerId)}`} className="block">
-      <Card
-        className={`flex flex-wrap items-center justify-between gap-3 transition-colors hover:border-zinc-600 ${item.isActive ? '' : 'opacity-60'}`}
-      >
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-base font-semibold text-white">{item.companyName}</p>
-            {item.isVerified ? (
-              <Badge variant="success">{t('dashboard.admin.ops.makers.badge.verified')}</Badge>
-            ) : (
-              <Badge variant="warning">{t('dashboard.admin.ops.makers.badge.unverified')}</Badge>
-            )}
-            {!item.isActive ? (
-              <Badge variant="error">{t('dashboard.admin.ops.makers.badge.inactive')}</Badge>
-            ) : null}
-          </div>
-          <p className="mt-1 text-xs text-zinc-500">
-            {t('dashboard.admin.ops.makers.list.rowMeta', {
-              ico: item.registrationNumber,
-              city: item.city,
-              email: item.userEmail,
-            })}
-          </p>
-        </div>
-        <div className="shrink-0 text-right text-xs text-zinc-400">
-          <p>{t('dashboard.admin.ops.makers.list.rowOrders', { count: item.totalOrders })}</p>
-          {item.feeRateOverrideBp !== null ? (
-            <p className="mt-1 text-brand-300">
-              {t('dashboard.admin.ops.makers.list.rowOverride', {
-                percent: (item.feeRateOverrideBp / 100).toString().replace('.', ','),
-              })}
-            </p>
+    <Link
+      href={`/dashboard/admin/makers/${encodeURIComponent(item.makerId)}`}
+      className={`flex flex-wrap items-center justify-between gap-3 p-4 ${item.isActive ? '' : 'opacity-60'}`}
+    >
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-base font-semibold text-white">{item.companyName}</p>
+          {item.isVerified ? (
+            <Badge variant="success">{t('dashboard.admin.ops.makers.badge.verified')}</Badge>
+          ) : (
+            <Badge variant="warning">{t('dashboard.admin.ops.makers.badge.unverified')}</Badge>
+          )}
+          {!item.isActive ? (
+            <Badge variant="error">{t('dashboard.admin.ops.makers.badge.inactive')}</Badge>
           ) : null}
         </div>
-      </Card>
+        <p className="mt-1 text-xs text-zinc-500">
+          {t('dashboard.admin.ops.makers.list.rowMeta', {
+            ico: item.registrationNumber,
+            city: item.city,
+            email: item.userEmail,
+          })}
+        </p>
+      </div>
+      <div className="shrink-0 text-right text-xs text-zinc-400">
+        <p>{t('dashboard.admin.ops.makers.list.rowOrders', { count: item.totalOrders })}</p>
+        {item.feeRateOverrideBp !== null ? (
+          <p className="mt-1 text-brand-300">
+            {t('dashboard.admin.ops.makers.list.rowOverride', {
+              percent: (item.feeRateOverrideBp / 100).toString().replace('.', ','),
+            })}
+          </p>
+        ) : null}
+      </div>
     </Link>
   );
 }

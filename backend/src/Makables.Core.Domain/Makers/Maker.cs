@@ -109,6 +109,17 @@ public sealed class Maker : Auditable
     /// <summary>Free-text pickup instructions shown to customers (e.g. opening hours, doorbell name).</summary>
     public string? PickupNote { get; private set; }
 
+    /// <summary>
+    /// Blob path of the maker's logo in the public-read
+    /// <c>profile-images</c> container, shaped
+    /// <c>{country}/makers/{makerId}/{ulid}.{ext}</c>. Null until the
+    /// maker uploads one — the catalog then falls back to the initial
+    /// tile. Set/cleared only via <see cref="SetLogo"/>; the blob itself
+    /// is written by the upload controller BEFORE the command runs (ADR
+    /// 0011 — blob I/O stays outside the unit-of-work transaction).
+    /// </summary>
+    public string? LogoBlobPath { get; private set; }
+
     // === Catalog fields (T-0043) ===
 
     /// <summary>
@@ -340,6 +351,20 @@ public sealed class Maker : Auditable
     }
 
     /// <summary>
+    /// Set or clear the maker's catalog logo. Pass <c>null</c> to clear.
+    /// Returns the PREVIOUS blob path (null if there wasn't one) so the
+    /// caller can delete the superseded blob — a maker who re-uploads
+    /// ten times must not leave ten orphans in storage.
+    /// </summary>
+    public string? SetLogo(string? blobPath)
+    {
+        var previous = LogoBlobPath;
+        var trimmed = blobPath?.Trim();
+        LogoBlobPath = string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        return previous;
+    }
+
+    /// <summary>
     /// Update the ARES snapshot fields after a deliberate refresh
     /// (T-0034 <c>RefreshMakerFromAres</c>). Does NOT touch
     /// <see cref="IsVerified"/> — admin verification is independent of
@@ -403,6 +428,9 @@ public sealed class Maker : Auditable
         VatId = null;
         Bio = sentinel;
         PickupNote = sentinel;
+        // The logo is maker-supplied imagery, not a tax record — drop the
+        // pointer here; the erasure service deletes the blob itself.
+        LogoBlobPath = null;
         // RETAIN RegistrationNumber (IČO) + BankAccount — legal/payout records
         // reference them; scrubbing would orphan those rows (Q-A / Option I).
         IsRetainedForLegal = true;

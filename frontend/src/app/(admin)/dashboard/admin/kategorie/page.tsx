@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { getAdminCategories } from '@/lib/api-client-helpers/admin-categories';
 import { t } from '@/lib/i18n';
@@ -52,20 +53,30 @@ export default async function AdminCategoriesPage() {
 
         {result.success ? (
           result.value.items.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-12 text-center">
               <span className="icon-tile h-12 w-12" aria-hidden="true">
                 <Icon name="tag" size={20} />
               </span>
               <p className="text-sm text-zinc-400">{t('dashboard.admin.categories.list.empty')}</p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
-              {result.value.items.map((item) => (
-                <li key={item.id}>
-                  <CategoryRow item={item} />
-                </li>
-              ))}
-            </ul>
+            <div className="rounded-xl border border-zinc-800 bg-surface-card">
+              <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-sm font-semibold text-zinc-100">
+                    {t('dashboard.admin.categories.title')}
+                  </h2>
+                  <Badge dot={false}>{result.value.items.length}</Badge>
+                </div>
+              </div>
+              <ul className="divide-y divide-zinc-800">
+                {result.value.items.map((item) => (
+                  <li key={item.id}>
+                    <CategoryRow item={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
           )
         ) : (
           <Alert variant="error">{t('dashboard.admin.categories.list.error')}</Alert>

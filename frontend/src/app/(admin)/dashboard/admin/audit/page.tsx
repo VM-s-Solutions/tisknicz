@@ -141,10 +141,7 @@ function AuditResults({ data, baseParams }: AuditResultsProps) {
 
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
-        {t('dashboard.admin.audit.count', { count: data.totalCount })}
-      </p>
-      <AuditRows items={data.items} />
+      <AuditRows items={data.items} totalCount={data.totalCount} />
       <Pagination
         page={data.page}
         totalPages={totalPages}
@@ -158,10 +155,10 @@ function AuditResults({ data, baseParams }: AuditResultsProps) {
 
 function AuditEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-500">
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-20 text-center">
+      <span className="icon-tile h-14 w-14" aria-hidden="true">
         <Icon name="file" size={28} />
-      </div>
+      </span>
       <div>
         <h2 className="text-lg font-semibold text-zinc-100">
           {t('dashboard.admin.audit.empty.title')}
@@ -184,7 +181,7 @@ function AuditError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
           {t('dashboard.admin.audit.error.retry')}
         </Link>

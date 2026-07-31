@@ -20,7 +20,7 @@ export default function CustomerOrdersError({
   readonly reset: () => void;
 }) {
   return (
-    <section className="bg-surface-primary py-12 lg:py-16">
+    <section className="py-12 lg:py-16">
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 sm:px-6 lg:px-8">
         <Alert variant="error">
           <p className="font-semibold">{t('customer.orders.error.title')}</p>
@@ -32,7 +32,7 @@ export default function CustomerOrdersError({
           </Button>
           <Link
             href="/dashboard/zakaznik/objednavky"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('customer.orders.title')}
           </Link>

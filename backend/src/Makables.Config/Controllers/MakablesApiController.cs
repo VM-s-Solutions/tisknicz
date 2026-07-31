@@ -39,6 +39,31 @@ public abstract class MakablesApiController : ControllerBase
         return MapErrorToActionResult(result.Error!);
     }
 
+    /// <summary>
+    /// Read up to <paramref name="buffer"/>.Length bytes from an upload
+    /// stream, tolerating short reads (a stream may return fewer bytes
+    /// per call). Returns the number actually read — fewer than the
+    /// buffer length only at genuine end-of-stream (a file shorter than
+    /// the magic-byte header window, which the validator then rejects).
+    ///
+    /// <para>
+    /// Lives on the base controller because every upload endpoint needs
+    /// it before calling its per-concern validator (product images,
+    /// order attachments, profile images).
+    /// </para>
+    /// </summary>
+    protected static async Task<int> ReadAtLeastAsync(Stream stream, byte[] buffer, CancellationToken ct)
+    {
+        var total = 0;
+        while (total < buffer.Length)
+        {
+            var n = await stream.ReadAsync(buffer.AsMemory(total), ct);
+            if (n == 0) break;
+            total += n;
+        }
+        return total;
+    }
+
     private IActionResult MapErrorToActionResult(Error error) =>
         error.Type switch
         {

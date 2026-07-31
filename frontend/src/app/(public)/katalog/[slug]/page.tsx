@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -10,6 +11,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
 import {
+  buildMakerLogoUrl,
   getMakerBySlug,
   RATING_BP_PER_STAR,
   type MakerProductItem,
@@ -120,6 +122,13 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
     }
     return (
       <section className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+        <Link
+          href="/katalog"
+          className="inline-flex items-center gap-1.5 self-start text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <Icon name="chevronLeft" size={16} />
+          {t('catalog.maker.back_to_catalog')}
+        </Link>
         <Alert variant="error">
           <p className="font-semibold">{t('catalog.maker.error.title')}</p>
           <p className="mt-1">{t('catalog.maker.error.body')}</p>
@@ -149,7 +158,14 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
     filter.minPriceMinor !== null || filter.maxPriceMinor !== null || filter.minRatingBp !== null;
 
   return (
-    <section className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+    <section className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+      <Link
+        href="/katalog"
+        className="inline-flex items-center gap-1.5 self-start text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+      >
+        <Icon name="chevronLeft" size={16} />
+        {t('catalog.maker.back_to_catalog')}
+      </Link>
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
           <SellerPanel profile={profile} />
@@ -171,16 +187,6 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
           <ReviewsSection reviews={profile.reviews} />
         </div>
       </div>
-
-      <div className="pt-2">
-        <Link
-          href="/katalog"
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-        >
-          <Icon name="arrowLeft" size={16} />
-          {t('catalog.maker.back_to_catalog')}
-        </Link>
-      </div>
     </section>
   );
 }
@@ -199,12 +205,8 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
   return (
     <Card variant="accent" padding="lg" className="flex flex-col gap-5">
       <div className="flex items-center gap-4">
-        <span
-          aria-hidden="true"
-          className="icon-tile h-14 w-14 shrink-0 text-xl font-bold"
-        >
-          {profile.companyName.charAt(0).toUpperCase()}
-        </span>
+        {/* Decorative: the <h1> beside it already names the maker. */}
+        <Avatar src={buildMakerLogoUrl(profile.logoBlobPath)} name={profile.companyName} size="lg" />
         <div className="min-w-0">
           <h1 className="text-shine break-words text-2xl font-bold tracking-tight">
             {profile.companyName}
@@ -222,8 +224,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
       {profile.isVerified ? (
         <div className="flex flex-wrap items-center gap-2">
           <Tooltip content={t('catalog.card.verified_tooltip')}>
-            <Badge variant="brand">
-              <Icon name="verified" size={14} />
+            <Badge variant="brand" dot={false}>
               {t('catalog.maker.verified')}
             </Badge>
           </Tooltip>
@@ -256,7 +257,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
               {t('catalog.maker.pickup.heading')}
             </p>
             {pickupNote ? (
-              <p className="whitespace-pre-line text-sm text-zinc-400">{pickupNote}</p>
+              <p className="whitespace-pre-line break-words text-sm text-zinc-400">{pickupNote}</p>
             ) : null}
           </div>
         </>
@@ -265,7 +266,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
       {bio ? (
         <>
           <div aria-hidden="true" className="divider-glow" />
-          <p className="whitespace-pre-line text-sm text-zinc-300">{bio}</p>
+          <p className="whitespace-pre-line break-words text-sm text-zinc-300">{bio}</p>
         </>
       ) : null}
     </Card>
@@ -282,24 +283,25 @@ function ProductsGrid({
   readonly isFiltered: boolean;
 }) {
   return (
-    <Card padding="md" className="flex flex-col gap-5">
-      <section className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <span aria-hidden="true" className="icon-tile h-9 w-9">
-            <Icon name="grid" size={16} />
+    <section className="rounded-xl border border-zinc-800 bg-surface-card">
+      <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+        <h2 className="text-sm font-semibold text-zinc-100">
+          {t('catalog.maker.products.heading')}
+        </h2>
+        {isFiltered ? (
+          <span className="text-xs text-zinc-500">
+            {t('catalog.maker.products.filtered_count', {
+              shown: products.length,
+              total: totalCount,
+            })}
           </span>
-          <h2 className="text-xl font-semibold text-white">
-            {t('catalog.maker.products.heading')}
-          </h2>
-          {isFiltered ? (
-            <span className="text-sm text-zinc-400">
-              {t('catalog.maker.products.filtered_count', {
-                shown: products.length,
-                total: totalCount,
-              })}
-            </span>
-          ) : null}
-        </div>
+        ) : totalCount > 0 ? (
+          <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-zinc-400">
+            {totalCount}
+          </span>
+        ) : null}
+      </div>
+      <div className="p-4">
         {totalCount === 0 ? (
           <EmptyState icon="grid" title={t('catalog.maker.products.empty')} />
         ) : products.length === 0 ? (
@@ -315,7 +317,7 @@ function ProductsGrid({
             ))}
           </div>
         )}
-      </section>
-    </Card>
+      </div>
+    </section>
   );
 }

@@ -34,7 +34,7 @@ export function ProductCard({ item }: ProductCardProps) {
   return (
     <Link
       href={`/produkt/${encodeURIComponent(item.productId)}`}
-      className="group block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary rounded-2xl"
+      className="block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
     >
       <Card padding="none" hover variant="elevated" className="flex h-full flex-col overflow-hidden">
         <div className="relative aspect-[4/3] w-full bg-surface-elevated">

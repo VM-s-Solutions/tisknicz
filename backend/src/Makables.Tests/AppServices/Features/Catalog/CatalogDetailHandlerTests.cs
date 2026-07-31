@@ -29,7 +29,7 @@ public class CatalogDetailHandlerTests
     {
         var profile = new MakerProfile(
             "m1", "keramika", "Keramika s.r.o.", "bio", "s.r.o.", "Praha",
-            true, false, null, 45000, 12, 30,
+            true, false, null, 45000, 12, 30, null,
             Array.Empty<MakerProductItem>(), Array.Empty<MakerReviewItem>());
         _catalog.GetMakerBySlugAsync("keramika", Arg.Any<CancellationToken>()).Returns(profile);
         var sut = new GetMakerBySlug.Handler(_catalog);
@@ -60,7 +60,7 @@ public class CatalogDetailHandlerTests
         var detail = new ProductDetail(
             "p1", "Hrnek", "popis", 25000, "CZK", "Fixed", "MadeToOrder", 400, "cat-1",
             42000, 7,
-            "m1", "keramika", "Keramika s.r.o.", true, true, "Odběr Po–Pá 9–17",
+            "m1", "keramika", "Keramika s.r.o.", true, true, "Odběr Po–Pá 9–17", null,
             Array.Empty<ProductImageItem>());
         _catalog.GetProductByIdAsync("p1", Arg.Any<CancellationToken>()).Returns(detail);
         var sut = new GetProductById.Handler(_catalog);
