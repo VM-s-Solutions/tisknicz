@@ -5,155 +5,180 @@
      New findings outside this list break the build. Shrink, never grow. -->
 
 - backend/src/Makables.Core.AppServices/Behaviors/UnitOfWorkPipelineBehavior.cs:63:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
-- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminAuditLog.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminOrderDetail.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetAllInvoices.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetAllOrders.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetPayoutBatches.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetProcessingPayoutsCount.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxCount.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxEvents.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/CompleteAppleOAuth.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/CompleteGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/ConfirmEmail.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/ConfirmPasswordReset.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/ConsumeMagicLink.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/Login.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/Logout.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminAuditLog.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminMakerDetail.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminMakers.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAdminOrderDetail.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAllInvoices.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetAllOrders.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetPayoutBatches.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetProcessingPayoutsCount.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxCount.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxEvents.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file is missing nested "record Command" or "record Query"
+- backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Auth/AuthDefaultCountryOptions.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Auth/CompleteAppleOAuth.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/CompleteGoogleOAuth.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/ConfirmEmail.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/ConfirmPasswordReset.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/ConsumeMagicLink.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/Login.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/Logout.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:1:T1  feature file is missing nested "class Handler"
-- backend/src/Makables.Core.AppServices/Features/Auth/Refresh.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/Register.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/RequestMagicLink.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/RequestPasswordReset.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/SendEmailConfirmation.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/StartAppleOAuth.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Auth/StartGoogleOAuth.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Catalog/GetMakerBySlug.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:39:T1  multiple top-level types in feature file ("IssueRequest") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:56:T1  multiple top-level types in feature file ("IssueOutcome") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Auth/OneTimeTokenIssuer.cs:58:T1  multiple top-level types in feature file ("OneTimeTokenIssuer") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Auth/Refresh.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/RequestMagicLink.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/RequestPasswordReset.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/SendEmailConfirmation.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file is missing nested "record Command" or "record Query"
+- backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Auth/SessionResult.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Catalog/GetMakerBySlug.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Catalog/GetMakerBySlug.cs:39:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Catalog/GetPagedMakers.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Catalog/GetProductById.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Catalog/GetPagedMakers.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Catalog/GetProductById.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Catalog/GetProductById.cs:37:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Categories/CreateCategory.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Categories/DeactivateCategory.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Catalog/GetPublicCategories.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Categories/CreateCategory.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Categories/DeactivateCategory.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Categories/DeactivateCategory.cs:66:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:83:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/CountryConfigurations/GetCountryConfiguration.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/CountryConfigurations/UpdateCountryConfiguration.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Categories/GetAdminCategories.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Categories/GetAdminCategories.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Categories/UpdateCategory.cs:87:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/CountryConfigurations/GetCountryConfiguration.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/CountryConfigurations/UpdateCountryConfiguration.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:1:T1  feature file is missing nested "class Handler"
-- backend/src/Makables.Core.AppServices/Features/Invoices/IssueInvoice.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Maker/DeactivateMaker.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Email/IEmailSendService.cs:41:T1  multiple top-level types in feature file ("EmailSendService") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Maker/DeactivateMaker.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Maker/DeactivateMaker.cs:86:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Maker/GetMyMakerProfile.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Maker/GetMyMakerProfile.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Maker/GetMyMakerProfile.cs:48:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Maker/RefreshMakerFromAres.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Maker/RefreshMakerFromAres.cs:102:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Maker/RegisterMaker.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Maker/UpdateMakerProfile.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Maker/LookupCompanyPreview.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Maker/RefreshMakerFromAres.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Maker/RefreshMakerFromAres.cs:104:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Maker/SetMakerFeeOverride.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Maker/SetMakerFeeOverride.cs:111:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Maker/UpdateMakerProfile.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Maker/UpdateMakerProfile.cs:97:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Maker/VerifyMaker.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Maker/VerifyMaker.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Maker/VerifyMaker.cs:79:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/GetCustomerOrderMessages.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/GetMakerOrderMessages.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/MarkCustomerOrderMessagesAsRead.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/MarkMakerOrderMessagesAsRead.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/PostCustomerOrderMessage.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/OrderMessages/PostMakerOrderMessage.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/AddOrderAttachment.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/CancelExpiredOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/ChangeOrderStateManually.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/GetCustomerOrderMessages.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/GetMakerOrderMessages.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/MarkCustomerOrderMessagesAsRead.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/MarkMakerOrderMessagesAsRead.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/PostCustomerOrderMessage.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/OrderMessages/PostMakerOrderMessage.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/AcceptOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/CancelExpiredOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/ChangeOrderStateManually.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Orders/ChangeOrderStateManually.cs:99:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Orders/CreateOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/CreatePaymentSession.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/DisputeShipment.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/GetCustomerOrderDetails.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/GetCustomerOrders.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/GetMakerOrderDetails.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/GetMakerOrders.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/HandOverOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderDelivered.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderPaid.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/OpenCustomerDispute.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/OpenDispute.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/OpenMakerDispute.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/RefundOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/ResolveDispute.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Outbox/AcknowledgeOutboxEvent.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Orders/DisputeShipment.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/EscalateDispute.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/GenerateReturnLabel.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/GetCustomerOrderDetails.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/GetCustomerOrders.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/GetMakerOrderDetails.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/GetMakerOrders.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/HandOverOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/MarkDisputeReturnReceivedByAdmin.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/MarkDisputeReturnReceivedByMaker.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/MarkOrderDelivered.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenCustomerDispute.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenDispute.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/OpenMakerDispute.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/RefundOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/ResolveDispute.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Orders/ShipOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Outbox/AcknowledgeOutboxEvent.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:49:T1  multiple top-level types in feature file ("DispatchSummary") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:55:T1  multiple top-level types in feature file ("OutboxDispatcher") — one use case per file
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:105:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/IOutboxDispatcher.cs:145:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "record Command" or "record Query"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:35:T1  multiple top-level types in feature file ("HandleOutcome") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:50:T1  multiple top-level types in feature file ("SendEmailHandler") — one use case per file
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:84:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
 - backend/src/Makables.Core.AppServices/Features/Outbox/ISendEmailHandler.cs:94:T3  SaveChangesAsync is forbidden in handlers — UnitOfWorkPipelineBehavior commits
-- backend/src/Makables.Core.AppServices/Features/Outbox/RetryOutboxEvent.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/CreatePayoutBatch.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerOutboxEventsForOrder.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerPayoutDetail.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerPayouts.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/MarkPayoutBatchCompleted.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Outbox/RetryOutboxEvent.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/CreatePayoutBatch.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file is missing nested "record Command" or "record Query"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GenericPayoutCsvFormatter.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerOutboxEventsForOrder.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerPayoutDetail.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/GetMakerPayouts.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file is missing nested "record Command" or "record Query"
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:1:T1  feature file is missing nested "class Handler"
+- backend/src/Makables.Core.AppServices/Features/Payouts/IPayoutArtifactService.cs:43:T1  multiple top-level types in feature file ("PayoutArtifactResult") — one use case per file
+- backend/src/Makables.Core.AppServices/Features/Payouts/MarkPayoutBatchCompleted.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file is missing nested "record Command" or "record Query"
+- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file is missing nested "class Validator"
+- backend/src/Makables.Core.AppServices/Features/Payouts/PayoutArtifactService.cs:1:T1  feature file is missing nested "class Handler"
 - backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:68:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/AddProductImage.cs:74:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/CreateProduct.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Products/CreateProduct.cs:95:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/DeleteProduct.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Products/CreateProduct.cs:99:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Products/DeleteProduct.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Products/DeleteProduct.cs:58:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/DeleteProduct.cs:64:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/GetMyProductById.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Products/GetMyProductById.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Products/GetMyProductById.cs:64:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/GetMyProductById.cs:71:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/GetMyProducts.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Products/GetMyProducts.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Products/GetMyProducts.cs:70:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/RemoveProductImage.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Products/RemoveProductImage.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Products/RemoveProductImage.cs:63:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Core.AppServices/Features/Products/RemoveProductImage.cs:69:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:85:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:93:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:89:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Products/UpdateProduct.cs:97:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Profile/ChangePassword.cs:55:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Profile/DeleteMyAccount.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:1:T1  feature file is missing nested "class Validator"
 - backend/src/Makables.Core.AppServices/Features/Profile/GetMyProfile.cs:43:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Profile/UpdateUserProfile.cs:56:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerReviewableOrders.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerSubmittedReviews.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/GetMakerReceivedReviews.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/RespondToReview.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Reviews/SubmitReview.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Shipping/FetchAndStoreShippingLabel.cs:1:T1  feature file must declare a public static class wrapper
-- backend/src/Makables.Core.AppServices/Features/Users/DeleteUserPermanently.cs:1:T1  feature file must declare a public static class wrapper
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerReviewableOrders.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetCustomerSubmittedReviews.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Reviews/GetMakerReceivedReviews.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Reviews/RespondToReview.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Reviews/SubmitReview.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Users/DeleteUserPermanently.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Infra.Azure.Storage.Blobs/AzureBlobStorageClient.cs:92:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Infra.Clients/Ares/AresCompanyRegistry.cs:186:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Infra.Clients/Ares/AresCompanyRegistry.cs:221:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Infra.Database/Auditing/AdminAuditLogWriter.cs:79:T4  `dynamic` is forbidden — model the contract with a concrete type
 - backend/src/Makables.Tests/AppServices/Behaviors/PipelineBehaviorTests.cs:194:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/AppServices/Behaviors/PipelineBehaviorTests.cs:228:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/AppServices/Behaviors/PipelineBehaviorTests.cs:266:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/AppServices/Behaviors/PipelineBehaviorTests.cs:307:T5  Error.Conflict call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Tests/AppServices/Features/Maker/RegisterMakerHandlerTests.cs:92:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Tests/AppServices/Features/Maker/RegisterMakerHandlerTests.cs:101:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/BusinessResultTests.cs:20:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/BusinessResultTests.cs:40:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/ErrorTests.cs:11:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Tests/Common/ErrorTests.cs:21:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
 - backend/src/Makables.Web.Customer/Controllers/OrdersController.cs:286:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Web.Maker/Controllers/ProductController.cs:193:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
-- backend/src/Makables.Web.Maker/Controllers/ProductController.cs:211:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Web.Maker/Controllers/ProductController.cs:195:T5  Error.NotFound call uses an inline string — reference BusinessErrorMessage.X
+- backend/src/Makables.Web.Maker/Controllers/ProductController.cs:213:T5  Error.Validation call uses an inline string — reference BusinessErrorMessage.X

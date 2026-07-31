@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { SaveButton, type SaveState } from '@/components/ui/save-button';
+import { DeleteAccountSection } from '@/components/shared/delete-account-section';
 import { ProfileImagePicker } from '@/components/shared/profile-image-picker';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { logout } from '@/lib/api-client-helpers/auth';
@@ -66,6 +67,7 @@ export function CustomerProfileClient({ initialProfile }: { initialProfile: MyPr
           {t('dashboard.customer.profile.logout')}
         </Button>
       </div>
+      <DeleteAccountSection host={Host} />
     </>
   );
 }

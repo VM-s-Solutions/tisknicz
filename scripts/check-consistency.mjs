@@ -149,8 +149,12 @@ function ruleT1(file, src) {
     // index is not preceded by a `class` keyword on a containing line. Approximation:
     // top-level types are those whose declaration column is 0 in the namespace-scoped
     // file (file-scoped namespace pattern Makables uses everywhere).
-    const topLevelTypes = [...code.matchAll(/^\s*public\s+(?:static\s+|sealed\s+|abstract\s+)?(?:partial\s+)?(class|record|interface|struct|enum)\s+(\w+)/gm)]
-        .filter(m => m[0].startsWith('public') || m[0].match(/^\s{0,3}public/));
+    // [ \t]* (not \s*) so the indent group cannot swallow preceding blank
+    // lines — with \s* every match started with newlines and the old
+    // startsWith('public') filter rejected all of them, flagging every
+    // feature file as missing its wrapper.
+    const topLevelTypes = [...code.matchAll(/^([ \t]*)public\s+(?:static\s+|sealed\s+|abstract\s+)?(?:partial\s+)?(class|record|interface|struct|enum)\s+(\w+)/gm)]
+        .filter(m => m[1].length <= 3);
     if (topLevelTypes.length === 0) {
         out.push(finding(file, 1, 'T1', 'feature file must declare a public static class wrapper'));
         return out;
@@ -159,7 +163,7 @@ function ruleT1(file, src) {
         for (let i = 1; i < topLevelTypes.length; i++) {
             const m = topLevelTypes[i];
             out.push(finding(file, lineOf(code, m.index), 'T1',
-                `multiple top-level types in feature file ("${m[2]}") — one use case per file`));
+                `multiple top-level types in feature file ("${m[3]}") — one use case per file`));
         }
     }
 

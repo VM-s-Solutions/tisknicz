@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Makables.Config.Auth;
 using Makables.Core.AppServices.Features.Maker;
 using Makables.Core.AppServices.Features.Profile;
 using Makables.Core.Domain.Common;
@@ -44,13 +45,15 @@ public sealed class ProfileController(
     IMakerRepository makers,
     IBlobStorageClient blobs,
     IUserSessionProvider session,
-    IIdGenerator ids) : MakablesApiController
+    IIdGenerator ids,
+    IHostAudience hostAudience) : MakablesApiController
 {
     public sealed record UpdateProfileRequest(string FullName, string? Phone);
 
     /// <summary>Blob path of the stored image, for the client to build a URL from.</summary>
     public sealed record UploadProfileImageResponse(string BlobPath);
     public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+    public sealed record DeleteMyAccountRequest(string ConfirmedEmail);
     public sealed record UpdateMakerProfileRequest(
         string? Bio,
         string? BankAccount,
@@ -75,6 +78,25 @@ public sealed class ProfileController(
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body, CancellationToken ct)
     {
         var result = await Mediator.Send(new ChangePassword.Command(body.CurrentPassword, body.NewPassword), ct);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Self-service GDPR account deletion (soft delete + logout-all).
+    /// <c>POST .../delete</c> (not <c>DELETE /me</c>) — the operation is
+    /// side-effecting and gated by a retype body, mirroring the admin
+    /// <c>POST users/{id}/erase</c> naming convention. On success the
+    /// session cookies are cleared so the caller is logged out immediately.
+    /// </summary>
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteMe([FromBody] DeleteMyAccountRequest body, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeleteMyAccount.Command(body.ConfirmedEmail), ct);
+        if (result.IsSuccess)
+        {
+            AuthCookies.ClearSessionCookies(Response, hostAudience.Value);
+        }
+
         return HandleResult(result);
     }
 

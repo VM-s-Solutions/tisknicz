@@ -59,6 +59,21 @@ export async function changePassword(host: ApiHost, input: ChangePasswordInput):
   return result.success ? ok(undefined) : result;
 }
 
+export interface DeleteMyAccountInput {
+  confirmedEmail: string;
+}
+
+/**
+ * Self-service GDPR account deletion (soft delete + logout-all). The
+ * backend requires the caller to retype their own email; on success it
+ * clears the session cookies, so the caller must be redirected out of
+ * the authenticated area immediately.
+ */
+export async function deleteMyAccount(host: ApiHost, input: DeleteMyAccountInput): Promise<Result<void, ApiError>> {
+  const result = await apiFetch<unknown>(host, `${Base}/delete`, { method: 'POST', json: input });
+  return result.success ? ok(undefined) : result;
+}
+
 // ---- Maker profile ----
 
 export interface MyMakerProfile {

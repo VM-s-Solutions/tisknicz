@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { SaveButton, type SaveState } from '@/components/ui/save-button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { DeleteAccountSection } from '@/components/shared/delete-account-section';
 import { ProfileImagePicker } from '@/components/shared/profile-image-picker';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { buildMakerLogoUrl } from '@/lib/api-client-helpers/catalog';
@@ -41,6 +42,7 @@ export function MakerProfileClient({ initialProfile }: { initialProfile: MyMaker
     <>
       <CompanySection profile={profile} onUpdated={setProfile} />
       <EditableSection profile={profile} onUpdated={setProfile} />
+      <DeleteAccountSection host={Host} />
     </>
   );
 }
