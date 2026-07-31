@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { PublicFooter } from '@/components/shared/public-footer';
 import { accessCookieName } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import { AdminShellNav } from '../../shell-nav';
@@ -31,9 +32,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
 
   return (
     <div className="relative min-h-screen text-zinc-100">
-      <div aria-hidden="true" className="page-backdrop" />
       <AdminShellNav identity={t('dashboard.admin.shell.identityFallback')} />
       <main>{children}</main>
+      <PublicFooter />
     </div>
   );
 }

@@ -143,7 +143,7 @@ export function Dropdown({
   return (
     <div className="flex flex-col gap-1.5" ref={rootRef}>
       {label && (
-        <label htmlFor={triggerId} className="text-sm font-medium text-zinc-400">
+        <label htmlFor={triggerId} className="text-sm font-medium text-zinc-300">
           {label}
         </label>
       )}
@@ -158,7 +158,7 @@ export function Dropdown({
           disabled={disabled}
           onClick={() => (open ? setOpen(false) : openList())}
           onKeyDown={onTriggerKeyDown}
-          className={`flex w-full items-center justify-between gap-2 rounded-xl border bg-zinc-900 px-4 py-2.5 text-left text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/30 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:opacity-50 ${
+          className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-zinc-900 px-4 py-2.5 text-left text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/30 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:opacity-50 ${
             error
               ? 'border-error text-zinc-100'
               : 'border-zinc-700 text-zinc-100 hover:border-zinc-500 focus-visible:border-brand-400'
@@ -169,7 +169,7 @@ export function Dropdown({
           </span>
           <span
             aria-hidden="true"
-            className={`shrink-0 text-zinc-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            className={`shrink-0 text-zinc-500 ${open ? 'rotate-180' : ''}`}
           >
             <Icon name="chevronDown" size={16} />
           </span>
@@ -181,7 +181,7 @@ export function Dropdown({
             id={listboxId}
             role="listbox"
             aria-labelledby={triggerId}
-            className="absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 py-1.5 shadow-2xl shadow-black/50 motion-safe:animate-tooltip-in"
+            className="absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1.5 shadow-2xl shadow-black/50"
           >
             {allOptions.map((option, index) => {
               const isSelected = index === selectedIndex;

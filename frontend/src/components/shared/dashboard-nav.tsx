@@ -34,7 +34,7 @@ export function DashboardNav({ items }: { items: readonly DashboardNavItem[] }) 
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   active
                     ? 'border-brand-500/40 bg-brand-400/10 text-brand-200'
                     : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-100'

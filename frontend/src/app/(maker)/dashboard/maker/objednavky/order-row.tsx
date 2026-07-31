@@ -9,12 +9,13 @@ import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-l
 import { formatDate } from '@/lib/utils/dates';
 
 /**
- * Presentational order rows for the maker dashboard list (T-0087a).
- * Server-safe: pure formatting + links, no client logic. Each row is a
- * lifted panel card (`.panel .card-lift`) — the whole card is the
- * `<Link>` target (AC-9): order number + state badge, customer, product,
- * created date, and the payout amount prominent on the trailing edge
- * with a chevron that nudges on hover.
+ * Presentational order list for the maker dashboard (T-0087a). Server-
+ * safe: pure formatting + links, no client logic. GitHub "box" pattern:
+ * one bordered container with a quiet count header, rows divided by
+ * hairlines — the whole row is the `<Link>` target (AC-9): order number
+ * + state badge, customer, product, created date, and the payout amount
+ * prominent on the trailing edge with a chevron that picks up the brand
+ * hue on hover (color only — static UI, no movement).
  *
  * GDPR surface (T-0081 §A.2): the row shows `customerContactName` only
  * — the DTO carries no email, and no `mailto:` is rendered anywhere
@@ -22,12 +23,24 @@ import { formatDate } from '@/lib/utils/dates';
  * the platform fee.
  */
 
-export function OrderRows({ items }: { readonly items: readonly MakerOrderListItem[] }) {
+interface OrderRowsProps {
+  readonly items: readonly MakerOrderListItem[];
+  readonly totalCount: number;
+}
+
+export function OrderRows({ items, totalCount }: OrderRowsProps) {
   return (
-    <div className="flex flex-col gap-3">
-      {items.map((item) => (
-        <OrderRow key={item.orderId} item={item} />
-      ))}
+    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-surface-card">
+      <header className="border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3 sm:px-5">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          {t('dashboard.maker.orders.count', { count: totalCount })}
+        </h2>
+      </header>
+      <div className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <OrderRow key={item.orderId} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -38,7 +51,7 @@ function OrderRow({ item }: { readonly item: MakerOrderListItem }) {
   return (
     <Link
       href={`/dashboard/maker/objednavky/${encodeURIComponent(item.orderId)}`}
-      className="group panel card-lift flex flex-col gap-3 rounded-2xl border border-zinc-800 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5"
+      className="group flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:flex-row sm:items-center sm:gap-6 sm:px-5"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2.5">
@@ -60,7 +73,10 @@ function OrderRow({ item }: { readonly item: MakerOrderListItem }) {
         <span className="text-lg font-bold text-zinc-100">
           {formatCzk(item.makerPayoutAmountMinor, item.currency)}
         </span>
-        <span aria-hidden="true" className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-brand-400">
+        <span
+          aria-hidden="true"
+          className="text-zinc-500 transition-colors group-hover:text-brand-400"
+        >
           <Icon name="chevronRight" size={18} />
         </span>
       </div>

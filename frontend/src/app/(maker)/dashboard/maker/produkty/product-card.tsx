@@ -7,7 +7,7 @@ import { buildProductImageUrl } from '@/lib/api-client-helpers/catalog';
 import type { MakerProductListItem } from '@/lib/api-client-helpers/maker-products';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { formatWeight } from '@/lib/format/weight';
-import { t, type MessageKey } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
 import { formatDate } from '@/lib/utils/dates';
 import { DeleteProductButton } from './_components/delete-product-button';
@@ -54,9 +54,9 @@ export function MakerProductCard({ item }: ProductCardProps) {
     >
       <Link
         href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
-        className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
       >
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-surface-elevated">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-surface-elevated">
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -64,7 +64,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
               width={IMAGE_WIDTH}
               height={IMAGE_HEIGHT}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-zinc-500">
@@ -111,7 +111,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
       <div className="flex items-center justify-between gap-2 border-t border-zinc-800 px-4 py-3">
         <Link
           href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
         >
           <Icon name="edit" size={14} />
           {t('dashboard.maker.products.actions.edit')}
@@ -136,8 +136,3 @@ function ProductPrice({ item }: { readonly item: MakerProductListItem }) {
   }
   return <>{formatted}</>;
 }
-
-// Re-export a key for consumers that want a static narrowed reference
-// to the card heading row's i18n keys (kept type-only for now; no
-// runtime impact).
-export type MakerProductCardLabelKey = MessageKey;

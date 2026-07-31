@@ -100,7 +100,7 @@ function TimelineNode({
       ? 'border-brand-400 bg-brand-400 text-zinc-950'
       : filled
         ? 'border-brand-400/40 bg-brand-400/10 text-brand-400'
-        : 'border-zinc-800 bg-zinc-900 text-zinc-700';
+        : 'border-zinc-800 bg-zinc-900 text-zinc-500';
 
   return (
     <li className="flex gap-4">
@@ -125,7 +125,7 @@ function TimelineNode({
       <div className={`flex flex-col gap-0.5 pt-0.5 ${isLast ? 'pb-0' : 'pb-6'}`}>
         <span
           className={`text-sm font-semibold ${
-            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-600'
+            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-500'
           }`}
         >
           {step.label}

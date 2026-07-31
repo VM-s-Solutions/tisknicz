@@ -45,42 +45,42 @@ export default function PrivacyPage() {
           <p className="font-semibold">{t('static.privacy.disclaimer')}</p>
         </Alert>
 
-        <div className="space-y-6 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:p-8">
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_controller_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_controller_body')}</p>
+        <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-surface-card">
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_controller_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_controller_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_data_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_data_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_data_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_data_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_legal_basis_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_legal_basis_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_legal_basis_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_legal_basis_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_retention_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_retention_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_retention_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_retention_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_rights_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_rights_body')}</p>
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_rights_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_rights_body')}</p>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_cookies_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_cookies_body')}</p>
-            <CookieSettingsLink className="inline-block underline" />
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_cookies_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_cookies_body')}</p>
+            <CookieSettingsLink className="mt-2 inline-block underline" />
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-xl font-semibold text-white">{t('static.privacy.section_law_title')}</h2>
-            <p className="leading-relaxed text-zinc-300">{t('static.privacy.section_law_intro')}</p>
-            <ul className="list-disc space-y-2 pl-5 text-zinc-300">
+          <section className="px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold text-zinc-100">{t('static.privacy.section_law_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t('static.privacy.section_law_intro')}</p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-zinc-300">
               {legalSources.map((law) => (
                 <li key={law}>{t(law)}</li>
               ))}

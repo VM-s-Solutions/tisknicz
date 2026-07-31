@@ -31,7 +31,7 @@ export default function MakerReviewsError({
           </Button>
           <Link
             href="/dashboard/maker/recenze"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('dashboard.maker.reviews.title')}
           </Link>

@@ -46,6 +46,12 @@ export const messages = {
   'error.configuration': 'Konfigurace platformy neumožňuje tuto akci. Kontaktujte podporu.',
   'error.unknown': 'Něco se pokazilo.',
 
+  // Global 404 page
+  'notFound.title': 'Stránka nenalezena',
+  'notFound.body': 'Tato stránka neexistuje nebo byla přesunuta.',
+  'notFound.back_home': 'Zpět na úvod',
+  'notFound.browse_catalog': 'Prohlédnout katalog',
+
   // Auth — login
   'auth.login.title': 'Přihlášení',
   'auth.login.subtitle': 'Přihlaste se a pokračujte v objednávkách, komunikaci s makerem i sledování zásilek na jednom místě.',
@@ -614,6 +620,7 @@ export const messages = {
   'static.contact.disclaimer':
     'PLACEHOLDER — čekáme na doplnění závazných identifikačních údajů (IČO, sídlo, DIČ) provozovatelem. Text níže nesmí jít do produkčního nasazení bez doplnění.',
   'static.contact.section_operator_title': 'Provozovatel platformy',
+  'static.contact.operator_name_label': 'Název',
   'static.contact.operator_name': 'JVM YORE s.r.o.',
   'static.contact.operator_ico_label': 'IČO',
   'static.contact.operator_ico_value': 'doplní se před spuštěním',

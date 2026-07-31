@@ -69,9 +69,9 @@ export default async function MakerPayoutDetailPage({ params }: PageProps) {
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
         >
-          <Icon name="arrowLeft" size={16} />
+          <Icon name="chevronLeft" size={16} />
           {t('dashboard.maker.payoutDetail.backToList')}
         </Link>
 
@@ -102,11 +102,12 @@ function PayoutSummary({ detail }: { readonly detail: MakerPayoutDetail }) {
           {t(payoutStateLabelKey(detail.state))}
         </Badge>
       </div>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <dl className="divide-y divide-zinc-800 border-t border-zinc-800">
         <SummaryItem labelKey="dashboard.maker.payoutDetail.summary.number" value={detail.batchNumber} />
         <SummaryItem
           labelKey="dashboard.maker.payoutDetail.summary.total"
           value={formatCzk(detail.makerTotalPaidMinor, detail.currency)}
+          emphasised
         />
         <SummaryItem
           labelKey="dashboard.maker.payoutDetail.summary.orders"
@@ -121,11 +122,25 @@ function PayoutSummary({ detail }: { readonly detail: MakerPayoutDetail }) {
   );
 }
 
-function SummaryItem({ labelKey, value }: { readonly labelKey: MessageKey; readonly value: string }) {
+function SummaryItem({
+  labelKey,
+  value,
+  emphasised = false,
+}: {
+  readonly labelKey: MessageKey;
+  readonly value: string;
+  readonly emphasised?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{t(labelKey)}</dt>
-      <dd className="text-sm font-medium text-zinc-100">{value}</dd>
+    <div className="flex items-center justify-between gap-3 py-2.5">
+      <dt className="text-sm text-zinc-400">{t(labelKey)}</dt>
+      <dd
+        className={`min-w-0 break-words text-right text-sm text-zinc-100 ${
+          emphasised ? 'font-semibold' : ''
+        }`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -135,18 +150,13 @@ const BREAKDOWN_GRID =
 
 function PayoutBreakdown({ detail }: { readonly detail: MakerPayoutDetail }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <span className="icon-tile h-9 w-9" aria-hidden="true">
-          <Icon name="receipt" size={16} />
-        </span>
-        <h2 className="text-lg font-semibold text-white">
-          {t('dashboard.maker.payoutDetail.breakdown.heading')}
-        </h2>
-      </div>
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        {t('dashboard.maker.payoutDetail.breakdown.heading')}
+      </h2>
       <Card variant="elevated" padding="none" className="flex flex-col overflow-hidden">
         <div
-          className={`hidden border-b border-zinc-800 px-5 pt-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${BREAKDOWN_GRID}`}
+          className={`hidden border-b border-zinc-800 bg-surface-secondary/60 px-5 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${BREAKDOWN_GRID}`}
         >
           <span>{t('dashboard.maker.payoutDetail.breakdown.order')}</span>
           <span className="md:text-right">
@@ -162,31 +172,35 @@ function PayoutBreakdown({ detail }: { readonly detail: MakerPayoutDetail }) {
             {t('dashboard.maker.payoutDetail.breakdown.netPayout')}
           </span>
         </div>
-        {detail.orders.map((line) => (
-          <div
-            key={line.orderId}
-            className={`flex flex-col gap-2 border-b border-zinc-800 px-5 py-4 last:border-b-0 ${BREAKDOWN_GRID}`}
-          >
-            <span className="text-sm font-semibold text-zinc-100">{line.orderNumber}</span>
-            <BreakdownCell
-              labelKey="dashboard.maker.payoutDetail.breakdown.productPrice"
-              value={formatCzk(line.productPriceMinor, line.currency)}
-            />
-            <BreakdownCell
-              labelKey="dashboard.maker.payoutDetail.breakdown.shipping"
-              value={formatCzk(line.shippingPriceMinor, line.currency)}
-            />
-            <BreakdownCell
-              labelKey="dashboard.maker.payoutDetail.breakdown.platformFee"
-              value={formatCzk(line.platformFeeAmountMinor, line.currency)}
-            />
-            <BreakdownCell
-              labelKey="dashboard.maker.payoutDetail.breakdown.netPayout"
-              value={formatCzk(line.makerPayoutAmountMinor, line.currency)}
-              emphasised
-            />
-          </div>
-        ))}
+        <div className="divide-y divide-zinc-800">
+          {detail.orders.map((line) => (
+            <div
+              key={line.orderId}
+              className={`flex flex-col gap-2 px-5 py-4 ${BREAKDOWN_GRID}`}
+            >
+              <span className="min-w-0 break-words text-sm font-semibold text-zinc-100">
+                {line.orderNumber}
+              </span>
+              <BreakdownCell
+                labelKey="dashboard.maker.payoutDetail.breakdown.productPrice"
+                value={formatCzk(line.productPriceMinor, line.currency)}
+              />
+              <BreakdownCell
+                labelKey="dashboard.maker.payoutDetail.breakdown.shipping"
+                value={formatCzk(line.shippingPriceMinor, line.currency)}
+              />
+              <BreakdownCell
+                labelKey="dashboard.maker.payoutDetail.breakdown.platformFee"
+                value={formatCzk(line.platformFeeAmountMinor, line.currency)}
+              />
+              <BreakdownCell
+                labelKey="dashboard.maker.payoutDetail.breakdown.netPayout"
+                value={formatCzk(line.makerPayoutAmountMinor, line.currency)}
+                emphasised
+              />
+            </div>
+          ))}
+        </div>
       </Card>
     </div>
   );

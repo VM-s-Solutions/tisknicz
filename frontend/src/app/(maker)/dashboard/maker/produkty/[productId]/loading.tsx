@@ -15,9 +15,9 @@ export default function MakerProductEditLoading() {
           </h1>
           <div className="mt-3 h-5 w-2/3 animate-pulse rounded bg-surface-elevated" />
         </header>
-        <div className="h-80 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
-        <div className="h-56 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
-        <div className="h-72 animate-pulse rounded-2xl border border-zinc-800 bg-surface-card" />
+        <div className="h-80 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
+        <div className="h-56 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
+        <div className="h-72 animate-pulse rounded-xl border border-zinc-800 bg-surface-card" />
       </div>
     </section>
   );

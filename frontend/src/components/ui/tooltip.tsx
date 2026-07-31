@@ -124,7 +124,7 @@ export function Tooltip({ content, side = 'top', children, className = '' }: Too
             id={tooltipId}
             role="tooltip"
             style={tooltipStyle}
-            className="pointer-events-none fixed z-50 block max-w-xs rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium leading-relaxed text-zinc-100 shadow-xl shadow-black/40 motion-safe:animate-tooltip-in"
+            className="pointer-events-none fixed z-50 block max-w-xs rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium leading-relaxed text-zinc-100 shadow-xl shadow-black/40"
           >
             {content}
             <span

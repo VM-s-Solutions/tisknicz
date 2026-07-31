@@ -21,7 +21,7 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
   const imageUrl = buildProductImageUrl(product.images[0]?.blobPath);
 
   return (
-    <Card variant="accent" padding="md" className="flex flex-col gap-4 lg:sticky lg:top-8">
+    <Card variant="accent" padding="md" className="flex flex-col gap-4 lg:sticky lg:top-24">
       <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
         {t('checkout.summary.product')}
       </h2>
@@ -38,7 +38,7 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-zinc-600">
+            <div className="flex h-full w-full items-center justify-center text-zinc-500">
               <Icon name="image" size={20} />
             </div>
           )}
@@ -48,8 +48,7 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
           <p className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
             <span>{product.makerCompanyName}</span>
             {product.makerIsVerified ? (
-              <Badge variant="brand">
-                <Icon name="verified" size={12} />
+              <Badge variant="brand" dot={false}>
                 {t('catalog.maker.verified')}
               </Badge>
             ) : null}

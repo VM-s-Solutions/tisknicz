@@ -233,10 +233,8 @@ export function OrderFormClient({
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-4">
-          <legend className="flex items-center gap-3 text-lg font-semibold text-white">
-            <span className="icon-tile h-9 w-9" aria-hidden="true">
-              <Icon name="user" size={16} />
-            </span>
+          <legend className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <Icon name="user" size={14} className="shrink-0" />
             {t('checkout.contact.legend')}
           </legend>
           <Input
@@ -291,14 +289,10 @@ export function OrderFormClient({
         </fieldset>
       </Card>
 
-      <div aria-hidden="true" className="divider-glow" />
-
       <Card variant="elevated" padding="md" className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-3">
-          <legend className="flex items-center gap-3 text-lg font-semibold text-white">
-            <span className="icon-tile h-9 w-9" aria-hidden="true">
-              <Icon name="truck" size={16} />
-            </span>
+          <legend className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <Icon name="truck" size={14} className="shrink-0" />
             {t('checkout.shipping.legend')}
           </legend>
 
@@ -477,7 +471,7 @@ export function WithdrawalNotice({
 
   return (
     <Alert variant="warning">
-      <p className="text-xs font-semibold uppercase tracking-wide">
+      <p className="text-xs font-semibold uppercase tracking-widest">
         {t('checkout.withdrawalNotice.interimLabel')}
       </p>
       <p className="mt-1 font-semibold">{t(titleKey)}</p>

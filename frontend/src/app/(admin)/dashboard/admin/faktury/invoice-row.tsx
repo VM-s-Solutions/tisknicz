@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import type { AdminInvoiceListItem } from '@/lib/api-client-helpers/admin-client';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
@@ -9,9 +10,11 @@ import { InvoiceDownload } from './invoice-download';
  * Presentational admin invoice rows (T-0118a, US-admin-0012 AC-1).
  * Server-safe markup; the only client island is the per-row download
  * button (re-enabled in T-0118c — the admin invoice-PDF endpoint T-0126
- * now exists; see invoice-download.tsx). Two layouts: stacked cards below
- * `md`, a grid "table" at `md+`. Invoices have no detail page in any
- * slice, so the row is not a `<Link>`.
+ * now exists; see invoice-download.tsx). Rendered as one GitHub-style
+ * "box": a single bordered container with a header row (title + count)
+ * and `divide-y` rows — not floating cards. Two row layouts: stacked
+ * below `md`, a grid "table" at `md+`. Invoices have no detail page in
+ * any slice, so the row is not a `<Link>`.
  *
  * `type` is the InvoiceType ordinal (0 = Customer zákaznická, 1 = Fee
  * provize) — a presentation-only label map, not business logic.
@@ -31,11 +34,30 @@ function invoiceTypeLabelKey(type: number): MessageKey {
   }
 }
 
-export function InvoiceRows({ items }: { readonly items: readonly AdminInvoiceListItem[] }) {
+export function InvoiceRows({
+  items,
+  totalCount,
+}: {
+  readonly items: readonly AdminInvoiceListItem[];
+  readonly totalCount: number;
+}) {
   return (
-    <div className="flex flex-col gap-3 md:gap-0">
+    <div className="rounded-xl border border-zinc-800 bg-surface-card">
+      <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            {t('dashboard.admin.invoices.title')}
+          </h2>
+          <Badge
+            dot={false}
+            aria-label={t('dashboard.admin.invoices.count', { count: totalCount })}
+          >
+            {totalCount}
+          </Badge>
+        </div>
+      </div>
       <div
-        className={`hidden border-b border-zinc-800 px-4 pb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
+        className={`hidden border-b border-zinc-800 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-500 ${GRID_COLUMNS}`}
       >
         <span>{t('dashboard.admin.invoices.table.number')}</span>
         <span>{t('dashboard.admin.invoices.table.type')}</span>
@@ -45,18 +67,18 @@ export function InvoiceRows({ items }: { readonly items: readonly AdminInvoiceLi
         <span className="md:text-right">{t('dashboard.admin.invoices.table.created')}</span>
         <span className="md:text-right">{t('dashboard.admin.invoices.table.actions')}</span>
       </div>
-      {items.map((item) => (
-        <InvoiceRow key={item.invoiceId} item={item} />
-      ))}
+      <div className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <InvoiceRow key={item.invoiceId} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
 
 function InvoiceRow({ item }: { readonly item: AdminInvoiceListItem }) {
   return (
-    <div
-      className={`flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-surface-card p-4 md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:bg-transparent ${GRID_COLUMNS}`}
-    >
+    <div className={`flex flex-col gap-3 p-4 ${GRID_COLUMNS}`}>
       <div className="flex items-center justify-between gap-3 md:contents">
         <span className="text-sm font-semibold text-zinc-100">{item.invoiceNumber}</span>
         <span className="hidden text-sm text-zinc-300 md:block">

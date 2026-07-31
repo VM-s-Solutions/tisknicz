@@ -85,6 +85,23 @@ function readString(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
+/**
+ * Quiet back affordance to the customer order list — the first element
+ * on both order surfaces (PendingPayment and tracking), above the
+ * title/status row.
+ */
+function BackToOrdersLink() {
+  return (
+    <Link
+      href="/dashboard/zakaznik/objednavky"
+      className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+    >
+      <Icon name="chevronLeft" size={16} />
+      {t('common.back')}
+    </Link>
+  );
+}
+
 export default async function OrderPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const sp = await searchParams;
@@ -123,6 +140,10 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
 
   return (
     <section className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+      <div>
+        <BackToOrdersLink />
+      </div>
+
       {Number.isFinite(attachmentsFailed) && attachmentsFailed > 0 ? (
         <Alert variant="warning">
           {t('order.page.attachments.failedHandoffAlert', { count: attachmentsFailed })}
@@ -232,7 +253,11 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-2">
+      <div>
+        <BackToOrdersLink />
+      </div>
+
+      <header className="mt-6 flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
             {t('order.page.title', { orderNumber: detail.orderNumber })}
@@ -353,7 +378,7 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
             <Card
               variant="elevated"
               padding="md"
-              className="flex items-center justify-between gap-3"
+              className="flex flex-wrap items-center justify-between gap-3"
             >
               <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
                 <Icon name="receipt" size={14} className="shrink-0" />
@@ -371,7 +396,7 @@ async function TrackingDetail({ detail }: { readonly detail: CustomerOrderDetail
             <Card
               variant="elevated"
               padding="md"
-              className="flex items-center justify-between gap-3"
+              className="flex flex-wrap items-center justify-between gap-3"
             >
               <h2 className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
                 <Icon name="package" size={14} className="shrink-0" />
@@ -400,7 +425,7 @@ function LoadErrorState({ orderId }: { readonly orderId: string }) {
       <div>
         <Link
           href={`/objednavka/${encodeURIComponent(orderId)}`}
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
         >
           <Icon name="refresh" size={14} className="shrink-0" />
           {t('order.page.loadErrorRetry')}

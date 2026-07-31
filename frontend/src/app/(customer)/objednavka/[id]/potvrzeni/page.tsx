@@ -84,7 +84,7 @@ export default async function PaymentConfirmationPage({ params, searchParams }: 
         <div>
           <Link
             href={`/objednavka/${encodeURIComponent(id)}/potvrzeni`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('order.page.loadErrorRetry')}
           </Link>
@@ -125,7 +125,7 @@ export default async function PaymentConfirmationPage({ params, searchParams }: 
           <p className="text-sm text-zinc-400">{t('order.page.banner.detailComing')}</p>
           <Link
             href={`/objednavka/${encodeURIComponent(detail.orderId)}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('checkout.confirm.pendingDetailLink')}
             <Icon name="arrowRight" size={14} />

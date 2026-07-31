@@ -108,7 +108,7 @@ export function ProductFilters({
         <span aria-hidden="true" className="icon-tile h-8 w-8">
           <Icon name="filter" size={15} />
         </span>
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('catalog.maker.filter.heading')}
         </h2>
       </div>

@@ -216,7 +216,7 @@ function CatalogEmpty() {
       action={
         <Link
           href="/katalog"
-          className="inline-flex items-center gap-2 rounded-full border border-brand-500/60 px-5 py-2.5 text-sm font-medium tracking-wide text-brand-300 transition-all duration-200 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
         >
           {t('catalog.empty.reset')}
         </Link>
@@ -227,15 +227,15 @@ function CatalogEmpty() {
 
 function CatalogError() {
   return (
-    <Alert variant="error" className="border border-red-900/50 bg-red-950/20">
+    <Alert variant="error">
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-semibold">{t('catalog.error.title')}</p>
-          <p className="mt-1 text-sm opacity-90">{t('error.transient')}</p>
+          <p className="mt-1 text-sm">{t('error.transient')}</p>
         </div>
         <Link
           href="/katalog"
-          className="inline-flex w-fit items-center gap-2 rounded-full border border-red-500/50 px-4 py-2 text-sm font-medium text-red-300 transition-all duration-200 hover:border-red-400 hover:text-red-200"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
         >
           {t('catalog.error.retry')}
         </Link>

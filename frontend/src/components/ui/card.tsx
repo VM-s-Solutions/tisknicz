@@ -4,9 +4,10 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   hover?: boolean;
   /**
-   * Surface treatment. `default` keeps the original flat card;
-   * `elevated` uses the lit `.panel` gradient surface; `accent` adds
-   * the teal top hairline for the one primary surface on a page.
+   * Surface treatment. `default` and `elevated` are both flat fills of
+   * `--color-surface-card` (elevation reads through the hairline border,
+   * not a gradient); `accent` adds the solid teal top hairline for the
+   * one primary surface on a page.
    */
   variant?: 'default' | 'elevated' | 'accent';
 }
@@ -34,7 +35,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`rounded-2xl border border-zinc-800 ${variantStyles[variant]} ${hover ? 'card-lift' : ''} ${paddingStyles[padding]} ${className}`}
+      className={`rounded-xl border border-zinc-800 ${variantStyles[variant]} ${hover ? 'card-lift' : ''} ${paddingStyles[padding]} ${className}`}
       {...props}
     >
       {children}

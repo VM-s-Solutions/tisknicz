@@ -101,14 +101,14 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
       {removeError ? <Alert variant="error">{removeError}</Alert> : null}
 
       {images.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           {images.map((image, index) => {
             const url = buildProductImageUrl(image.blobPath);
             const isRemoving = removingId === image.imageId;
             return (
               <li
                 key={image.imageId}
-                className="flex flex-col gap-2 overflow-hidden rounded-2xl border border-zinc-800 bg-surface-elevated"
+                className="flex flex-col gap-2 overflow-hidden rounded-xl border border-zinc-800 bg-surface-elevated"
               >
                 <div className="relative aspect-[4/3] w-full bg-zinc-900">
                   {url ? (
@@ -147,11 +147,7 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
         </ul>
       ) : null}
 
-      <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-zinc-700 px-6 py-8 text-center">
-        <div
-          aria-hidden="true"
-          className="empty-glow pointer-events-none absolute inset-x-0 top-0 h-24"
-        />
+      <div className="relative flex flex-col items-center gap-3 overflow-hidden rounded-xl border border-dashed border-zinc-700 px-6 py-8 text-center">
         <span className="icon-tile relative h-12 w-12">
           <Icon name="upload" size={20} />
         </span>
@@ -169,7 +165,7 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
           className="hidden"
           id="product-image-upload"
         />
-        <div className="relative flex items-center gap-3">
+        <div className="relative flex flex-wrap items-center justify-center gap-3">
           <Button
             type="button"
             variant="outline"

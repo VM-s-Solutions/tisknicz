@@ -13,7 +13,6 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   const session = await getDisplaySession();
   return (
     <div className="relative flex min-h-screen flex-col text-zinc-100">
-      <div aria-hidden="true" className="page-backdrop" />
       <PublicNavbar session={session} />
       <main className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
         <div className="w-full max-w-xl">{children}</div>

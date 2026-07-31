@@ -16,7 +16,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   const session = await getDisplaySession();
   return (
     <div className="relative min-h-screen text-zinc-100">
-      <div aria-hidden="true" className="page-backdrop" />
       <PublicNavbar session={session} />
       <main>{children}</main>
       <PublicFooter />

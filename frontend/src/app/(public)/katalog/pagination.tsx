@@ -11,11 +11,11 @@ interface PaginationProps {
   readonly baseParams: Readonly<Record<string, string>>;
 }
 
-const PILL_ACTIVE =
-  'inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-surface-card px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-brand-400/60 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40';
+const PAGE_LINK =
+  'inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-surface-card px-4 py-2 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40';
 
-const PILL_DISABLED =
-  'inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-600';
+const PAGE_LINK_DISABLED =
+  'inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2 text-sm font-medium text-zinc-500';
 
 /**
  * URL-driven prev/next pagination. Renders as <Link> elements so back
@@ -36,14 +36,14 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
   return (
     <nav aria-label={t('catalog.pagination.page_of', { page, total: totalPages })} className="mt-10">
       <div aria-hidden="true" className="divider-glow" />
-      <div className="mt-6 flex items-center justify-between gap-4">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         {hasPrevious ? (
-          <Link href={hrefFor(page - 1)} className={PILL_ACTIVE}>
+          <Link href={hrefFor(page - 1)} className={PAGE_LINK}>
             <Icon name="arrowLeft" size={16} />
             {t('catalog.pagination.previous')}
           </Link>
         ) : (
-          <span aria-disabled="true" className={PILL_DISABLED}>
+          <span aria-disabled="true" className={PAGE_LINK_DISABLED}>
             <Icon name="arrowLeft" size={16} />
             {t('catalog.pagination.previous')}
           </span>
@@ -54,12 +54,12 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
         </p>
 
         {hasNext ? (
-          <Link href={hrefFor(page + 1)} className={PILL_ACTIVE}>
+          <Link href={hrefFor(page + 1)} className={PAGE_LINK}>
             {t('catalog.pagination.next')}
             <Icon name="arrowRight" size={16} />
           </Link>
         ) : (
-          <span aria-disabled="true" className={PILL_DISABLED}>
+          <span aria-disabled="true" className={PAGE_LINK_DISABLED}>
             {t('catalog.pagination.next')}
             <Icon name="arrowRight" size={16} />
           </span>

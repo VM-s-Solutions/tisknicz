@@ -3,7 +3,7 @@
 import { type ButtonHTMLAttributes, type Ref } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'dangerGhost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   /**
@@ -16,27 +16,39 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * Hairline button system: transparent surfaces, 1px borders, colored
- * text and a soft glow on hover instead of solid fills. `ghost` is the
- * only borderless variant (pure text with an animated underline).
+ * Hairline button system. No variant ships a solid block of colour — a
+ * button is a bordered outline whose *border and text* carry the weight,
+ * and hover adds only a faint tint. Rank reads through colour, not fill:
+ * brand hairline (primary) > bright neutral (secondary) > muted neutral
+ * (outline) > borderless (ghost).
+ *
+ * Squared-ish corners (rounded-lg, never a full pill), colour-only hover
+ * feedback — no movement, no glow.
+ *
+ * Two destructive weights: `danger` is the high-commitment one (delete
+ * account, cancel order) and is the single exception that carries a tinted
+ * fill at rest, so it can never be mistaken for a neutral action;
+ * `dangerGhost` is the quiet one for reversible things like logout.
  */
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'border border-brand-500/60 bg-transparent text-brand-300 hover:border-brand-400 hover:text-brand-200 hover:shadow-lg hover:shadow-brand-500/20 active:border-brand-300',
+    'border border-brand-500/60 bg-transparent font-semibold text-brand-300 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 active:bg-brand-500/15',
   secondary:
-    'border border-zinc-700 bg-transparent text-zinc-200 hover:border-zinc-500 hover:text-white hover:shadow-lg hover:shadow-zinc-500/10 active:border-zinc-400',
+    'border border-zinc-700 bg-transparent font-medium text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800/60 active:bg-zinc-800',
   outline:
-    'border border-zinc-700 bg-transparent text-zinc-300 hover:border-brand-500/50 hover:text-brand-200 active:border-brand-400',
+    'border border-zinc-700 bg-transparent font-medium text-zinc-300 hover:border-brand-500/60 hover:text-brand-300 active:border-brand-400',
   ghost:
-    'link-underline border border-transparent bg-transparent text-zinc-300 hover:text-white',
+    'border border-transparent bg-transparent font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white',
   danger:
-    'border border-red-500/50 bg-transparent text-red-300 hover:border-red-400 hover:text-red-200 hover:shadow-lg hover:shadow-red-500/20 active:border-red-300',
+    'border border-error/50 bg-error/10 font-semibold text-error hover:border-error/70 hover:bg-error/20',
+  dangerGhost:
+    'border border-error/30 bg-transparent font-medium text-error hover:border-error/50 hover:bg-error/10',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
-  sm: 'px-3.5 py-2 text-sm',
-  md: 'px-5 py-2.5 text-sm',
-  lg: 'px-7 py-3.5 text-base',
+  sm: 'px-3 py-1.5 text-sm',
+  md: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-2.5 text-base',
 };
 
 export function Button({
@@ -50,7 +62,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg tracking-wide transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:cursor-not-allowed disabled:opacity-50 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >

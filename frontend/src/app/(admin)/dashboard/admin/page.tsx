@@ -93,7 +93,7 @@ export default async function AdminOverviewPage() {
           </p>
         </header>
 
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-zinc-500">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.overview.orders.heading')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,7 +124,7 @@ export default async function AdminOverviewPage() {
           />
         </div>
 
-        <h2 className="mb-4 mt-10 text-sm font-semibold uppercase tracking-widest text-zinc-500">
+        <h2 className="mb-4 mt-10 text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.overview.ops.heading')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -168,7 +168,7 @@ function KpiTile({ labelKey, count, href, icon, emphasis = false }: KpiTileProps
       >
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-zinc-400">{t(labelKey)}</span>
-          <span className={`text-zinc-500 ${emphasis ? 'text-red-400' : ''}`}>
+          <span className={emphasis ? 'text-red-400' : 'text-zinc-500'}>
             <Icon name={icon} size={20} />
           </span>
         </div>

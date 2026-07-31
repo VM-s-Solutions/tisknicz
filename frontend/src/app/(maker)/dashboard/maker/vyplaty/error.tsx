@@ -31,7 +31,7 @@ export default function MakerPayoutsError({
           </Button>
           <Link
             href="/dashboard/maker/vyplaty"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('dashboard.maker.payouts.title')}
           </Link>

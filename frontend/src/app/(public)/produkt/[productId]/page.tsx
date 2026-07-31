@@ -2,12 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
 import {
+  buildMakerLogoUrl,
   getProductById,
   RATING_BP_PER_STAR,
   type ProductDetail,
@@ -77,19 +79,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
     }
     return (
       <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+        <Link
+          href="/katalog"
+          className="inline-flex items-center gap-1.5 self-start text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+        >
+          <Icon name="chevronLeft" size={16} />
+          {t('catalog.maker.back_to_catalog')}
+        </Link>
         <Alert variant="error">
           <p className="font-semibold">{t('catalog.product_detail.error.title')}</p>
           <p className="mt-1">{t('catalog.product_detail.error.body')}</p>
         </Alert>
-        <div>
-          <Link
-            href="/katalog"
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-          >
-            <Icon name="arrowLeft" size={16} />
-            {t('catalog.maker.back_to_catalog')}
-          </Link>
-        </div>
       </section>
     );
   }
@@ -98,7 +98,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const description = product.description?.trim();
 
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+    <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+      <Link
+        href="/katalog"
+        className="inline-flex items-center gap-1.5 self-start text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+      >
+        <Icon name="chevronLeft" size={16} />
+        {t('catalog.maker.back_to_catalog')}
+      </Link>
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
         <ProductGallery images={product.images} title={product.title} />
         <ProductInfo product={product} />
@@ -110,19 +117,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {t('catalog.product_detail.description.heading')}
           </h2>
           <div aria-hidden="true" className="divider-glow" />
-          <p className="whitespace-pre-line text-base text-zinc-300">{description}</p>
+          <p className="whitespace-pre-line break-words text-base text-zinc-300">{description}</p>
         </Card>
       ) : null}
-
-      <div className="pt-2">
-        <Link
-          href="/katalog"
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-        >
-          <Icon name="arrowLeft" size={16} />
-          {t('catalog.maker.back_to_catalog')}
-        </Link>
-      </div>
     </section>
   );
 }
@@ -169,12 +166,17 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
           href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
           className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
         >
+          {/* Decorative: the adjacent "by {maker}" text names them. */}
+          <Avatar
+            src={buildMakerLogoUrl(product.makerLogoBlobPath)}
+            name={product.makerCompanyName}
+            size="xs"
+          />
           <span>
             {t('catalog.product_detail.heading.by_maker', { maker: product.makerCompanyName })}
           </span>
           {product.makerIsVerified ? (
-            <Badge variant="brand">
-              <Icon name="verified" size={14} />
+            <Badge variant="brand" dot={false}>
               {t('catalog.maker.verified')}
             </Badge>
           ) : null}
@@ -187,7 +189,7 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
               {t('catalog.maker.pickup.heading')}
             </p>
             {product.makerPickupNote?.trim() ? (
-              <p className="whitespace-pre-line pl-6 text-sm text-zinc-400">
+              <p className="whitespace-pre-line break-words pl-6 text-sm text-zinc-400">
                 {product.makerPickupNote.trim()}
               </p>
             ) : null}
@@ -202,7 +204,7 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
       <div className="pt-2">
         <Link
           href={`/objednavka?productId=${encodeURIComponent(product.productId)}`}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-6 py-3 text-base font-semibold text-zinc-950 transition-colors hover:bg-brand-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary sm:w-auto"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
         >
           {t('catalog.product_detail.cta.order')}
           <Icon name="arrowRight" size={16} />

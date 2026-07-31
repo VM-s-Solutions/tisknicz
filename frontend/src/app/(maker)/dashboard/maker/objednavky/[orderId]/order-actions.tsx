@@ -292,7 +292,7 @@ function ShipConfirmDialog({
       <div aria-hidden="true" onClick={onCancel} className="absolute inset-0 bg-black/70" />
       {/* Start sentinel: Shift+Tab off Cancel lands here → Confirm. */}
       <div tabIndex={0} onFocus={() => lastFocusableRef.current?.focus()} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
         <h2 id={`ship-${orderId}-title`} className="text-lg font-semibold text-white">
           {t('dashboard.maker.orderDetail.shipConfirm.title')}
         </h2>

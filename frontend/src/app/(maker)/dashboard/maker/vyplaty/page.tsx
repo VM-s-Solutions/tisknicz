@@ -92,10 +92,7 @@ function PayoutsResults({ data }: { readonly data: MakerPayoutsPage }) {
 
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
-        {t('dashboard.maker.payouts.count', { count: data.totalCount })}
-      </p>
-      <PayoutRows items={data.items} />
+      <PayoutRows items={data.items} totalCount={data.totalCount} />
       <Pagination
         page={data.page}
         totalPages={totalPages}
@@ -126,7 +123,7 @@ function PayoutsError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
           {t('dashboard.maker.payouts.error.retry')}
         </Link>

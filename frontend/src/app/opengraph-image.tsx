@@ -38,20 +38,21 @@ export default function OpenGraphImage() {
           height: '100%',
           display: 'flex',
           position: 'relative',
-          background: 'linear-gradient(120deg, #09090b 0%, #111827 45%, #052e2b 100%)',
-          color: '#f4f4f5',
+          background: '#0b1417',
+          color: '#e2eef1',
           fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif',
         }}
       >
+        {/* Flat teal rule along the top edge — the card's only accent, in
+            place of the former corner glow. */}
         <div
           style={{
             position: 'absolute',
-            top: -120,
-            right: -80,
-            width: 520,
-            height: 520,
-            borderRadius: 999,
-            background: 'radial-gradient(circle, rgba(45,212,191,0.18) 0%, rgba(45,212,191,0) 72%)',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: 6,
+            background: '#14b8a6',
           }}
         />
 
@@ -79,7 +80,7 @@ export default function OpenGraphImage() {
                 width: 62,
                 height: 62,
                 borderRadius: 16,
-                background: 'rgba(9, 9, 11, 0.55)',
+                background: '#121d21',
                 border: '1px solid rgba(45,212,191,0.45)',
                 display: 'flex',
                 alignItems: 'center',
@@ -95,13 +96,13 @@ export default function OpenGraphImage() {
             <div style={{ fontSize: 74, fontWeight: 800, lineHeight: 1.02, letterSpacing: '-0.03em' }}>
               Kde napady dostavaji tvar
             </div>
-            <div style={{ fontSize: 34, color: '#d4d4d8', lineHeight: 1.25 }}>
+            <div style={{ fontSize: 34, color: '#b6cad1', lineHeight: 1.25 }}>
               Marketplace pro makery a tiskare v CR
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 26, color: '#a1a1aa' }}>makables.cz</div>
+            <div style={{ fontSize: 26, color: '#9db4bd' }}>makables.cz</div>
             <div
               style={{
                 display: 'flex',
@@ -112,7 +113,7 @@ export default function OpenGraphImage() {
                 border: '1px solid rgba(45,212,191,0.35)',
                 background: 'rgba(20, 184, 166, 0.12)',
                 padding: '8px 14px',
-                borderRadius: 999,
+                borderRadius: 10,
               }}
             >
               <span>Makables link preview</span>

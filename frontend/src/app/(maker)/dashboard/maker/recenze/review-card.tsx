@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/card';
 import { StarRating } from '@/components/ui/star-rating';
 import type { MakerReceivedReview } from '@/lib/api-client-helpers/reviews-client';
 import { t } from '@/lib/i18n';
@@ -6,7 +5,8 @@ import { formatDate } from '@/lib/utils/dates';
 import { ReplyForm } from './reply-form';
 
 /**
- * Server-rendered card per received review (T-0117, AC-2/AC-3). Shows the
+ * Server-rendered row per received review (T-0117, AC-2/AC-3) — one
+ * hairline-divided row inside the list box on the page. Shows the
  * read-only rating stars, the order number, the comment (or a muted
  * "bez komentáře" line when null), and the Czech-short created date. When
  * a reply already exists it renders read-only (reply text + answered
@@ -24,7 +24,7 @@ export function ReviewCard({ review }: { readonly review: MakerReceivedReview })
   const hasReply = hasText(review.makerReply);
 
   return (
-    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
+    <article className="flex flex-col gap-4 px-4 py-5 sm:px-5">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <StarRating value={review.rating} size="md" />
@@ -61,12 +61,12 @@ export function ReviewCard({ review }: { readonly review: MakerReceivedReview })
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-zinc-800 bg-surface-elevated px-4 py-3">
+      <div className="rounded-xl border border-zinc-800 bg-surface-secondary/60 px-4 py-3">
         <ReplyForm
           reviewId={review.reviewId}
           initialReply={hasReply ? review.makerReply : ''}
         />
       </div>
-    </Card>
+    </article>
   );
 }

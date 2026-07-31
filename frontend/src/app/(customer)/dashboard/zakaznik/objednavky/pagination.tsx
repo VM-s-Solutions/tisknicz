@@ -42,7 +42,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-400/50 hover:bg-brand-400/10 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
         >
           <Icon name="arrowLeft" size={16} />
           {t('customer.orders.pagination.previous')}
@@ -50,7 +50,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-500"
         >
           <Icon name="arrowLeft" size={16} />
           {t('customer.orders.pagination.previous')}
@@ -58,7 +58,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       )}
 
       <p
-        className="rounded-full border border-zinc-800 px-4 py-1.5 text-sm text-zinc-400"
+        className="rounded-md border border-zinc-800 px-4 py-1.5 text-sm text-zinc-400"
         aria-live="polite"
       >
         {t('customer.orders.pagination.page_of', { page, total: totalPages })}
@@ -67,7 +67,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-brand-400/50 hover:bg-brand-400/10 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
         >
           {t('customer.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />
@@ -75,7 +75,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-zinc-800 px-5 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-500"
         >
           {t('customer.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />

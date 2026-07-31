@@ -5,7 +5,6 @@ import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,7 +72,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
   }
 
   return (
-    <Card className={`flex flex-col gap-3 ${item.isActive ? '' : 'opacity-60'}`}>
+    <div className={`flex flex-col gap-3 p-4 ${item.isActive ? '' : 'opacity-60'}`}>
       {error ? <Alert variant="error">{error}</Alert> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -161,6 +160,6 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
           </div>
         </form>
       ) : null}
-    </Card>
+    </div>
   );
 }

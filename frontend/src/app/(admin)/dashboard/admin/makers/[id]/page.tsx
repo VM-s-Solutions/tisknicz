@@ -80,9 +80,9 @@ export default async function AdminMakerDetailPage({ params, searchParams }: Pag
         <div>
           <Link
             href="/dashboard/admin/makers"
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
-            <Icon name="arrowLeft" size={16} />
+            <Icon name="chevronLeft" size={16} />
             {t('dashboard.admin.ops.makers.detail.back')}
           </Link>
         </div>
@@ -107,36 +107,38 @@ export default async function AdminMakerDetailPage({ params, searchParams }: Pag
           <p className="mt-2 text-sm text-zinc-400">{maker.userEmail}</p>
         </header>
 
-        <Card className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-          <HeaderField label={t('dashboard.admin.ops.makers.detail.ico')} value={maker.registrationNumber} />
-          <HeaderField label={t('dashboard.admin.ops.makers.detail.dic')} value={maker.vatId ?? '—'} />
-          <HeaderField label={t('dashboard.admin.ops.makers.detail.legalForm')} value={maker.legalForm ?? '—'} />
-          <HeaderField label={t('dashboard.admin.ops.makers.detail.city')} value={maker.city} />
-          <HeaderField label={t('dashboard.admin.ops.makers.detail.slug')} value={`/${maker.slug}`} />
-          <HeaderField
-            label={t('dashboard.admin.ops.makers.detail.orders')}
-            value={String(maker.totalOrders)}
-          />
-          <HeaderField
-            label={t('dashboard.admin.ops.makers.detail.rating')}
-            value={
-              maker.ratingCount > 0
-                ? `${(maker.ratingAverageBp / 10000).toFixed(1)} (${maker.ratingCount})`
-                : '—'
-            }
-          />
-          <HeaderField
-            label={t('dashboard.admin.ops.makers.detail.effectiveFee')}
-            value={effectiveBp !== undefined ? formatPercent(effectiveBp) : '—'}
-          />
-          <HeaderField
-            label={t('dashboard.admin.ops.makers.detail.feeOverride')}
-            value={
-              maker.feeRateOverrideBp !== null
-                ? formatPercent(maker.feeRateOverrideBp)
-                : t('dashboard.admin.ops.makers.detail.feeOverrideNone')
-            }
-          />
+        <Card>
+          <dl className="divide-y divide-zinc-800">
+            <HeaderField label={t('dashboard.admin.ops.makers.detail.ico')} value={maker.registrationNumber} />
+            <HeaderField label={t('dashboard.admin.ops.makers.detail.dic')} value={maker.vatId ?? '—'} />
+            <HeaderField label={t('dashboard.admin.ops.makers.detail.legalForm')} value={maker.legalForm ?? '—'} />
+            <HeaderField label={t('dashboard.admin.ops.makers.detail.city')} value={maker.city} />
+            <HeaderField label={t('dashboard.admin.ops.makers.detail.slug')} value={`/${maker.slug}`} />
+            <HeaderField
+              label={t('dashboard.admin.ops.makers.detail.orders')}
+              value={String(maker.totalOrders)}
+            />
+            <HeaderField
+              label={t('dashboard.admin.ops.makers.detail.rating')}
+              value={
+                maker.ratingCount > 0
+                  ? `${(maker.ratingAverageBp / 10000).toFixed(1)} (${maker.ratingCount})`
+                  : '—'
+              }
+            />
+            <HeaderField
+              label={t('dashboard.admin.ops.makers.detail.effectiveFee')}
+              value={effectiveBp !== undefined ? formatPercent(effectiveBp) : '—'}
+            />
+            <HeaderField
+              label={t('dashboard.admin.ops.makers.detail.feeOverride')}
+              value={
+                maker.feeRateOverrideBp !== null
+                  ? formatPercent(maker.feeRateOverrideBp)
+                  : t('dashboard.admin.ops.makers.detail.feeOverrideNone')
+              }
+            />
+          </dl>
         </Card>
 
         {!maker.isActiveInRegistry ? (
@@ -161,11 +163,12 @@ export default async function AdminMakerDetailPage({ params, searchParams }: Pag
   );
 }
 
+/** iOS grouped-list row: quiet label left, value right, hairline dividers from the parent `divide-y`. */
 function HeaderField({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-0.5 truncate text-sm text-zinc-200">{value}</p>
+    <div className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+      <dt className="shrink-0 text-sm text-zinc-400">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-sm text-zinc-100">{value}</dd>
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function AdminShellNav({ identity }: { readonly identity: string }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-zinc-800 bg-surface-primary/95 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-zinc-800 bg-surface-primary">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <button
@@ -71,39 +71,43 @@ export function AdminShellNav({ identity }: { readonly identity: string }) {
             aria-label={t('dashboard.admin.shell.openMenu')}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800 lg:hidden"
           >
-            <Icon name="chevronDown" size={18} />
+            <Icon name="list" size={18} />
           </button>
           <Link href="/dashboard/admin" className="text-base font-semibold tracking-tight text-white">
             {t('dashboard.admin.shell.brand')}
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label={t('dashboard.admin.shell.brand')}>
+        <nav
+          className="hidden min-w-0 flex-wrap items-center justify-center gap-1 lg:flex"
+          aria-label={t('dashboard.admin.shell.brand')}
+        >
           {LIVE_NAV.map((item) => (
             <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
           ))}
         </nav>
 
         <div className="flex items-center gap-3">
-          <span className="hidden max-w-[12rem] truncate text-sm text-zinc-400 sm:block">
+          <span className="hidden max-w-48 truncate text-sm text-zinc-400 sm:block">
             {identity}
           </span>
           <Button
             type="button"
-            variant="ghost"
+            variant="dangerGhost"
             size="sm"
             loading={loggingOut}
             onClick={handleLogout}
           >
+            <Icon name="logOut" size={15} />
             {t('dashboard.admin.shell.logout')}
           </Button>
         </div>
       </div>
 
       {open ? (
-        <nav className="border-t border-zinc-800 px-4 py-3 md:hidden" aria-label={t('dashboard.admin.shell.brand')}>
+        <nav className="border-t border-zinc-800 px-4 py-3 lg:hidden" aria-label={t('dashboard.admin.shell.brand')}>
           <ul className="flex flex-col gap-1">
             {LIVE_NAV.map((item) => (
               <li key={item.href}>
@@ -143,7 +147,7 @@ function NavLink({
       href={item.href}
       aria-current={active ? 'page' : undefined}
       onClick={onNavigate}
-      className={`rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         block ? 'block' : ''
       } ${
         active
@@ -160,12 +164,12 @@ function PendingNavEntry({ labelKey, block = false }: { readonly labelKey: Messa
   return (
     <span
       aria-disabled="true"
-      className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 ${
+      className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 ${
         block ? '' : 'inline-flex'
       }`}
     >
       {t(labelKey)}
-      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
         {t('dashboard.admin.nav.pendingBadge')}
       </span>
     </span>

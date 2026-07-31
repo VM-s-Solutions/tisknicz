@@ -42,13 +42,13 @@ export function AuditFilters({
     <form
       method="get"
       action={ROUTE_PATH}
-      className="grid grid-cols-1 items-end gap-4 rounded-2xl border border-zinc-800 bg-surface-card p-6 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 items-end gap-4 rounded-xl border border-zinc-800 bg-surface-card p-6 sm:grid-cols-2 lg:grid-cols-3"
     >
       <div className="flex items-center gap-2.5 sm:col-span-2 lg:col-span-3">
         <span aria-hidden="true" className="icon-tile h-8 w-8">
           <Icon name="filter" size={15} />
         </span>
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.common.filterHeading')}
         </h2>
       </div>

@@ -60,10 +60,7 @@ export function OrderTimeline({ detail }: { readonly detail: MakerOrderDetail })
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
-        <span aria-hidden="true" className="text-zinc-500">
-          <Icon name="clock" size={14} />
-        </span>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
         {t('dashboard.maker.orderDetail.timeline.heading')}
       </h2>
       <ol className="flex flex-col">
@@ -99,7 +96,7 @@ function TimelineNode({
       ? isCurrent
         ? 'border-brand-400/60 bg-brand-400/15 text-brand-300 ring-4 ring-brand-400/10'
         : 'border-brand-400/40 bg-brand-400/10 text-brand-400'
-      : 'border-zinc-800 bg-zinc-900 text-zinc-600';
+      : 'border-zinc-800 bg-zinc-900 text-zinc-500';
 
   return (
     <li className="flex gap-4">
@@ -124,7 +121,7 @@ function TimelineNode({
       <div className={`flex flex-col gap-0.5 pt-1 ${isLast ? 'pb-0' : 'pb-6'}`}>
         <span
           className={`text-sm font-semibold ${
-            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-600'
+            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-500'
           }`}
         >
           {step.label}

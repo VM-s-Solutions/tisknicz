@@ -27,6 +27,7 @@ const baseProduct: ProductDetail = {
   makerIsVerified: true,
   makerPersonalPickupEnabled: false,
   makerPickupNote: null,
+  makerLogoBlobPath: null,
   images: [],
 };
 

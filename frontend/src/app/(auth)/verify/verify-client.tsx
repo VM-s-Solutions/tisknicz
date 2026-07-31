@@ -39,7 +39,7 @@ export function VerifyClient() {
 
   if (state === 'missing-token') {
     return (
-      <Card padding="lg">
+      <Card padding="lg" variant="elevated">
         <Alert variant="error">{t('auth.verify.missing_token')}</Alert>
       </Card>
     );
@@ -47,7 +47,7 @@ export function VerifyClient() {
 
   if (state === 'pending') {
     return (
-      <Card padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
+      <Card padding="lg" variant="elevated" className="flex items-center gap-3 text-sm text-zinc-300">
         <Spinner />
         <span>{t('auth.verify.confirming')}</span>
       </Card>
@@ -56,8 +56,8 @@ export function VerifyClient() {
 
   if (state === 'success') {
     return (
-      <Card padding="lg" className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">{t('auth.verify.success_title')}</h2>
+      <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-white">{t('auth.verify.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.verify.success_body')}</p>
         <p className="text-sm">
           <Link href="/login" className="text-brand-400 hover:underline">
@@ -69,8 +69,8 @@ export function VerifyClient() {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">{t('auth.verify.failed_title')}</h2>
+    <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold text-white">{t('auth.verify.failed_title')}</h2>
       <p className="text-sm text-zinc-300">{t('auth.verify.failed_body')}</p>
     </Card>
   );

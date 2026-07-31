@@ -32,7 +32,7 @@ export default function MakerProductsError({
           </Button>
           <Link
             href="/dashboard/maker/produkty"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('dashboard.maker.products.create.back')}
           </Link>

@@ -90,10 +90,20 @@ function ReviewsResults({ data }: { readonly data: MakerReviewsPage }) {
         <ReviewsEmpty />
       ) : (
         <>
-          <div className="mt-8 flex flex-col gap-4">
-            {data.items.map((review) => (
-              <ReviewCard key={review.reviewId} review={review} />
-            ))}
+          <div className="mt-8 overflow-hidden rounded-xl border border-zinc-800 bg-surface-card">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3 sm:px-5">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                {t('dashboard.maker.reviews.title')}
+              </h2>
+              <span className="text-sm text-zinc-500">
+                {t('dashboard.maker.reviews.aggregate.count', { count: data.totalCount })}
+              </span>
+            </header>
+            <div className="divide-y divide-zinc-800">
+              {data.items.map((review) => (
+                <ReviewCard key={review.reviewId} review={review} />
+              ))}
+            </div>
           </div>
           <Pagination
             page={data.page}
@@ -127,7 +137,7 @@ function AggregateHeader({
   }
   const average = ratingAverageBp / RATING_BP_PER_STAR;
   return (
-    <div className="panel panel-accent flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-800 px-5 py-4">
+    <div className="panel panel-accent flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 px-5 py-4">
       <StarRating value={average} size="md" />
       <span className="text-xl font-bold text-white">{average.toFixed(1)}</span>
       <span className="text-sm text-zinc-400">
@@ -159,7 +169,7 @@ function ReviewsError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
           {t('dashboard.maker.reviews.error.retry')}
         </Link>

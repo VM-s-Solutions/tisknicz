@@ -36,12 +36,12 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
   return (
     <nav
       aria-label={t('dashboard.admin.orders.pagination.page_of', { page, total: totalPages })}
-      className="mt-10 flex items-center justify-between gap-4"
+      className="mt-10 flex flex-wrap items-center justify-between gap-3"
     >
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.admin.orders.pagination.previous')}
@@ -49,7 +49,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.admin.orders.pagination.previous')}
@@ -63,7 +63,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
         >
           {t('dashboard.admin.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />
@@ -71,7 +71,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseParams 
       ) : (
         <span
           aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-600"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
         >
           {t('dashboard.admin.orders.pagination.next')}
           <Icon name="arrowRight" size={16} />

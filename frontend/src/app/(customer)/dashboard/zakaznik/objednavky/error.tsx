@@ -32,7 +32,7 @@ export default function CustomerOrdersError({
           </Button>
           <Link
             href="/dashboard/zakaznik/objednavky"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
           >
             {t('customer.orders.title')}
           </Link>

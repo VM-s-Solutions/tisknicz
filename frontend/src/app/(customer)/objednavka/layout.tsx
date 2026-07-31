@@ -13,7 +13,6 @@ export default async function OrderFlowLayout({ children }: { children: ReactNod
   const session = await getDisplaySession();
   return (
     <div className="relative min-h-screen text-zinc-100">
-      <div aria-hidden="true" className="page-backdrop" />
       <PublicNavbar session={session} />
       <main>{children}</main>
       <PublicFooter />

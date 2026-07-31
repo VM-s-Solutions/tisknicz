@@ -11,14 +11,16 @@ import { formatCzk } from '@/lib/money/formatter';
 import { formatDate } from '@/lib/utils/dates';
 
 /**
- * Presentational payout-batch rows for the maker dashboard list (T-0116).
- * Server-safe: pure formatting + a row `<Link>` to the batch detail. Each
- * row is a lifted panel card with a wallet icon tile, the batch number +
- * state badge, order count, date, and the per-maker total prominent on
- * the trailing edge. State maps to two values only — Processing →
- * "Připravujeme" (warning), Completed → "Vyplaceno" (success); no
- * `Pending`. The money column is the per-maker total computed by the
- * backend (formatCzk only formats). NO CSV anywhere.
+ * Presentational payout-batch list for the maker dashboard (T-0116).
+ * Server-safe: pure formatting + a row `<Link>` to the batch detail.
+ * GitHub "box" pattern: one bordered container with a quiet count
+ * header, rows divided by hairlines — each row carries a wallet icon
+ * tile, the batch number + state badge, order count, date, and the
+ * per-maker total prominent on the trailing edge. State maps to two
+ * values only — Processing → "Připravujeme" (warning), Completed →
+ * "Vyplaceno" (success); no `Pending`. The money column is the
+ * per-maker total computed by the backend (formatCzk only formats).
+ * NO CSV anywhere.
  */
 
 /** Two-value state → badge variant / label (presentation routing, not a rule). */
@@ -32,12 +34,24 @@ function payoutStateLabelKey(state: PayoutBatchState): MessageKey {
     : 'dashboard.maker.payouts.state.processing';
 }
 
-export function PayoutRows({ items }: { readonly items: readonly MakerPayoutListItem[] }) {
+interface PayoutRowsProps {
+  readonly items: readonly MakerPayoutListItem[];
+  readonly totalCount: number;
+}
+
+export function PayoutRows({ items, totalCount }: PayoutRowsProps) {
   return (
-    <div className="flex flex-col gap-3">
-      {items.map((item) => (
-        <PayoutRow key={item.batchId} item={item} />
-      ))}
+    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-surface-card">
+      <header className="border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3 sm:px-5">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          {t('dashboard.maker.payouts.count', { count: totalCount })}
+        </h2>
+      </header>
+      <div className="divide-y divide-zinc-800">
+        {items.map((item) => (
+          <PayoutRow key={item.batchId} item={item} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -50,7 +64,7 @@ function PayoutRow({ item }: { readonly item: MakerPayoutListItem }) {
   return (
     <Link
       href={`/dashboard/maker/vyplaty/${encodeURIComponent(item.batchId)}`}
-      className="group panel card-lift flex flex-col gap-3 rounded-2xl border border-zinc-800 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+      className="group flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:flex-row sm:items-center sm:gap-5 sm:px-5"
     >
       <span className="icon-tile hidden h-11 w-11 shrink-0 sm:inline-flex" aria-hidden="true">
         <Icon name="wallet" size={20} />
@@ -58,7 +72,9 @@ function PayoutRow({ item }: { readonly item: MakerPayoutListItem }) {
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-sm font-bold text-zinc-100">{item.batchNumber}</span>
+          <span className="min-w-0 break-words text-sm font-bold text-zinc-100">
+            {item.batchNumber}
+          </span>
           <Badge variant={payoutStateBadgeVariant(item.state)}>
             {t(payoutStateLabelKey(item.state))}
           </Badge>
@@ -76,7 +92,10 @@ function PayoutRow({ item }: { readonly item: MakerPayoutListItem }) {
         <span className="text-lg font-bold text-zinc-100">
           {formatCzk(item.makerTotalPaidMinor, item.currency)}
         </span>
-        <span aria-hidden="true" className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-brand-400">
+        <span
+          aria-hidden="true"
+          className="text-zinc-500 transition-colors group-hover:text-brand-400"
+        >
           <Icon name="chevronRight" size={18} />
         </span>
       </div>

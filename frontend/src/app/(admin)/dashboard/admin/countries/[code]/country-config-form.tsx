@@ -449,7 +449,7 @@ function ProviderConfirmModal({
         }}
         className="absolute inset-0 bg-black/70"
       />
-      <div className="relative z-10 my-8 w-full max-w-lg rounded-2xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
+      <div className="relative z-10 my-8 w-full max-w-lg rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
         <h2 id={titleId} className="text-lg font-semibold text-white">
           {t('dashboard.admin.ops.country.providerModal.title')}
         </h2>
@@ -457,8 +457,8 @@ function ProviderConfirmModal({
           <p className="text-sm text-zinc-400">
             {t('dashboard.admin.ops.country.providerModal.intro')}
           </p>
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <div className="rounded-xl border border-zinc-800 bg-surface-secondary p-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
               {t('dashboard.admin.ops.country.providerModal.changedHeading')}
             </p>
             <ul className="mt-2 flex flex-col gap-1 text-sm text-zinc-200">

@@ -1,8 +1,13 @@
 import Link from 'next/link';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';
-import { RATING_BP_PER_STAR, type MakerListItem } from '@/lib/api-client-helpers/catalog';
+import {
+  buildMakerLogoUrl,
+  RATING_BP_PER_STAR,
+  type MakerListItem,
+} from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
 
 interface MakerCardProps {
@@ -24,16 +29,12 @@ export function MakerCard({ item }: MakerCardProps) {
   return (
     <Link
       href={`/katalog/${item.slug}`}
-      className="group block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
+      className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
     >
-      <article className="panel card-lift flex h-full flex-col gap-4 rounded-2xl border border-zinc-800 p-5 sm:p-6">
+      <article className="panel card-lift flex h-full flex-col gap-4 rounded-xl border border-zinc-800 p-5 sm:p-6">
         <div className="flex items-start gap-4">
-          <span
-            aria-hidden="true"
-            className="icon-tile h-12 w-12 shrink-0 text-lg font-bold"
-          >
-            {item.companyName.charAt(0).toUpperCase()}
-          </span>
+          {/* Decorative: the <h3> beside it already names the maker. */}
+          <Avatar src={buildMakerLogoUrl(item.logoBlobPath)} name={item.companyName} size="md" />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -42,8 +43,7 @@ export function MakerCard({ item }: MakerCardProps) {
               </h3>
               {item.isVerified && (
                 <Tooltip content={t('catalog.card.verified_tooltip')} className="shrink-0">
-                  <Badge variant="brand">
-                    <Icon name="verified" size={12} />
+                  <Badge variant="brand" dot={false}>
                     {t('catalog.card.verified')}
                   </Badge>
                 </Tooltip>
@@ -62,7 +62,7 @@ export function MakerCard({ item }: MakerCardProps) {
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between gap-4 border-t border-zinc-800/80 pt-4">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-zinc-800/80 pt-4">
           <div className="flex items-center gap-1.5 text-sm whitespace-nowrap">
             {hasRating ? (
               <>
@@ -74,7 +74,7 @@ export function MakerCard({ item }: MakerCardProps) {
               </>
             ) : (
               <>
-                <Icon name="starOutline" size={14} className="text-zinc-600" />
+                <Icon name="starOutline" size={14} className="text-zinc-500" />
                 <span className="text-zinc-500">{t('catalog.card.rating_none')}</span>
               </>
             )}
@@ -85,7 +85,7 @@ export function MakerCard({ item }: MakerCardProps) {
             {t('catalog.card.orders', { count: item.totalOrders })}
           </p>
 
-          <span className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-brand-300">
+          <span className="text-zinc-500 group-hover:text-brand-300">
             <Icon name="arrowRight" size={16} />
           </span>
         </div>

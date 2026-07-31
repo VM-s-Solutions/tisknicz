@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
@@ -139,7 +140,7 @@ export function RegisterForm() {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <h2 className="text-lg font-semibold">{t('auth.register.success_title')}</h2>
+        <h2 className="text-lg font-semibold text-white">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         <p className="text-sm text-zinc-400">
           <Link href="/login" className="text-brand-400 hover:underline">
@@ -187,16 +188,12 @@ export function RegisterForm() {
         />
         <p className="text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
 
-        <label className="flex items-center gap-2 text-sm text-zinc-200">
-          <input
-            type="checkbox"
-            checked={isCompany}
-            onChange={(e) => handleIsCompanyChange(e.target.checked)}
-            disabled={submitting}
-            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-brand-400 focus:ring-brand-400/40"
-          />
-          {t('auth.register.is_company')}
-        </label>
+        <Checkbox
+          checked={isCompany}
+          onChange={(e) => handleIsCompanyChange(e.target.checked)}
+          disabled={submitting}
+          label={t('auth.register.is_company')}
+        />
         {isCompany && (
           <>
             <p className="-mt-2 text-xs text-zinc-500">{t('auth.register.is_company_hint')}</p>
@@ -235,10 +232,10 @@ export function RegisterForm() {
                 <p className="text-xs uppercase tracking-wide text-zinc-500">
                   {t('auth.register.company_preview_heading')}
                 </p>
-                <p className="mt-1 font-semibold text-zinc-100">
+                <p className="mt-1 break-words font-semibold text-zinc-100">
                   {preview.company.companyName}
                 </p>
-                <p className="mt-1 text-zinc-300">
+                <p className="mt-1 break-words text-zinc-300">
                   {t('auth.register.company_preview_vat_id')}:{' '}
                   {preview.company.vatId ?? t('auth.register.company_preview_no_vat_id')}
                 </p>

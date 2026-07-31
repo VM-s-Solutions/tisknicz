@@ -108,11 +108,11 @@ export function CatalogFilters({
           <span aria-hidden="true" className="icon-tile h-8 w-8">
             <Icon name="filter" size={15} />
           </span>
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
             {t('catalog.filter.heading')}
           </h2>
           {activeCount > 0 ? (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-400/15 px-1.5 text-xs font-semibold text-brand-300">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-400/15 px-1.5 text-xs font-semibold text-brand-300">
               {activeCount}
             </span>
           ) : null}
@@ -125,11 +125,7 @@ export function CatalogFilters({
           aria-label={t('catalog.filter.heading')}
           className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200 lg:hidden"
         >
-          <Icon
-            name="chevronDown"
-            size={18}
-            className={`transition-transform duration-200 ${mobileOpen ? 'rotate-180' : ''}`}
-          />
+          <Icon name="chevronDown" size={18} className={mobileOpen ? 'rotate-180' : ''} />
         </button>
       </div>
 
@@ -178,7 +174,7 @@ export function CatalogFilters({
                   onClick={() => handleMinRatingChange(stars)}
                   aria-pressed={isActive}
                   aria-label={t('catalog.filter.min_rating_stars', { stars })}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                     isActive
                       ? 'border-brand-400/40 bg-brand-400/10 text-brand-300'
                       : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'

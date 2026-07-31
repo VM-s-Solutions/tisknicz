@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { type AdminPayoutBatch, PayoutBatchState } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
@@ -41,7 +40,7 @@ export function PayoutBatchCard({ batch }: { readonly batch: AdminPayoutBatch })
   }
 
   return (
-    <Card className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-zinc-100">{batch.batchNumber}</span>
@@ -100,6 +99,6 @@ export function PayoutBatchCard({ batch }: { readonly batch: AdminPayoutBatch })
           onCompleted={handleCompleted}
         />
       ) : null}
-    </Card>
+    </div>
   );
 }

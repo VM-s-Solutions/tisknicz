@@ -115,8 +115,8 @@ export function MakerFeeOverrideForm({
       {error ? <Alert variant="error">{error}</Alert> : null}
       {success ? <Alert variant="success">{success}</Alert> : null}
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="rounded-xl border border-zinc-800 bg-surface-secondary p-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.ops.makers.detail.countryDefaultLabel', { country: countryCode })}
         </p>
         <p className="mt-1 text-sm text-zinc-200">
