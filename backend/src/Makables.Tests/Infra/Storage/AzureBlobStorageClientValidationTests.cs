@@ -135,6 +135,7 @@ public class AzureBlobStorageClientValidationTests
     public void BlobContainer_All_lists_the_launch_containers()
     {
         // T-0102b adds the private "payouts" container for the weekly CSVs.
+        // "profile-images" is public-read — maker logos + user avatars.
         BlobContainer.All.Should().BeEquivalentTo(new[]
         {
             "product-images",
@@ -142,16 +143,19 @@ public class AzureBlobStorageClientValidationTests
             "invoices",
             "maker-documents",
             "payouts",
+            "profile-images",
         });
     }
 
     [Theory]
     [InlineData("product-images", true)]
+    [InlineData("profile-images", true)]
     [InlineData("order-attachments", false)]
     [InlineData("invoices", false)]
     [InlineData("maker-documents", false)]
+    [InlineData("payouts", false)]
     [InlineData("unknown", false)]
-    public void BlobContainer_IsPublicRead_only_true_for_product_images(string container, bool expected)
+    public void BlobContainer_IsPublicRead_only_true_for_the_public_image_containers(string container, bool expected)
     {
         BlobContainer.IsPublicRead(container).Should().Be(expected);
     }

@@ -218,11 +218,17 @@ export const messages = {
   'dashboard.customer.profile.password_changed': 'Heslo bylo změněno.',
   'dashboard.customer.profile.password_wrong': 'Současné heslo není správné.',
   'dashboard.customer.profile.logout': 'Odhlásit se',
+  'dashboard.customer.profile.section_avatar': 'Profilová fotka',
+  'dashboard.customer.profile.avatar_hint':
+    'Zobrazí se u vašich hodnocení výrobců. Když žádnou nenahrajete, ukáže se jen iniciála.',
 
   // Dashboard — maker profile
   'dashboard.maker.profile.title': 'Profil výrobce',
   'dashboard.maker.profile.section_company': 'Firemní údaje (ARES)',
   'dashboard.maker.profile.section_about': 'O výrobci',
+  'dashboard.maker.profile.section_logo': 'Logo',
+  'dashboard.maker.profile.logo_hint':
+    'Zobrazí se v katalogu, na vašem profilu a u vašich produktů.',
   'dashboard.maker.profile.section_pickup': 'Osobní odběr',
   'dashboard.maker.profile.section_bank': 'Bankovní účet',
   'dashboard.maker.profile.company_name': 'Název firmy',
@@ -242,6 +248,20 @@ export const messages = {
   'dashboard.maker.profile.save': 'Uložit změny',
   'dashboard.maker.profile.saving': 'Ukládám…',
   'dashboard.maker.profile.saved': 'Změny uloženy.',
+
+  // Profile images (shared by the avatar + maker-logo pickers).
+  // Error keys mirror BusinessErrorMessage.File* emitted by the
+  // ProfileImageValidator path on ProfileController.
+  'profile.image.upload': 'Nahrát obrázek',
+  'profile.image.replace': 'Změnit obrázek',
+  'profile.image.uploading': 'Nahrávám…',
+  'profile.image.remove': 'Odebrat',
+  'profile.image.removing': 'Odebírám…',
+  'profile.image.constraints': 'JPEG, PNG nebo WebP, maximálně 2 MB.',
+  'profile.image.error.too_large': 'Obrázek je příliš velký. Maximální velikost je 2 MB.',
+  'profile.image.error.unsupported_type': 'Nepodporovaný formát. Použijte JPEG, PNG nebo WebP.',
+  'profile.image.error.invalid': 'Obrázek se nepodařilo nahrát. Zkuste to prosím znovu.',
+  'profile.image.error.remove_failed': 'Obrázek se nepodařilo odebrat. Zkuste to prosím znovu.',
 
   // Navigation
   'nav.home': 'Domů',

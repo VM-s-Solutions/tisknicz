@@ -25,17 +25,20 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
   name: 'default'
 }
 
-// Container map per ADR 0011: product-images public read, the rest private.
+// Container map per ADR 0011: product-images + profile-images public read,
+// the rest private.
 // MUST stay in sync with BlobContainer.All in
 // backend/src/Makables.Core.Domain/Storage/BlobContainer.cs — the client does
 // NOT auto-create containers, so a name in code but not here is a runtime 404
-// on the first blob op. (payouts added: the weekly payout CSV upload, T-0102b.)
+// on the first blob op. (payouts added: the weekly payout CSV upload, T-0102b.
+// profile-images added: maker logos + user avatars.)
 var containers = [
   { name: 'product-images', publicAccess: 'Blob' }
   { name: 'order-attachments', publicAccess: 'None' }
   { name: 'invoices', publicAccess: 'None' }
   { name: 'maker-documents', publicAccess: 'None' }
   { name: 'payouts', publicAccess: 'None' }
+  { name: 'profile-images', publicAccess: 'Blob' }
 ]
 
 resource containerResources 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = [for c in containers: {

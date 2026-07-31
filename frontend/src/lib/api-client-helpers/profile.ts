@@ -31,6 +31,8 @@ export interface MyProfile {
   role: UserRole;
   emailConfirmed: boolean;
   preferredLanguage: string | null;
+  /** Avatar blob path; use `buildAvatarUrl` from `catalog.ts`. Null → initials tile. */
+  avatarBlobPath: string | null;
 }
 
 export async function getMyProfile(host: ApiHost): Promise<Result<MyProfile, ApiError>> {
@@ -74,6 +76,8 @@ export interface MyMakerProfile {
   bankAccount: string | null;
   personalPickupEnabled: boolean;
   pickupNote: string | null;
+  /** Catalog logo blob path; use `buildMakerLogoUrl` from `catalog.ts`. Null → initial tile. */
+  logoBlobPath: string | null;
 }
 
 export async function getMyMakerProfile(host: ApiHost): Promise<Result<MyMakerProfile, ApiError>> {
@@ -89,5 +93,77 @@ export interface UpdateMakerProfileInput {
 
 export async function updateMyMakerProfile(host: ApiHost, input: UpdateMakerProfileInput): Promise<Result<void, ApiError>> {
   const result = await apiFetch<unknown>(host, `${Base}/maker`, { method: 'PUT', json: input });
+  return result.success ? ok(undefined) : result;
+}
+
+// ---- Profile images (avatar + maker logo) ----
+
+/**
+ * Multipart-upload budget. Mirrors `UPLOAD_TIMEOUT_MS` in
+ * `orders-client.ts`: a 2 MB image over a slow mobile uplink is a real
+ * transfer, and the 8 s `apiFetch` JSON default aborts it client-side
+ * mid-flight — the request shows as "cancelled" in devtools with the
+ * server still working on it, which reads as a broken feature rather
+ * than a timeout. JSON profile endpoints keep the 8 s default.
+ */
+const UPLOAD_TIMEOUT_MS = 120_000;
+
+/** Response of both upload endpoints — the stored blob path. */
+export interface UploadProfileImageResponse {
+  blobPath: string;
+}
+
+/**
+ * Upload the signed-in user's avatar. Builds a `FormData` with the
+ * `file` field the controller's `IFormFile` binding expects. We do NOT
+ * set `Content-Type`: the browser computes the multipart boundary and
+ * writes the matching header itself, and overriding it corrupts the
+ * request. `apiFetch` only injects `application/json` for the `json`
+ * option, so a raw `body` passes through untouched.
+ *
+ * Backend validation surfaces as `ApiError` with one of the
+ * `BusinessErrorMessage` codes: `file.tooLarge` (over 2 MB),
+ * `file.unsupportedType` (not JPEG/PNG/WebP), `file.invalid`.
+ */
+export async function uploadMyAvatar(
+  host: ApiHost,
+  file: File,
+): Promise<Result<UploadProfileImageResponse, ApiError>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetch<UploadProfileImageResponse>(host, `${Base}/avatar`, {
+    method: 'POST',
+    body: formData,
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+  });
+}
+
+/** Remove the signed-in user's avatar. Backend also deletes the blob. */
+export async function deleteMyAvatar(host: ApiHost): Promise<Result<void, ApiError>> {
+  const result = await apiFetch<unknown>(host, `${Base}/avatar`, { method: 'DELETE' });
+  return result.success ? ok(undefined) : result;
+}
+
+/**
+ * Upload the signed-in maker's catalog logo. Same multipart contract and
+ * error codes as {@link uploadMyAvatar}; 404 when the caller has no
+ * maker row.
+ */
+export async function uploadMyMakerLogo(
+  host: ApiHost,
+  file: File,
+): Promise<Result<UploadProfileImageResponse, ApiError>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetch<UploadProfileImageResponse>(host, `${Base}/maker/logo`, {
+    method: 'POST',
+    body: formData,
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+  });
+}
+
+/** Remove the signed-in maker's logo. Backend also deletes the blob. */
+export async function deleteMyMakerLogo(host: ApiHost): Promise<Result<void, ApiError>> {
+  const result = await apiFetch<unknown>(host, `${Base}/maker/logo`, { method: 'DELETE' });
   return result.success ? ok(undefined) : result;
 }

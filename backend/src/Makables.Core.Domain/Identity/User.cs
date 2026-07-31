@@ -52,6 +52,18 @@ public sealed class User : Auditable
     public string? CompanyVatId { get; private set; }
     public DateTimeOffset? CompanySnapshotFetchedAt { get; private set; }
 
+    /// <summary>
+    /// Blob path of the user's avatar in the public-read
+    /// <c>profile-images</c> container, shaped
+    /// <c>{country}/avatars/{userId}/{ulid}.{ext}</c>. Null until the user
+    /// uploads one — surfaces fall back to an initials tile. The avatar is
+    /// catalog-facing (it appears beside the reviews the user writes), so
+    /// it is served anonymously like a product image. Set/cleared only via
+    /// <see cref="SetAvatar"/>; GDPR erasure hard-deletes the row and the
+    /// erasure service deletes the blob.
+    /// </summary>
+    public string? AvatarBlobPath { get; private set; }
+
     private User() { }
 
     /// <summary>
@@ -155,6 +167,20 @@ public sealed class User : Auditable
         FullName = fullName.Trim();
         Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
         return this;
+    }
+
+    /// <summary>
+    /// Set or clear the user's avatar. Pass <c>null</c> to clear. Returns
+    /// the PREVIOUS blob path (null if there wasn't one) so the caller can
+    /// delete the superseded blob — a user who re-uploads repeatedly must
+    /// not leave a trail of orphans in storage.
+    /// </summary>
+    public string? SetAvatar(string? blobPath)
+    {
+        var previous = AvatarBlobPath;
+        var trimmed = blobPath?.Trim();
+        AvatarBlobPath = string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        return previous;
     }
 
     /// <summary>

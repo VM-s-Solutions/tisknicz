@@ -61,6 +61,13 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.PersonalPickupEnabled).HasColumnName("personal_pickup_enabled").IsRequired();
         builder.Property(m => m.PickupNote).HasColumnName("pickup_note").HasMaxLength(500);
 
+        // Catalog logo blob path in the public-read profile-images
+        // container. 500 chars mirrors OrderAttachment.MaxBlobPathLength;
+        // the actual shape ({cc}/makers/{ulid}/{ulid}.webp) is ~60. Not
+        // indexed — always read alongside the row that owns it.
+        builder.Property(m => m.LogoBlobPath)
+            .HasColumnName("logo_blob_path").HasMaxLength(500);
+
         // T-0043 catalog fields.
         builder.Property(m => m.Slug).HasColumnName("slug").HasMaxLength(120).IsRequired();
         // Partial unique index WHERE is_active so a soft-deleted maker

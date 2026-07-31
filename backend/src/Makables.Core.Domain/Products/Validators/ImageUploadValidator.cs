@@ -1,3 +1,5 @@
+using Makables.Core.Domain.Common;
+
 namespace Makables.Core.Domain.Products.Validators;
 
 /// <summary>
@@ -21,12 +23,7 @@ public static class ImageUploadValidator
     public const long MaxSizeBytes = 5 * 1024 * 1024;
 
     public static readonly IReadOnlySet<string> AllowedContentTypes =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-        };
+        FileSignatures.RasterImageContentTypes;
 
     public enum Result
     {
@@ -51,31 +48,10 @@ public static class ImageUploadValidator
         if (string.IsNullOrWhiteSpace(contentType) || !AllowedContentTypes.Contains(contentType))
             return Result.UnsupportedType;
 
-        if (!MagicBytesMatch(contentType, headerBytes))
+        if (!FileSignatures.Matches(contentType, headerBytes))
             return Result.MagicByteMismatch;
 
         return Result.Valid;
-    }
-
-    private static bool MagicBytesMatch(string contentType, ReadOnlySpan<byte> b)
-    {
-        return contentType.ToLowerInvariant() switch
-        {
-            // JPEG: FF D8 FF
-            "image/jpeg" => b.Length >= 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF,
-
-            // PNG: 89 50 4E 47 0D 0A 1A 0A
-            "image/png" => b.Length >= 8
-                && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47
-                && b[4] == 0x0D && b[5] == 0x0A && b[6] == 0x1A && b[7] == 0x0A,
-
-            // WebP: "RIFF" .... "WEBP" (bytes 0-3 = RIFF, bytes 8-11 = WEBP)
-            "image/webp" => b.Length >= 12
-                && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46
-                && b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50,
-
-            _ => false,
-        };
     }
 
     /// <summary>
@@ -83,15 +59,9 @@ public static class ImageUploadValidator
     /// signature spans the first 12 bytes). The controller buffers at
     /// least this many before calling <see cref="Validate"/>.
     /// </summary>
-    public const int RequiredHeaderBytes = 12;
+    public const int RequiredHeaderBytes = FileSignatures.RequiredHeaderBytes;
 
     /// <summary>Canonical file extension for a validated content type — used to build the blob filename.</summary>
     public static string ExtensionFor(string contentType) =>
-        contentType.ToLowerInvariant() switch
-        {
-            "image/jpeg" => "jpg",
-            "image/png" => "png",
-            "image/webp" => "webp",
-            _ => "bin",
-        };
+        FileSignatures.ExtensionFor(contentType);
 }

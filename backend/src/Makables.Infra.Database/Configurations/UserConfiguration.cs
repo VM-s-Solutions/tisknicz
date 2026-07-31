@@ -68,6 +68,13 @@ internal sealed class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CompanyVatId).HasColumnName("company_vat_id").HasMaxLength(32);
         builder.Property(u => u.CompanySnapshotFetchedAt).HasColumnName("company_snapshot_fetched_at");
 
+        // Avatar blob path in the public-read profile-images container.
+        // 500 chars mirrors OrderAttachment.MaxBlobPathLength; the actual
+        // shape ({cc}/avatars/{ulid}/{ulid}.webp) is ~60. Not indexed — it
+        // is only ever read alongside the row that owns it.
+        builder.Property(u => u.AvatarBlobPath)
+            .HasColumnName("avatar_blob_path").HasMaxLength(500);
+
         ConfigureAuditable(builder);
     }
 

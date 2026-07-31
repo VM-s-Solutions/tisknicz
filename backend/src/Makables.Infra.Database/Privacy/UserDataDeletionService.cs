@@ -5,6 +5,7 @@ using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Reviews;
+using Makables.Core.Domain.Storage;
 using Microsoft.EntityFrameworkCore;
 
 namespace Makables.Infra.Database.Privacy;
@@ -23,8 +24,19 @@ namespace Makables.Infra.Database.Privacy;
 /// obligation exemption (immutable tax records). They are never loaded for
 /// mutation; an integration test asserts the byte-for-byte invariant.
 /// </para>
+///
+/// <para>
+/// <b>Profile imagery</b> is the one thing erased OUTSIDE the database:
+/// the maker logo + user avatar blobs are deleted from the public-read
+/// <c>profile-images</c> container. That delete runs BEFORE the caller's
+/// UoW commits, so a rollback leaves a nulled pointer with the blob
+/// already gone. That asymmetry is deliberate — for an erasure request,
+/// a stale broken image link is a cosmetic bug while a surviving
+/// publicly-fetchable photo of the subject is a GDPR breach.
+/// </para>
 /// </summary>
-public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDeletionService
+public sealed class UserDataDeletionService(MakablesDbContext db, IBlobStorageClient blobs)
+    : IUserDataDeletionService
 {
     private static readonly OrderState[] InFlightStates =
     [
@@ -88,6 +100,9 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
         }
 
         // Maker PII (retain IČO + bank account, set IsRetainedForLegal).
+        // Capture the logo path first — AnonymizeForErasure nulls it, and
+        // the blob delete at the end of this method needs the value.
+        var makerLogoBlobPath = maker?.LogoBlobPath;
         maker?.AnonymizeForErasure();
 
         // === 3. Hard-delete pass ===
@@ -136,6 +151,7 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
         var user = await db.Set<User>()
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var avatarBlobPath = user?.AvatarBlobPath;
         if (user is not null)
         {
             // LoginAttemptBucket is keyed by the user's normalized email (PK ==
@@ -154,7 +170,20 @@ public sealed class UserDataDeletionService(MakablesDbContext db) : IUserDataDel
             db.Set<User>().Remove(user);
         }
 
-        // === 4. Invoices — RETAINED untouched. No read, no write. ===
+        // === 4. Profile imagery — deleted from blob storage ===
+        // Best-effort: a failed blob delete must not abort an otherwise
+        // lawful erasure (the pointers are gone either way, so nothing
+        // links the residue back to the subject). See the class remarks
+        // for why this runs pre-commit.
+        foreach (var path in new[] { makerLogoBlobPath, avatarBlobPath })
+        {
+            if (!string.IsNullOrEmpty(path))
+            {
+                await blobs.DeleteAsync(BlobContainer.ProfileImages, path, ct);
+            }
+        }
+
+        // === 5. Invoices — RETAINED untouched. No read, no write. ===
 
         // No SaveChangesAsync — the command's UoW pipeline commits the
         // anonymizations + hard-deletes atomically.

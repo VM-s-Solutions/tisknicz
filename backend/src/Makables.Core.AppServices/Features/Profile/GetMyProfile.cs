@@ -23,7 +23,8 @@ public static class GetMyProfile
         string CountryCodePrimary,
         UserRole Role,
         bool EmailConfirmed,
-        string? PreferredLanguage);
+        string? PreferredLanguage,
+        string? AvatarBlobPath);
 
     public sealed class Handler(
         IUserRepository users,
@@ -51,7 +52,8 @@ public static class GetMyProfile
                 CountryCodePrimary: user.CountryCodePrimary,
                 Role: user.Role,
                 EmailConfirmed: user.EmailConfirmedAt is not null,
-                PreferredLanguage: user.PreferredLanguage));
+                PreferredLanguage: user.PreferredLanguage,
+                AvatarBlobPath: user.AvatarBlobPath));
         }
     }
 }

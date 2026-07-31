@@ -13,6 +13,7 @@ using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Products;
 using Makables.Core.Domain.Reviews;
+using Makables.Core.Domain.Storage;
 using Makables.Infra.Common.Auth;
 using Makables.Infra.Database;
 using Makables.Infra.Database.Privacy;
@@ -401,7 +402,9 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
                 services.Remove(descriptor);
                 services.AddScoped<IUserDataDeletionService>(sp =>
                     new ThrowingDeletionDecorator(
-                        new UserDataDeletionService(sp.GetRequiredService<MakablesDbContext>())));
+                        new UserDataDeletionService(
+                            sp.GetRequiredService<MakablesDbContext>(),
+                            sp.GetRequiredService<IBlobStorageClient>())));
             }));
 
         var client = factory.CreateClient();
