@@ -5,7 +5,7 @@ import { t } from '@/lib/i18n';
 import { CustomerProfileClient } from './profile-client';
 
 export const metadata = {
-  title: 'Můj profil — Makables',
+  title: `${t('dashboard.customer.profile.title')} — ${t('common.app_name')}`,
 };
 
 // Always render fresh — the profile reflects edits the user just saved.
@@ -23,7 +23,7 @@ export default async function CustomerProfilePage() {
   const result = await getMyProfile('customer');
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-8">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
       <PageHeader title={t('dashboard.customer.profile.title')} />
       {result.success ? (
         <CustomerProfileClient initialProfile={result.value} />

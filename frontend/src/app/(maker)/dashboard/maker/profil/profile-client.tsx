@@ -1,100 +1,98 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
+import { SaveButton, type SaveState } from '@/components/ui/save-button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { ProfileImagePicker } from '@/components/shared/profile-image-picker';
+import { SectionHeading } from '@/components/shared/section-heading';
+import { buildMakerLogoUrl } from '@/lib/api-client-helpers/catalog';
 import {
-  getMyMakerProfile,
+  deleteMyMakerLogo,
   type MyMakerProfile,
   updateMyMakerProfile,
+  uploadMyMakerLogo,
 } from '@/lib/api-client-helpers/profile';
 import { t } from '@/lib/i18n';
 
 const Host = 'maker' as const;
 
 /**
- * Maker self-service profile page. Surfaces:
- *   - Read-only ARES snapshot (company name, IČO, DIČ, legal form).
- *   - Verification + stale-snapshot status badges.
- *   - Editable: bio, bank account (Czech ČNB format), personal pickup
- *     toggle + note.
+ * Maker self-service profile page. Two cards:
+ *   1. Company identity — logo (commits on selection) beside the
+ *      read-only ARES snapshot and the verification badge.
+ *   2. Editable profile — bio, bank account, personal pickup — as
+ *      hairline-separated sections under one save button.
+ *
+ * The profile arrives as a prop from the Server Component page, so there
+ * is no client fetch and no spinner pass.
  *
  * Categories are deferred (out of scope per T-0034 — needs Category
  * entity from T-0040).
  */
-export function MakerProfileClient() {
-  const [profile, setProfile] = useState<MyMakerProfile | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const result = await getMyMakerProfile(Host);
-      if (cancelled) return;
-      if (result.success) {
-        setProfile(result.value);
-      } else {
-        setLoadError(result.error.message);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loadError) {
-    return <Alert variant="error">{loadError}</Alert>;
-  }
-  if (!profile) {
-    return (
-      <Card variant="elevated" padding="lg" className="flex items-center gap-3 text-sm text-zinc-300">
-        <Spinner />
-        <span>{t('common.loading')}</span>
-      </Card>
-    );
-  }
+export function MakerProfileClient({ initialProfile }: { initialProfile: MyMakerProfile }) {
+  const [profile, setProfile] = useState<MyMakerProfile>(initialProfile);
 
   return (
     <>
-      <CompanySection profile={profile} />
+      <CompanySection profile={profile} onUpdated={setProfile} />
       <EditableSection profile={profile} onUpdated={setProfile} />
     </>
   );
 }
 
-function CompanySection({ profile }: { profile: MyMakerProfile }) {
+/**
+ * Company identity. The logo picker lives here rather than in its own
+ * card: it commits on selection through a separate endpoint, so keeping
+ * it out of the editable form is what matters — and next to the registry
+ * data it reads as "this is who you are in the catalog" instead of a
+ * lone card holding a single control.
+ */
+function CompanySection({
+  profile,
+  onUpdated,
+}: {
+  profile: MyMakerProfile;
+  onUpdated: (next: MyMakerProfile) => void;
+}) {
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="icon-tile h-9 w-9" aria-hidden="true">
-            <Icon name="verified" size={16} />
-          </span>
-          <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_company')}</h2>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {profile.isVerified ? (
-            <Badge variant="success">{t('dashboard.maker.profile.verified')}</Badge>
-          ) : (
-            <Badge variant="warning">{t('dashboard.maker.profile.not_verified')}</Badge>
-          )}
-        </div>
+    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <SectionHeading icon="verified" title={t('dashboard.maker.profile.section_company')} />
+        {profile.isVerified ? (
+          <Badge variant="success">{t('dashboard.maker.profile.verified')}</Badge>
+        ) : (
+          <Badge variant="warning">{t('dashboard.maker.profile.not_verified')}</Badge>
+        )}
       </div>
+
       {profile.snapshotIsStale && (
         <Alert variant="warning">{t('dashboard.maker.profile.snapshot_stale')}</Alert>
       )}
-      <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-        <ReadonlyField label={t('dashboard.maker.profile.company_name')} value={profile.companyName} />
+
+      <ProfileImagePicker
+        currentUrl={buildMakerLogoUrl(profile.logoBlobPath)}
+        name={profile.companyName}
+        hint={t('dashboard.maker.profile.logo_hint')}
+        heading={
+          <p className="truncate text-lg font-semibold text-zinc-100">{profile.companyName}</p>
+        }
+        onUpload={(file) => uploadMyMakerLogo(Host, file)}
+        onRemove={() => deleteMyMakerLogo(Host)}
+        onChanged={(logoBlobPath) => onUpdated({ ...profile, logoBlobPath })}
+      />
+
+      <dl className="grid gap-x-8 gap-y-3 border-t border-zinc-800 pt-5 sm:grid-cols-2">
         <ReadonlyField label={t('dashboard.maker.profile.ico')} value={profile.registrationNumber} />
         <ReadonlyField label={t('dashboard.maker.profile.vat_id')} value={profile.vatId ?? '—'} />
-        <ReadonlyField label={t('dashboard.maker.profile.legal_form')} value={profile.legalForm ?? '—'} />
+        <ReadonlyField
+          label={t('dashboard.maker.profile.legal_form')}
+          value={profile.legalForm ?? '—'}
+        />
       </dl>
       <p className="text-xs text-zinc-500">{t('dashboard.maker.profile.readonly_hint')}</p>
     </Card>
@@ -103,9 +101,9 @@ function CompanySection({ profile }: { profile: MyMakerProfile }) {
 
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="text-sm text-zinc-100">{value}</dd>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-xs text-zinc-500">{label}</dt>
+      <dd className="break-words text-sm text-zinc-100">{value}</dd>
     </div>
   );
 }
@@ -121,91 +119,91 @@ function EditableSection({
   const [bankAccount, setBankAccount] = useState(profile.bankAccount ?? '');
   const [personalPickupEnabled, setPersonalPickupEnabled] = useState(profile.personalPickupEnabled);
   const [pickupNote, setPickupNote] = useState(profile.pickupNote ?? '');
-  const [submitting, setSubmitting] = useState(false);
+  const [state, setState] = useState<SaveState>('idle');
   const [serverError, setServerError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+
+  const saving = state === 'saving';
+  const dirty =
+    bio !== (profile.bio ?? '') ||
+    bankAccount !== (profile.bankAccount ?? '') ||
+    personalPickupEnabled !== profile.personalPickupEnabled ||
+    pickupNote !== (profile.pickupNote ?? '');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setServerError(null);
-    setSaved(false);
-    setSubmitting(true);
+    setState('saving');
+
+    // Empty string clears the field on the backend; null means "leave
+    // unchanged" (UpdateMakerProfile field semantics), so an emptied
+    // input must ride the wire as '' — never as null.
+    const nextBio = bio.trim();
+    const nextBankAccount = bankAccount.trim();
+    const nextPickupNote = pickupNote.trim();
+
     const result = await updateMyMakerProfile(Host, {
-      bio: bio,
-      bankAccount: bankAccount,
+      bio: nextBio,
+      bankAccount: nextBankAccount,
       personalPickupEnabled,
-      pickupNote: pickupNote,
+      pickupNote: nextPickupNote,
     });
-    setSubmitting(false);
-    if (result.success) {
-      setSaved(true);
-      onUpdated({
-        ...profile,
-        bio: bio.trim() === '' ? null : bio.trim(),
-        bankAccount: bankAccount.trim() === '' ? null : bankAccount.trim(),
-        personalPickupEnabled,
-        pickupNote: pickupNote.trim() === '' ? null : pickupNote.trim(),
-      });
+
+    if (!result.success) {
+      setState('idle');
+      setServerError(mapMakerProfileError(result.error.code, result.error.message));
       return;
     }
-    setServerError(mapMakerProfileError(result.error.code, result.error.message));
+
+    // Mirror the stored (trimmed) values into both the inputs and the
+    // profile so the dirty check settles at clean after a save.
+    setBio(nextBio);
+    setBankAccount(nextBankAccount);
+    setPickupNote(nextPickupNote);
+    setState('saved');
+    onUpdated({
+      ...profile,
+      bio: nextBio === '' ? null : nextBio,
+      bankAccount: nextBankAccount === '' ? null : nextBankAccount,
+      personalPickupEnabled,
+      pickupNote: nextPickupNote === '' ? null : nextPickupNote,
+    });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-      {saved && <Alert variant="success">{t('dashboard.maker.profile.saved')}</Alert>}
-      {serverError && <Alert variant="error">{serverError}</Alert>}
-
-      <Card variant="elevated" padding="lg">
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="icon-tile h-9 w-9" aria-hidden="true">
-              <Icon name="user" size={16} />
-            </span>
-            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_about')}</h2>
-          </div>
+    <form onSubmit={handleSubmit} noValidate>
+      <Card variant="elevated" padding="lg" className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
+          <SectionHeading icon="user" title={t('dashboard.maker.profile.section_about')} />
           <Textarea
             label={t('dashboard.maker.profile.bio')}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             maxLength={500}
             rows={4}
-            disabled={submitting}
+            disabled={saving}
           />
         </section>
-      </Card>
 
-      <Card variant="elevated" padding="lg">
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="icon-tile h-9 w-9" aria-hidden="true">
-              <Icon name="creditCard" size={16} />
-            </span>
-            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_bank')}</h2>
+        <section className="flex flex-col gap-4 border-t border-zinc-800 pt-6">
+          <SectionHeading icon="creditCard" title={t('dashboard.maker.profile.section_bank')} />
+          <div className="sm:max-w-sm">
+            <Input
+              type="text"
+              label={t('dashboard.maker.profile.bank_account')}
+              value={bankAccount}
+              onChange={(e) => setBankAccount(e.target.value)}
+              placeholder={t('dashboard.maker.profile.bank_account_placeholder')}
+              disabled={saving}
+            />
           </div>
-          <Input
-            type="text"
-            label={t('dashboard.maker.profile.bank_account')}
-            value={bankAccount}
-            onChange={(e) => setBankAccount(e.target.value)}
-            placeholder={t('dashboard.maker.profile.bank_account_placeholder')}
-            disabled={submitting}
-          />
         </section>
-      </Card>
 
-      <Card variant="elevated" padding="lg">
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="icon-tile h-9 w-9" aria-hidden="true">
-              <Icon name="mapPin" size={16} />
-            </span>
-            <h2 className="text-lg font-semibold">{t('dashboard.maker.profile.section_pickup')}</h2>
-          </div>
+        <section className="flex flex-col gap-4 border-t border-zinc-800 pt-6">
+          <SectionHeading icon="mapPin" title={t('dashboard.maker.profile.section_pickup')} />
           <Switch
             checked={personalPickupEnabled}
             onChange={(e) => setPersonalPickupEnabled(e.target.checked)}
-            disabled={submitting}
+            disabled={saving}
             label={t('dashboard.maker.profile.pickup_enabled')}
           />
           <Textarea
@@ -214,15 +212,17 @@ function EditableSection({
             onChange={(e) => setPickupNote(e.target.value)}
             maxLength={500}
             rows={3}
-            disabled={submitting || !personalPickupEnabled}
+            disabled={saving || !personalPickupEnabled}
           />
         </section>
-      </Card>
 
-      <Button type="submit" loading={submitting} className="self-start">
-        {!submitting ? <Icon name="save" size={16} /> : null}
-        {submitting ? t('dashboard.maker.profile.saving') : t('dashboard.maker.profile.save')}
-      </Button>
+        <div className="flex flex-col gap-4 border-t border-zinc-800 pt-6">
+          {serverError && <Alert variant="error">{serverError}</Alert>}
+          <div className="flex justify-end">
+            <SaveButton state={state} dirty={dirty} />
+          </div>
+        </div>
+      </Card>
     </form>
   );
 }

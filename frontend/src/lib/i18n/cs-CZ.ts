@@ -20,6 +20,10 @@ export const messages = {
   'common.cancel': 'Zrušit',
   'common.confirm': 'Potvrdit',
   'common.save': 'Uložit',
+  'common.save_changes': 'Uložit změny',
+  'common.saving': 'Ukládám…',
+  'common.saved': 'Uloženo',
+  'common.no_changes': 'Žádné změny k uložení',
   'common.delete': 'Smazat',
   'common.edit': 'Upravit',
   'common.close': 'Zavřít',
@@ -213,18 +217,15 @@ export const messages = {
   'dashboard.customer.profile.full_name': 'Jméno a příjmení',
   'dashboard.customer.profile.phone': 'Telefon',
   'dashboard.customer.profile.phone_placeholder': '+420 …',
-  'dashboard.customer.profile.email_readonly': 'E-mail',
   'dashboard.customer.profile.email_change_hint': 'Pro změnu e-mailu kontaktujte podporu.',
-  'dashboard.customer.profile.save': 'Uložit změny',
-  'dashboard.customer.profile.saving': 'Ukládám…',
-  'dashboard.customer.profile.saved': 'Změny uloženy.',
   'dashboard.customer.profile.current_password': 'Současné heslo',
   'dashboard.customer.profile.new_password': 'Nové heslo',
   'dashboard.customer.profile.change_password': 'Změnit heslo',
-  'dashboard.customer.profile.password_changed': 'Heslo bylo změněno.',
+  // Doubles as the change-password button's saved state, hence no
+  // trailing period — it reads as a button label, not a sentence.
+  'dashboard.customer.profile.password_changed': 'Heslo změněno',
   'dashboard.customer.profile.password_wrong': 'Současné heslo není správné.',
   'dashboard.customer.profile.logout': 'Odhlásit se',
-  'dashboard.customer.profile.section_avatar': 'Profilová fotka',
   'dashboard.customer.profile.avatar_hint':
     'Zobrazí se u vašich hodnocení výrobců. Když žádnou nenahrajete, ukáže se jen iniciála.',
 
@@ -232,12 +233,10 @@ export const messages = {
   'dashboard.maker.profile.title': 'Profil výrobce',
   'dashboard.maker.profile.section_company': 'Firemní údaje (ARES)',
   'dashboard.maker.profile.section_about': 'O výrobci',
-  'dashboard.maker.profile.section_logo': 'Logo',
   'dashboard.maker.profile.logo_hint':
     'Zobrazí se v katalogu, na vašem profilu a u vašich produktů.',
   'dashboard.maker.profile.section_pickup': 'Osobní odběr',
   'dashboard.maker.profile.section_bank': 'Bankovní účet',
-  'dashboard.maker.profile.company_name': 'Název firmy',
   'dashboard.maker.profile.ico': 'IČO',
   'dashboard.maker.profile.vat_id': 'DIČ',
   'dashboard.maker.profile.legal_form': 'Právní forma',
@@ -251,9 +250,6 @@ export const messages = {
   'dashboard.maker.profile.bank_account_invalid': 'Bankovní účet není v platném tvaru.',
   'dashboard.maker.profile.pickup_enabled': 'Nabízím osobní odběr',
   'dashboard.maker.profile.pickup_note': 'Poznámka k odběru',
-  'dashboard.maker.profile.save': 'Uložit změny',
-  'dashboard.maker.profile.saving': 'Ukládám…',
-  'dashboard.maker.profile.saved': 'Změny uloženy.',
 
   // Profile images (shared by the avatar + maker-logo pickers).
   // Error keys mirror BusinessErrorMessage.File* emitted by the
