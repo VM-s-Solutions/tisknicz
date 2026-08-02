@@ -142,10 +142,45 @@ public static class MakablesOpenApiExtensions
                         continue;
                     }
 
-                    // Replace the $ref with an inline string enum. Inline rather
-                    // than mutating the shared component, because the same enum
-                    // may legitimately appear in a body elsewhere where the
-                    // schema transformer has already handled it correctly.
+                    // Resolve through the $ref. A query-only enum still gets a
+                    // components/schemas entry — it is just never visited by the
+                    // schema transformer, so it sits there as a bare
+                    // `{"type": "integer"}` and the parameter points at it.
+                    //
+                    // Fix that COMPONENT in place instead of overwriting the
+                    // parameter with an inline copy. Inlining would work on the
+                    // wire but costs the name: NSwag can only name a type it can
+                    // point at, so inlined enums come out per-operation as
+                    // State / State2 / Sort / Type. Repairing the target keeps
+                    // `OrderState` as `OrderState` and fixes every other
+                    // reference to the same component at once.
+                    // OpenApiSchemaReference.Target resolves through the
+                    // reference's host document, which is not yet attached while
+                    // operation transformers run — it comes back null. Look the
+                    // component up on the in-flight document instead.
+                    IOpenApiSchema? schema = parameter.Schema;
+                    if (schema is OpenApiSchemaReference reference)
+                    {
+                        var id = reference.Reference?.Id;
+                        schema = id is not null
+                            && context.Document?.Components?.Schemas?.TryGetValue(id, out var component) == true
+                                ? component
+                                : null;
+                    }
+
+                    if (schema is not OpenApiSchema target)
+                    {
+                        continue;
+                    }
+
+                    // Already correct — the enum also appears in a body, so the
+                    // schema transformer got here first. Rewriting is a no-op at
+                    // best and clobbers its Format handling at worst.
+                    if ((target.Type & JsonSchemaType.String) == JsonSchemaType.String)
+                    {
+                        continue;
+                    }
+
                     var names = Enum.GetNames(type);
                     var nodes = new List<JsonNode>(names.Length);
                     foreach (var name in names)
@@ -153,11 +188,9 @@ public static class MakablesOpenApiExtensions
                         nodes.Add(JsonValue.Create(name)!);
                     }
 
-                    parameter.Schema = new OpenApiSchema
-                    {
-                        Type = JsonSchemaType.String,
-                        Enum = nodes,
-                    };
+                    target.Type = JsonSchemaType.String;
+                    target.Format = null;
+                    target.Enum = nodes;
                 }
 
                 return Task.CompletedTask;

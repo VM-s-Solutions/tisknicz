@@ -41,7 +41,7 @@ export interface IAdminApi {
      * @param dateTo (optional) 
      * @return OK
      */
-    adminInvoices(page: number | undefined, pageSize: number | undefined, type: number | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse>;
+    adminInvoices(page: number | undefined, pageSize: number | undefined, type: InvoiceType | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse>;
 
     /**
      * @param page (optional) 
@@ -571,7 +571,7 @@ export class AdminApi implements IAdminApi {
      * @param dateTo (optional) 
      * @return OK
      */
-    adminInvoices(page: number | undefined, pageSize: number | undefined, type: number | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse> {
+    adminInvoices(page: number | undefined, pageSize: number | undefined, type: InvoiceType | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse> {
         let url_ = this.baseUrl + "/api/v1/admin-invoices?";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
@@ -3830,7 +3830,7 @@ export interface IAdminCategoryItem {
 export class AdminInvoiceListItemDto implements IAdminInvoiceListItemDto {
     invoiceId!: string;
     invoiceNumber!: string;
-    type!: number;
+    type!: InvoiceType;
     countryCode!: string;
     recipientName!: string;
     totalMinor!: number;
@@ -3899,7 +3899,7 @@ export class AdminInvoiceListItemDto implements IAdminInvoiceListItemDto {
 export interface IAdminInvoiceListItemDto {
     invoiceId: string;
     invoiceNumber: string;
-    type: number;
+    type: InvoiceType;
     countryCode: string;
     recipientName: string;
     totalMinor: number;
@@ -6027,6 +6027,11 @@ export interface IChangePasswordRequest {
     newPassword: string;
 
     [key: string]: any;
+}
+
+export enum InvoiceType {
+    Customer = "Customer",
+    Fee = "Fee",
 }
 
 export enum InvoicingMode {
