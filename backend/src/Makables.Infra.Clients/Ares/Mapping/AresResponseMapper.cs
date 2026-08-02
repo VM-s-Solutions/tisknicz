@@ -92,6 +92,11 @@ public static class AresResponseMapper
             VatId: string.IsNullOrWhiteSpace(payload.Dic) ? null : payload.Dic,
             CompanyName: payload.ObchodniJmeno ?? string.Empty,
             LegalForm: CzechLegalForms.Resolve(payload.PravniForma),
+            // Classified here, in the CZ adapter, from the raw ČSÚ code —
+            // the code is not carried further, so this is the last point
+            // at which the company/individual split can be decided
+            // without parsing display copy.
+            LegalType: CzechLegalForms.Classify(payload.PravniForma),
             RegisteredAddress: address,
             IncorporatedOn: incorporatedOn,
             IsActiveInRegistry: string.IsNullOrWhiteSpace(payload.DatumZaniku),

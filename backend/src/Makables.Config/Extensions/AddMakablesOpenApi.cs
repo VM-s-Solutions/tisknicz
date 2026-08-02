@@ -103,6 +103,66 @@ public static class MakablesOpenApiExtensions
                 return Task.CompletedTask;
             });
 
+            // Enum-typed QUERY/ROUTE parameters. The schema transformer above
+            // only reaches types the JSON serializer produces a JsonTypeInfo
+            // for — i.e. things that appear in a request or response BODY. An
+            // enum used solely as a query parameter never goes through
+            // System.Text.Json (MVC model-binds it from the raw string), so it
+            // falls through and is emitted as a bare `{"type": "integer"}`
+            // with no values.
+            //
+            // That contradicts the wire contract the platform actually has:
+            // AddMakablesControllers registers a global JsonStringEnumConverter
+            // precisely so "every Makables consumer types enums as string
+            // unions", and ASP.NET's own binder accepts the member NAME. Left
+            // alone, NSwag would generate `number` for a parameter the client
+            // must send as "NaturalPerson".
+            options.AddOperationTransformer((operation, context, _) =>
+            {
+                if (operation.Parameters is null)
+                {
+                    return Task.CompletedTask;
+                }
+
+                foreach (var description in context.Description.ParameterDescriptions)
+                {
+                    // Unwrap Nullable<T>: an optional filter is `MakerLegalType?`.
+                    var type = Nullable.GetUnderlyingType(description.Type) ?? description.Type;
+                    if (type is null || !type.IsEnum)
+                    {
+                        continue;
+                    }
+
+                    // Same downcast the multipart transformer below needs:
+                    // the interface exposes Schema read-only.
+                    if (operation.Parameters.FirstOrDefault(p =>
+                            string.Equals(p.Name, description.Name, StringComparison.Ordinal))
+                        is not OpenApiParameter parameter)
+                    {
+                        continue;
+                    }
+
+                    // Replace the $ref with an inline string enum. Inline rather
+                    // than mutating the shared component, because the same enum
+                    // may legitimately appear in a body elsewhere where the
+                    // schema transformer has already handled it correctly.
+                    var names = Enum.GetNames(type);
+                    var nodes = new List<JsonNode>(names.Length);
+                    foreach (var name in names)
+                    {
+                        nodes.Add(JsonValue.Create(name)!);
+                    }
+
+                    parameter.Schema = new OpenApiSchema
+                    {
+                        Type = JsonSchemaType.String,
+                        Enum = nodes,
+                    };
+                }
+
+                return Task.CompletedTask;
+            });
+
             options.AddOperationTransformer((operation, context, _) =>
             {
                 // Only multipart bodies are rewritten. JSON/text bodies pass

@@ -29,10 +29,31 @@ const Base = '/api/v1/catalog';
 export type FulfillmentType = 'MadeToOrder' | 'InStock';
 
 /**
+ * Mirror of <c>Makables.Core.Domain.Makers.MakerLegalType</c>. Whether a
+ * maker trades as a company ("Firma") or as an individual trader
+ * ("Živnostník"). Every maker holds an IČO, so
+ * <c>NaturalPerson</c> means OSVČ — never "private seller".
+ *
+ * A maker whose legal form the registry adapter could not classify is
+ * NULL on the backend and matches neither value, so it appears only in
+ * the unfiltered list. There is deliberately no third "unknown" member
+ * to select.
+ */
+export type MakerLegalType = 'LegalEntity' | 'NaturalPerson';
+
+/**
  * Mirror of <c>PagedData&lt;T&gt;</c> in
  * <c>Makables.Core.Domain.Common</c>. Backend computes
- * <c>TotalPages</c>, <c>HasNext</c>, <c>HasPrevious</c>; we surface them
- * directly so no client-side pagination math is needed.
+ * <c>TotalPages</c>, <c>HasNextPage</c>, <c>HasPreviousPage</c>; we
+ * surface them directly so no client-side pagination math is needed.
+ *
+ * NOTE the <c>Page</c> suffix on the two booleans — it is the wire name
+ * (see the C# computed properties and the NSwag-generated
+ * <c>PagedDataOfMakerListItem</c>). This mirror previously declared them
+ * as <c>hasNext</c> / <c>hasPrevious</c>, which typed as <c>boolean</c>
+ * but resolved to <c>undefined</c> at runtime, so every catalog
+ * prev/next control rendered permanently disabled and the sitemap
+ * stopped after one page. Keep these names in sync with the C# record.
  */
 export interface PagedData<T> {
   readonly items: readonly T[];
@@ -40,8 +61,8 @@ export interface PagedData<T> {
   readonly pageSize: number;
   readonly totalCount: number;
   readonly totalPages: number;
-  readonly hasNext: boolean;
-  readonly hasPrevious: boolean;
+  readonly hasNextPage: boolean;
+  readonly hasPreviousPage: boolean;
 }
 
 /**
@@ -180,9 +201,17 @@ export interface ProductDetail {
  */
 export interface CatalogFilterInput {
   readonly country?: string;
-  readonly category?: string;
+  /**
+   * Zero or more category slugs, emitted as a REPEATED `category` query
+   * param (`?category=a&category=b`) — what the controller's
+   * `string[]? category` binder expects. The backend OR-s them: a maker
+   * listed under any selected category matches.
+   */
+  readonly categories?: readonly string[];
   readonly city?: string;
   readonly minRatingStars?: number;
+  /** Restrict to companies or individual traders. Omit for no constraint. */
+  readonly legalType?: MakerLegalType;
   readonly page?: number;
   readonly pageSize?: number;
 }
@@ -250,10 +279,15 @@ export async function getPagedMakers(
 ): Promise<Result<PagedData<MakerListItem>, ApiError>> {
   const params = new URLSearchParams();
   params.set('country', input.country ?? 'CZ');
-  if (input.category) params.set('category', input.category);
+  for (const slug of input.categories ?? []) {
+    if (slug) params.append('category', slug);
+  }
   if (input.city) params.set('city', input.city);
   if (input.minRatingStars !== undefined) {
     params.set('minRating', String(input.minRatingStars));
+  }
+  if (input.legalType) {
+    params.set('legalType', input.legalType);
   }
   params.set('page', String(input.page ?? 1));
   params.set('pageSize', String(input.pageSize ?? CATALOG_DEFAULT_PAGE_SIZE));

@@ -22,11 +22,23 @@ namespace Makables.Tools.Seeder;
 /// order-message threads, reviews, and the denormalized maker catalog stats.
 ///
 /// <para>
+/// Runs in TWO passes (both inside one transaction):
+/// <list type="number">
+///   <item><description>The hand-authored demo snapshot below. One
+///     indivisible dataset, guarded by the sentinel admin row — present
+///     or absent as a whole.</description></item>
+///   <item><description>The 50-maker catalog set in
+///     <c>DevDataSeeder.CatalogMakers.cs</c>, idempotent PER MAKER so it
+///     tops up a dev database that already holds pass 1, hand-made rows,
+///     or a shorter earlier version of that list.</description></item>
+/// </list>
+/// </para>
+///
+/// <para>
 /// Safety: refuses to run against a non-local host unless
 /// <c>--allow-remote</c> is passed, and always refuses when the host or
-/// database name contains "prod". Idempotent via the sentinel admin row —
-/// a second run is a no-op; <c>--reset</c> deletes all <c>seed-*</c> rows
-/// first and reseeds. Everything runs in a single transaction.
+/// database name contains "prod". <c>--reset</c> deletes all
+/// <c>seed-*</c> rows first and reseeds both passes.
 /// </para>
 ///
 /// <para>
@@ -37,7 +49,7 @@ namespace Makables.Tools.Seeder;
 /// sequence (which starts at 0001) cannot collide with them in dev.
 /// </para>
 /// </summary>
-public sealed class DevDataSeeder(
+public sealed partial class DevDataSeeder(
     MakablesDbContext db,
     IPasswordHasher passwordHasher,
     SeedClock clock,
@@ -61,6 +73,14 @@ public sealed class DevDataSeeder(
     private readonly List<Maker> _makers = [];
     private int _messageCount;
     private DateTimeOffset _now;
+    private string? _passwordHash;
+
+    /// <summary>
+    /// The shared Argon2id hash, computed at most once per run — hashing
+    /// is deliberately slow, and every seeded account uses the same
+    /// password.
+    /// </summary>
+    private string PasswordHash => _passwordHash ??= passwordHasher.Hash(SharedPassword);
 
     public async Task<int> RunAsync(bool reset, bool allowRemote, bool migrate, CancellationToken ct)
     {
@@ -82,36 +102,81 @@ public sealed class DevDataSeeder(
             await db.SaveChangesAsync(ct);
         }
 
-        var alreadySeeded = await db.Set<User>()
-            .IgnoreQueryFilters()
-            .AnyAsync(u => u.Id == AdminUserId, ct);
-        if (alreadySeeded)
-        {
-            logger.LogInformation(
-                "Seed data already present (sentinel {Sentinel} exists). Nothing to do — rerun with --reset to reseed.",
-                AdminUserId);
-            return 0;
-        }
-
         _now = DateTimeOffset.UtcNow;
         clock.UtcNow = _now;
 
-        SeedAll();
+        // Pass 1 — the hand-authored demo snapshot. All-or-nothing, so
+        // one sentinel row decides it.
+        var snapshotPresent = await db.Set<User>()
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.Id == AdminUserId, ct);
+        if (snapshotPresent)
+        {
+            logger.LogInformation(
+                "Demo snapshot already present (sentinel {Sentinel} exists) — skipping pass 1. Rerun with --reset to rebuild it.",
+                AdminUserId);
+        }
+        else
+        {
+            SeedAll();
+        }
+
+        // Pass 2 — the catalog makers. Per-maker idempotency, so this
+        // tops up a dev database that already has pass 1.
+        var (catalogAdded, catalogSkipped) = await SeedCatalogMakersAsync(ct);
+
+        RecomputeMakerStats();
+
+        if (snapshotPresent && catalogAdded == 0)
+        {
+            logger.LogInformation("Nothing to seed — every seed row already exists.");
+            await transaction.RollbackAsync(ct);
+            return 0;
+        }
+
+        // Counted BEFORE the save — afterwards every entry is Unchanged.
+        var newUsers = db.ChangeTracker.Entries<User>().Count(e => e.State == EntityState.Added);
+        var newProducts = db.ChangeTracker.Entries<Product>().Count(e => e.State == EntityState.Added);
+
+        // The state-transition helpers leave the clock deep in the past;
+        // put it back so the audit interceptor stamps anything it has to
+        // fill in with the run's own timestamp.
+        clock.UtcNow = _now;
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
         logger.LogInformation(
-            "Seed complete: {Users} users, {Makers} makers, {Products} products, {Orders} orders, {Reviews} reviews.",
-            db.ChangeTracker.Entries<User>().Count(),
+            "Seed complete: {Users} users, {Makers} makers, {Products} products, {Orders} orders, {Reviews} reviews written " +
+            "({CatalogAdded} catalog makers added, {CatalogSkipped} already present).",
+            newUsers,
             _makers.Count,
-            db.ChangeTracker.Entries<Product>().Count(),
+            newProducts,
             _orders.Count,
-            _reviews.Count);
+            _reviews.Count,
+            catalogAdded,
+            catalogSkipped);
         logger.LogInformation(
             "Every account (admin@makables.test, jana.novakova@makables.test, karel.tiskar@makables.test, …) uses the password '{Password}'.",
             SharedPassword);
         return 0;
+    }
+
+    /// <summary>
+    /// Recompute-from-rows for the denormalized catalog stats, over the
+    /// makers THIS run created (existing rows keep their stored values).
+    /// </summary>
+    private void RecomputeMakerStats()
+    {
+        foreach (var maker in _makers)
+        {
+            var makerReviews = _reviews.Where(r => r.MakerId == maker.Id).ToList();
+            var averageBp = makerReviews.Count == 0
+                ? 0
+                : (int)Math.Round(makerReviews.Average(r => (double)r.Rating) * 10_000, MidpointRounding.AwayFromZero);
+            var completedOrders = _orders.Count(o => o.MakerId == maker.Id && o.State == OrderState.Completed);
+            maker.SetCatalogStats(averageBp, makerReviews.Count, completedOrders);
+        }
     }
 
     // === Safety rails ===
@@ -198,7 +263,7 @@ public sealed class DevDataSeeder(
 
     private void SeedAll()
     {
-        var passwordHash = passwordHasher.Hash(SharedPassword);
+        var passwordHash = PasswordHash;
 
         // --- Admin + customers ---
         AddUser(AdminUserId, "admin@makables.test", UserRole.Admin,
@@ -219,6 +284,7 @@ public sealed class DevDataSeeder(
             "Karel Tiskař", passwordHash, confirmed: true, DaysAgo(60));
         var maker1 = AddMaker("seed-maker-01", karel, ico: "12345679", vatId: "CZ12345679",
             company: "PrintLab s.r.o.", slug: "printlab",
+            legalType: MakerLegalType.LegalEntity,
             street: "Korunní", houseNumber: "1208/12", city: "Praha", zip: "120 00",
             bio: "Malá pražská dílna zaměřená na precizní FDM a SLA tisk. Tiskneme od prototypů po malé série, poradíme s materiálem i modelem.",
             bank: "123456789/0800", pickup: true,
@@ -230,6 +296,7 @@ public sealed class DevDataSeeder(
             "Marie Vltavská", passwordHash, confirmed: true, DaysAgo(55));
         var maker2 = AddMaker("seed-maker-02", marie, ico: "87654326", vatId: "CZ87654326",
             company: "Tiskárna Vltava s.r.o.", slug: "tiskarna-vltava",
+            legalType: MakerLegalType.LegalEntity,
             street: "Nádražní", houseNumber: "32", city: "Praha", zip: "150 00",
             bio: "Klasický ofset i digitál pod jednou střechou. Vizitky, svatební oznámení, plakáty a velkoformátové bannery do druhého dne.",
             bank: "987654321/0100", pickup: false, pickupNote: null,
@@ -240,6 +307,7 @@ public sealed class DevDataSeeder(
             "Ondřej Barvíř", passwordHash, confirmed: true, DaysAgo(50));
         var maker3 = AddMaker("seed-maker-03", ondrej, ico: "25596641", vatId: "CZ25596641",
             company: "Textilka Brno s.r.o.", slug: "textilka-brno",
+            legalType: MakerLegalType.LegalEntity,
             street: "Cejl", houseNumber: "76", city: "Brno", zip: "602 00",
             bio: "Sítotisk, DTF i výšivka na textil. Potiskneme jeden kus stejně rádi jako celý firemní merch.",
             bank: "555666777/0300", pickup: false, pickupNote: null,
@@ -250,6 +318,7 @@ public sealed class DevDataSeeder(
             "Lucie Řezavá", passwordHash, confirmed: true, DaysAgo(45));
         var maker4 = AddMaker("seed-maker-04", lucie, ico: "45012342", vatId: null,
             company: "LaserCut Ostrava s.r.o.", slug: "lasercut-ostrava",
+            legalType: MakerLegalType.LegalEntity,
             street: "Stodolní", houseNumber: "9", city: "Ostrava", zip: "702 00",
             bio: "Laserové řezání a gravírování dřeva, překližky a akrylátu. Vlastní návrhy i zakázková výroba podle vašich podkladů.",
             bank: "111222333/2010", pickup: true,
@@ -263,6 +332,7 @@ public sealed class DevDataSeeder(
             "Alena Lipová", passwordHash, confirmed: true, DaysAgo(3));
         var maker5 = AddMaker("seed-maker-05", alena, ico: "73000001", vatId: null,
             company: "Dílna U Lípy s.r.o.", slug: "dilna-u-lipy",
+            legalType: MakerLegalType.LegalEntity,
             street: "Dolní náměstí", houseNumber: "17", city: "Olomouc", zip: "779 00",
             bio: "Ručně točená keramika z malé olomoucké dílny.",
             bank: null, pickup: false, pickupNote: null,
@@ -426,16 +496,8 @@ public sealed class DevDataSeeder(
         Pay(o14, DaysAgo(4).AddHours(2));
         Accept(o14, DaysAgo(3));
 
-        // --- Denormalized maker catalog stats (recompute-from-rows) ---
-        foreach (var maker in _makers)
-        {
-            var makerReviews = _reviews.Where(r => r.MakerId == maker.Id).ToList();
-            var averageBp = makerReviews.Count == 0
-                ? 0
-                : (int)Math.Round(makerReviews.Average(r => (double)r.Rating) * 10_000, MidpointRounding.AwayFromZero);
-            var completedOrders = _orders.Count(o => o.MakerId == maker.Id && o.State == OrderState.Completed);
-            maker.SetCatalogStats(averageBp, makerReviews.Count, completedOrders);
-        }
+        // The denormalized maker catalog stats are recomputed for both
+        // passes together in RecomputeMakerStats().
     }
 
     // === Builders ===
@@ -451,8 +513,14 @@ public sealed class DevDataSeeder(
         return user;
     }
 
+    /// <summary>
+    /// <paramref name="legalType"/> drives the <c>legal_form</c> label too,
+    /// so seed data can never carry a label that contradicts the bucket
+    /// the "Firma / Živnostník" catalog filter puts the maker in.
+    /// </summary>
     private Maker AddMaker(
         string id, User user, string ico, string? vatId, string company, string slug,
+        MakerLegalType legalType,
         string street, string houseNumber, string city, string zip,
         string bio, string? bank, bool pickup, string? pickupNote,
         bool verified, DateTimeOffset createdAt, string[] categories)
@@ -463,7 +531,10 @@ public sealed class DevDataSeeder(
         db.Add(address);
 
         var maker = Maker.Create(id, user.Id, ico, vatId, company,
-            legalForm: "Společnost s ručením omezeným",
+            legalForm: legalType == MakerLegalType.NaturalPerson
+                ? "Fyzická osoba podnikající dle živnostenského zákona"
+                : "Společnost s ručením omezeným",
+            legalType: legalType,
             registeredAddressId: address.Id,
             incorporatedOn: DateOnly.FromDateTime(createdAt.UtcDateTime.AddYears(-3)),
             isActiveInRegistry: true,
@@ -483,7 +554,13 @@ public sealed class DevDataSeeder(
 
         foreach (var categoryId in categories)
         {
-            db.Add(MakerCategory.Link(maker.Id, categoryId, Country, createdAt));
+            // created_by is a SHADOW property here: MakerCategory is not
+            // Auditable, so the audit interceptor (which walks
+            // Entries<Auditable>) never stamps it, and the column is NOT
+            // NULL with no database default on a migrations-built schema.
+            // Stamp it with the same actor as every other seeded row.
+            var link = db.Add(MakerCategory.Link(maker.Id, categoryId, Country, createdAt));
+            link.Property<string>("created_by").CurrentValue = Actor;
         }
 
         return maker;

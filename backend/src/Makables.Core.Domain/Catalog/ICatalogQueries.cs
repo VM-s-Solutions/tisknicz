@@ -1,4 +1,5 @@
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Makers;
 
 namespace Makables.Core.Domain.Catalog;
 
@@ -16,9 +17,9 @@ public interface ICatalogQueries
     /// <summary>
     /// Paged maker list for the catalog (US-customer-0007). Only
     /// publicly-listable makers (active + user active + email confirmed)
-    /// in a serviced country appear. Filters: category (via
-    /// maker_categories), city (partial, case-insensitive), minimum
-    /// rating. Sorted by rating average desc, then total orders desc.
+    /// in a serviced country appear. Filters: categories (via
+    /// maker_categories, OR semantics), city (partial, case-insensitive),
+    /// minimum rating. Sorted by rating average desc, then total orders desc.
     /// </summary>
     Task<PagedData<MakerListItem>> GetPagedMakersAsync(
         CatalogFilter filter,
@@ -52,11 +53,26 @@ public interface ICatalogQueries
 /// All filter fields are optional; null/blank means "no constraint".
 /// <see cref="Page"/> is 1-based.
 /// </summary>
+/// <param name="CategorySlugs">
+/// Zero or more category slugs. Multiple slugs are OR-ed — a maker
+/// listed under ANY of them qualifies — because the catalog filter is a
+/// multi-select ("show me 3D print OR laser cutting"), not a
+/// "must offer all of these" intersection. Null/empty means no
+/// constraint.
+/// </param>
+/// <param name="LegalType">
+/// Restrict to companies or to individual traders ("Firma" /
+/// "Živnostník"). Null means no constraint. A maker whose legal form the
+/// registry adapter could not classify has a NULL
+/// <see cref="Makers.Maker.LegalType"/> and therefore matches NEITHER
+/// value — it appears only in the unfiltered list.
+/// </param>
 public sealed record CatalogFilter(
     string CountryCode,
-    string? CategorySlug,
+    IReadOnlyList<string>? CategorySlugs,
     string? City,
     int? MinRatingStars,
+    MakerLegalType? LegalType,
     int Page,
     int PageSize);
 

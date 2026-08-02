@@ -250,6 +250,7 @@ public static class RegisterMaker
                 vatId: company.VatId,
                 companyName: company.CompanyName,
                 legalForm: company.LegalForm,
+                legalType: company.LegalType,
                 registeredAddressId: addressId,
                 incorporatedOn: company.IncorporatedOn,
                 isActiveInRegistry: company.IsActiveInRegistry,

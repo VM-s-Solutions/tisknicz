@@ -277,6 +277,77 @@ jobs:
               --resource-group $RG --server-name $PG_SERVER \
               --name ci-migrate-${{ github.run_id }} --output none || true
 
+  # Dev-only mock data. The migrations seed REFERENCE data (country CZ,
+  # CountryConfiguration, categories, email templates) but no marketplace
+  # content, so a fresh dev DB rendered an empty catalog. Makables.Tools.Seeder
+  # runs two passes: the demo snapshot (users, makers, products, orders in
+  # every state, messages, reviews), short-circuited by its sentinel admin
+  # row, and 50 catalog makers checked ONE BY ONE against the database.
+  # Re-running on every deploy is therefore a no-op once both are in — and
+  # a dev DB that already holds data (hand-made rows, an earlier and shorter
+  # blueprint list) is topped up rather than duplicated.
+  #
+  # There is NO equivalent job in deploy-production.yml, and the seeder itself
+  # hard-refuses any host/database containing "prod" with no override.
+  seed:
+    name: Dev mock data → Postgres
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: [migrate]
+    timeout-minutes: 20
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Same runner-IP dance as the migrate job — the runner's public IP is
+      # not covered by the allowAllAzureServices rule.
+      - name: Open temp firewall rule for the runner IP
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            RUNNER_IP=$(curl -s https://api.ipify.org)
+            az postgres flexible-server firewall-rule create \
+              --resource-group $RG --server-name $PG_SERVER \
+              --name ci-seed-${{ github.run_id }} \
+              --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" \
+              --output none
+
+      # --allow-remote is required for any non-localhost target (the seeder
+      # refuses otherwise). Connection string shape mirrors the Bicep-derived
+      # ConnectionStrings--Postgres secret.
+      - name: Run the dev data seeder
+        env:
+          PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
+          PGPASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          export ConnectionStrings__Postgres="Host=$PG_SERVER.postgres.database.azure.com;Port=5432;Database=makables;Username=$PGUSER;Password=$PGPASSWORD;SslMode=Require"
+          dotnet run --project backend/src/Makables.Tools.Seeder/Makables.Tools.Seeder.csproj \
+            --configuration Release -- --allow-remote
+
+      - name: Remove temp firewall rule
+        if: always()
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az postgres flexible-server firewall-rule delete --yes \
+              --resource-group $RG --server-name $PG_SERVER \
+              --name ci-seed-${{ github.run_id }} --output none || true
+
   backend:
     name: Backend (.NET) → App Services
     runs-on: ubuntu-latest

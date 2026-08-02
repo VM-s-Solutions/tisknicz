@@ -42,25 +42,47 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
             select new { m, a };
 
         // Category filter via the maker_categories join table. The table
-        // has no domain entity, so query it by its category slug through
-        // the Category set + a raw membership check on maker_categories.
-        if (!string.IsNullOrWhiteSpace(filter.CategorySlug))
-        {
-            var slug = filter.CategorySlug.Trim();
-            var categoryId = await db.Set<Category>().AsNoTracking()
-                .Where(c => c.Slug == slug)
-                .Select(c => c.Id)
-                .FirstOrDefaultAsync(cancellationToken);
+        // has no domain entity, so resolve the slugs through the Category
+        // set (its global soft-delete filter drops inactive rows) and do a
+        // membership check on maker_categories.
+        var slugs = filter.CategorySlugs?
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-            // Unknown / inactive category → empty result (not an error;
-            // a stale filter chip shouldn't 500).
-            if (categoryId is null)
+        if (slugs is { Count: > 0 })
+        {
+            var categoryIds = await db.Set<Category>().AsNoTracking()
+                .Where(c => slugs.Contains(c.Slug))
+                .Select(c => c.Id)
+                .ToListAsync(cancellationToken);
+
+            // NO requested slug resolves to an active category → empty
+            // result (not an error; a stale filter chip shouldn't 500).
+            // A slug that doesn't resolve alongside ones that do is simply
+            // dropped — under OR semantics it can only have widened the set.
+            if (categoryIds.Count == 0)
             {
                 return PagedData<MakerListItem>.Empty(filter.Page, filter.PageSize);
             }
 
+            // OR: a maker listed under ANY selected category qualifies.
+            // `Any` over the join table (not a join) keeps the row count at
+            // one per maker — a join would duplicate makers that match
+            // several of the selected categories and corrupt both the count
+            // and the paging.
             query = query.Where(x => db.Set<MakerCategory>()
-                .Any(mc => mc.CategoryId == categoryId && mc.MakerId == x.m.Id));
+                .Any(mc => categoryIds.Contains(mc.CategoryId) && mc.MakerId == x.m.Id));
+        }
+
+        if (filter.LegalType is { } legalType)
+        {
+            // NULL LegalType (a legal form the registry adapter could not
+            // classify) matches neither bucket — `== legalType` on a
+            // nullable column already excludes NULL in SQL, which is the
+            // intended behaviour, not an oversight.
+            query = query.Where(x => x.m.LegalType == legalType);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.City))

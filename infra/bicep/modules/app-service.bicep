@@ -48,6 +48,9 @@ param secretAppSettings array = []
 @description('App Service health-check path (Cleansia pattern). The platform pings it per instance; repeated non-2xx marks the instance unhealthy (and with >1 instance pulls it from rotation / restarts it). The API hosts expose a dependency-free liveness endpoint at /health (see each Program.cs). Empty disables the health check.')
 param healthCheckPath string = ''
 
+@description('Non-secret per-environment app settings as { name, value } pairs, appended after the base/secret/CORS sets. Used for switches that exist only in some environments — e.g. the dev payment bypass (Payments__Dev__*), which main.bicep passes ONLY when envSlug is dev.')
+param extraAppSettings array = []
+
 // CORS origins injected as the Cors__AllowedOrigins__<audience>__N indexed
 // app settings that bind to the string[] the host reads. (Bicep app settings
 // are flat key/value, so the array is expanded to indexed keys here.)
@@ -101,7 +104,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
       // HTTP/2 at the App Service front end (parity with the web app).
       http20Enabled: true
       healthCheckPath: healthCheckPath
-      appSettings: concat(baseAppSettings, secretAppSettings, corsAppSettings)
+      appSettings: concat(baseAppSettings, secretAppSettings, corsAppSettings, extraAppSettings)
     }
   }
   tags: {

@@ -383,3 +383,45 @@ As an admin, I want to grant an individual maker a reduced commission rate (loya
 - ADRs: 0004, 0014
 - Ticket: T-0140
 - Roles: `maker`, `country-configuration`, `order-pricing`, `invoice`, `admin-audit-log-entry`
+
+---
+
+## US-admin-0019 — Review maker-proposed categories
+
+### Narrative
+As an admin, I want a queue of categories makers proposed, so I can approve the good ones (opening them to every maker), fold the near-duplicates into what already exists, and reject the rest — keeping the public taxonomy coherent without blocking makers from listing their work.
+
+### Roles in play
+- **Category** — extended with `Status` (`Approved` / `Pending` / `Rejected`), `ProposedByMakerId`, `ReviewNote`, `MergedIntoCategoryId`. Three audited transitions: approve, reject, merge.
+- **Product** — products in a pending category are withheld from every public surface; approval publishes them with no write to `products`, merge reassigns their `CategoryId`.
+- **AdminAuditLogEntry** — before/after JSONB on each review action (`category.proposal.approve|reject|merge`).
+- **Outbox** — `category.proposal.submitted.adminEmail` in, `category.proposal.reviewed.makerEmail` out.
+
+### Acceptance criteria
+- **AC-1** Given makers have proposed categories, when the admin opens the categories page, then a "Návrhy kategorií" queue lists each proposal with the proposed name, the proposing maker, how many products are waiting on it, and when it was submitted.
+- **AC-2** Given a pending proposal, when the admin approves it, then `Status = Approved`, every waiting product becomes publicly visible immediately, and the category appears in the public filter list and in every maker's product-form picker.
+- **AC-3** Given the proposed name or slug needs cleaning up ("resin tisk" → "Pryskyřicový tisk"), when the admin edits name, slug, icon, description and sort order as part of approving, then all five are persisted. The slug is editable **only** here — a pending slug has never been public, so no external link breaks (contrast US-admin-0013 AC-2, where rename freezes the slug).
+- **AC-4** Given the corrected slug collides with an existing active category, when the admin approves, then it is refused with `category.slugAlreadyExists` and nothing is persisted.
+- **AC-5** Given a proposal duplicates an existing category, when the admin merges it into that category, then the waiting products are reassigned to the target and become publicly visible, the proposal is marked rejected and deactivated with `MergedIntoCategoryId` recorded, and the maker is emailed naming the target category.
+- **AC-6** Given a merge target that is missing, not approved, inactive, or the proposal itself, when submitted, then `category.proposal.mergeTargetInvalid` and nothing is persisted.
+- **AC-7** Given a proposal the admin does not want, when they reject it with a required reason, then the category is marked rejected and deactivated, the waiting products stay hidden, and the maker sees the reason and can re-point their product to an existing category.
+- **AC-8** Given approve / reject / merge is called on a category that is not `Pending` (already reviewed, or an ordinary admin-created category), then `category.proposal.notPending` and nothing is persisted.
+- **AC-9** Given any review action succeeds, then an `AdminAuditLogEntry` captures before/after JSONB under the matching action code.
+- **AC-10** Given no resolvable admin session, then `401 auth.required` and nothing is persisted.
+- **AC-11** Given pending proposals exist, when the admin loads the dashboard, then a count tile shows the pending total and links to the queue — the same shape as the stalled-outbox and processing-payouts tiles.
+- **AC-12** Given the existing admin category list, then it now shows each row's status so approved, pending and rejected rows are distinguishable at a glance.
+
+### Out of scope
+- Auto-approval of proposals from trusted makers, and fuzzy duplicate detection beyond exact slug match — every proposal is reviewed by a human at MVP.
+- Bulk approve/reject.
+- Re-categorising already-published products outside the merge path.
+- Category hierarchy.
+
+### Alternatives considered
+- **Option A — Approve/reject only, no merge.** *Rejected* — makers will propose "Resin", "Pryskyřice" and "3D resin" for the same thing. Without merge the admin either accepts a fragmented public taxonomy or rejects proposals and strands the makers' products.
+- **Option B — Let proposals publish immediately and moderate after the fact.** *Rejected* — the proposed name becomes an indexable URL segment and a public filter chip; post-hoc moderation means unmoderated maker text is publicly live in the interim.
+
+### Related
+- ADRs: 0004, 0011, 0013, 0014, 0020
+- Ticket: T-0163
+- Roles: `category`, `product`, `admin-audit-log-entry`, `outbox`

@@ -25,13 +25,16 @@ public class GetPagedMakersHandlerTests
         _catalog.GetPagedMakersAsync(Arg.Any<CatalogFilter>(), Arg.Any<CancellationToken>()).Returns(page);
 
         var result = await _sut.Handle(
-            new GetPagedMakers.Query("CZ", "3d-tisk", "Praha", 4, 1, 24), CancellationToken.None);
+            new GetPagedMakers.Query("CZ", ["3d-tisk", "laser-cnc"], "Praha", 4, null, 1, 24),
+            CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.TotalCount.Should().Be(1);
         await _catalog.Received(1).GetPagedMakersAsync(
             Arg.Is<CatalogFilter>(f =>
-                f.CountryCode == "CZ" && f.CategorySlug == "3d-tisk"
+                f.CountryCode == "CZ"
+                && f.CategorySlugs!.Count == 2
+                && f.CategorySlugs[0] == "3d-tisk" && f.CategorySlugs[1] == "laser-cnc"
                 && f.City == "Praha" && f.MinRatingStars == 4
                 && f.Page == 1 && f.PageSize == 24),
             Arg.Any<CancellationToken>());
@@ -41,7 +44,7 @@ public class GetPagedMakersHandlerTests
     public void Validator_rejects_page_below_one()
     {
         var v = new GetPagedMakers.Validator();
-        var r = v.Validate(new GetPagedMakers.Query("CZ", null, null, null, 0, 24));
+        var r = v.Validate(new GetPagedMakers.Query("CZ", null, null, null, null, 0, 24));
         r.IsValid.Should().BeFalse();
     }
 
@@ -49,7 +52,7 @@ public class GetPagedMakersHandlerTests
     public void Validator_rejects_oversize_page()
     {
         var v = new GetPagedMakers.Validator();
-        var r = v.Validate(new GetPagedMakers.Query("CZ", null, null, null, 1, GetPagedMakers.MaxPageSize + 1));
+        var r = v.Validate(new GetPagedMakers.Query("CZ", null, null, null, null, 1, GetPagedMakers.MaxPageSize + 1));
         r.IsValid.Should().BeFalse();
     }
 
@@ -57,15 +60,29 @@ public class GetPagedMakersHandlerTests
     public void Validator_rejects_rating_out_of_range()
     {
         var v = new GetPagedMakers.Validator();
-        v.Validate(new GetPagedMakers.Query("CZ", null, null, 6, 1, 24)).IsValid.Should().BeFalse();
-        v.Validate(new GetPagedMakers.Query("CZ", null, null, 0, 1, 24)).IsValid.Should().BeFalse();
+        v.Validate(new GetPagedMakers.Query("CZ", null, null, 6, null, 1, 24)).IsValid.Should().BeFalse();
+        v.Validate(new GetPagedMakers.Query("CZ", null, null, 0, null, 1, 24)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public void Validator_accepts_valid_query()
     {
         var v = new GetPagedMakers.Validator();
-        v.Validate(new GetPagedMakers.Query("CZ", "3d-tisk", "Praha", 3, 2, 24)).IsValid.Should().BeTrue();
+        v.Validate(new GetPagedMakers.Query("CZ", ["3d-tisk", "laser-cnc"], "Praha", 3, null, 2, 24))
+            .IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_rejects_more_category_slugs_than_the_cap()
+    {
+        var v = new GetPagedMakers.Validator();
+        var tooMany = Enumerable
+            .Range(0, GetPagedMakers.MaxCategoryFilters + 1)
+            .Select(i => $"cat-{i}")
+            .ToArray();
+
+        v.Validate(new GetPagedMakers.Query("CZ", tooMany, null, null, null, 1, 24))
+            .IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -75,7 +92,7 @@ public class GetPagedMakersHandlerTests
         // typed validation failure instead of letting Skip go negative
         // (T-0043 Copilot review).
         var v = new GetPagedMakers.Validator();
-        v.Validate(new GetPagedMakers.Query("CZ", null, null, null, int.MaxValue, 24))
+        v.Validate(new GetPagedMakers.Query("CZ", null, null, null, null, int.MaxValue, 24))
             .IsValid.Should().BeFalse();
     }
 }

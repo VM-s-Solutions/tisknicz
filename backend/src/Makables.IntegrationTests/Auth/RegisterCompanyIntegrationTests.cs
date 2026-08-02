@@ -1,3 +1,4 @@
+using Makables.Core.Domain.Makers;
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
@@ -207,6 +208,7 @@ public sealed class RegisterCompanyIntegrationTests : IAsyncLifetime
                 VatId: "CZ27074358",
                 CompanyName: "Avast Software s.r.o.",
                 LegalForm: "Společnost s ručením omezeným",
+                LegalType: MakerLegalType.LegalEntity,
                 RegisteredAddress: AddressEntity.Create(
                     id: $"ares-snapshot-{ValidIco}",
                     street: "Pikrtova", houseNumber: "1737", city: "Praha", zip: "14000",

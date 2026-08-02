@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: '/katalog', key: 'nav.catalog' as const },
   { href: '/jak-to-funguje', key: 'nav.how_it_works' as const },
   { href: '/pro-makery', key: 'nav.for_makers' as const },
+  { href: '/kontakt', key: 'nav.contact' as const },
 ];
 
 interface AccountLink {
@@ -171,7 +172,10 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           <MakablesLogo textClassName="text-lg font-semibold tracking-tight text-zinc-100 leading-none" />
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex" aria-label={t('nav.public_aria')}>
+        {/* Breakpoint is lg, not md: with five primary links the inline
+            nav plus the CTA cluster no longer fits a 768px viewport, so
+            tablets keep the collapsed menu. */}
+        <nav className="hidden items-center gap-6 lg:flex" aria-label={t('nav.public_aria')}>
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -186,7 +190,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-6 md:flex">
+        <div className="hidden items-center gap-6 lg:flex">
           {session ? (
             accountMenu
           ) : (
@@ -210,7 +214,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center px-2 py-2 text-zinc-300 transition-colors hover:text-white md:hidden"
+          className="inline-flex items-center justify-center px-2 py-2 text-zinc-300 transition-colors hover:text-white lg:hidden"
           aria-expanded={isMobileMenuOpen}
           aria-controls="public-mobile-menu"
           aria-label={isMobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}
@@ -233,7 +237,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
 
       <div
         id="public-mobile-menu"
-        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}
+        className={`absolute inset-x-0 top-full z-40 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur lg:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}
       >
         <div className="px-4 pb-5 sm:px-6">
           <nav className="flex flex-col pt-2" aria-label={t('nav.public_aria')}>

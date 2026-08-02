@@ -52,6 +52,22 @@ public sealed class Maker : Auditable
     /// <summary>Snapshot of the legal form (e.g. "Společnost s ručením omezeným").</summary>
     public string? LegalForm { get; private set; }
 
+    /// <summary>
+    /// <see cref="LegalForm"/> normalised into the two buckets the
+    /// public catalog filters on ("Firma" / "Živnostník"). Classified by
+    /// the country's registry adapter at registration and refreshed with
+    /// every snapshot; <c>null</c> when the adapter could not classify
+    /// the form, in which case the maker matches neither filter bucket.
+    ///
+    /// <para>
+    /// Stored rather than derived from <see cref="LegalForm"/> at query
+    /// time: <see cref="LegalForm"/> is display copy (and, for a form we
+    /// have not catalogued, the bare numeric code), so a WHERE clause
+    /// over it would be a string match on text that is free to change.
+    /// </para>
+    /// </summary>
+    public MakerLegalType? LegalType { get; private set; }
+
     /// <summary>FK to <c>Address</c> (the legal seat from ARES).</summary>
     public string RegisteredAddressId { get; private set; } = default!;
 
@@ -189,7 +205,13 @@ public sealed class Maker : Auditable
         DateTimeOffset snapshotFetchedAt,
         bool snapshotIsStale,
         string countryCode,
-        string? slug = null)
+        string? slug = null,
+        // Trails the required parameters (C# forbids an optional one
+        // mid-signature) and defaults to null — "unclassified" — so a
+        // caller with no registry classification to hand, such as a test
+        // fixture building a maker directly, need not invent one. The two
+        // production callers (RegisterMaker, the dev seeder) pass it.
+        MakerLegalType? legalType = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Id is required.", nameof(id));
@@ -232,6 +254,7 @@ public sealed class Maker : Auditable
             VatId = string.IsNullOrWhiteSpace(vatId) ? null : vatId.Trim(),
             CompanyName = companyName.Trim(),
             LegalForm = string.IsNullOrWhiteSpace(legalForm) ? null : legalForm.Trim(),
+            LegalType = legalType,
             RegisteredAddressId = registeredAddressId,
             IncorporatedOn = incorporatedOn,
             IsActiveInRegistry = isActiveInRegistry,
@@ -374,6 +397,7 @@ public sealed class Maker : Auditable
         string companyName,
         string? vatId,
         string? legalForm,
+        MakerLegalType? legalType,
         DateOnly? incorporatedOn,
         bool isActiveInRegistry,
         DateTimeOffset snapshotFetchedAt,
@@ -384,6 +408,9 @@ public sealed class Maker : Auditable
         CompanyName = companyName.Trim();
         VatId = string.IsNullOrWhiteSpace(vatId) ? null : vatId.Trim();
         LegalForm = string.IsNullOrWhiteSpace(legalForm) ? null : legalForm.Trim();
+        // Tracks LegalForm: a maker who re-registers as an s.r.o. moves
+        // from the "Živnostník" bucket to "Firma" on the next snapshot.
+        LegalType = legalType;
         IncorporatedOn = incorporatedOn;
         IsActiveInRegistry = isActiveInRegistry;
         SnapshotFetchedAt = snapshotFetchedAt;
@@ -425,6 +452,10 @@ public sealed class Maker : Auditable
         const string sentinel = "Anonymized";
         CompanyName = sentinel;
         LegalForm = sentinel;
+        // Cleared rather than sentinelled — the enum has no "anonymized"
+        // member, and an erased tombstone must not keep answering the
+        // public "Firma / Živnostník" filter.
+        LegalType = null;
         VatId = null;
         Bio = sentinel;
         PickupNote = sentinel;

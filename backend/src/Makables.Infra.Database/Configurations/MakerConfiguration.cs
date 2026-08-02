@@ -40,6 +40,22 @@ internal sealed class MakerEntityConfiguration : IEntityTypeConfiguration<Maker>
         builder.Property(m => m.CompanyName).HasColumnName("company_name").HasMaxLength(300).IsRequired();
         builder.Property(m => m.LegalForm).HasColumnName("legal_form").HasMaxLength(200);
 
+        // String-storage (same convention as Product.PriceType / Order
+        // state) so `dotnet ef database update` and raw SQL read cleanly.
+        // Nullable: an uncatalogued legal form stays unclassified rather
+        // than being guessed into a bucket.
+        builder.Property(m => m.LegalType)
+            .HasColumnName("legal_type")
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
+        // Partial index: the catalog's "Firma / Živnostník" filter only
+        // ever reads classified, active makers, and NULL rows (which can
+        // never match either bucket) are dead weight in the index.
+        builder.HasIndex(m => m.LegalType)
+            .HasDatabaseName("ix_makers_legal_type")
+            .HasFilter("is_active AND legal_type IS NOT NULL");
+
         builder.Property(m => m.RegisteredAddressId)
             .HasColumnName("registered_address_id").HasMaxLength(40).IsRequired();
         // FK reference is informational; we keep the addresses table

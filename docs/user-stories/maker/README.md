@@ -401,3 +401,43 @@ As a maker, I want to see whether the customer was notified, when the invoice wa
 ### Related
 - ADRs: 0020
 - Roles: `outbox`, `order`
+
+---
+
+## US-maker-0020 — Propose a new category when none fits my product
+
+### Narrative
+As a maker, I want to type my own category name on the product form when none of the existing ones fits what I make, so I can list the product without emailing the operator and waiting for the taxonomy to catch up.
+
+### Roles in play
+- **Category** — extended with a `Status` (`Approved` / `Pending` / `Rejected`), the proposing maker, and the admin's review note. `Category.Propose(...)` is the maker-facing factory; the slug is derived from the name, never maker-supplied.
+- **Product** — created in the same transaction as the proposal, against the pending category. Withheld from every public surface until the category is approved.
+- **Outbox** — `category.proposal.submitted.adminEmail` notifies the admin; `category.proposal.reviewed.makerEmail` reports the outcome back.
+
+### Acceptance criteria
+- **AC-1** Given none of the existing categories fits, when the maker picks "Jiná kategorie…" on the product form, types a name, and submits, then the product is saved against a new `Pending` category and the maker is told it will publish once an admin approves.
+- **AC-2** Given the maker's proposal is still pending, when anyone views the public catalog, the maker's public profile, or requests the product by id, then the product is not visible and the detail request 404s — the proposed name appears on no anonymous surface.
+- **AC-3** Given the proposal is pending, when the maker opens their own dashboard, then the product is listed with a "čeká na schválení" badge and remains editable.
+- **AC-4** Given the maker types a name that matches an existing approved category (diacritics/casing aside), when they submit, then no proposal is created — the product joins that category and is publicly visible immediately.
+- **AC-5** Given another maker already proposed the same name, when this maker submits, then both products attach to the same pending category rather than creating a duplicate proposal.
+- **AC-6** Given an admin approves the category, then the maker's product becomes publicly visible with no further action from the maker, and the maker is emailed.
+- **AC-7** Given an admin rejects the proposal, then the maker sees the admin's reason on the product and can re-point it to an existing category, after which it publishes normally. The product is never deleted.
+- **AC-8** Given an admin merged the proposal into a different existing category, then the product publishes under that category and the email names it.
+- **AC-9** Given the maker already has 3 pending proposals, when they submit a fourth, then it is refused with a Czech message explaining the limit.
+- **AC-10** Given the proposed name contains a prohibited term, when submitted, then it is refused with `category.nameNotAllowed` and neither the category nor the product is saved.
+- **AC-11** Given a name an admin previously rejected, when a maker proposes it again, then it is refused — makers cannot resurrect a declined name.
+
+### Out of scope
+- Proposing a category while *editing* an existing product (create-time only; editing to an already-approved category is the existing US-maker-0004 AC-3 path).
+- Editing or withdrawing a proposal once submitted.
+- Choosing the URL slug — derived from the name, and correctable only by the reviewing admin.
+- Subcategories / hierarchy.
+
+### Alternatives considered
+- **Option A — Make the maker submit a category request first and block product creation until it is approved.** *Rejected* — the maker's work stalls on admin turnaround and they must return to a half-finished form later. Saving the product immediately and publishing it on approval gets the maker to "done" in one sitting.
+- **Option B — Publish the product immediately and only withhold the category from the public filter list.** *Rejected* — the product page renders its category, so an unmoderated maker-supplied string would reach a public, indexable surface before any admin saw it.
+
+### Related
+- ADRs: 0004, 0011, 0020
+- Ticket: T-0163
+- Roles: `category`, `product`, `maker`, `outbox`

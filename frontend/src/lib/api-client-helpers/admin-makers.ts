@@ -56,14 +56,21 @@ export interface AdminMakerDetail {
   readonly createdAt: string;
 }
 
+/**
+ * Mirror of <c>PagedData&lt;AdminMakerListItemDto&gt;</c>. The two
+ * booleans carry the <c>Page</c> suffix because that is the wire name of
+ * the C# computed properties (<c>HasNextPage</c> / <c>HasPreviousPage</c>) —
+ * declaring them without it types as <c>boolean</c> but resolves to
+ * <c>undefined</c>, silently disabling the prev/next controls.
+ */
 export interface AdminMakerPage {
   readonly items: readonly AdminMakerListItem[];
   readonly page: number;
   readonly pageSize: number;
   readonly totalCount: number;
   readonly totalPages: number;
-  readonly hasNext: boolean;
-  readonly hasPrevious: boolean;
+  readonly hasNextPage: boolean;
+  readonly hasPreviousPage: boolean;
 }
 
 export const ADMIN_MAKERS_DEFAULT_PAGE_SIZE = 20;

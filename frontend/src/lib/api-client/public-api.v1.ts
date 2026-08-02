@@ -18,7 +18,7 @@ export interface IPublicApi {
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
+    makers(country: string | undefined, category: string[] | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
 
     /**
      * @param country (optional) 
@@ -233,7 +233,7 @@ export class PublicApi implements IPublicApi {
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem> {
+    makers(country: string | undefined, category: string[] | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem> {
         let url_ = this.baseUrl + "/api/v1/catalog/makers?";
         if (country === null)
             throw new globalThis.Error("The parameter 'country' cannot be null.");
@@ -242,7 +242,7 @@ export class PublicApi implements IPublicApi {
         if (category === null)
             throw new globalThis.Error("The parameter 'category' cannot be null.");
         else if (category !== undefined)
-            url_ += "category=" + encodeURIComponent("" + category) + "&";
+            category && category.forEach(item => { url_ += "category=" + encodeURIComponent("" + item) + "&"; });
         if (city === null)
             throw new globalThis.Error("The parameter 'city' cannot be null.");
         else if (city !== undefined)

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { PageHeader } from '@/components/shared/page-header';
+import { ScrollToTop } from '@/components/shared/scroll-to-top';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,6 +10,7 @@ import {
   type CatalogFilterInput,
   getCatalogCategories,
   getPagedMakers,
+  type MakerLegalType,
   type MakerListItem,
 } from '@/lib/api-client-helpers/catalog';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
@@ -61,6 +63,27 @@ function readString(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
+/**
+ * Repeated query param → deduped list. `?category=a&category=b` arrives
+ * as an array; a single `?category=a` as a string. Order is preserved so
+ * the canonical URL is stable for a given click sequence.
+ */
+function readStringList(value: string | string[] | undefined): readonly string[] {
+  const raw = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  return [...new Set(raw.map((v) => v.trim()).filter(Boolean))];
+}
+
+/**
+ * Canonicalise `?legalType=` against the two values the backend accepts.
+ * Anything else (a hand-typed or stale value) degrades to "no
+ * constraint" rather than an empty result — same posture as an unknown
+ * category slug.
+ */
+function readLegalType(value: string | string[] | undefined): MakerLegalType | undefined {
+  const raw = readString(value);
+  return raw === 'LegalEntity' || raw === 'NaturalPerson' ? raw : undefined;
+}
+
 function parsePositiveInt(raw: string, fallback: number): number {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
@@ -69,9 +92,10 @@ function parsePositiveInt(raw: string, fallback: number): number {
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const sp = await searchParams;
-  const rawCategory = readString(sp.category);
+  const rawCategories = readStringList(sp.category);
   const rawCity = readString(sp.city).trim();
   const rawMinRating = readString(sp.minRating);
+  const legalType = readLegalType(sp.legalType);
   const rawPage = readString(sp.page);
 
   const minRatingStarsParsed = Number.parseInt(rawMinRating, 10);
@@ -81,11 +105,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       : undefined;
   const page = parsePositiveInt(rawPage, 1);
 
-  const buildFilter = (category: string): CatalogFilterInput => ({
+  const buildFilter = (selected: readonly string[]): CatalogFilterInput => ({
     country: 'CZ',
-    category: category || undefined,
+    categories: selected.length > 0 ? selected : undefined,
     city: rawCity || undefined,
     minRatingStars,
+    legalType,
     page,
     pageSize: CATALOG_DEFAULT_PAGE_SIZE,
   });
@@ -98,19 +123,19 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   // (invalid slug → unfiltered, not empty).
   const categoriesPromise = loadCategoryOptions();
   let categoryOptions: Awaited<typeof categoriesPromise>;
-  let category: string;
+  let selectedCategories: readonly string[];
   let result: Awaited<ReturnType<typeof getPagedMakers>>;
-  if (rawCategory === '') {
-    category = '';
+  if (rawCategories.length === 0) {
+    selectedCategories = [];
     [categoryOptions, result] = await Promise.all([
       categoriesPromise,
-      getPagedMakers(buildFilter('')),
+      getPagedMakers(buildFilter([])),
     ]);
   } else {
     categoryOptions = await categoriesPromise;
     const validCategorySlugs = new Set(categoryOptions.map((c) => c.slug));
-    category = validCategorySlugs.has(rawCategory) ? rawCategory : '';
-    result = await getPagedMakers(buildFilter(category));
+    selectedCategories = rawCategories.filter((slug) => validCategorySlugs.has(slug));
+    result = await getPagedMakers(buildFilter(selectedCategories));
   }
 
   // Filters component reads URL state; canonicalised values keep its
@@ -118,10 +143,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const initialMinRating = minRatingStars !== undefined ? String(minRatingStars) : '';
 
   // Preserved params for pagination links (everything except `page`).
-  const baseParams: Record<string, string> = {};
-  if (category) baseParams.category = category;
-  if (rawCity) baseParams.city = rawCity;
-  if (initialMinRating) baseParams.minRating = initialMinRating;
+  // Built as URLSearchParams, not a record — `category` repeats.
+  const baseParams = new URLSearchParams();
+  for (const slug of selectedCategories) baseParams.append('category', slug);
+  if (rawCity) baseParams.set('city', rawCity);
+  if (initialMinRating) baseParams.set('minRating', initialMinRating);
+  if (legalType) baseParams.set('legalType', legalType);
+  const baseQuery = baseParams.toString();
 
   return (
     <section className="py-14 lg:py-18">
@@ -129,13 +157,20 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle')} />
 
         <div className="mt-10 flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+          {/* Sticky only engages when the panel is SHORTER than the space
+              below `top`; the old scrolling category column made the card
+              taller than a laptop viewport, so it scrolled away instead.
+              The panel is now fixed-height regardless of category count
+              (the list lives in an overlay), so no cap is needed here —
+              and an `overflow` on this element would clip that overlay. */}
           <aside className="lg:sticky lg:top-24">
             <Card variant="elevated" padding="sm" className="sm:p-5">
               <CatalogFilters
                 categories={categoryOptions}
-                initialCategory={category}
+                initialCategories={selectedCategories}
                 initialCity={rawCity}
                 initialMinRating={initialMinRating}
+                initialLegalType={legalType}
               />
             </Card>
           </aside>
@@ -146,10 +181,10 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 items={result.value.items}
                 page={result.value.page}
                 totalPages={result.value.totalPages}
-                hasNext={result.value.hasNext}
-                hasPrevious={result.value.hasPrevious}
+                hasNext={result.value.hasNextPage}
+                hasPrevious={result.value.hasPreviousPage}
                 totalCount={result.value.totalCount}
-                baseParams={baseParams}
+                baseQuery={baseQuery}
               />
             ) : (
               <CatalogError />
@@ -157,6 +192,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           </div>
         </div>
       </div>
+      <ScrollToTop />
     </section>
   );
 }
@@ -168,7 +204,7 @@ interface CatalogResultsProps {
   readonly hasNext: boolean;
   readonly hasPrevious: boolean;
   readonly totalCount: number;
-  readonly baseParams: Readonly<Record<string, string>>;
+  readonly baseQuery: string;
 }
 
 function CatalogResults({
@@ -178,7 +214,7 @@ function CatalogResults({
   hasNext,
   hasPrevious,
   totalCount,
-  baseParams,
+  baseQuery,
 }: CatalogResultsProps) {
   if (items.length === 0) {
     return <CatalogEmpty />;
@@ -201,7 +237,7 @@ function CatalogResults({
         totalPages={totalPages}
         hasNext={hasNext}
         hasPrevious={hasPrevious}
-        baseParams={baseParams}
+        baseQuery={baseQuery}
       />
     </>
   );

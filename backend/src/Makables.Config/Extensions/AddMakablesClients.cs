@@ -7,6 +7,7 @@ using Makables.Core.Domain.Shipping;
 using Makables.Infra.Clients.Apple;
 using Makables.Infra.Clients.Ares;
 using Makables.Infra.Clients.Comgate;
+using Makables.Infra.Clients.Dev;
 using Makables.Infra.Clients.Google;
 using Makables.Infra.Clients.Mapbox;
 using Makables.Infra.Clients.Packeta;
@@ -268,6 +269,29 @@ public static class MakablesClientsExtensions
         services.AddKeyedScoped<IPaymentProvider, ComgatePaymentProvider>(
             ComgatePaymentProvider.ProviderCode);
         services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
+
+        // === Dev payment bypass (non-production only) ===
+        // The options object is always bound so PaymentProviderFactory can
+        // read the flag, but the provider itself is registered ONLY when
+        // the flag is on: on production the keyed 'dev' service does not
+        // exist at all, so no configuration mistake downstream can reach
+        // it. ValidateOnStart turns "enabled but no ConfirmBaseUrl" into a
+        // boot crash rather than a checkout that redirects into the void.
+        services.AddOptions<DevPaymentOptions>()
+            .Bind(configuration.GetSection(DevPaymentOptions.SectionName))
+            .Validate(
+                o => !o.Enabled || DevPaymentOptions.IsValidConfirmBaseUrl(o.ConfirmBaseUrl),
+                "Payments:Dev:Enabled is true but Payments:Dev:ConfirmBaseUrl is neither an absolute http(s) URL nor an origin-relative path.")
+            .ValidateOnStart();
+
+        var devPaymentsEnabled = configuration
+            .GetSection(DevPaymentOptions.SectionName)
+            .GetValue<bool>(nameof(DevPaymentOptions.Enabled));
+        if (devPaymentsEnabled)
+        {
+            services.AddKeyedScoped<IPaymentProvider, DevPaymentProvider>(
+                DevPaymentProvider.ProviderCode);
+        }
 
         // === Packeta (T-0070) ===
         // ValidateOnStart so missing/typo'd Packeta:ApiKey or

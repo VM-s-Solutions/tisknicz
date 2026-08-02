@@ -13,3 +13,30 @@ import { toHaveNoViolations } from 'jest-axe';
 import { expect } from 'vitest';
 
 expect.extend(toHaveNoViolations);
+
+/**
+ * jsdom ships `AbortSignal` without the static `any` combinator that
+ * every modern browser and Node 20+ provide. `lib/runtime/api-fetch.ts`
+ * uses it to compose a caller's signal with its own timeout budget, so
+ * without this shim any test that passes `signal` throws
+ * "AbortSignal.any is not a function" in the harness while working fine
+ * in production. Shim only when absent — a future jsdom that implements
+ * it must win.
+ */
+if (typeof AbortSignal.any !== 'function') {
+  AbortSignal.any = (signals: readonly AbortSignal[]): AbortSignal => {
+    const controller = new AbortController();
+    const alreadyAborted = signals.find((signal) => signal.aborted);
+    if (alreadyAborted) {
+      controller.abort(alreadyAborted.reason);
+      return controller.signal;
+    }
+    for (const signal of signals) {
+      signal.addEventListener('abort', () => controller.abort(signal.reason), {
+        once: true,
+        signal: controller.signal,
+      });
+    }
+    return controller.signal;
+  };
+}

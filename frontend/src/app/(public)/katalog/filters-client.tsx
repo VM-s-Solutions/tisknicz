@@ -1,34 +1,85 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { Radio } from '@/components/ui/radio';
+import { RangeSlider } from '@/components/ui/range-slider';
+import type { MakerLegalType } from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
+import type { MessageKey } from '@/lib/i18n/cs-CZ';
 
 interface CatalogFiltersProps {
   /** Category options resolved server-side (data-driven since T-0119, static fallback). */
   readonly categories: readonly { readonly slug: string; readonly label: string }[];
-  readonly initialCategory: string;
+  /** Slugs the server accepted for this render (already canonicalised). */
+  readonly initialCategories: readonly string[];
   readonly initialCity: string;
   readonly initialMinRating: string;
+  /** Undefined = no constraint (the "Vše" option). */
+  readonly initialLegalType?: MakerLegalType;
 }
 
-const RATING_OPTIONS = ['1', '2', '3', '4', '5'] as const;
-const CITY_DEBOUNCE_MS = 300;
+/**
+ * Radio, not checkboxes: a maker is a company or an individual trader,
+ * never both, and the backend takes a single optional value. Two
+ * checkboxes would let a customer tick a combination ("Firma" +
+ * "Živnostník") that has no representation in the query and means the
+ * same as ticking neither.
+ */
+/** Every filter value the panel owns; `legalType` is '' for "Vše". */
+interface FilterState {
+  readonly categories: readonly string[];
+  readonly city: string;
+  readonly minRating: string;
+  readonly legalType: string;
+}
+
+const LEGAL_TYPE_OPTIONS: readonly { readonly value: string; readonly labelKey: MessageKey }[] = [
+  { value: '', labelKey: 'catalog.filter.legal_type_any' },
+  { value: 'LegalEntity', labelKey: 'catalog.filter.legal_type_company' },
+  { value: 'NaturalPerson', labelKey: 'catalog.filter.legal_type_sole_trader' },
+];
+
+const PUSH_DEBOUNCE_MS = 300;
 const FILTER_PANEL_ID = 'catalog-filter-panel';
+const MAX_RATING_STARS = 5;
+
+/**
+ * Category count above which the list grows a search field. Below it,
+ * scanning is faster than typing.
+ */
+const CATEGORY_SEARCH_THRESHOLD = 10;
 
 /**
  * URL-state filter sidebar for the catalog page. Pushes
- * <c>category</c> / <c>city</c> / <c>minRating</c> into the search
- * params and resets <c>page</c> to 1 on every change so the server-
- * rendered list re-fetches with fresh paging.
+ * <c>category</c> (repeatable) / <c>city</c> / <c>minRating</c> into the
+ * search params and resets <c>page</c> to 1 on every change so the
+ * server-rendered list re-fetches with fresh paging.
  *
- * - Category option list + rating pills push immediately on click;
- *   clicking the active rating pill clears it.
- * - City input is debounced 300 ms after the last keystroke, OR pushed
- *   immediately on submit. Avoids one fetch per keystroke (AC-3).
+ * - Categories are MULTI-SELECT and stay visible in the panel as a
+ *   checkbox list; the backend OR-s the selection. The taxonomy is
+ *   admin-managed and expected to outgrow the six launch rows, so the
+ *   list gains a search field past
+ *   {@link CATEGORY_SEARCH_THRESHOLD} entries and scrolls within its
+ *   own bounded area — the panel height stays the same at 6 or 60
+ *   categories.
+ * - Minimum rating is a 0–5 slider (0 = no constraint) rather than a row
+ *   of buttons: one control-height row, and the space goes to the
+ *   category list.
+ * - Every change applies itself — there is no "apply" button. Category
+ *   toggles push immediately; the city field and the rating slider are
+ *   debounced {@link PUSH_DEBOUNCE_MS} after the last change so a fetch
+ *   doesn't fire per keystroke / per slider step (AC-3). The only
+ *   footer control is "clear filters".
+ * - The `<form>` and its submit handler stay even though nothing renders
+ *   a submit button: pressing Enter in the city or category-search field
+ *   still implicitly submits, and the handler turns that into an
+ *   immediate flush of the pending debounce instead of a full page
+ *   reload. Do not delete it as dead code.
  * - Below lg the panel collapses behind a toggle (the sidebar stacks
  *   above the results there); the toggle badge shows the active count.
  *
@@ -37,69 +88,128 @@ const FILTER_PANEL_ID = 'catalog-filter-panel';
  */
 export function CatalogFilters({
   categories,
-  initialCategory,
+  initialCategories,
   initialCity,
   initialMinRating,
+  initialLegalType,
 }: CatalogFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [category, setCategory] = useState(initialCategory);
+  const [selectedCategories, setSelectedCategories] = useState<readonly string[]>(initialCategories);
   const [city, setCity] = useState(initialCity);
   const [minRating, setMinRating] = useState(initialMinRating);
+  // '' is the "Vše" option — kept as a string so it maps 1:1 to the radio
+  // group's value and to the query param's presence/absence.
+  const [legalType, setLegalType] = useState<string>(initialLegalType ?? '');
+  const [categoryQuery, setCategoryQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pushFilters = (next: { category: string; city: string; minRating: string }): void => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next.category) params.set('category', next.category); else params.delete('category');
-    if (next.city.trim()) params.set('city', next.city.trim()); else params.delete('city');
-    if (next.minRating) params.set('minRating', next.minRating); else params.delete('minRating');
-    params.delete('page');
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  const cancelPending = (): void => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
   };
 
-  const handleCategoryChange = (value: string): void => {
-    setCategory(value);
-    pushFilters({ category: value, city, minRating });
+  const pushFilters = (next: FilterState): void => {
+    const params = new URLSearchParams(searchParams.toString());
+    // `category` repeats — delete every existing value before re-adding
+    // the current selection, or toggling would accumulate stale slugs.
+    params.delete('category');
+    for (const slug of next.categories) params.append('category', slug);
+    if (next.city.trim()) params.set('city', next.city.trim()); else params.delete('city');
+    if (next.minRating) params.set('minRating', next.minRating); else params.delete('minRating');
+    if (next.legalType) params.set('legalType', next.legalType); else params.delete('legalType');
+    params.delete('page');
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
+  /** Re-push after {@link PUSH_DEBOUNCE_MS} of quiet — for continuous inputs. */
+  const pushDebounced = (next: FilterState): void => {
+    cancelPending();
+    debounceRef.current = setTimeout(() => pushFilters(next), PUSH_DEBOUNCE_MS);
+  };
+
+  /** The current state, with one field overridden by whatever just changed. */
+  const withCurrent = (override: Partial<FilterState>): FilterState => ({
+    categories: selectedCategories,
+    city,
+    minRating,
+    legalType,
+    ...override,
+  });
+
+  const handleCategoryToggle = (slug: string): void => {
+    const next = selectedCategories.includes(slug)
+      ? selectedCategories.filter((s) => s !== slug)
+      // Append rather than rebuild from the option order, so the URL
+      // reflects the click sequence and stays stable across re-renders.
+      : [...selectedCategories, slug];
+    setSelectedCategories(next);
+    cancelPending();
+    pushFilters(withCurrent({ categories: next }));
+  };
+
+  const handleClearCategories = (): void => {
+    setSelectedCategories([]);
+    cancelPending();
+    pushFilters(withCurrent({ categories: [] }));
   };
 
   const handleMinRatingChange = (value: string): void => {
-    const next = value === minRating ? '' : value;
+    // 0 on the slider means "no minimum" — clear the param rather than
+    // sending minRating=0, which the backend validator rejects (1..5).
+    const next = value === '0' ? '' : value;
     setMinRating(next);
-    pushFilters({ category, city, minRating: next });
+    pushDebounced(withCurrent({ minRating: next }));
   };
 
   const handleCityChange = (value: string): void => {
     setCity(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      pushFilters({ category, city: value, minRating });
-    }, CITY_DEBOUNCE_MS);
+    pushDebounced(withCurrent({ city: value }));
+  };
+
+  /** Discrete pick — pushes immediately, like a category toggle. */
+  const handleLegalTypeChange = (value: string): void => {
+    setLegalType(value);
+    cancelPending();
+    pushFilters(withCurrent({ legalType: value }));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    pushFilters({ category, city, minRating });
+    cancelPending();
+    pushFilters(withCurrent({}));
   };
 
   const handleReset = (): void => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setCategory('');
+    cancelPending();
+    setSelectedCategories([]);
     setCity('');
     setMinRating('');
+    setLegalType('');
+    setCategoryQuery('');
     router.replace(pathname, { scroll: false });
   };
 
-  const activeCount = [category, city.trim(), minRating].filter(Boolean).length;
+  const activeCount =
+    selectedCategories.length + [city.trim(), minRating, legalType].filter(Boolean).length;
 
-  const categoryOptions: readonly { readonly value: string; readonly label: string }[] = [
-    { value: '', label: t('catalog.filter.category_any') },
-    ...categories.map((c) => ({ value: c.slug, label: c.label })),
-  ];
+  const showCategorySearch = categories.length > CATEGORY_SEARCH_THRESHOLD;
+
+  const visibleCategories = useMemo(() => {
+    const needle = categoryQuery.trim().toLocaleLowerCase('cs-CZ');
+    if (!needle) return categories;
+    return categories.filter((c) => c.label.toLocaleLowerCase('cs-CZ').includes(needle));
+  }, [categories, categoryQuery]);
+
+  const ratingValue = minRating === '' ? 0 : Number(minRating);
+  const ratingLabel =
+    ratingValue === 0
+      ? t('catalog.filter.min_rating_any')
+      : t('catalog.filter.min_rating_stars', { stars: ratingValue });
 
   return (
     <form onSubmit={handleSubmit}>
@@ -131,64 +241,86 @@ export function CatalogFilters({
 
       <div
         id={FILTER_PANEL_ID}
-        className={`${mobileOpen ? 'flex' : 'hidden'} mt-5 flex-col gap-6 lg:flex`}
+        className={`${mobileOpen ? 'flex' : 'hidden'} mt-4 flex-col gap-5 lg:flex`}
       >
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            {t('catalog.filter.category')}
-          </legend>
-          <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto pr-1">
-            {categoryOptions.map((option) => {
-              const isActive = option.value === category;
-              return (
-                <li key={option.value}>
-                  <button
-                    type="button"
-                    onClick={() => handleCategoryChange(option.value)}
-                    aria-pressed={isActive}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                      isActive
-                        ? 'border-brand-400/30 bg-brand-400/10 font-medium text-brand-300'
-                        : 'border-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </fieldset>
+        <div>
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-medium text-zinc-300">{t('catalog.filter.category')}</h3>
+            {selectedCategories.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleClearCategories}
+                className="text-xs font-medium text-zinc-500 transition-colors hover:text-brand-300"
+              >
+                {t('catalog.filter.category_clear')}
+              </button>
+            ) : null}
+          </div>
 
-        <fieldset className="flex flex-col">
-          <legend className="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            {t('catalog.filter.min_rating')}
+          {showCategorySearch ? (
+            <div className="mb-2">
+              <Input
+                type="text"
+                icon="search"
+                value={categoryQuery}
+                onChange={(e) => setCategoryQuery(e.target.value)}
+                placeholder={t('catalog.filter.category_search')}
+                aria-label={t('catalog.filter.category_search')}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+
+          {/* The list scrolls inside its own bounded area rather than
+              growing the panel: the category taxonomy is admin-managed
+              and open-ended, and an unbounded list is what pushed the
+              sticky sidebar past the viewport before. */}
+          <div
+            role="group"
+            aria-label={t('catalog.filter.category')}
+            className="flex max-h-48 flex-col gap-1.5 overflow-y-auto pr-1"
+          >
+            {visibleCategories.length === 0 ? (
+              <p className="py-1 text-sm text-zinc-500">{t('catalog.filter.category_no_match')}</p>
+            ) : (
+              visibleCategories.map((option) => (
+                <Checkbox
+                  key={option.slug}
+                  label={option.label}
+                  checked={selectedCategories.includes(option.slug)}
+                  onChange={() => handleCategoryToggle(option.slug)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        <RangeSlider
+          id="catalog-min-rating"
+          min={0}
+          max={MAX_RATING_STARS}
+          value={ratingValue}
+          onChange={(next) => handleMinRatingChange(String(next))}
+          label={t('catalog.filter.min_rating')}
+          valueLabel={ratingLabel}
+          ariaValueText={ratingLabel}
+        />
+
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium text-zinc-300">
+            {t('catalog.filter.legal_type')}
           </legend>
-          <div className="flex flex-wrap gap-2">
-            {RATING_OPTIONS.map((stars) => {
-              const isActive = stars === minRating;
-              return (
-                <button
-                  key={stars}
-                  type="button"
-                  onClick={() => handleMinRatingChange(stars)}
-                  aria-pressed={isActive}
-                  aria-label={t('catalog.filter.min_rating_stars', { stars })}
-                  className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'border-brand-400/40 bg-brand-400/10 text-brand-300'
-                      : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                  }`}
-                >
-                  <Icon
-                    name="star"
-                    size={12}
-                    className={isActive ? 'text-amber-400' : 'text-zinc-500'}
-                  />
-                  {stars}+
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-1.5">
+            {LEGAL_TYPE_OPTIONS.map((option) => (
+              <Radio
+                key={option.value || 'any'}
+                name="catalog-legal-type"
+                value={option.value}
+                label={t(option.labelKey)}
+                checked={legalType === option.value}
+                onChange={() => handleLegalTypeChange(option.value)}
+              />
+            ))}
           </div>
         </fieldset>
 
@@ -200,13 +332,9 @@ export function CatalogFilters({
           onChange={(e) => handleCityChange(e.target.value)}
           placeholder={t('catalog.filter.city_placeholder')}
           autoComplete="off"
-          className="h-11"
         />
 
-        <div className="flex flex-col gap-2 border-t border-zinc-800/80 pt-4">
-          <Button type="submit" variant="primary" className="w-full">
-            {t('catalog.filter.apply')}
-          </Button>
+        <div className="border-t border-zinc-800/80 pt-4">
           <Button type="button" variant="ghost" onClick={handleReset} className="w-full">
             {t('catalog.filter.reset')}
           </Button>

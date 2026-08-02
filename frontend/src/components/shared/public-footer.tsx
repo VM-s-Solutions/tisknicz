@@ -55,7 +55,7 @@ export function PublicFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-zinc-800 bg-surface-secondary">
+    <footer className="mt-16 bg-surface-secondary">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-3 sm:px-6 lg:px-8">
         <FooterColumn title={t('footer.customers')} links={CUSTOMER_LINKS} />
         <FooterColumn title={t('footer.makers')} links={MAKER_LINKS} />
