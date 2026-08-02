@@ -124,7 +124,36 @@ public static class MakablesInfrastructureExtensions
                     "Set ConnectionStrings:Postgres in appsettings or environment.");
             }
 
-            options.UseNpgsql(connectionString);
+            // Transient-fault resiliency. Azure Postgres Flexible Server
+            // drops connections for reasons that have nothing to do with the
+            // query: gateway reconnects, Burstable-tier CPU-credit throttling,
+            // planned maintenance, and (on dev) the westeurope apps →
+            // northeurope database cross-region hop. Without an execution
+            // strategy every one of those surfaces to the customer as a 500,
+            // which is exactly the "click it again and it works" symptom.
+            //
+            // EnableRetryOnFailure retries ONLY the errors Npgsql classifies
+            // as transient, so a 23505 uniqueness race still reaches
+            // UniqueConstraintTranslator as a typed Conflict rather than
+            // being retried into a duplicate.
+            //
+            // Safe to enable because nothing in the solution opens a
+            // user-initiated transaction — the UnitOfWorkPipelineBehavior
+            // relies on the implicit SaveChangesAsync transaction, and a
+            // retrying execution strategy throws on Database.BeginTransaction.
+            // Any future explicit transaction must go through
+            // Database.CreateExecutionStrategy().ExecuteAsync(...).
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.EnableRetryOnFailure(
+                    maxRetryCount: 4,
+                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    errorCodesToAdd: null);
+                // Cap a single command well under the frontend's request
+                // budget so a wedged query fails fast enough for the caller
+                // to see a typed error instead of a client-side abort.
+                npgsql.CommandTimeout(30);
+            });
             options.AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>());
         }
 

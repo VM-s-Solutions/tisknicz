@@ -109,8 +109,8 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
                 routePath={ROUTE_PATH}
                 page={result.value.makers.page}
                 totalPages={result.value.makers.totalPages}
-                hasNext={result.value.makers.hasNext}
-                hasPrevious={result.value.makers.hasPrevious}
+                hasNext={result.value.makers.hasNextPage}
+                hasPrevious={result.value.makers.hasPreviousPage}
                 extraParams={extraParams}
               />
             </>

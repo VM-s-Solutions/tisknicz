@@ -125,10 +125,50 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body' | 'headers'> {
    * {@link parseErrorResponse} unchanged.
    */
   readonly parse?: 'auto' | 'blob';
+  /**
+   * Override the transient-retry decision. Defaults to true for methods
+   * that are idempotent by HTTP contract (GET/HEAD/OPTIONS) and false for
+   * everything else. Set it to true on a POST only when the endpoint is
+   * genuinely idempotent (server-side dedupe / idempotency key); set it
+   * to false on a GET whose side effects make a replay undesirable.
+   */
+  readonly retryOnTransient?: boolean;
 }
 
 /** Default request timeout — unchanged behaviour for every JSON call site (T-0015 reviewer M1). */
 const DEFAULT_TIMEOUT_MS = 8000;
+
+/**
+ * Transient-failure retry budget.
+ *
+ * Azure App Service + Postgres Flexible Server produce a steady trickle of
+ * one-off failures that a plain repeat of the same request clears: gateway
+ * 502/503/504s while an instance recycles, and connection resets. Without
+ * a retry here the customer sees a red banner and re-clicks — the
+ * "some actions have to be done multiple times before we get a 200"
+ * symptom.
+ *
+ * ONLY methods that are idempotent by HTTP contract are retried. A POST
+ * may have committed server-side before the response was lost, so
+ * replaying it could double-charge, double-order, or double-message.
+ * Callers that know a specific POST is safe opt in via `retryOnTransient`.
+ *
+ * Retries share ONE overall deadline: the caller's own budget plus a
+ * single {@link DEFAULT_TIMEOUT_MS} allowance. Each attempt gets whatever
+ * is left, and once it is spent the last error is returned. The allowance
+ * is a fixed amount rather than a multiplier on purpose — the long-timeout
+ * call sites are the 120 s blob downloads, and a multiplier would let one
+ * of those hang for four minutes. That costs nothing in the case this
+ * exists for: gateway 5xx and connection resets come back in
+ * milliseconds, so every attempt still gets its full budget.
+ */
+const MAX_TRANSIENT_ATTEMPTS = 3;
+/** Backoff before retry N. Sized to MAX_TRANSIENT_ATTEMPTS - 1 entries. */
+const RETRY_BACKOFF_MS = [200, 600] as const;
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
  * The single entry point for calling the .NET backend from the frontend.
@@ -251,28 +291,60 @@ async function apiFetchCore<TValue>(
   // Compose any caller-supplied signal with the timeout budget so the
   // request aborts on whichever fires first (T-0015 reviewer M1). The
   // budget defaults to 8 s; uploads opt into a longer one via
-  // `timeoutMs` (checkout-flow review B-1).
-  const timeoutSignal = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, timeoutSignal])
-    : timeoutSignal;
+  // `timeoutMs` (checkout-flow review B-1). A fresh timeout signal is
+  // minted per attempt so a retry isn't handed an already-elapsed budget.
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const method = (options.method ?? 'GET').toUpperCase();
+  const retryable = options.retryOnTransient ?? IDEMPOTENT_METHODS.has(method);
+  const deadline = Date.now() + timeoutMs + (retryable ? DEFAULT_TIMEOUT_MS : 0);
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      ...options,
-      // Include cookies on cross-origin requests so the audience-scoped
-      // session cookies (set by the .NET AuthController per ADR 0012)
-      // ride along. T-0035 cq reviewer m5: this overrides the spread so
-      // a caller passing `credentials: undefined` still gets 'include',
-      // and an explicit 'omit'/'same-origin' is honoured.
-      credentials: options.credentials ?? 'include',
-      body,
-      headers,
-      signal,
-    });
-  } catch (cause) {
-    return err(transientError(cause));
+  let response: Response | undefined;
+  let lastNetworkError: ApiError | undefined;
+
+  for (let attempt = 0; attempt < (retryable ? MAX_TRANSIENT_ATTEMPTS : 1); attempt++) {
+    if (attempt > 0) {
+      // The caller pulled the plug (component unmounted, navigation) —
+      // never burn a retry on an abort we were told to honour.
+      if (options.signal?.aborted) break;
+      // Index is always in range (attempt < MAX_TRANSIENT_ATTEMPTS); the
+      // `?? 0` satisfies the compiler without an unsafe assertion.
+      await delay(RETRY_BACKOFF_MS[attempt - 1] ?? 0);
+    }
+
+    const remaining = attempt === 0 ? timeoutMs : Math.min(timeoutMs, deadline - Date.now());
+    if (remaining <= 0) break;
+
+    const timeoutSignal = AbortSignal.timeout(remaining);
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, timeoutSignal])
+      : timeoutSignal;
+
+    try {
+      response = await fetch(url, {
+        ...options,
+        // Include cookies on cross-origin requests so the audience-scoped
+        // session cookies (set by the .NET AuthController per ADR 0012)
+        // ride along. T-0035 cq reviewer m5: this overrides the spread so
+        // a caller passing `credentials: undefined` still gets 'include',
+        // and an explicit 'omit'/'same-origin' is honoured.
+        credentials: options.credentials ?? 'include',
+        body,
+        headers,
+        signal,
+      });
+    } catch (cause) {
+      response = undefined;
+      lastNetworkError = transientError(cause);
+      // A caller-driven abort is a deliberate cancellation, not a blip.
+      if (options.signal?.aborted) break;
+      continue;
+    }
+
+    if (!TRANSIENT_STATUSES.has(response.status)) break;
+  }
+
+  if (!response) {
+    return err(lastNetworkError ?? transientError(new Error('fetch produced no response')));
   }
 
   const correlationId = response.headers.get('x-correlation-id') ?? undefined;

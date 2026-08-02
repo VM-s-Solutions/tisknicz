@@ -1,9 +1,11 @@
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Payments;
+using Makables.Infra.Clients.Dev;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Makables.Infra.Clients.Comgate;
 
@@ -41,6 +43,7 @@ public sealed class PaymentProviderFactory(
     IServiceProvider services,
     ICountryConfigurationRepository countryConfigurations,
     IMemoryCache cache,
+    IOptions<DevPaymentOptions> devPayments,
     ILogger<PaymentProviderFactory> logger) : IPaymentProviderFactory
 {
     /// <summary>5-minute TTL on the country → provider-code lookup.</summary>
@@ -54,6 +57,34 @@ public sealed class PaymentProviderFactory(
         {
             return BusinessResult.Failure<IPaymentProvider>(
                 Error.NotFound("countryCode", BusinessErrorMessage.CountryConfigurationNotFound));
+        }
+
+        // Non-production bypass. Deliberately overrides the country's
+        // configured provider instead of being driven by it: dev and
+        // production share the same seeded CountryConfiguration rows, so
+        // encoding "dev" in the data would either fork the seed per
+        // environment or risk shipping a bypassed provider code to
+        // production. The switch is an app setting scoped to the dev
+        // environment (see infra/bicep/main.bicep), and it fails LOUD
+        // rather than silently falling back to the real gateway — an
+        // enabled flag with no registration is a broken deploy, not a
+        // reason to start charging cards on a test environment.
+        if (devPayments.Value.Enabled)
+        {
+            var devProvider = services.GetKeyedService<IPaymentProvider>(DevPaymentProvider.ProviderCode);
+            if (devProvider is null)
+            {
+                logger.LogError(
+                    "PaymentProviderFactory.Resolve: Payments:Dev:Enabled is true but no '{ProviderCode}' provider is registered.",
+                    DevPaymentProvider.ProviderCode);
+                return BusinessResult.Failure<IPaymentProvider>(
+                    Error.Configuration(BusinessErrorMessage.PaymentProviderNotRegistered));
+            }
+
+            logger.LogWarning(
+                "PaymentProviderFactory.Resolve: dev payment bypass active for {CountryCode} — the real gateway is NOT being used.",
+                countryCode);
+            return BusinessResult.Success(devProvider);
         }
 
         var normalised = countryCode.Trim().ToUpperInvariant();

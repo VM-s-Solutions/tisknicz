@@ -126,6 +126,7 @@ public class MakerTests
             companyName: "Avast Software s.r.o. v likvidaci",
             vatId: null,
             legalForm: "Společnost s ručením omezeným",
+            legalType: MakerLegalType.LegalEntity,
             incorporatedOn: new DateOnly(2006, 9, 4),
             isActiveInRegistry: false,
             snapshotFetchedAt: laterAt,
@@ -144,7 +145,7 @@ public class MakerTests
         var m = ValidDefaults();
 
         var act = () => m.UpdateSnapshot(
-            companyName: "   ", vatId: null, legalForm: null,
+            companyName: "   ", vatId: null, legalForm: null, legalType: null,
             incorporatedOn: null, isActiveInRegistry: true,
             snapshotFetchedAt: SnapshotAt, snapshotIsStale: false);
 
@@ -304,7 +305,7 @@ public class MakerTests
         var originalSlug = m.Slug;
 
         m.UpdateSnapshot(
-            companyName: "Avast Software a.s.", vatId: null, legalForm: null,
+            companyName: "Avast Software a.s.", vatId: null, legalForm: null, legalType: null,
             incorporatedOn: null, isActiveInRegistry: true,
             snapshotFetchedAt: SnapshotAt.AddDays(30), snapshotIsStale: false);
 

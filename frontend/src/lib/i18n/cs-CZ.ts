@@ -27,6 +27,7 @@ export const messages = {
   'common.delete': 'Smazat',
   'common.edit': 'Upravit',
   'common.close': 'Zavřít',
+  'common.scroll_to_top': 'Zpět nahoru',
 
   // Shared UI primitives (components/ui)
   'ui.datePicker.placeholder': 'Vyberte datum',
@@ -288,6 +289,7 @@ export const messages = {
   'nav.catalog': 'Katalog',
   'nav.how_it_works': 'Jak to funguje',
   'nav.for_makers': 'Pro makery',
+  'nav.contact': 'Kontakt',
   'nav.login': 'Přihlášení',
   'nav.start_selling': 'Začít prodávat',
   'nav.open_menu': 'Menu',
@@ -352,15 +354,22 @@ export const messages = {
   // Catalog — filters
   'catalog.filter.heading': 'Filtry',
   'catalog.filter.category': 'Kategorie',
-  'catalog.filter.category_any': 'Všechny kategorie',
+  'catalog.filter.category_clear': 'Zrušit výběr',
+  'catalog.filter.category_search': 'Hledat kategorii',
+  'catalog.filter.category_no_match': 'Žádná kategorie neodpovídá',
   'catalog.filter.city': 'Město',
   'catalog.filter.city_placeholder': 'např. Praha',
   'catalog.filter.min_rating': 'Minimální hodnocení',
   'catalog.filter.min_rating_any': 'Bez omezení',
   'catalog.filter.min_rating_stars': '{stars}+ hvězd',
+  // "Firma" vs "Živnostník": every maker holds an IČO, so the second
+  // bucket is an OSVČ — never a private seller without a trade licence.
+  'catalog.filter.legal_type': 'Typ výrobce',
+  'catalog.filter.legal_type_any': 'Vše',
+  'catalog.filter.legal_type_company': 'Firma',
+  'catalog.filter.legal_type_sole_trader': 'Živnostník',
   'catalog.filter.price_min': 'Cena od (Kč)',
   'catalog.filter.price_max': 'Cena do (Kč)',
-  'catalog.filter.apply': 'Použít filtry',
   'catalog.filter.reset': 'Vymazat filtry',
 
   // Catalog — category labels (T-0040 launch slugs)

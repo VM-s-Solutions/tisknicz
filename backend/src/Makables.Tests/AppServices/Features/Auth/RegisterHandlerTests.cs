@@ -1,3 +1,4 @@
+using Makables.Core.Domain.Makers;
 using FluentAssertions;
 using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Addresses;
@@ -45,6 +46,7 @@ public class RegisterHandlerTests
             VatId: vatId,
             CompanyName: "Avast Software s.r.o.",
             LegalForm: "Společnost s ručením omezeným",
+            LegalType: MakerLegalType.LegalEntity,
             RegisteredAddress: Address.Create(
                 id: $"ares-snapshot-{ValidIco}",
                 street: "Pikrtova", houseNumber: "1737", city: "Praha", zip: "14000",

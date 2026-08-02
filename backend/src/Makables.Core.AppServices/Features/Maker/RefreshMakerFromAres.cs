@@ -127,6 +127,7 @@ public static class RefreshMakerFromAres
                 companyName: company.CompanyName,
                 vatId: company.VatId,
                 legalForm: company.LegalForm,
+                legalType: company.LegalType,
                 incorporatedOn: company.IncorporatedOn,
                 isActiveInRegistry: company.IsActiveInRegistry,
                 snapshotFetchedAt: company.FetchedAt,

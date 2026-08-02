@@ -49,14 +49,22 @@ The frontend (`cd frontend; npm run dev`) defaults to exactly these ports, so no
 
 `Makables.Tools.Seeder` builds a realistic CZ dataset on top of the reference
 data the migrations already seed (country CZ, CountryConfiguration, the six
-launch categories): 10 users (1 admin, 4 customers, 5 makers), 5 makers
-(4 verified + 1 in the admin verification queue), 15 products across every
-category (including one `OnRequest`, one soft-deleted, one from the unverified
-maker), 14 orders covering **every** `OrderState`, message threads with unread
-counters, 4 reviews with recomputed maker catalog stats, and one open dispute.
+launch categories). It runs in **two passes**, both inside one transaction:
+
+1. **Demo snapshot** (`DevDataSeeder.cs`) — 10 users (1 admin, 4 customers,
+   5 makers), 5 makers (4 verified + 1 in the admin verification queue), 15
+   products across every category (including one `OnRequest`, one soft-deleted,
+   one from the unverified maker), 14 orders covering **every** `OrderState`,
+   message threads with unread counters, 4 reviews, and one open dispute.
+2. **Catalog makers** (`DevDataSeeder.CatalogMakers.cs`) — 50 more makers
+   across the whole country (Praha and Brno repeat so the city filter has
+   partial matches), each with 2–4 products and 0–7 completed orders, ~105
+   reviews with replies, and recomputed catalog stats. Enough to exercise
+   paging, the city / category / rating filters and the sort order on
+   `/katalog`.
 
 ```powershell
-dotnet run --project backend/src/Makables.Tools.Seeder                 # seed (no-op if already seeded)
+dotnet run --project backend/src/Makables.Tools.Seeder                 # seed / top up (no-op when everything exists)
 dotnet run --project backend/src/Makables.Tools.Seeder -- --reset      # delete seed-* rows and reseed
 dotnet run --project backend/src/Makables.Tools.Seeder -- --migrate    # apply pending migrations first
 ```
@@ -66,9 +74,19 @@ dotnet run --project backend/src/Makables.Tools.Seeder -- --migrate    # apply p
   `eva.dvorakova@` / `tomas.marek@` (unconfirmed) `makables.test`; makers:
   `karel.tiskar@` (PrintLab), `marie.vltavska@` (Tiskárna Vltava),
   `ondrej.barvir@` (Textilka Brno), `lucie.rezava@` (LaserCut Ostrava),
-  `alena.lipova@` (Dílna U Lípy, unverified) `makables.test`.
-- **Idempotent:** all ids are deterministic (`seed-*`); a rerun without
-  `--reset` is a no-op (sentinel `seed-user-admin`).
+  `alena.lipova@` (Dílna U Lípy, unverified) `makables.test`. The catalog
+  makers own `{jmeno}.{prijmeni}@makables.test` accounts derived from the
+  owner name (`jan.dvorak@makables.test` for Praha3D Studio).
+- **Idempotent, and safe to run against a dev database that already has
+  data.** All ids are deterministic (`seed-*`). Pass 1 is all-or-nothing
+  behind the `seed-user-admin` sentinel; pass 2 is checked **per maker** —
+  a blueprint whose maker id, slug, IČO, user id or e-mail is already taken
+  is left alone, so adding a 51st blueprint later inserts exactly that one.
+  Nothing is ever duplicated and nothing existing is overwritten.
+- **Connection string:** the local default lives in the seeder's
+  `appsettings.json`, but `dotnet run` uses the shell's working directory as
+  the content root — from the repo root pass it explicitly:
+  `$env:ConnectionStrings__Postgres = 'Host=localhost;Port=5432;Database=makables_dev;Username=postgres;Password=postgres'`.
 - **Safety:** refuses non-local hosts unless `--allow-remote`, and always
   refuses any host/database whose name contains `prod`.
 - **Order numbers** use the reserved `M-CZ-{YYYY}9NNN` range so the live
@@ -99,6 +117,54 @@ exercise a live provider locally.
 > The JWT `SigningKeyBase64` stub decodes to exactly 32 bytes, the minimum the
 > `JwtOptionsValidator` accepts. It is a dev-only placeholder — tokens signed
 > with it are not valid against any real environment.
+
+## Paying without Comgate (dev payment bypass)
+
+The Comgate stubs above pass the validator but cannot create a real payment
+session, so checkout would dead-end. `Payments:Dev` swaps the gateway for
+`DevPaymentProvider`, which turns **Zaplatit** into a one-click pay:
+
+```jsonc
+"Payments": {
+  "Dev": {
+    "Enabled": true,
+    "ConfirmBaseUrl": "http://localhost:5001"   // Customer host
+  }
+}
+```
+
+It is already set in every host's `appsettings.Development.json`, and the
+deploy template sets it on the Azure **dev** environment only
+(`envSlug == 'dev'` in `infra/bicep/main.bicep`).
+
+**How it flows.** `CreatePaymentSession` hands back a redirect URL pointing at
+`GET /api/v1/orders/{orderId}/dev-payment/confirm` on the Customer host instead
+of a Comgate page. Following it dispatches the ordinary `MarkOrderPaid` command
+and bounces the browser to `/objednavka/{id}`. Everything downstream is
+identical to a real payment — order state, outbox emails, invoice generation,
+audit trail. The adapter itself never touches the database.
+
+**Why it cannot leak into production:**
+
+| Guard | Effect |
+|---|---|
+| `Payments:Dev:Enabled` defaults to `false` | An environment that omits the section keeps Comgate. |
+| Bicep gates on `envSlug == 'dev'` | The setting is structurally absent from production, not merely `false`. |
+| Provider registered only when enabled | On production the keyed `dev` service does not exist at all. |
+| Confirm endpoint 404s when disabled | The route answers as if it were a typo. |
+| Refs are prefixed `dev-` | The confirm endpoint refuses any order whose reference a real gateway issued. |
+
+It fails **loud**, never silent: `Enabled=true` with the provider missing
+returns `payment.providerNotRegistered` rather than falling back to charging a
+real card, and `Enabled=true` without a valid `ConfirmBaseUrl` crashes the host
+at boot.
+
+> On deployed environments `ConfirmBaseUrl` is the **origin-relative**
+> `/api-proxy/customer`, not an absolute URL. The session cookies are
+> `SameSite=Strict`, so the confirm hop has to stay same-origin; leaving it
+> relative means the browser resolves it against whichever hostname the tester
+> actually browsed. Locally the absolute `http://localhost:5001` works because
+> ports do not split a site.
 
 ## Azure dev environment
 

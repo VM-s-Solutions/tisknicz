@@ -2,6 +2,7 @@ using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Makers;
 using MediatR;
 
 namespace Makables.Core.AppServices.Features.Catalog;
@@ -15,7 +16,10 @@ namespace Makables.Core.AppServices.Features.Catalog;
 /// <para>
 /// Page size is clamped to <see cref="MaxPageSize"/> so a client can't
 /// request a 10,000-row page. Default page size is
-/// <see cref="DefaultPageSize"/> (24 per AC-1).
+/// <see cref="DefaultPageSize"/> (24 per AC-1). The category filter is
+/// multi-select (OR semantics) and capped at
+/// <see cref="MaxCategoryFilters"/> slugs so a caller can't force an
+/// unbounded IN list.
 /// </para>
 /// </summary>
 public static class GetPagedMakers
@@ -23,11 +27,19 @@ public static class GetPagedMakers
     public const int DefaultPageSize = 24;
     public const int MaxPageSize = 48;
 
+    /// <summary>
+    /// Upper bound on selected category slugs. Comfortably above any
+    /// realistic category count while keeping the generated IN list
+    /// bounded.
+    /// </summary>
+    public const int MaxCategoryFilters = 20;
+
     public sealed record Query(
         string CountryCode,
-        string? CategorySlug,
+        IReadOnlyList<string>? CategorySlugs,
         string? City,
         int? MinRatingStars,
+        MakerLegalType? LegalType,
         int Page,
         int PageSize)
         : IQuery<PagedData<MakerListItem>>;
@@ -54,6 +66,18 @@ public static class GetPagedMakers
                 RuleFor(q => q.MinRatingStars!.Value)
                     .InclusiveBetween(1, 5).WithErrorCode(BusinessErrorMessage.MinValue);
             });
+
+            When(q => q.CategorySlugs is not null, () =>
+            {
+                RuleFor(q => q.CategorySlugs!.Count)
+                    .LessThanOrEqualTo(MaxCategoryFilters).WithErrorCode(BusinessErrorMessage.MinValue);
+            });
+
+            When(q => q.LegalType.HasValue, () =>
+            {
+                RuleFor(q => q.LegalType!.Value)
+                    .IsInEnum().WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
+            });
         }
     }
 
@@ -65,9 +89,10 @@ public static class GetPagedMakers
             var result = await catalog.GetPagedMakersAsync(
                 new CatalogFilter(
                     CountryCode: query.CountryCode,
-                    CategorySlug: query.CategorySlug,
+                    CategorySlugs: query.CategorySlugs,
                     City: query.City,
                     MinRatingStars: query.MinRatingStars,
+                    LegalType: query.LegalType,
                     Page: query.Page,
                     PageSize: query.PageSize),
                 cancellationToken);

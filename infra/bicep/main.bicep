@@ -294,6 +294,30 @@ var functionsSecretSettings = [
   }
 ]
 
+// ---------------------------------------------------------------------------
+// Dev payment bypass. Replaces the Comgate redirect with a one-click confirm
+// hop back into our own Customer host so the checkout flow is walkable on dev
+// without real cards or a public webhook endpoint. Gated on envSlug so the
+// setting is structurally absent from production — not merely set to false.
+//
+// ConfirmBaseUrl stays ORIGIN-RELATIVE on purpose: the browser resolves it
+// against whichever hostname the tester actually browsed (custom domain or
+// the default *.azurewebsites.net name), which keeps the confirm navigation
+// same-origin. The session cookies are SameSite=Strict, so a cross-site hop
+// would arrive with no cookie and 401. '/api-proxy/customer' is the T-0153
+// rewrite in frontend/next.config.ts.
+// ---------------------------------------------------------------------------
+var devPaymentAppSettings = envSlug == 'dev' ? [
+  {
+    name: 'Payments__Dev__Enabled'
+    value: 'true'
+  }
+  {
+    name: 'Payments__Dev__ConfirmBaseUrl'
+    value: '/api-proxy/customer'
+  }
+] : []
+
 module customerApp 'modules/app-service.bicep' = {
   name: 'customer-app'
   params: {
@@ -307,6 +331,7 @@ module customerApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
+    extraAppSettings: devPaymentAppSettings
   }
 }
 
@@ -323,6 +348,7 @@ module makerApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
+    extraAppSettings: devPaymentAppSettings
   }
 }
 
@@ -339,6 +365,7 @@ module adminApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
+    extraAppSettings: devPaymentAppSettings
   }
 }
 
@@ -355,6 +382,7 @@ module publicApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
+    extraAppSettings: devPaymentAppSettings
   }
 }
 

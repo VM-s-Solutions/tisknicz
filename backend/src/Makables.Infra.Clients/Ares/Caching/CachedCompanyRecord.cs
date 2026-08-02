@@ -1,4 +1,5 @@
 using Makables.Core.Domain.Addresses;
+using Makables.Core.Domain.Makers;
 using Makables.Core.Domain.Registry;
 
 namespace Makables.Infra.Clients.Ares.Caching;
@@ -21,6 +22,7 @@ internal sealed record CachedCompanyRecord(
     string? VatId,
     string CompanyName,
     string? LegalForm,
+    MakerLegalType? LegalType,
     string Street,
     string HouseNumber,
     string City,
@@ -38,6 +40,7 @@ internal sealed record CachedCompanyRecord(
         r.VatId,
         r.CompanyName,
         r.LegalForm,
+        r.LegalType,
         r.RegisteredAddress.Street,
         r.RegisteredAddress.HouseNumber,
         r.RegisteredAddress.City,
@@ -55,6 +58,11 @@ internal sealed record CachedCompanyRecord(
         VatId: VatId,
         CompanyName: CompanyName,
         LegalForm: LegalForm,
+        // Pre-T-0163 cache rows have no `legalType` key; System.Text.Json
+        // leaves the nullable enum null, which is the correct
+        // "unclassified" value. The row re-fetches on expiry and picks up
+        // a real classification then — no cache flush needed.
+        LegalType: LegalType,
         RegisteredAddress: Address.Create(
             id: $"ares-snapshot-{RegistrationNumber}",
             street: Street,

@@ -67,7 +67,7 @@ async function collectMakerSlugs(): Promise<string[]> {
     for (const maker of result.value.items) {
       slugs.push(maker.slug);
     }
-    if (!result.value.hasNext) break;
+    if (!result.value.hasNextPage) break;
   }
   return slugs;
 }

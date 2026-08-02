@@ -14,11 +14,12 @@ export interface IPublicApi {
      * @param category (optional) 
      * @param city (optional) 
      * @param minRating (optional) 
+     * @param legalType (optional) 
      * @param page (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
+    makers(country: string | undefined, category: string[] | undefined, city: string | undefined, minRating: number | undefined, legalType: MakerLegalType | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem>;
 
     /**
      * @param country (optional) 
@@ -229,11 +230,12 @@ export class PublicApi implements IPublicApi {
      * @param category (optional) 
      * @param city (optional) 
      * @param minRating (optional) 
+     * @param legalType (optional) 
      * @param page (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    makers(country: string | undefined, category: string | undefined, city: string | undefined, minRating: number | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem> {
+    makers(country: string | undefined, category: string[] | undefined, city: string | undefined, minRating: number | undefined, legalType: MakerLegalType | undefined, page: number | undefined, pageSize: number | undefined): Promise<PagedDataOfMakerListItem> {
         let url_ = this.baseUrl + "/api/v1/catalog/makers?";
         if (country === null)
             throw new globalThis.Error("The parameter 'country' cannot be null.");
@@ -242,7 +244,7 @@ export class PublicApi implements IPublicApi {
         if (category === null)
             throw new globalThis.Error("The parameter 'category' cannot be null.");
         else if (category !== undefined)
-            url_ += "category=" + encodeURIComponent("" + category) + "&";
+            category && category.forEach(item => { url_ += "category=" + encodeURIComponent("" + item) + "&"; });
         if (city === null)
             throw new globalThis.Error("The parameter 'city' cannot be null.");
         else if (city !== undefined)
@@ -251,6 +253,10 @@ export class PublicApi implements IPublicApi {
             throw new globalThis.Error("The parameter 'minRating' cannot be null.");
         else if (minRating !== undefined)
             url_ += "minRating=" + encodeURIComponent("" + minRating) + "&";
+        if (legalType === null)
+            throw new globalThis.Error("The parameter 'legalType' cannot be null.");
+        else if (legalType !== undefined)
+            url_ += "legalType=" + encodeURIComponent("" + legalType) + "&";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
         else if (page !== undefined)
@@ -2296,6 +2302,11 @@ export interface ILookupCompanyPreviewResponse {
     isStale: boolean;
 
     [key: string]: any;
+}
+
+export enum MakerLegalType {
+    LegalEntity = "LegalEntity",
+    NaturalPerson = "NaturalPerson",
 }
 
 export class MakerListItem implements IMakerListItem {

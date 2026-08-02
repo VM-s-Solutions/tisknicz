@@ -1,5 +1,6 @@
 using Makables.Core.Domain.Addresses;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Makers;
 
 namespace Makables.Core.Domain.Registry;
 
@@ -40,11 +41,24 @@ public interface ICompanyRegistry
 /// <c>RegisterMaker</c>) MAY surface a warning to the user but MUST
 /// still allow registration to proceed.
 /// </summary>
+/// <param name="LegalForm">
+/// Human-readable legal form for display (in CZ, the resolved ČSÚ
+/// <c>pravniForma</c> label). Free text — never branch on it.
+/// </param>
+/// <param name="LegalType">
+/// The same fact normalised into the two buckets the catalog filters on
+/// (<see cref="MakerLegalType"/>). Classified inside the country's
+/// registry adapter, so nothing downstream parses
+/// <paramref name="LegalForm"/> display copy to decide whether a maker
+/// is a company. <c>null</c> when the adapter could not classify the
+/// form — such a maker matches neither filter bucket.
+/// </param>
 public sealed record CompanyRecord(
     string RegistrationNumber,
     string? VatId,
     string CompanyName,
     string? LegalForm,
+    MakerLegalType? LegalType,
     Address RegisteredAddress,
     DateOnly? IncorporatedOn,
     bool IsActiveInRegistry,

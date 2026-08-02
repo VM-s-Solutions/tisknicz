@@ -63,6 +63,7 @@ public class RefreshMakerFromAresHandlerTests
         VatId: "CZ27074358",
         CompanyName: "Avast Software s.r.o. v likvidaci",
         LegalForm: "s.r.o.",
+        LegalType: MakerLegalType.LegalEntity,
         RegisteredAddress: Address.Create(
             id: $"ares-snapshot-{Ico}",
             street: "Nová 1", houseNumber: "10", city: "Brno", zip: "60200",

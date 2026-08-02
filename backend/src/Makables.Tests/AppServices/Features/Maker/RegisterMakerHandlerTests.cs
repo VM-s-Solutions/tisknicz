@@ -66,6 +66,7 @@ public class RegisterMakerHandlerTests
             VatId: "CZ27074358",
             CompanyName: "Avast Software s.r.o.",
             LegalForm: "Společnost s ručením omezeným",
+            LegalType: MakerLegalType.LegalEntity,
             RegisteredAddress: Address.Create(
                 id: $"ares-snapshot-{ValidIco}",
                 street: "Pikrtova", houseNumber: "1737", city: "Praha", zip: "14000",

@@ -1296,6 +1296,11 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("legal_form");
 
+                    b.Property<string>("LegalType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("legal_type");
+
                     b.Property<string>("LogoBlobPath")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -1375,6 +1380,10 @@ namespace Makables.Infra.Database.Migrations
                         .HasColumnName("vat_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LegalType")
+                        .HasDatabaseName("ix_makers_legal_type")
+                        .HasFilter("is_active AND legal_type IS NOT NULL");
 
                     b.HasIndex("RegisteredAddressId")
                         .HasDatabaseName("ix_makers_registered_address_id");
