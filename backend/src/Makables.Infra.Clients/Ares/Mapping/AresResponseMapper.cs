@@ -21,6 +21,16 @@ namespace Makables.Infra.Clients.Ares.Mapping;
 public static class AresResponseMapper
 {
     /// <summary>
+    /// Widest company name the snapshot columns accept —
+    /// <c>makers.company_name</c> and <c>users.company_name</c> are both
+    /// <c>varchar(300)</c>. ARES's <c>obchodniJmeno</c> is free registry
+    /// text with no documented bound, so it is capped here rather than
+    /// left to fail as a Postgres 22001 on a user-triggered registration
+    /// (T-0163 / T-0162 secops F-1).
+    /// </summary>
+    public const int MaxCompanyNameLength = 300;
+
+    /// <summary>
     /// Try to map an ARES payload to a <see cref="CompanyRecord"/>.
     /// Returns the record on success. On failure returns null and sets
     /// <paramref name="failure"/> to the structural reason — the
@@ -36,6 +46,18 @@ public static class AresResponseMapper
             failure = MapFailure.MissingIco;
             return null;
         }
+
+        // T-0163 (T-0162 secops F-2): an ARES row with no company name is
+        // "unexpected shape" exactly like a missing sídlo. It used to map to
+        // string.Empty, which then tripped Maker.Create's ArgumentException —
+        // a 500 on a user-triggered path. Permanent business error instead.
+        if (string.IsNullOrWhiteSpace(payload.ObchodniJmeno))
+        {
+            failure = MapFailure.MissingCompanyName;
+            return null;
+        }
+
+        var companyName = Cap(payload.ObchodniJmeno);
 
         var sidlo = payload.Sidlo;
         if (sidlo is null
@@ -90,7 +112,7 @@ public static class AresResponseMapper
         return new CompanyRecord(
             RegistrationNumber: payload.Ico,
             VatId: string.IsNullOrWhiteSpace(payload.Dic) ? null : payload.Dic,
-            CompanyName: payload.ObchodniJmeno ?? string.Empty,
+            CompanyName: companyName,
             LegalForm: CzechLegalForms.Resolve(payload.PravniForma),
             // Classified here, in the CZ adapter, from the raw ČSÚ code —
             // the code is not carried further, so this is the last point
@@ -104,6 +126,19 @@ public static class AresResponseMapper
             FetchedAt: now,
             IsStale: false);
     }
+
+    /// <summary>
+    /// Trim, then cut to <see cref="MaxCompanyNameLength"/>, then trim again —
+    /// the cut can land mid-word and expose trailing whitespace, and the
+    /// snapshot is display copy (it prints on invoices and shipping labels).
+    /// </summary>
+    private static string Cap(string companyName)
+    {
+        var trimmed = companyName.Trim();
+        return trimmed.Length <= MaxCompanyNameLength
+            ? trimmed
+            : trimmed[..MaxCompanyNameLength].TrimEnd();
+    }
 }
 
 /// <summary>
@@ -114,6 +149,11 @@ public enum MapFailure
     None = 0,
     MissingIco = 1,
     IncompleteSidlo = 2,
+
+    /// <summary>
+    /// ARES returned a subject with no <c>obchodniJmeno</c> (T-0163).
+    /// </summary>
+    MissingCompanyName = 3,
 }
 
 /// <summary>
