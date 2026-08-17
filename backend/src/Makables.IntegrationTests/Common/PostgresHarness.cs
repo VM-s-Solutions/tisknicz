@@ -68,6 +68,12 @@ public sealed class PostgresHarness : IAsyncLifetime
     /// </summary>
     public const string ExternalServerEnvVar = "MAKABLES_TEST_POSTGRES";
 
+    /// <summary>
+    /// Pinned to the Azure Postgres Flexible Server major version in the
+    /// deploy Bicep — see the production-parity note above.
+    /// </summary>
+    private const string PostgresImage = "postgres:16-alpine";
+
     private readonly PostgreSqlContainer? _container;
     private readonly string? _externalAdminConnectionString;
     private readonly string _externalDatabaseName = $"makables_test_{Guid.NewGuid():N}";
@@ -82,9 +88,7 @@ public sealed class PostgresHarness : IAsyncLifetime
         // constructed on the container path, never as a field initialiser.
         if (string.IsNullOrWhiteSpace(external))
         {
-            _container = new PostgreSqlBuilder()
-                .WithImage("postgres:16-alpine")
-                .Build();
+            _container = new PostgreSqlBuilder(PostgresImage).Build();
         }
         else
         {
