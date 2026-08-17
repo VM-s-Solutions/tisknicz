@@ -210,7 +210,9 @@ cannot flush the half-built `User` aggregate.
   mirroring the maker precedent, not 409.
 - 2026-07-29 gate fan-out results (PR #112): **optimizer PASS 5/5**;
   **secops PASS** (2 LOW pre-existing parity findings on the shared ARES
-  mapper — spun off as T-0163; T-0161 merge-ordering note recorded below);
+  mapper — spun off as T-0163, renumbered **T-0164** on 2026-08-17 when that
+  slot turned out to be reused by the maker-proposed-categories ticket;
+  T-0161 merge-ordering note recorded below);
   **qa PASS** (5 minor); **reviewer REQUEST CHANGES** (1 MAJOR: role-file
   parity). Fold commit closes: reviewer MAJOR (`docs/architecture/roles/
   user.md` updated — company snapshot in Knows, Does-NOT-know qualified,
