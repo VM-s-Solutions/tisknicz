@@ -38,6 +38,7 @@ using Makables.Infra.Database.Auditing;
 using Makables.Infra.Database.Interceptors;
 using Makables.Infra.Database.Catalog;
 using Makables.Infra.Database.Categories;
+using Makables.Infra.Database.Identity;
 using Makables.Infra.Database.Invoices;
 using Makables.Infra.Database.Makers;
 using Makables.Infra.Database.OrderMessages;
@@ -101,6 +102,10 @@ public static class MakablesInfrastructureExtensions
         // === Auth policy (T-0022) ===
         services.AddOptions<LockoutOptions>()
             .Bind(configuration.GetSection(LockoutOptions.SectionName));
+
+        // Retention window for expired auth artifacts (T-0114).
+        services.AddOptions<AuthRetentionOptions>()
+            .Bind(configuration.GetSection(AuthRetentionOptions.SectionName));
 
         // === EF Core DbContext + interceptor + UoW alias ===
         services.AddScoped<AuditableSaveChangesInterceptor>();
@@ -294,6 +299,11 @@ public static class MakablesInfrastructureExtensions
         // (T-0032 sec reviewer M-1). Scoped lifetime is fine — the
         // factory itself is the singleton, the store just holds a reference.
         services.AddScoped<ICompanyRegistryCacheStore, CompanyRegistryCacheStore>();
+
+        // === Auth-artifact retention purge (T-0114) ===
+        // Same isolated-DbContext rationale: the caller is a timer Function
+        // with no request scope, and the deletes are set-based.
+        services.AddScoped<IAuthRetentionStore, AuthRetentionStore>();
         // IMemoryCache backs the in-process hot layer used by
         // AresCompanyRegistry. Singleton + thread-safe; entries TTL out
         // via MemoryCacheEntryOptions set per-call.

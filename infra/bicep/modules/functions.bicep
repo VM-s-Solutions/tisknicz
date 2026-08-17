@@ -54,6 +54,9 @@ param disputeAutoEscalationSchedule string = '0 0 9 * * *'
 @description('EvictExpiredRegistryCache timer (daily 02:30 UTC, offset from CancelExpired). T-0113.')
 param evictExpiredRegistryCacheSchedule string = '0 30 2 * * *'
 
+@description('DataRetentionCleanup timer (Sunday 03:00 UTC — weekly, offset from the nightly jobs). T-0114.')
+param dataRetentionCleanupSchedule string = '0 0 3 * * 0'
+
 param location string = resourceGroup().location
 
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -137,6 +140,10 @@ var baseAppSettings = [
   {
     name: 'EvictExpiredRegistryCache__Schedule'
     value: evictExpiredRegistryCacheSchedule
+  }
+  {
+    name: 'DataRetentionCleanup__Schedule'
+    value: dataRetentionCleanupSchedule
   }
 ]
 

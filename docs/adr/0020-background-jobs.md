@@ -92,7 +92,7 @@ On `last_error_type = Permanent | Configuration`: stop retrying; admin sees stal
 | `GenerateInvoice` | Queue | `generate-invoice` queue | Render PDF + write to blob + outbox-enqueue customer email with attachment |
 | `GenerateLabel` | Queue | `generate-label` queue | Fetch label from Packeta + write to blob (proactively, before maker opens dashboard) |
 | `SendEmail` | Queue | `send-email` queue | Render template + submit to Resend (called by ProcessOutbox for `email.send` events) |
-| `DataRetentionCleanup` | Timer | weekly Sunday 03:00 UTC | Anonymize / purge per GDPR retention policy (post-MVP detail in NFR ADR) |
+| `DataRetentionCleanup` | Timer | weekly Sunday 03:00 UTC | Purge expired auth artifacts — refresh tokens (IP + user-agent), one-time tokens (IP), login-attempt buckets (keyed by email, incl. addresses that never registered). T-0114. Order / invoice / payout data has statutory retention and is out of scope; a subject's erasure request goes through `DeleteUserPermanently` (T-0110), not this job. |
 
 ### Why a hybrid (outbox + queues)
 
