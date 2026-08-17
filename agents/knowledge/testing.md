@@ -169,6 +169,34 @@ This is the readable overview; the row-by-row enforcement matrix (with coverage 
 - **Background jobs:** Azure Functions get an integration test for the happy path plus retry/idempotency
   (a re-invocation does not double the effect), mirroring §7.
 
+## Running the suites
+
+```bash
+cd backend/src
+dotnet test Makables.Tests/Makables.Tests.csproj                     # unit, no infrastructure
+dotnet test Makables.IntegrationTests/Makables.IntegrationTests.csproj
+cd ../../frontend && npm run test                                     # Vitest + jest-axe
+```
+
+`Makables.IntegrationTests` needs a real Postgres 16. By default `PostgresHarness`
+starts a `postgres:16-alpine` Testcontainer — that is what CI uses and the
+production-parity guarantee rests on it. **Without a Docker daemon every
+Postgres-backed test fails at fixture construction** (`Docker is either not
+running or misconfigured`), which reads like 188 broken tests and is not.
+
+On a machine without Docker, point the harness at an already-running Postgres 16
+instead — it creates a throwaway `makables_test_<guid>` database per fixture and
+drops it afterwards, so it never touches the dev data:
+
+```bash
+~/.makables-dev/start-pg.sh   # the durable local cluster
+MAKABLES_TEST_POSTGRES="Host=localhost;Port=5432;Username=postgres;Database=postgres" \
+  dotnet test Makables.IntegrationTests/Makables.IntegrationTests.csproj
+```
+
+Leave the variable unset in CI. A run that skipped the Postgres leg is not
+evidence — say so rather than reporting the unit counts alone.
+
 ## Anti-patterns (`reviewer` rejects — and Gate 0 governs *how* findings are reported)
 
 - A test that asserts a method exists or returns non-null but checks no behavior (theater).
