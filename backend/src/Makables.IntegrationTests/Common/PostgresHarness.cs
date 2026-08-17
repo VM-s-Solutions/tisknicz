@@ -1,5 +1,6 @@
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace Makables.IntegrationTests.Common;
@@ -46,22 +47,68 @@ namespace Makables.IntegrationTests.Common;
 /// collection definition (<see cref="PostgresCollection"/>) keeps a
 /// single container shared across the collection's tests.
 /// </para>
+///
+/// <para>
+/// Docker-less escape hatch: when <see cref="ExternalServerEnvVar"/> names
+/// an already-running Postgres 16 server (maintenance-database connection
+/// string), the harness creates a throwaway <c>makables_test_*</c> database
+/// on it instead of starting a container, and drops it on dispose. This is
+/// how the suite runs on a developer machine without Docker Desktop (macOS
+/// dev cluster) or on a self-hosted runner. CI leaves the variable unset and
+/// keeps the pinned <c>postgres:16-alpine</c> image, so the production-parity
+/// guarantee above is unchanged for the gate that matters.
+/// </para>
 /// </summary>
 public sealed class PostgresHarness : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
-        .Build();
+    /// <summary>
+    /// Environment variable holding a connection string to an existing
+    /// Postgres 16 server (pointing at a maintenance database the harness may
+    /// connect to, typically <c>postgres</c>). Unset ⇒ Testcontainers.
+    /// </summary>
+    public const string ExternalServerEnvVar = "MAKABLES_TEST_POSTGRES";
+
+    private readonly PostgreSqlContainer? _container;
+    private readonly string? _externalAdminConnectionString;
+    private readonly string _externalDatabaseName = $"makables_test_{Guid.NewGuid():N}";
+    private string _connectionString = string.Empty;
+
+    public PostgresHarness()
+    {
+        var external = Environment.GetEnvironmentVariable(ExternalServerEnvVar);
+
+        // The Testcontainers builder validates the Docker endpoint eagerly and
+        // throws from Build() when no daemon is reachable — so it is only
+        // constructed on the container path, never as a field initialiser.
+        if (string.IsNullOrWhiteSpace(external))
+        {
+            _container = new PostgreSqlBuilder()
+                .WithImage("postgres:16-alpine")
+                .Build();
+        }
+        else
+        {
+            _externalAdminConnectionString = external;
+        }
+    }
 
     /// <summary>
-    /// Connection string to the running container. Stable for the
+    /// Connection string to the running database. Stable for the
     /// lifetime of the fixture.
     /// </summary>
-    public string ConnectionString => _container.GetConnectionString();
+    public string ConnectionString => _connectionString;
 
     public async Task InitializeAsync()
     {
-        await _container.StartAsync();
+        if (_container is not null)
+        {
+            await _container.StartAsync();
+            _connectionString = _container.GetConnectionString();
+        }
+        else
+        {
+            _connectionString = await CreateExternalDatabaseAsync();
+        }
 
         // Apply every migration once at container start. Closes the
         // T-0123 migration-coverage gap for this surface: if any new
@@ -73,7 +120,46 @@ public sealed class PostgresHarness : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        await _container.DisposeAsync();
+        if (_container is not null)
+        {
+            await _container.DisposeAsync();
+            return;
+        }
+
+        await DropExternalDatabaseAsync();
+    }
+
+    private async Task<string> CreateExternalDatabaseAsync()
+    {
+        await using (var admin = new NpgsqlConnection(_externalAdminConnectionString))
+        {
+            await admin.OpenAsync();
+            // The name is generated, never user input, and is quoted anyway —
+            // CREATE DATABASE takes no parameters.
+            await using var create = new NpgsqlCommand(
+                $"CREATE DATABASE \"{_externalDatabaseName}\";",
+                admin);
+            await create.ExecuteNonQueryAsync();
+        }
+
+        return new NpgsqlConnectionStringBuilder(_externalAdminConnectionString)
+        {
+            Database = _externalDatabaseName,
+        }.ConnectionString;
+    }
+
+    private async Task DropExternalDatabaseAsync()
+    {
+        // Pooled connections to the throwaway database would block the DROP;
+        // clearing the pool is what makes the fixture re-runnable.
+        NpgsqlConnection.ClearAllPools();
+
+        await using var admin = new NpgsqlConnection(_externalAdminConnectionString);
+        await admin.OpenAsync();
+        await using var drop = new NpgsqlCommand(
+            $"DROP DATABASE IF EXISTS \"{_externalDatabaseName}\" WITH (FORCE);",
+            admin);
+        await drop.ExecuteNonQueryAsync();
     }
 
     /// <summary>
