@@ -4,6 +4,7 @@ using Makables.Core.Domain.Categories;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
 using Makables.Core.Domain.Money;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payments;
 using Makables.Core.Domain.Products;
@@ -83,6 +84,9 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
     private readonly PostgresHarness _harness;
     private readonly FakeComgatePaymentProvider _provider = new();
     private WebApplicationFactory<Makables.Web.Public.Program> _factory = default!;
+
+    /// <summary>Records every (provider, outcome) pair the controller emits.</summary>
+    private readonly RecordingWebhookMetrics _webhookMetrics = new();
 
     public ComgateWebhookTests(PostgresHarness harness)
     {
@@ -179,6 +183,18 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
                         services.Remove(d);
                     }
                     services.AddKeyedSingleton<IPaymentProvider>("comgate", _provider);
+
+                    // T-0165: capture the ADR 0023 §4 ingest counter so the
+                    // per-path outcome can be asserted. Recording is the
+                    // point of the instrument — an under-counted reject path
+                    // looks exactly like a provider that stopped calling.
+                    var metricsDescriptors = services
+                        .Where(d => d.ServiceType == typeof(IWebhookMetrics)).ToList();
+                    foreach (var d in metricsDescriptors)
+                    {
+                        services.Remove(d);
+                    }
+                    services.AddSingleton<IWebhookMetrics>(_webhookMetrics);
 
                     // TestServer leaves Connection.RemoteIpAddress null
                     // by default; inject middleware that stamps the
@@ -548,6 +564,59 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
         row!.State.Should().Be(OrderState.PendingPayment);
     }
 
+    // ---- T-0165 (Q-0033): ADR 0023 §4 ingest counter ----
+
+    [Fact]
+    public async Task Accepted_delivery_is_counted_once_as_accepted()
+    {
+        await SeedOrderInStateAsync(OrderState.PendingPayment);
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        _webhookMetrics.Records.Should().ContainSingle()
+            .Which.Should().Be(("comgate", WebhookOutcome.Accepted));
+    }
+
+    [Fact]
+    public async Task Idempotent_re_delivery_is_counted_as_duplicate_not_accepted()
+    {
+        // The distinction the operator actually needs: a retry storm shows as
+        // duplicates, a real payment flow shows as accepted.
+        await SeedOrderInStateAsync(OrderState.PendingPayment);
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        await client.PostAsync(WebhookPath, BuildWebhookBody());
+        await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        _webhookMetrics.Records.Should().Equal(
+            ("comgate", WebhookOutcome.Accepted),
+            ("comgate", WebhookOutcome.Duplicate));
+    }
+
+    [Fact]
+    public async Task Unknown_provider_ref_is_counted_as_rejected_despite_the_200()
+    {
+        // Returns 200 by design (no retry storm), so the HTTP status alone
+        // cannot tell an operator this happened — the counter is the signal.
+        await SeedCancelledOrderAsync();
+        _provider.EnqueueWebhook(BusinessResult.Success(
+            new WebhookPayload(TransId1, PaymentState.Paid, "CARD_CZ", PaidAtFromProvider)));
+
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsync(WebhookPath, BuildWebhookBody());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _webhookMetrics.Records.Should().ContainSingle()
+            .Which.Should().Be(("comgate", WebhookOutcome.Rejected));
+    }
+
     [Fact]
     public async Task POST_twice_idempotency_short_circuits_second_call()
     {
@@ -694,4 +763,19 @@ public sealed class ComgateWebhookTests : IAsyncLifetime
             .FirstOrDefaultAsync(o => o.Id == OrderId);
         row!.State.Should().Be(OrderState.PendingPayment);
     }
+    /// <summary>
+    /// Test double for <see cref="IWebhookMetrics"/> that keeps what was
+    /// recorded. A substitute would do, but this reads better in the
+    /// assertions and makes "exactly one record per delivery" checkable.
+    /// </summary>
+    private sealed class RecordingWebhookMetrics : IWebhookMetrics
+    {
+        private readonly List<(string Provider, string Outcome)> _records = [];
+
+        public IReadOnlyList<(string Provider, string Outcome)> Records => _records;
+
+        public void RecordReceived(string provider, string outcome) =>
+            _records.Add((provider, outcome));
+    }
+
 }

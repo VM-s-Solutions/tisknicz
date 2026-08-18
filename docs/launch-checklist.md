@@ -125,15 +125,15 @@ ADR 0023 §7 target, and the runbook that covers it.
   are reachable only through a maker profile). Maker profiles
   (`/katalog/{slug}`) ARE enumerated. A backend bulk-id feed would enable
   product enumeration post-MVP.
-- [ ] **Custom metric emission (Q-0033, pre-launch decision):** the ADR 0023
-  §4 alert table (outbox lag/stalled, payment failures, webhook received,
-  auto-deliver) assumes custom metrics that are REGISTERED but not yet
-  EMITTED — only `makables.payouts.*` records values today. The
-  `monitoring.md` runbook leads with the working DB-backed outbox-stall
-  signal (`GET /outbox-events/stalled/count` + admin UI) + the
-  ProcessOutboxTimer tick log; 5xx + DB-CPU alerts use Azure-Monitor
-  built-ins (which work). Decide per Q-0033: wire the emission pre-launch,
-  or accept the documented alternatives for MVP.
+- [x] **Custom metric emission (Q-0033) — DONE, no operator step.** Was: the
+  ADR 0023 §4 alert table assumed custom metrics that were registered but
+  never emitted, so those alert rules would have read empty. T-0165 wired the
+  emission: `makables.outbox.lag_seconds` + `.stalled` + `.dispatched`,
+  `makables.payments.sessions_created`, `makables.webhooks.received`,
+  `makables.orders.auto_delivered` / `.auto_cancelled`. The alert *rules* still
+  have to be created in Azure Monitor against these names
+  (`docs/runbooks/monitoring.md`) — that is the remaining ops task, but it is
+  now a task with signal behind it rather than a decision.
 - [ ] **k6 load test RUN (T-0132, gated manual step):** execute
   `deploy/load-tests/makables-load.js` (100 VUs, 30-min) against live seeded
   staging per `deploy/load-tests/README.md`. PASS = the ADR 0023 §1 k6

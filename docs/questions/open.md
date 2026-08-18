@@ -25,7 +25,6 @@ launch blocker by definition and must also have a line in
 | Q | Title | Owner | Status |
 |---|---|---|---|
 | Q-0030 | Approved legal text for /vop + /gdpr | user (legal counsel) | open |
-| Q-0033 | Custom observability metrics not emitted | user (accept docs alt. or wire emission) | open |
 | Q-0036 | Stripe Connect fee/hold/KYC/ČNB verification (blocks T-0142) | user (Stripe contact + legal counsel) | open |
 
 Everything else below is `v1.1` or `backlog` unless its entry says otherwise.
@@ -481,7 +480,23 @@ same edit.
   - Wire the emission pre-launch (a small instrumentation pass across the dispatcher/providers/webhooks/Function) so all ADR 0023 §4 alerts work as specified. ~M.
   - Accept the documented alternatives at MVP (the runbook leads with the DB endpoint + ProcessOutboxTimer tick log for outbox; 5xx/DB-CPU come from ASP.NET/Azure Monitor built-ins which DO work; only the custom-metric alerts degrade) — defer emission to v1.1.
   - Partial: emit only the highest-value outbox + payment-failure metrics now, defer the rest.
-- **Status:** open
+- **Status:** answered (obsolete — resolved by building it)
+- **Answer (2026-08-18, T-0165):** Option 1, wired. The decision the question
+  asked the user to make only mattered while the work was hypothetical; the
+  instrumentation pass turned out to be small (four interfaces mirroring the
+  existing `IPayoutMetrics` seam, four implementations on the already-registered
+  meters, five call sites) and it removes a pre-launch decision rather than
+  documenting around one. Now emitting: `makables.outbox.lag_seconds` +
+  `.stalled` (gauges, sampled every sweep including empty ones),
+  `makables.outbox.dispatched` (tagged routed / stalled / publish_failed),
+  `makables.payments.sessions_created` (tagged provider + created / transient /
+  permanent), `makables.webhooks.received` (tagged provider + accepted /
+  duplicate / rejected / malformed / error, recorded on **every** exit path of
+  the Comgate controller), and `makables.orders.auto_delivered` /
+  `.auto_cancelled` (recorded even at zero — a counter that only writes when it
+  has work is indistinguishable from a timer that stopped firing). The
+  DB-backed stalled endpoint the runbook leads with stays as-is; it is now a
+  cross-check on the gauge rather than a substitute for it.
 
 ## Q-0034 — Rate-limit v1.1 hardening: config-bound limits + distributed partition store
 - **From:** optimizer + architect (T-0136 secops-hardening review, Gate-8 / Gate-4)

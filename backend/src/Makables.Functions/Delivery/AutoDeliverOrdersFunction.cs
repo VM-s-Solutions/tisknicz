@@ -1,5 +1,6 @@
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using MediatR;
 using Microsoft.Azure.Functions.Worker;
@@ -41,6 +42,7 @@ public sealed class AutoDeliverOrdersFunction(
     IOrderRepository orderRepository,
     ISender mediator,
     IClock clock,
+    IOrderLifecycleMetrics metrics,
     ILogger<AutoDeliverOrdersFunction> logger)
 {
     public const string FunctionName = "AutoDeliverOrders";
@@ -103,6 +105,12 @@ public sealed class AutoDeliverOrdersFunction(
                     orderId);
             }
         }
+
+        // Recorded even when dispatched == 0 (ADR 0023 §4 / T-0165): a
+        // counter that only writes when it has work is indistinguishable
+        // from a timer that stopped firing, which is the failure this
+        // instrument exists to catch.
+        metrics.RecordAutoDelivered(dispatched);
 
         logger.LogInformation(
             "AutoDeliverOrders completed: claimed {Claimed} orders, dispatched {Dispatched}, failed {Failed}",

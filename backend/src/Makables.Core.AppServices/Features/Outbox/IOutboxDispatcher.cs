@@ -1,5 +1,6 @@
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,7 @@ public sealed class OutboxDispatcher(
     IUnitOfWork unitOfWork,
     IClock clock,
     IOptions<OutboxDispatcherOptions> dispatcherOptions,
+    IOutboxMetrics metrics,
     ILogger<OutboxDispatcher> logger) : IOutboxDispatcher
 {
     /// <summary>Per-sweep cap. ADR 0020 §"The outbox is the message hub": 50 at launch.</summary>
@@ -67,7 +69,21 @@ public sealed class OutboxDispatcher(
     {
         var now = clock.UtcNow;
         var due = await outboxConsumer.LoadDueAsync(BatchSize, now, cancellationToken);
-        if (due.Count == 0) return new DispatchSummary(0, 0, 0, 0);
+        if (due.Count == 0)
+        {
+            // Record on the empty sweep too. A gauge that only writes when
+            // there is work is indistinguishable from a sweep that stopped
+            // running — and "the outbox stopped draining" is the alert this
+            // whole meter exists for (ADR 0023 §4 / Q-0033).
+            metrics.RecordLagSeconds(0);
+            await RecordStalledGaugeAsync(cancellationToken);
+            return new DispatchSummary(0, 0, 0, 0);
+        }
+
+        // Age of the oldest row this sweep picked up. LoadDueAsync orders by
+        // due-time, but Min() rather than due[0] keeps this correct if that
+        // ordering ever changes.
+        metrics.RecordLagSeconds((now - due.Min(e => e.CreatedAt)).TotalSeconds);
 
         var parkDuration = TimeSpan.FromMinutes(Math.Max(1, dispatcherOptions.Value.HandoffParkMinutes));
         // T-0069: classify each event once at Phase 1 + remember the verdict
@@ -145,10 +161,37 @@ public sealed class OutboxDispatcher(
             await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
+        metrics.RecordDispatched(OutboxDispatchOutcome.Routed, routed);
+        metrics.RecordDispatched(OutboxDispatchOutcome.Stalled, stalled);
+        metrics.RecordDispatched(OutboxDispatchOutcome.PublishFailed, failedToPublish);
+        await RecordStalledGaugeAsync(cancellationToken);
+
         logger.LogInformation(
             "Outbox sweep complete: loaded={Loaded} routed={Routed} stalled={Stalled} failedToPublish={FailedToPublish}",
             due.Count, routed, stalled, failedToPublish);
         return new DispatchSummary(due.Count, routed, stalled, failedToPublish);
+    }
+
+    /// <summary>
+    /// Sample the total stalled count for the gauge. One indexed COUNT per
+    /// 30-second sweep, and never at the cost of the sweep itself: a
+    /// telemetry read must not turn a working dispatch into a failed tick,
+    /// so a failure here is logged and swallowed.
+    /// </summary>
+    private async Task RecordStalledGaugeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            metrics.RecordStalled(await outboxConsumer.CountStalledAsync(cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not sample the stalled-outbox gauge; sweep result is unaffected.");
+        }
     }
 
     private Task PublishToTargetAsync(RouteTarget target, string outboxEventId, CancellationToken cancellationToken) =>

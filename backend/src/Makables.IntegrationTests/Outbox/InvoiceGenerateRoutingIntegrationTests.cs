@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Outbox;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.Infra.Database.Outbox;
@@ -79,6 +80,7 @@ public sealed class InvoiceGenerateRoutingIntegrationTests
             unitOfWork,
             clock,
             Options.Create(new OutboxDispatcherOptions { HandoffParkMinutes = 15 }),
+            Substitute.For<IOutboxMetrics>(),
             NullLogger<OutboxDispatcher>.Instance);
 
         // Act

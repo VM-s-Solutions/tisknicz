@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Makables.Config.Controllers;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payments;
 using Makables.Web.Public.Filters;
@@ -57,8 +58,17 @@ public sealed class ComgateWebhookController(
     IPaymentProviderFactory providers,
     IOrderRepository orders,
     IMediator mediator,
+    IWebhookMetrics metrics,
     ILogger<ComgateWebhookController> logger) : MakablesApiController
 {
+    /// <summary>
+    /// Provider tag for the ADR 0023 §4 ingest counter (T-0165). A literal,
+    /// not <c>provider.Code</c>: the first two exit paths run before (or
+    /// because) provider resolution failed, and a counter that changes its
+    /// tag depending on how far the request got is a counter you cannot sum.
+    /// </summary>
+    private const string MetricProvider = "comgate";
+
     /// <summary>
     /// Country code the public host uses to resolve the payment provider.
     /// MVP ships a single CZ Comgate provider per <c>CountryConfiguration</c>.
@@ -73,6 +83,16 @@ public sealed class ComgateWebhookController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Receive(CancellationToken ct)
     {
+        // Every exit from this method goes through Counted(...) so the ADR
+        // 0023 §4 ingest counter can never drift from the actual outcome —
+        // "the provider stopped calling us" is a silence that produces no
+        // error anywhere else, and an under-counted path looks the same.
+        IActionResult Counted(string outcome, IActionResult result)
+        {
+            metrics.RecordReceived(MetricProvider, outcome);
+            return result;
+        }
+
         // Step 1: Resolve the country's payment provider. At MVP this is
         // a single keyed Comgate registration; the factory call keeps the
         // call site honest for the multi-country future.
@@ -85,7 +105,7 @@ public sealed class ComgateWebhookController(
             logger.LogCritical(
                 "Comgate webhook: failed to resolve payment provider for {CountryCode}. Error={Code}.",
                 ProviderCountryCode, providerResult.Error!.Code);
-            return HandleResult(providerResult);
+            return Counted(WebhookOutcome.Error, HandleResult(providerResult));
         }
         var provider = providerResult.Value!;
 
@@ -97,7 +117,12 @@ public sealed class ComgateWebhookController(
         var parseResult = await provider.ParseAndVerifyWebhookAsync(Request, ct);
         if (!parseResult.IsSuccess)
         {
-            return HandleResult(parseResult);
+            // Validation = the body was not what Comgate sends; anything else
+            // (Transient re-fetch failure, Configuration) is our problem.
+            var outcome = parseResult.Error!.Type == ErrorType.Validation
+                ? WebhookOutcome.Malformed
+                : WebhookOutcome.Error;
+            return Counted(outcome, HandleResult(parseResult));
         }
         var payload = parseResult.Value!;
 
@@ -115,7 +140,7 @@ public sealed class ComgateWebhookController(
             logger.LogCritical(
                 "Comgate webhook: no order found for providerRef={ProviderRef}. State={State}. Possible ref-persistence bug — ops investigation required.",
                 payload.ProviderRef, payload.State);
-            return Ok();
+            return Counted(WebhookOutcome.Rejected, Ok());
         }
 
         // Step 4: Spoof check on the body's refId vs the resolved order.
@@ -136,7 +161,9 @@ public sealed class ComgateWebhookController(
             // MakablesApiController.MapErrorToActionResult convention;
             // using Conflict here would silently mismatch type-vs-status.
             // T-0066 reviewer L-1.
-            return Unauthorized(Error.Unauthorized(BusinessErrorMessage.PaymentWebhookRefIdMismatch));
+            return Counted(
+                WebhookOutcome.Rejected,
+                Unauthorized(Error.Unauthorized(BusinessErrorMessage.PaymentWebhookRefIdMismatch)));
         }
 
         // Step 5: Idempotency short-circuit. If the order already sits in
@@ -149,7 +176,7 @@ public sealed class ComgateWebhookController(
             logger.LogInformation(
                 "Comgate webhook: order {OrderId} already in target state {OrderState} for inbound payload {PaymentState}. Idempotent no-op.",
                 order.Id, order.State, payload.State);
-            return Ok();
+            return Counted(WebhookOutcome.Duplicate, Ok());
         }
 
         // Step 6: Switch on the payload's state and dispatch the matching
@@ -194,21 +221,21 @@ public sealed class ComgateWebhookController(
                             logger.LogWarning(
                                 "Comgate payment captured for cancelled order {OrderId} (State={OrderState}, CancellationSource={CancellationSource}) — manual refund required until T-0105 ships.",
                                 order.Id, order.State, order.CancellationSource);
-                            return Ok();
+                            return Counted(WebhookOutcome.Duplicate, Ok());
                         }
                         // Benign race: another webhook delivery already
                         // moved the order to Paid (or later). Info-level.
                         logger.LogInformation(
                             "Comgate webhook: MarkOrderPaid lost the race for order {OrderId} (already transitioned). Idempotent 200.",
                             order.Id);
-                        return Ok();
+                        return Counted(WebhookOutcome.Duplicate, Ok());
                     }
                     // Unexpected handler failure — surface via the
                     // normal mapping so a 500 reaches ops alerting.
                     logger.LogError(
                         "Comgate webhook: MarkOrderPaid returned unexpected failure for order {OrderId}. Code={Code}.",
                         order.Id, dispatchResult.Error.Code);
-                    return HandleResult(dispatchResult);
+                    return Counted(WebhookOutcome.Error, HandleResult(dispatchResult));
                 }
                 break;
 
@@ -237,7 +264,7 @@ public sealed class ComgateWebhookController(
         // Step 8: 200 on every non-failure path. The webhook only returns
         // 4xx for IP / spoof / malformed-body — never for "business
         // rejected".
-        return Ok();
+        return Counted(WebhookOutcome.Accepted, Ok());
     }
 
     /// <summary>

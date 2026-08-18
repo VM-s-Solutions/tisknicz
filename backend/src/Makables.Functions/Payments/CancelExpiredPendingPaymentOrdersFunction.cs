@@ -1,5 +1,6 @@
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using MediatR;
 using Microsoft.Azure.Functions.Worker;
@@ -41,6 +42,7 @@ public sealed class CancelExpiredPendingPaymentOrdersFunction(
     IOrderRepository orderRepository,
     ISender mediator,
     IClock clock,
+    IOrderLifecycleMetrics metrics,
     ILogger<CancelExpiredPendingPaymentOrdersFunction> logger)
 {
     public const string FunctionName = "CancelExpiredPendingPaymentOrders";
@@ -101,6 +103,9 @@ public sealed class CancelExpiredPendingPaymentOrdersFunction(
                     orderId);
             }
         }
+
+        // Zero is a recorded value on purpose — see AutoDeliverOrdersFunction.
+        metrics.RecordAutoCancelled(dispatched);
 
         logger.LogInformation(
             "CancelExpiredPendingPaymentOrders completed: claimed {Claimed} orders, dispatched {Dispatched}, failed {Failed}",
