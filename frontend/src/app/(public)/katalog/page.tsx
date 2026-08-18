@@ -225,7 +225,7 @@ function CatalogResults({
       <p className="mb-5 text-sm text-zinc-500">
         {t('catalog.pagination.results', { count: totalCount })}
       </p>
-      <ul className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
         {items.map((item) => (
           <li key={item.makerId} className="min-w-0">
             <MakerCard item={item} />
