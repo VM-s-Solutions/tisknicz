@@ -2,6 +2,7 @@ using FluentAssertions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using Makables.Functions.Delivery;
 using MediatR;
@@ -33,12 +34,13 @@ public class AutoDeliverOrdersFunctionTests
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly ILogger<AutoDeliverOrdersFunction> _logger =
         Substitute.For<ILogger<AutoDeliverOrdersFunction>>();
+    private readonly IOrderLifecycleMetrics _metrics = Substitute.For<IOrderLifecycleMetrics>();
     private readonly AutoDeliverOrdersFunction _sut;
 
     public AutoDeliverOrdersFunctionTests()
     {
         _clock.UtcNow.Returns(Now);
-        _sut = new AutoDeliverOrdersFunction(_orders, _mediator, _clock, _logger);
+        _sut = new AutoDeliverOrdersFunction(_orders, _mediator, _clock, _metrics, _logger);
     }
 
     private static async IAsyncEnumerable<string> AsAsyncEnumerable(params string[] ids)

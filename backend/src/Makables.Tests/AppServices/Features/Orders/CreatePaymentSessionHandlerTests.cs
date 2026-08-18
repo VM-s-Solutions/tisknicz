@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Makables.Core.AppServices.Features.Orders;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payments;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -29,6 +30,7 @@ public class CreatePaymentSessionHandlerTests
     private readonly IPaymentProviderFactory _providerFactory = Substitute.For<IPaymentProviderFactory>();
     private readonly IPaymentProvider _provider = Substitute.For<IPaymentProvider>();
     private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IPaymentMetrics _metrics = Substitute.For<IPaymentMetrics>();
     private readonly CreatePaymentSession.Handler _sut;
 
     public CreatePaymentSessionHandlerTests()
@@ -39,7 +41,7 @@ public class CreatePaymentSessionHandlerTests
             .Returns(BusinessResult.Success(_provider));
 
         _sut = new CreatePaymentSession.Handler(
-            _session, _orders, _providerFactory, _clock,
+            _session, _orders, _providerFactory, _clock, _metrics,
             NullLogger<CreatePaymentSession.Handler>.Instance);
     }
 
@@ -79,6 +81,80 @@ public class CreatePaymentSessionHandlerTests
     }
 
     private static CreatePaymentSession.Command ValidCommand() => new(OrderId);
+
+    // ---- T-0165 (Q-0033): payment-session outcome emission ----
+
+    [Fact]
+    public async Task Successful_session_creation_records_the_created_outcome()
+    {
+        _provider.Code.Returns("comgate");
+        var order = BuildOrderInState(OrderState.PendingPayment);
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _provider.CreatePaymentAsync(order, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new PaymentSession(TransId1, Redirect1)));
+
+        await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        _metrics.Received(1).RecordSessionCreated("comgate", PaymentSessionOutcome.Created);
+    }
+
+    [Fact]
+    public async Task Transient_provider_failure_records_the_transient_outcome()
+    {
+        // The bucket that says "wait" rather than "page someone".
+        _provider.Code.Returns("comgate");
+        var order = BuildOrderInState(OrderState.PendingPayment);
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _provider.CreatePaymentAsync(order, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Failure<PaymentSession>(
+                Error.Transient(BusinessErrorMessage.PaymentProviderUnavailable)));
+
+        var result = await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        _metrics.Received(1).RecordSessionCreated("comgate", PaymentSessionOutcome.Transient);
+    }
+
+    [Theory]
+    [InlineData(ErrorType.Permanent)]
+    [InlineData(ErrorType.Configuration)]
+    [InlineData(ErrorType.Unknown)]
+    public async Task Non_transient_provider_failures_all_fold_into_the_permanent_outcome(ErrorType type)
+    {
+        // Deliberate: only the retry-worthy split matters operationally, and
+        // the exact code is already in the logs. Folding keeps tag cardinality
+        // at two failure values instead of four.
+        _provider.Code.Returns("comgate");
+        var order = BuildOrderInState(OrderState.PendingPayment);
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _provider.CreatePaymentAsync(order, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Failure<PaymentSession>(
+                new Error("payment", BusinessErrorMessage.PaymentUnknownError, type)));
+
+        await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        _metrics.Received(1).RecordSessionCreated("comgate", PaymentSessionOutcome.Permanent);
+    }
+
+    [Fact]
+    public async Task A_cached_session_records_nothing_no_provider_call_was_made()
+    {
+        _provider.Code.Returns("comgate");
+        var order = BuildOrderInState(OrderState.PendingPayment);
+        order.ReservePaymentSession(TransId1, Redirect1, _clock);
+        _orders.GetByIdForCustomerAsync(OrderId, CustomerUserId, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _provider.VerifyPaymentAsync(TransId1, Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(
+                new PaymentStatus(PaymentState.Pending, null, null)));
+
+        await _sut.Handle(ValidCommand(), CancellationToken.None);
+
+        _metrics.DidNotReceive().RecordSessionCreated(Arg.Any<string>(), Arg.Any<string>());
+    }
 
     [Fact]
     public async Task Happy_path_no_existing_ref_creates_new_session()

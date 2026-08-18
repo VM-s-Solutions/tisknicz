@@ -15,20 +15,26 @@
 Every log line carries `correlation_id` (from `traceparent`), `user_id`, `country_code`,
 `request_id` (ADR 0023 §4). **Start every investigation from the `correlation_id`** — it stitches the
 request, handler, and outbox/webhook trace together. Secrets are redacted at the logger layer
-(`SensitivePropertyMasker`). Custom metrics (the meter NAMES are registered in `MakablesMeters`,
-ADR 0023 §4): `outbox_lag_seconds`, `outbox_stalled_count`, `payment_create_failures_total`,
-`webhook_received_total`, `auto_deliver_count`, `payout_batch_total_minor`.
+(`SensitivePropertyMasker`). Custom metrics — all emitting as of T-0165 (Q-0033 closed):
 
-> ⚠ **EMISSION GAP — read before relying on the metric-based alerts below.** As of MVP, only the
-> `makables.payouts.*` instruments actually emit values; the outbox/payment/webhook/auto-deliver
-> metrics above are **registered meter names, not yet instrumented** (no code records them). The
-> ADR 0023 §4 alert table is therefore the *target* state — SecOps wires the rules, but the
-> outbox/payment/webhook gauges will read empty until the emission is added (logged as a follow-up).
-> **The signal that works TODAY** for the highest-value alert (outbox stall) is DB-backed, not a
-> metric: `GET /api/v1/outbox-events/stalled/count` on the admin host (the count the admin dashboard
-> surfaces, T-0126) + the stalled-event list + the admin retry/ack UI (T-0118c). The outbox sections
-> below lead with that endpoint; treat the `outbox_lag_seconds`/`outbox_stalled_count` charts as
-> pending the emission follow-up.
+| Instrument | Meter | Tags | Recorded by |
+|---|---|---|---|
+| `makables.outbox.lag_seconds` | `Makables.Outbox` | — | every sweep, **including empty ones** |
+| `makables.outbox.stalled` | `Makables.Outbox` | — | every sweep (sampled from the same count the admin tile uses) |
+| `makables.outbox.dispatched` | `Makables.Outbox` | `outcome` = routed / stalled / publish_failed | every sweep with work |
+| `makables.payments.sessions_created` | `Makables.Payments` | `provider`, `outcome` = created / transient / permanent | `CreatePaymentSession` |
+| `makables.webhooks.received` | `Makables.Webhooks` | `provider`, `outcome` = accepted / duplicate / rejected / malformed / error | every exit path of the Comgate controller |
+| `makables.orders.auto_delivered`, `.auto_cancelled` | `Makables.Orders` | — | the timer Functions, **including zero-count runs** |
+| `makables.payouts.*` | `Makables.Payouts` | see T-0102a | payout batch handler |
+
+> **Why the zero-value recordings matter.** A gauge or counter that only writes when it has work is
+> indistinguishable from a job that stopped running — which is the outage these instruments exist to
+> catch. An empty outbox sweep records `lag_seconds = 0`; a quiet night records
+> `auto_delivered = 0`. If a series goes *absent* rather than *zero*, the Function is not firing.
+>
+> The DB-backed stalled signal (`GET /api/v1/outbox-events/stalled/count` on the admin host, T-0126,
+> plus the stalled-event list and retry/ack UI, T-0118c) is unchanged and still the fastest way to
+> see *which* events are stuck. It is now a cross-check on the gauge rather than a substitute for it.
 
 ## A. Alert table (thresholds verbatim from ADR 0023 §4)
 
@@ -126,9 +132,10 @@ traces
 | project timestamp, message
 ```
 (The tick logs `loaded= routed= stalled= failedToPublish=` — see `ProcessOutboxFunction`.) If the
-tick stopped, the host/schedule is the cause (below). ⚠ The `outbox_lag_seconds` gauge is **not
-emitted yet** (see the EMISSION GAP note in §0) — chart it only once the emission follow-up ships;
-until then the tick log + the stalled-count endpoint (§4) are the authoritative outbox signals.
+tick stopped, the host/schedule is the cause (below). The `makables.outbox.lag_seconds` gauge (T-0165)
+carries this signal directly and is written on every sweep, so a *missing* series means the sweep
+itself stopped — check the tick log and the host before assuming a metrics problem. The
+stalled-count endpoint (§4) remains the fastest way to see *which* events are stuck.
 
 **Likely cause:** the Functions host is down / not scaled, the `ProcessOutbox:Schedule`
 (`*/30 * * * * *`) stopped firing, or the storage/queue conn string broke (no publish target).
@@ -150,9 +157,10 @@ their own; they need operator action.
 
 **Confirm (works today):** the authoritative live signal is `GET /api/v1/outbox-events/stalled/count`
 on the admin host (the count the admin dashboard surfaces, T-0126) + the stalled-event list
-(`GET /api/v1/outbox-events/stalled`) browsable in the admin outbox UI (T-0118c). ⚠ The
-`outbox_stalled_count` metric is **not emitted yet** (§0 EMISSION GAP) — use the endpoint/UI, not the
-chart, until the emission follow-up ships. Direct DB peek (matches the endpoint's predicate exactly):
+(`GET /api/v1/outbox-events/stalled`) browsable in the admin outbox UI (T-0118c). The
+`makables.outbox.stalled` gauge (T-0165) is sampled from the same count once per sweep — the chart is
+what alerts, the endpoint/UI is what tells you *which* events. Direct DB peek (matches the endpoint's
+predicate exactly):
 ```sql
 SELECT id, event_type, last_error_kind, last_error_code, retry_count
 FROM outbox_event

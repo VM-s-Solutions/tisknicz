@@ -80,6 +80,14 @@ public static class MakablesInfrastructureExtensions
         // CreatePayoutBatch from the timer) resolves IPayoutMetrics.
         services.AddMetrics();
         services.AddSingleton<IPayoutMetrics, Makables.Config.Observability.PayoutMetrics>();
+        // T-0165 (Q-0033): the remaining ADR 0023 §4 meters had names
+        // registered but nothing recording onto them, so every alert rule
+        // built on them read empty. Singletons — one instrument set per
+        // process, shared by the Web hosts and Makables.Functions.
+        services.AddSingleton<IOutboxMetrics, Makables.Config.Observability.OutboxMetrics>();
+        services.AddSingleton<IPaymentMetrics, Makables.Config.Observability.PaymentMetrics>();
+        services.AddSingleton<IWebhookMetrics, Makables.Config.Observability.WebhookMetrics>();
+        services.AddSingleton<IOrderLifecycleMetrics, Makables.Config.Observability.OrderLifecycleMetrics>();
 
         // === Auth crypto (T-0021) ===
         services.AddOptions<Argon2idOptions>()

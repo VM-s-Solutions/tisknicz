@@ -1,6 +1,7 @@
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Orders;
 using Makables.Core.Domain.Payments;
 using MediatR;
@@ -96,8 +97,23 @@ public static class CreatePaymentSession
         IOrderRepository orders,
         IPaymentProviderFactory paymentProviders,
         IClock clock,
+        IPaymentMetrics metrics,
         ILogger<Handler> logger) : IRequestHandler<Command, BusinessResult<Response>>
     {
+        /// <summary>
+        /// Map a provider result onto the metric's outcome tag. Only the
+        /// retry-worthy / not-retry-worthy split matters operationally, so
+        /// Configuration and Unknown fold into Permanent rather than growing
+        /// the tag cardinality — the error code is already in the logs for
+        /// anyone who needs the exact reason.
+        /// </summary>
+        private static string ClassifyOutcome(BusinessResult<PaymentSession> result) =>
+            result.IsSuccess
+                ? PaymentSessionOutcome.Created
+                : result.Error!.Type == ErrorType.Transient
+                    ? PaymentSessionOutcome.Transient
+                    : PaymentSessionOutcome.Permanent;
+
         public async Task<BusinessResult<Response>> Handle(
             Command command, CancellationToken cancellationToken)
         {
@@ -203,6 +219,11 @@ public static class CreatePaymentSession
 
             // 6. Create a fresh session.
             var createResult = await provider.CreatePaymentAsync(order, cancellationToken);
+            // ADR 0023 §4 / T-0165: the money path's leading indicator. A spike
+            // here means customers cannot pay, minutes before order volume
+            // would show it. Transient and Permanent are separate buckets
+            // because they call for different responses — wait vs. page someone.
+            metrics.RecordSessionCreated(provider.Code, ClassifyOutcome(createResult));
             if (!createResult.IsSuccess)
             {
                 return BusinessResult.Failure<Response>(createResult.Error!);

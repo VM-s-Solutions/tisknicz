@@ -2,6 +2,7 @@ using FluentAssertions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Outbox;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Observability;
 using Makables.Core.Domain.Outbox;
 using Makables.Core.Domain.SeedWork;
 using Makables.TestUtilities;
@@ -30,12 +31,14 @@ public class OutboxDispatcherTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly FakeClock _clock = new();
     private readonly OutboxDispatcherOptions _opts = new() { HandoffParkMinutes = 15 };
+    private readonly IOutboxMetrics _metrics = Substitute.For<IOutboxMetrics>();
     private readonly OutboxDispatcher _sut;
 
     public OutboxDispatcherTests()
     {
         _sut = new OutboxDispatcher(_outboxConsumer, _queue, _uow, _clock,
             Options.Create(_opts),
+            _metrics,
             NullLogger<OutboxDispatcher>.Instance);
     }
 
