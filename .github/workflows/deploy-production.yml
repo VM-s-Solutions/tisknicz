@@ -66,6 +66,18 @@ jobs:
               --template-file infra/bicep/main.bicep \
               --parameters infra/bicep/envs/weu.prod.bicepparam
 
+      # RE-LOGIN before the Key Vault work — do not delete. The OIDC client
+      # assertion azure/login exchanges lives 5 MINUTES and is replayed for
+      # every audience the CLI has not seen yet (Graph for `az ad sp show`,
+      # vault.azure.net for `az keyvault secret set`). A >5 min Bicep deploy
+      # therefore kills them with AADSTS700024 while the ARM token still works.
+      # Full post-mortem in deploy-staging.yml.
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # Push the EXTERNAL secrets into Key Vault (see deploy-staging.yml for the
       # full rationale). Self-grants the CI principal Secrets Officer, retries
       # through RBAC propagation, fails loudly on any empty required secret.
