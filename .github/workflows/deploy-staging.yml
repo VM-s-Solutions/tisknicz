@@ -209,6 +209,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Cache the restored NuGet packages across jobs/runs. No packages.lock.json
+      # exists, so key on the central package manifest (Directory.Packages.props
+      # pins every version) + global.json + all csproj (package-ref add/remove).
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/src/Directory.Packages.props', 'backend/src/global.json', 'backend/src/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       # Generate an IDEMPOTENT SQL script from the EF Core migrations (safe to
       # re-run: each migration is guarded by a check against __EFMigrationsHistory).
       # The DbContext lives in Infra.Database; the Customer host is the startup
@@ -371,6 +382,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Cache the restored NuGet packages across jobs/runs. No packages.lock.json
+      # exists, so key on the central package manifest (Directory.Packages.props
+      # pins every version) + global.json + all csproj (package-ref add/remove).
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/src/Directory.Packages.props', 'backend/src/global.json', 'backend/src/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       - name: Publish
         run: |
           dotnet publish backend/src/${{ matrix.host.project }}/${{ matrix.host.project }}.csproj \
@@ -402,6 +424,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # Cache the restored NuGet packages across jobs/runs. No packages.lock.json
+      # exists, so key on the central package manifest (Directory.Packages.props
+      # pins every version) + global.json + all csproj (package-ref add/remove).
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/src/Directory.Packages.props', 'backend/src/global.json', 'backend/src/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
       - name: Publish Functions
         run: |
           dotnet publish backend/src/Makables.Functions/Makables.Functions.csproj \
