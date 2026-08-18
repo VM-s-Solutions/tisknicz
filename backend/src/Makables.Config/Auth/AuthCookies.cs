@@ -1,6 +1,8 @@
 using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Identity;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Makables.Config.Auth;
 
@@ -41,12 +43,12 @@ public static class AuthCookies
         response.Cookies.Append(
             AccessCookieName(audience),
             session.AccessToken,
-            BuildOptions(session.AccessTokenExpiresAt));
+            BuildOptions(response, session.AccessTokenExpiresAt));
 
         response.Cookies.Append(
             RefreshCookieName(audience),
             session.RefreshToken,
-            BuildOptions(session.RefreshTokenExpiresAt));
+            BuildOptions(response, session.RefreshTokenExpiresAt));
     }
 
     public static void ClearSessionCookies(HttpResponse response, string audience)
@@ -55,7 +57,7 @@ public static class AuthCookies
         var expired = new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = UseSecureCookies(response),
             SameSite = SameSiteMode.Strict,
             Path = "/",
             Expires = DateTimeOffset.UnixEpoch,
@@ -119,12 +121,43 @@ public static class AuthCookies
         });
     }
 
-    private static CookieOptions BuildOptions(DateTimeOffset expiresAt) => new()
+    private static CookieOptions BuildOptions(HttpResponse response, DateTimeOffset expiresAt) => new()
     {
         HttpOnly = true,
-        Secure = true,
+        Secure = UseSecureCookies(response),
         SameSite = SameSiteMode.Strict,
         Path = "/",
         Expires = expiresAt,
     };
+
+    /// <summary>
+    /// Whether the session cookies carry the <c>Secure</c> attribute.
+    ///
+    /// <para>
+    /// Always <c>true</c> outside Development, regardless of the scheme
+    /// the request arrived on, so a TLS-terminating reverse proxy (where
+    /// <see cref="HttpRequest.IsHttps"/> is <c>false</c> on the inner hop)
+    /// can never silently downgrade a production cookie. The relaxation
+    /// is therefore provably unreachable in production per CLAUDE.md §6.
+    /// </para>
+    ///
+    /// <para>
+    /// In Development over plain <c>http://localhost</c> it is <c>false</c>:
+    /// Safari refuses to store a <c>Secure</c> cookie on an insecure
+    /// localhost origin (Chrome and Firefox treat localhost as trustworthy
+    /// and store it either way). With the attribute always set, login
+    /// answered <c>200</c> but the session cookie was silently dropped, so
+    /// the app stayed logged out and the user re-submitted the form again
+    /// and again. Development over HTTPS keeps <c>Secure</c>.
+    /// </para>
+    /// </summary>
+    private static bool UseSecureCookies(HttpResponse response)
+    {
+        var environment = response.HttpContext.RequestServices
+            .GetService<IHostEnvironment>();
+
+        return environment is null
+            || !environment.IsDevelopment()
+            || response.HttpContext.Request.IsHttps;
+    }
 }
