@@ -70,3 +70,33 @@ zero silent skips).
 | 3.4 | Maker accepts → ships (label PDF) → customer confirms delivery | 🟡 | |
 | 3.5 | Invoice PDFs download (customer + maker fee at payout) | 🟡 | |
 | 3.6 | Lifecycle emails arrive | 🟡 | |
+
+## Appendix — localhost pre-walk (2026-08-18)
+
+**Not dev.** Recorded here because it de-risks specific rows above, but it
+proves nothing about AC-1 (dev hosts answering) or AC-6 (session across the
+dev cookie domain) — both of those are properties of the *deployed*
+environment, and the ⛔ at the top still stands.
+
+Stack: local Postgres 16 (`~/.makables-dev`, seeded), `Web.Public` :5104,
+`Web.Maker` :5002, Azurite, `next dev` :3000.
+
+| # | Step | Result | Evidence |
+|---|---|---|---|
+| L.1 | Maker login (seeded account, Maker host) | ✅ | `POST /api/v1/auth/login` → 200 with access + refresh token, `aud: maker` |
+| L.2 | Maker logo upload | ✅ | `POST /api/v1/me/maker/logo` (multipart PNG) → 200 `{"blobPath":"cz/makers/seed-maker-01/…png"}`; blob written to Azurite |
+| L.3 | Uploaded image **streams back** | ✅ | `GET /api/v1/files/makers/cz/seed-maker-01/….png` → 200 `image/png`, 809 B, 400×225 — byte-identical to the upload |
+| L.4 | Uploaded image **renders in the catalog** | ✅ | `/katalog` in Chromium + WebKit: `<img>` `complete=true`, non-zero `naturalWidth/Height`, served via `/_next/image`. This is the "it uploaded but I just see an icon" leg — checked, not assumed |
+| L.5 | Catalog renders live data | ✅ | 55 seeded makers, 24 cards/page, 0 console errors in both engines at 375 / 768 / 1280 |
+
+Two local-dev traps hit on the way (no code defect, both cost real time):
+
+- **Azurite needs `--skipApiVersionCheck`.** Azurite 3.36 rejects the API
+  version the current Azure SDK sends (`InvalidHeaderValue`), so container
+  creation fails. The six `BlobContainer.All` containers still have to be
+  created by hand — the client never auto-creates.
+- **`next.config.ts` is read once, at dev-server start.** A dev server that
+  had been up for 16 days made every maker logo throw
+  `Invalid src prop … hostname "localhost" is not configured` and rendered
+  **zero** catalog cards. Restarting it cleared the error completely. Rule out
+  a stale dev server before treating a next/image host error as a code defect.
