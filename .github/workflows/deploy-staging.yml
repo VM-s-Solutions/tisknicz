@@ -72,6 +72,22 @@ jobs:
               --template-file infra/bicep/main.bicep \
               --parameters infra/bicep/envs/weu.dev.bicepparam
 
+      # RE-LOGIN before the Key Vault work — do not delete. The GitHub OIDC
+      # token azure/login exchanges is a client assertion with a 5-MINUTE
+      # lifetime, and the CLI replays that STORED assertion every time it needs
+      # a token for an audience it has not seen yet (Microsoft Graph for
+      # `az ad sp show`, vault.azure.net for `az keyvault secret set`). The ARM
+      # token from the Bicep step stays valid for ~1 h, so a >5 min Bicep deploy
+      # leaves the session looking healthy while every NEW audience fails with
+      # AADSTS700024 "Client assertion is not within its valid time range"
+      # (run 32115009184: login 08:10:29, assertion expiry 08:15:29, Graph call
+      # 08:20:35 → dead). Minting a fresh assertion here costs ~2 s.
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       # Push the EXTERNAL secrets (the ones Bicep cannot derive) into Key Vault.
       # Self-grants the CI principal Key Vault Secrets Officer on the vault (the
       # OIDC principal needs User Access Administrator on the RG for this), then
