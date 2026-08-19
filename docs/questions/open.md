@@ -573,3 +573,18 @@ same edit.
 - **Status:** open
 - **Answer (filled by user):**
 - **Answer (filled by user):**
+
+## Q-0039 — The Public host's per-IP rate limit collapses to ONE bucket behind the same-origin proxy
+- **From:** dotnet-backend (fix/public-host-rate-limit-content-loading)
+- **Ticket / context:** T-0153 (same-origin `/api-proxy/<host>` rewrite) + T-0136 (per-IP rate limits). Surfaced as the "/katalog returns HTTP 200 but renders *Katalog se nepodařilo načíst*" defect.
+- **Asked:** 2026-08-19
+- **Blocking:** no — the shipped fix (blob streams get their own partition, Public envelope raised 60 → 300/min) clears the symptom with ~10× headroom at current traffic. This question is about the structural limit, not the outage.
+- **Owner:** architect + secops
+- **Resolve-by:** pre-launch (production traffic makes the shared bucket a hard ceiling)
+- **Question:** In deployed environments the browser never reaches the Public host directly — `NEXT_PUBLIC_API_PUBLIC_BASE_URL=/api-proxy/public` and the Next server forwards the request, so **every anonymous request from every visitor arrives from the frontend App Service's single egress IP**. `DefaultPartition` falls back to `ip:{ip}` when there is no `sub` claim, so the whole site's anonymous traffic (catalog reads, images, maker registration) shares one fixed window. The authenticated hosts are unaffected — they partition on the `sub` claim. Raising the envelope buys headroom but does not restore per-visitor fairness: one scraper behind the proxy still spends everyone's budget, and the limiter can no longer tell them apart.
+- **Options the agent has considered:**
+  - **Retire the proxy** by putting the APIs on a shared parent domain (`api.makables.cz`) — already named as the T-0153 follow-up in `next.config.ts`. The proxy exists only because sibling `*.azurewebsites.net` hosts are a public suffix and cannot share the ADR 0012 cookies; a real parent domain removes the reason for the proxy, and the connection IP becomes the true client again. Cleanest, and fixes the rate-limit and the cookie constraint together.
+  - **Trust a forwarded client IP from the proxy only** — `UseForwardedHeaders` with a restricted `KnownProxies`/`KnownNetworks`, or a shared-secret header the frontend adds. Restores per-visitor partitioning without a DNS change, but Next `rewrites()` cannot inject the client IP, so the proxy would have to become a Route Handler; and an un-validated `X-Forwarded-For` is a trivial limiter bypass, so the allowlist has to be exactly right (see the reverse-proxy prerequisite documented on `DefaultPartition`).
+  - **Accept the shared bucket and size it for aggregate traffic** (what ships today) — correct while the anonymous surface is cheap, cacheable reads; degrades as soon as real scraping starts.
+- **Status:** open
+- **Answer (filled by user):**

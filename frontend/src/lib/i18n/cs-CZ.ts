@@ -51,6 +51,17 @@ export const messages = {
   'error.configuration': 'Konfigurace platformy neumožňuje tuto akci. Kontaktujte podporu.',
   'error.unknown': 'Něco se pokazilo.',
 
+  // Transport-level codes minted by `lib/runtime/api-fetch.ts` rather
+  // than by the backend. Without their own entries these all collapsed
+  // onto `error.transient` ("Server je momentálně nedostupný"), which
+  // told the user the server was down when it had in fact answered —
+  // just with a 429, or not quite fast enough. A wrong diagnosis is
+  // worse than a vague one: it sends people to refresh in a loop, which
+  // is exactly what deepens a rate-limit window.
+  'http.429': 'Příliš mnoho požadavků. Počkejte prosím chvíli a zkuste to znovu.',
+  'network.timeout': 'Server neodpověděl včas. Zkuste to prosím znovu.',
+  'network.unreachable': 'Server je momentálně nedostupný. Zkuste to prosím znovu.',
+
   // Global 404 page
   'notFound.title': 'Stránka nenalezena',
   'notFound.body': 'Tato stránka neexistuje nebo byla přesunuta.',
@@ -429,7 +440,6 @@ export const messages = {
   'catalog.maker.reviews.empty': 'Tento výrobce zatím nemá žádná hodnocení.',
   'catalog.maker.reviews.reply_label': 'Odpověď výrobce',
   'catalog.maker.error.title': 'Profil se nepodařilo načíst',
-  'catalog.maker.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
   'catalog.maker.not_found.title': 'Výrobce nenalezen',
   'catalog.maker.not_found.body': 'Tento profil neexistuje nebo už není dostupný.',
   // Shared by the not-found page and the happy-path profile footer, so
@@ -464,7 +474,6 @@ export const messages = {
   'catalog.product_detail.gallery.thumbnail_aria': 'Náhled {n}',
   'catalog.product_detail.gallery.no_image': 'Bez fotografie',
   'catalog.product_detail.error.title': 'Produkt se nepodařilo načíst',
-  'catalog.product_detail.error.body': 'Zkuste prosím obnovit stránku za chvíli.',
   'catalog.product_detail.not_found.title': 'Produkt nenalezen',
   'catalog.product_detail.not_found.body': 'Tento produkt neexistuje nebo už není dostupný.',
   'catalog.product_detail.metadata.fallback_description': 'Detail produktu na Makables.',

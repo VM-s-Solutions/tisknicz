@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
 import {
   buildMakerLogoUrl,
   getProductById,
@@ -88,7 +89,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </Link>
         <Alert variant="error">
           <p className="font-semibold">{t('catalog.product_detail.error.title')}</p>
-          <p className="mt-1">{t('catalog.product_detail.error.body')}</p>
+          <p className="mt-1">{resolveErrorMessage(result.error)}</p>
         </Alert>
       </section>
     );
