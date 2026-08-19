@@ -15,6 +15,8 @@ import {
 } from '@/lib/api-client-helpers/catalog';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
+import type { ApiError } from '@/lib/runtime/result';
 import { canonicalUrl } from '@/lib/seo/site-url';
 import { CatalogFilters } from './filters-client';
 import { MakerCard } from './maker-card';
@@ -187,7 +189,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 baseQuery={baseQuery}
               />
             ) : (
-              <CatalogError />
+              <CatalogError error={result.error} />
             )}
           </div>
         </div>
@@ -261,13 +263,22 @@ function CatalogEmpty() {
   );
 }
 
-function CatalogError() {
+/**
+ * The catalog's failure surface used to print `error.transient`
+ * ("Server je momentálně nedostupný") for EVERY failure, whatever
+ * actually happened. When the Public host's rate limiter answered 429,
+ * the page still returned HTTP 200 and told the visitor the server was
+ * down — a 200 in the network tab and a "server unavailable" banner on
+ * screen, which is unfalsifiable from the outside and cost real
+ * debugging time. Render what actually failed instead.
+ */
+function CatalogError({ error }: { readonly error: ApiError }) {
   return (
     <Alert variant="error">
       <div className="flex flex-col gap-3">
         <div>
           <p className="font-semibold">{t('catalog.error.title')}</p>
-          <p className="mt-1 text-sm">{t('error.transient')}</p>
+          <p className="mt-1 text-sm">{resolveErrorMessage(error)}</p>
         </div>
         <Link
           href="/katalog"

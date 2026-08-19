@@ -10,6 +10,7 @@ import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Stars } from '@/components/ui/stars';
 import { t } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
 import {
   buildMakerLogoUrl,
   getMakerBySlug,
@@ -131,7 +132,7 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
         </Link>
         <Alert variant="error">
           <p className="font-semibold">{t('catalog.maker.error.title')}</p>
-          <p className="mt-1">{t('catalog.maker.error.body')}</p>
+          <p className="mt-1">{resolveErrorMessage(result.error)}</p>
         </Alert>
       </section>
     );

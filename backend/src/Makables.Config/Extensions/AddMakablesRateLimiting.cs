@@ -66,6 +66,54 @@ public static class MakablesRateLimitingExtensions
     /// </summary>
     public const string ShippingWidgetConfigPolicyName = "shipping-widget-config";
 
+    /// <summary>
+    /// Per-caller envelope for the Public host.
+    ///
+    /// <para>
+    /// Sized for aggregate site traffic, not for one visitor. Behind the
+    /// T-0153 same-origin proxy the browser never talks to this host
+    /// directly — every anonymous request arrives from the frontend App
+    /// Service's single egress IP, so this one partition covers the WHOLE
+    /// site's anonymous traffic. The previous 60/min was below a single
+    /// catalog page view and broke with a couple of concurrent visitors:
+    /// the server render of <c>/katalog</c> got a 429, which the frontend
+    /// folds to a transient error, so the page returned HTTP 200 carrying
+    /// "Katalog se nepodařilo načíst".
+    /// </para>
+    ///
+    /// <para>
+    /// The authenticated hosts do not have this problem — their partition
+    /// key is the <c>sub</c> claim, so the proxy's shared IP never
+    /// collapses them into one bucket.
+    /// </para>
+    /// </summary>
+    public const int PublicEnvelopePermitLimit = 300;
+
+    /// <summary>
+    /// Separate envelope for the anonymous blob-streaming routes
+    /// (<c>/api/v{n}/files/**</c> — maker logos, product photos, avatars,
+    /// order attachments).
+    ///
+    /// <para>
+    /// These are bulk by nature: one catalog page requests a full page of
+    /// maker logos, a maker profile adds every product thumbnail, a
+    /// product detail adds the whole gallery. Counting them against the
+    /// same budget as the JSON API meant ordinary browsing spent the
+    /// envelope on images and starved the very API call that renders the
+    /// page referencing them.
+    /// </para>
+    ///
+    /// <para>
+    /// They are also the cheapest thing this host serves — anonymous,
+    /// immutable, <c>Cache-Control: public, max-age=86400</c> byte
+    /// streams. The limiter is a scraping/bandwidth bound here, not a
+    /// fairness control, so it is set an order of magnitude above what a
+    /// real session can produce while still capping an unattended
+    /// crawler.
+    /// </para>
+    /// </summary>
+    public const int BlobStreamPermitLimit = 1000;
+
     public static IServiceCollection AddMakablesRateLimiting(
         this IServiceCollection services,
         string audience)
@@ -75,7 +123,7 @@ public static class MakablesRateLimitingExtensions
             MakablesHosts.Customer => (100, TimeSpan.FromMinutes(1)),
             MakablesHosts.Maker    => (60, TimeSpan.FromMinutes(1)),
             MakablesHosts.Admin    => (30, TimeSpan.FromMinutes(1)),
-            MakablesHosts.Public   => (60, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Public   => (PublicEnvelopePermitLimit, TimeSpan.FromMinutes(1)),
             _                      => (60, TimeSpan.FromMinutes(1)),
         };
 
@@ -160,24 +208,139 @@ public static class MakablesRateLimitingExtensions
     /// bypass. Tracked in the launch checklist; this code does NOT trust XFF.
     /// </para>
     /// </summary>
-    private static RateLimitPartition<string> DefaultPartition(
+    internal static RateLimitPartition<string> DefaultPartition(
         HttpContext http, int permitLimit, TimeSpan window)
     {
         var sub = http.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        var key = !string.IsNullOrWhiteSpace(sub)
+        var caller = !string.IsNullOrWhiteSpace(sub)
             ? $"user:{sub}"
             : IpPartitionKey(http);
+
+        // Blob streams get their OWN bucket for the same caller. Sharing
+        // one envelope let a page's images starve the API call that
+        // renders the page — see BlobStreamPermitLimit.
+        var isBlobStream = IsBlobStreamPath(http.Request.Path);
+        var key = isBlobStream ? $"files:{caller}" : caller;
+        var limit = isBlobStream ? BlobStreamPermitLimit : permitLimit;
 
         return RateLimitPartition.GetFixedWindowLimiter(
             key,
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = permitLimit,
+                PermitLimit = limit,
                 Window = window,
                 QueueLimit = 0,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 AutoReplenishment = true,
             });
+    }
+
+    /// <summary>
+    /// True for the versioned blob-streaming routes. Two shapes exist:
+    /// <list type="bullet">
+    ///   <item><description><c>/api/v{n}/files/{+rest}</c> — the anonymous
+    ///     Public-host images (<c>ProductImageController</c>,
+    ///     <c>ProfileImageController</c>).</description></item>
+    ///   <item><description><c>/api/v{n}/{audience}/files/{+rest}</c> — the
+    ///     authenticated per-audience <c>FilesController</c>s (shipping
+    ///     labels, invoice PDFs, dispute return labels), whose route
+    ///     templates carry the audience segment.</description></item>
+    /// </list>
+    ///
+    /// <para>
+    /// Matched segment-wise rather than with <c>StartsWith("/api/v")</c> or a
+    /// <c>Contains("/files/")</c> so <c>/api/v1/filesystem/...</c> or a future
+    /// <c>/api/v1/files-export</c> cannot slip into the far larger stream
+    /// budget. The audience segment is allow-listed for the same reason. A
+    /// bare <c>/api/v1/files</c> streams nothing and stays on the API
+    /// envelope.
+    /// </para>
+    /// </summary>
+    internal static bool IsBlobStreamPath(PathString path)
+    {
+        if (!path.HasValue)
+        {
+            return false;
+        }
+
+        var span = path.Value.AsSpan();
+        // segment 1: "api"
+        if (!TryTakeSegment(ref span, out var api) || !api.Equals("api", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // segment 2: "v" + a version ("v1", "v2", "v1.0"). Anything else
+        // is not the versioned API root.
+        if (!TryTakeSegment(ref span, out var version)
+            || version.Length < 2
+            || (version[0] != 'v' && version[0] != 'V')
+            || !char.IsAsciiDigit(version[1]))
+        {
+            return false;
+        }
+
+        // segment 3: "files", or an audience segment followed by "files".
+        if (!TryTakeSegment(ref span, out var third))
+        {
+            return false;
+        }
+
+        if (!third.Equals("files", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!IsAudienceSegment(third)
+                || !TryTakeSegment(ref span, out var files)
+                || !files.Equals("files", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        // ...and at least one more segment, or there is nothing to stream.
+        return TryTakeSegment(ref span, out _);
+    }
+
+    /// <summary>
+    /// The audience prefixes used by the per-host <c>FilesController</c>
+    /// route templates (<c>api/v{version}/maker/files</c> etc.). Allow-listed
+    /// rather than "any segment" so only the known file controllers reach the
+    /// stream budget.
+    /// </summary>
+    private static bool IsAudienceSegment(ReadOnlySpan<char> segment) =>
+        segment.Equals("customer", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("maker", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("admin", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("public", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Pops the next non-empty <c>/</c>-delimited segment off
+    /// <paramref name="remaining"/>. Empty segments (a leading slash, a
+    /// doubled slash, a trailing slash) are skipped rather than treated as
+    /// a segment, so <c>//api//v1//files//x</c> classifies the same as the
+    /// canonical path.
+    /// </summary>
+    private static bool TryTakeSegment(ref ReadOnlySpan<char> remaining, out ReadOnlySpan<char> segment)
+    {
+        while (!remaining.IsEmpty)
+        {
+            var slash = remaining.IndexOf('/');
+            if (slash < 0)
+            {
+                segment = remaining;
+                remaining = default;
+                return !segment.IsEmpty;
+            }
+
+            segment = remaining[..slash];
+            remaining = remaining[(slash + 1)..];
+            if (!segment.IsEmpty)
+            {
+                return true;
+            }
+        }
+
+        segment = default;
+        return false;
     }
 
     /// <summary>
