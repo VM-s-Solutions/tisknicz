@@ -580,7 +580,7 @@ export const messages = {
     'Tady najdete stručný přehled, jak fungují objednávky na Makables v B2C režimu. Tento text není individuální právní poradenství.',
   'static.terms.section_operator_title': '1. Provozovatel platformy',
   'static.terms.section_operator_body':
-    'Makables provozuje JVM YORE s.r.o. jako online tržiště, kde se propojují zákazníci a nezávislí makeři. Aktuální identifikační údaje provozovatele najdete vždy v kontaktní sekci.',
+    'Makables provozuje JVM Yore, s.r.o. jako online tržiště, kde se propojují zákazníci a nezávislí makeři. Aktuální identifikační údaje provozovatele najdete vždy v kontaktní sekci.',
   'static.terms.section_scope_title': '2. B2C model a role stran',
   'static.terms.section_scope_body':
     'Makables poskytuje technické prostředí pro nabídky, objednávky, platby a doručení. V B2C režimu je prodávajícím vůči zákazníkovi konkrétní maker. Smlouva o dodání zboží nebo služby vzniká mezi zákazníkem a makerem, pokud není u nabídky uvedeno jinak.',
@@ -613,7 +613,7 @@ export const messages = {
     'Tento dokument shrnuje, jak Makables zpracovává osobní údaje. Nejde o individuální právní poradenství.',
   'static.privacy.section_controller_title': '1. Správce osobních údajů',
   'static.privacy.section_controller_body':
-    'Správcem osobních údajů je provozovatel platformy JVM YORE s.r.o. Kontaktní údaje správce a kanály pro výkon práv subjektů údajů jsou uvedeny v kontaktní části služby.',
+    'Správcem osobních údajů je provozovatel platformy JVM Yore, s.r.o. Kontaktní údaje správce a kanály pro výkon práv subjektů údajů jsou uvedeny v kontaktní části služby.',
   'static.privacy.section_data_title': '2. Jaké údaje zpracováváme',
   'static.privacy.section_data_body':
     'Zpracováváme identifikační a kontaktní údaje, údaje o objednávkách, platbách, komunikaci mezi účastníky a technické provozní záznamy nutné pro bezpečnost, audit a plnění zákonných povinností.',
@@ -637,21 +637,29 @@ export const messages = {
   'static.privacy.law_cz_electronic': 'Zákon č. 480/2004 Sb., o některých službách informační společnosti.',
 
   // --- /kontakt (identifikace provozovatele) ---
+  // Závazné údaje ověřené proti ARES / veřejnému rejstříku (IČO 29633443,
+  // ověřeno 18. 8. 2026): obchodní firma v zapsaném tvaru, sídlo a spisová
+  // značka. ARES nevede u subjektu registraci k DPH → "Neplátce DPH" místo
+  // DIČ. Tím padá placeholder-lock z T-0130 pro TUTO stránku; /vop a /gdpr
+  // zůstávají placeholdery, dokud nepřijde schválený právní text (Q-0030).
   'static.contact.meta_title': 'Kontakt — Makables',
-  'static.contact.meta_description': 'Identifikační a kontaktní údaje provozovatele platformy Makables, JVM YORE s.r.o.',
+  'static.contact.meta_description':
+    'Identifikační a kontaktní údaje provozovatele platformy Makables, JVM Yore, s.r.o.',
   'static.contact.title': 'Kontakt',
-  'static.contact.disclaimer':
-    'PLACEHOLDER — čekáme na doplnění závazných identifikačních údajů (IČO, sídlo, DIČ) provozovatelem. Text níže nesmí jít do produkčního nasazení bez doplnění.',
   'static.contact.section_operator_title': 'Provozovatel platformy',
   'static.contact.operator_name_label': 'Název',
-  'static.contact.operator_name': 'JVM YORE s.r.o.',
+  'static.contact.operator_name': 'JVM Yore, s.r.o.',
   'static.contact.operator_ico_label': 'IČO',
-  'static.contact.operator_ico_value': 'doplní se před spuštěním',
+  'static.contact.operator_ico_value': '29633443',
+  'static.contact.operator_vat_label': 'DIČ',
+  'static.contact.operator_vat_value': 'Neplátce DPH',
   'static.contact.operator_address_label': 'Sídlo',
-  'static.contact.operator_address_value': 'doplní se před spuštěním',
+  'static.contact.operator_address_value': 'Příčná 1892/4, Nové Město, 110 00 Praha 1',
+  'static.contact.operator_register_label': 'Zápis v OR',
+  'static.contact.operator_register_value': 'Městský soud v Praze, oddíl C, vložka 449138',
   'static.contact.section_contact_title': 'Kontaktní údaje',
   'static.contact.operator_email_label': 'E-mail',
-  'static.contact.operator_email_value': 'doplní se před spuštěním',
+  'static.contact.operator_email_value': 'makables@jvm-yore.com',
 
   // Dashboard — maker products (T-0049).
   // Plural-neutral phrasing rule from the catalog block above applies
@@ -808,6 +816,21 @@ export const messages = {
     'Generování PDF faktury selhalo. Tým byl informován.',
   'invoice.blobUploadFailed':
     'Nahrání PDF faktury do úložiště selhalo. Tým byl informován.',
+  // Storage-adapter codes (BusinessErrorMessage.Blob*). Customer- and
+  // maker-facing: these are what an upload or a file download returns
+  // when the storage account is unreachable. Before the retry-budget fix
+  // that path threw past the adapter and surfaced as a bare 500, so no
+  // key existed — now it reaches the UI as a real transient and needs
+  // Czech copy. Wording says "zkuste to znovu" because Error.Transient
+  // means a retry can genuinely succeed.
+  'blob.notFound':
+    'Soubor už v úložišti není.',
+  'blob.uploadFailed':
+    'Nahrání souboru do úložiště se nezdařilo. Zkuste to prosím za chvíli znovu.',
+  'blob.downloadFailed':
+    'Soubor se nepodařilo načíst z úložiště. Zkuste to prosím za chvíli znovu.',
+  'blob.operationFailed':
+    'Operace se souborem se nezdařila. Zkuste to prosím za chvíli znovu.',
   // T-0069 invoice email attachment codes. Same admin / log surface as
   // the other invoice.* codes — the customer never sees these (a Transient
   // re-delivers the email; a Permanent stalls the row for ops).

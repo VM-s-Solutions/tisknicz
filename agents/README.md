@@ -12,7 +12,7 @@ together — the roster, the scaffolding for role-owned living docs, and the wor
 
 If you are a human: start with [`docs/WAY-OF-WORKING.md`](../docs/WAY-OF-WORKING.md).
 If you are an agent: read your charter in `.claude/agents/<your-name>.md`, then the process docs
-under [`docs/process/`](../docs/process/), then the ticket you were handed.
+under [`agents/process/`](./process/), then the ticket you were handed.
 
 ---
 
@@ -132,7 +132,7 @@ reads, in order:
 4. The ticket it was handed (and any ADRs / stories it links)
 
 Communication is **artifact-based** — agents never chat with each other. See
-[`docs/process/communication.md`](../docs/process/communication.md).
+[`agents/process/communication.md`](./process/communication.md).
 
 ---
 
@@ -160,4 +160,4 @@ provider.
 
 Edit a charter or a process doc; the change takes effect on the next invocation. Everything is in
 Git, so every change to *how the team works* is reviewable like code. If you rename a charter, the
-PM is responsible for updating every reference in `docs/process/`, `docs/tickets/`, and this roster.
+PM is responsible for updating every reference in `agents/process/`, `docs/tickets/`, and this roster.

@@ -15,6 +15,19 @@ namespace Makables.Infra.Azure.Storage.Blobs;
 /// <c>MapboxAddressGeocoder</c> T-0031).
 ///
 /// <para>
+/// <b>Two exception shapes, not one.</b> A single failed attempt with an
+/// HTTP response surfaces as <see cref="RequestFailedException"/>. When
+/// every attempt fails at the transport layer (endpoint down, DNS,
+/// connection refused) the SDK's retry policy instead throws an
+/// <see cref="AggregateException"/> wrapping one inner exception per
+/// attempt — which used to escape this adapter and reach the client as
+/// an unhandled 500 with a stack trace instead of the documented
+/// <c>blob.*Failed</c> transient. Both are caught. Cancellation is
+/// deliberately excluded from the aggregate filter so a disconnected
+/// client still cancels rather than logging a spurious failure.
+/// </para>
+///
+/// <para>
 /// Container validation: only the four containers in
 /// <see cref="BlobContainer.All"/> are accepted; anything else returns
 /// <see cref="BusinessErrorMessage.BlobInvalidContainer"/> so a typo'd
@@ -64,6 +77,13 @@ public sealed class AzureBlobStorageClient(
                 container, path, ex.Status);
             return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobUploadFailed));
         }
+        catch (AggregateException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex,
+                "Blob upload failed after retries (container {Container}, path {Path}).",
+                container, path);
+            return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobUploadFailed));
+        }
     }
 
     public async Task<BusinessResult<BlobDownload>> DownloadAsync(
@@ -89,13 +109,21 @@ public sealed class AzureBlobStorageClient(
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            return BusinessResult.Failure<BlobDownload>(Error.NotFound("blob"));
+            return BusinessResult.Failure<BlobDownload>(
+                Error.NotFound("blob", BusinessErrorMessage.BlobNotFound));
         }
         catch (RequestFailedException ex)
         {
             logger.LogWarning(ex,
                 "Blob download failed (container {Container}, path {Path}, status {Status}).",
                 container, path, ex.Status);
+            return BusinessResult.Failure<BlobDownload>(Error.Transient(BusinessErrorMessage.BlobDownloadFailed));
+        }
+        catch (AggregateException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex,
+                "Blob download failed after retries (container {Container}, path {Path}).",
+                container, path);
             return BusinessResult.Failure<BlobDownload>(Error.Transient(BusinessErrorMessage.BlobDownloadFailed));
         }
     }
@@ -125,6 +153,13 @@ public sealed class AzureBlobStorageClient(
                 container, path, ex.Status);
             return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
         }
+        catch (AggregateException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex,
+                "Blob delete failed after retries (container {Container}, path {Path}).",
+                container, path);
+            return BusinessResult.Failure(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
+        }
     }
 
     public async Task<BusinessResult<bool>> ExistsAsync(
@@ -148,6 +183,13 @@ public sealed class AzureBlobStorageClient(
             logger.LogWarning(ex,
                 "Blob exists-check failed (container {Container}, path {Path}, status {Status}).",
                 container, path, ex.Status);
+            return BusinessResult.Failure<bool>(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
+        }
+        catch (AggregateException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex,
+                "Blob exists-check failed after retries (container {Container}, path {Path}).",
+                container, path);
             return BusinessResult.Failure<bool>(Error.Transient(BusinessErrorMessage.BlobOperationFailed));
         }
     }

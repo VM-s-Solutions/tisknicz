@@ -1,3 +1,4 @@
+using Azure.Core;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Makables.Core.Domain.Storage;
@@ -42,20 +43,47 @@ public static class MakablesBlobStorageExtensions
         services.AddSingleton(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
+            var clientOptions = BuildClientOptions(opts);
 
             // Connection string wins when present (local dev / CI /
             // Azurite). In staging + prod the env var is empty and we
             // fall through to ServiceUri + DefaultAzureCredential.
             if (!string.IsNullOrWhiteSpace(opts.ConnectionString))
             {
-                return new BlobServiceClient(opts.ConnectionString);
+                return new BlobServiceClient(opts.ConnectionString, clientOptions);
             }
 
-            return new BlobServiceClient(new Uri(opts.ServiceUri!), new DefaultAzureCredential());
+            return new BlobServiceClient(
+                new Uri(opts.ServiceUri!), new DefaultAzureCredential(), clientOptions);
         });
 
         services.AddSingleton<IBlobStorageClient, AzureBlobStorageClient>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Bounded retry + per-request timeout for every blob call
+    /// (CLAUDE.md §5: external calls get a timeout and a bounded retry
+    /// with jitter). Without this the SDK defaults apply — 5 retries
+    /// with a 60 s <c>MaxDelay</c> — and an unreachable storage endpoint
+    /// sleeps ~25 s of exponential backoff before failing. That is not
+    /// hypothetical: a maker-logo upload took 26.4 s and threw when the
+    /// local emulator was down.
+    /// <para>
+    /// <c>RetryMode.Exponential</c> is the jittered mode; the fixed mode
+    /// would synchronise every caller's retry into a thundering herd
+    /// against a storage account that is already struggling.
+    /// </para>
+    /// </summary>
+    internal static BlobClientOptions BuildClientOptions(AzureBlobStorageOptions opts)
+    {
+        var clientOptions = new BlobClientOptions();
+        clientOptions.Retry.Mode = RetryMode.Exponential;
+        clientOptions.Retry.MaxRetries = opts.MaxRetries;
+        clientOptions.Retry.Delay = opts.RetryDelay;
+        clientOptions.Retry.MaxDelay = opts.MaxRetryDelay;
+        clientOptions.Retry.NetworkTimeout = opts.NetworkTimeout;
+        return clientOptions;
     }
 }
