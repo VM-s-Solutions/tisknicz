@@ -236,16 +236,24 @@ public static class MakablesRateLimitingExtensions
     }
 
     /// <summary>
-    /// True for the versioned blob-streaming routes — <c>/api/v{n}/files/{+rest}</c>,
-    /// the shape produced by the <c>api/v{version:apiVersion}/files</c> route
-    /// templates on <c>ProductImageController</c>, <c>ProfileImageController</c>
-    /// and the per-audience <c>FilesController</c>s.
+    /// True for the versioned blob-streaming routes. Two shapes exist:
+    /// <list type="bullet">
+    ///   <item><description><c>/api/v{n}/files/{+rest}</c> — the anonymous
+    ///     Public-host images (<c>ProductImageController</c>,
+    ///     <c>ProfileImageController</c>).</description></item>
+    ///   <item><description><c>/api/v{n}/{audience}/files/{+rest}</c> — the
+    ///     authenticated per-audience <c>FilesController</c>s (shipping
+    ///     labels, invoice PDFs, dispute return labels), whose route
+    ///     templates carry the audience segment.</description></item>
+    /// </list>
     ///
     /// <para>
-    /// Matched segment-wise rather than with <c>StartsWith("/api/v")</c> so
-    /// <c>/api/v1/filesystem/...</c> or a future <c>/api/v1/files-export</c>
-    /// cannot slip into the far larger image budget. A bare
-    /// <c>/api/v1/files</c> streams nothing and stays on the API envelope.
+    /// Matched segment-wise rather than with <c>StartsWith("/api/v")</c> or a
+    /// <c>Contains("/files/")</c> so <c>/api/v1/filesystem/...</c> or a future
+    /// <c>/api/v1/files-export</c> cannot slip into the far larger stream
+    /// budget. The audience segment is allow-listed for the same reason. A
+    /// bare <c>/api/v1/files</c> streams nothing and stays on the API
+    /// envelope.
     /// </para>
     /// </summary>
     internal static bool IsBlobStreamPath(PathString path)
@@ -272,16 +280,37 @@ public static class MakablesRateLimitingExtensions
             return false;
         }
 
-        // segment 3: "files"
-        if (!TryTakeSegment(ref span, out var files)
-            || !files.Equals("files", StringComparison.OrdinalIgnoreCase))
+        // segment 3: "files", or an audience segment followed by "files".
+        if (!TryTakeSegment(ref span, out var third))
         {
             return false;
+        }
+
+        if (!third.Equals("files", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!IsAudienceSegment(third)
+                || !TryTakeSegment(ref span, out var files)
+                || !files.Equals("files", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
         }
 
         // ...and at least one more segment, or there is nothing to stream.
         return TryTakeSegment(ref span, out _);
     }
+
+    /// <summary>
+    /// The audience prefixes used by the per-host <c>FilesController</c>
+    /// route templates (<c>api/v{version}/maker/files</c> etc.). Allow-listed
+    /// rather than "any segment" so only the known file controllers reach the
+    /// stream budget.
+    /// </summary>
+    private static bool IsAudienceSegment(ReadOnlySpan<char> segment) =>
+        segment.Equals("customer", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("maker", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("admin", StringComparison.OrdinalIgnoreCase)
+        || segment.Equals("public", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Pops the next non-empty <c>/</c>-delimited segment off

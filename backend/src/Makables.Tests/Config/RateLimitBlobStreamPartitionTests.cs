@@ -40,6 +40,12 @@ public sealed class RateLimitBlobStreamPartitionTests
     [InlineData("/API/V1/Files/Products/CZ/prod-1/photo.jpg")]
     // Version-agnostic: the route template is api/v{version:apiVersion}/files.
     [InlineData("/api/v2/files/products/CZ/prod-1/photo.jpg")]
+    // The authenticated FilesControllers carry an audience segment before
+    // "files" — a maker's product grid and invoice list stream through these
+    // and would otherwise have gone on spending the API envelope.
+    [InlineData("/api/v1/maker/files/orders/order-1/label")]
+    [InlineData("/api/v1/maker/files/invoices/invoice-1")]
+    [InlineData("/api/v1/customer/files/disputes/dispute-1/return-label")]
     public void IsBlobStreamPath_recognises_the_file_streaming_routes(string path)
     {
         MakablesRateLimitingExtensions.IsBlobStreamPath(new PathString(path)).Should().BeTrue();
@@ -53,6 +59,11 @@ public sealed class RateLimitBlobStreamPartitionTests
     // Prefix-collision guard: "files" must be a whole segment.
     [InlineData("/api/v1/filesystem/x")]
     [InlineData("/api/v1/files-export/x")]
+    // Only the known audience prefixes may precede "files".
+    [InlineData("/api/v1/orders/files/x")]
+    [InlineData("/api/v1/maker/filesystem/x")]
+    // Audience prefix present but nothing to stream.
+    [InlineData("/api/v1/maker/files")]
     // Not under the versioned API root.
     [InlineData("/files/products/CZ/prod-1/photo.jpg")]
     [InlineData("/api/files/products/CZ/prod-1/photo.jpg")]
@@ -122,11 +133,11 @@ public sealed class RateLimitBlobStreamPartitionTests
     public void Authenticated_blob_streams_partition_per_user_not_per_shared_ip()
     {
         // Customer/Maker file downloads are [Authorize]d; keeping the
-        // sub-claim partition means one user's attachment spree cannot
-        // spend another's image budget.
+        // sub-claim partition means one user's download spree cannot
+        // spend another's stream budget.
         var http = new DefaultHttpContext();
         http.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.7");
-        http.Request.Path = "/api/v1/files/orders/CZ/order-1/attachment.pdf";
+        http.Request.Path = "/api/v1/maker/files/invoices/invoice-1";
         http.User = new System.Security.Claims.ClaimsPrincipal(
             new System.Security.Claims.ClaimsIdentity(
                 [new System.Security.Claims.Claim(
