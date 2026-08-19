@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { axeAA } from '@/lib/testing/axe';
+import ContactPage from '../kontakt/page';
 import GdprPage from '../gdpr/page';
 import HowItWorksPage from '../jak-to-funguje/page';
 import ForMakersPage from '../pro-makery/page';
@@ -10,7 +11,7 @@ import TermsPage from '../vop/page';
 /**
  * a11y tests for the static public pages (T-0133, ADR 0023 §5).
  *
- * `/jak-to-funguje`, `/pro-makery`, `/vop`, `/gdpr` are Server Components
+ * `/jak-to-funguje`, `/pro-makery`, `/vop`, `/gdpr`, `/kontakt` are Server Components
  * returning static prose. They render inside the public layout's `<main>`
  * landmark, so we wrap each in a `<main>` to mirror the real document and
  * assert zero WCAG 2.1 AA violations (heading order, landmarks, contrast,
@@ -39,6 +40,11 @@ describe('static pages a11y', () => {
 
   it('/gdpr has no axe violations', async () => {
     const { container } = renderInMain(<GdprPage />);
+    expect(await axeAA(container)).toHaveNoViolations();
+  });
+
+  it('/kontakt has no axe violations', async () => {
+    const { container } = renderInMain(<ContactPage />);
     expect(await axeAA(container)).toHaveNoViolations();
   });
 });

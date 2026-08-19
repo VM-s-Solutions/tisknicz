@@ -1,38 +1,39 @@
-# Makables — Engineering Process
+# Makables — project system of record
 
-This `/docs` tree is the source of truth for **how** Makables is built, alongside the codebase which is the source of truth for **what** is built.
+This `/docs` tree is the source of truth for **how** Makables is built and **why**; the codebase is the source of truth for **what** is built.
 
-Audience: the sub-agent team (defined in `.claude/agents/`) and any human collaborator.
+Audience: the sub-agent team (charters in [`../.claude/agents/`](../.claude/agents/)) and any human collaborator. Start with [`WAY-OF-WORKING.md`](./WAY-OF-WORKING.md).
 
 ## Folder map
 
 | Folder | Purpose | Owned by |
 |---|---|---|
-| `process/` | How we work: discovery, ticket lifecycle, quality gates, communication rules | PM |
-| `personas.md`, `glossary.md` | Who the users are, what terms mean | BA |
-| `user-stories/` | Stories per persona with acceptance criteria | BA |
-| `adr/` | Architecture Decision Records (numbered, immutable once accepted) | Architect |
-| `architecture/` | Living architecture docs: overview, extension points, money, multi-country | Architect |
-| `tickets/` | Sized, sequenced work items with dependencies | PM |
-| `test-plans/` | Manual & automated test plans, per feature | QA |
-| `security/` | RLS audits, webhook verification, secret hygiene | SecOps |
-| `review/` | Review checklists, definition of done | Reviewer |
-| `status/` | Sprint status reports (PR-only checkpoints for the user) | PM |
-| `questions/open.md` | **Open questions escalated to the user.** Batched, reviewed at checkpoints. | All agents append |
+| [`adr/`](./adr/) | 27 Architecture Decision Records — numbered, immutable once accepted; superseded by a new ADR, never edited | Architect |
+| [`architecture/`](./architecture/) | Living architecture: [`overview.md`](./architecture/overview.md), [`patterns.md`](./architecture/patterns.md) (the canonical pattern catalog), role catalog | Architect |
+| [`tickets/`](./tickets/) | 146 tickets + [`INDEX.md`](./tickets/INDEX.md), the backlog manifest | PM |
+| [`user-stories/`](./user-stories/), [`personas.md`](./personas.md), [`glossary.md`](./glossary.md) | Who the users are, what they need, what the terms mean | BA |
+| [`test-plans/`](./test-plans/) | Per-feature manual + automated test plans | QA |
+| [`security/`](./security/) | Scoping audits, webhook verification, secret hygiene | SecOps |
+| [`deployment/`](./deployment/) | [`local-dev.md`](./deployment/local-dev.md), [`deploy-runbook.md`](./deployment/deploy-runbook.md), [`env-vars.md`](./deployment/env-vars.md), OAuth provider setup, incident post-mortems | SecOps |
+| [`runbooks/`](./runbooks/) | Operating the live system: monitoring, backup/restore, secret rotation | SecOps |
+| [`audits/`](./audits/) | Cross-cutting audit reports | Reviewer / Optimizer |
+| [`review/`](./review/) | Review checklists, definition of done | Reviewer |
+| [`status/`](./status/) | Sprint status reports | PM |
+| [`l10n/`](./l10n/), [`meetings/`](./meetings/) | Copy decisions; deliberation records | L10n / all |
+| [`questions/open.md`](./questions/open.md) | **Open questions escalated to the operator.** Batched, reviewed at checkpoints | all agents append |
+| [`launch-checklist.md`](./launch-checklist.md) | Blocking pre-launch items that only the operator can resolve | PM |
+| [`HANDOFF.md`](./HANDOFF.md) | The discovery-phase sign-off package (historical) | Architect + PM + BA |
 
-## Process phases
+**Process docs live in [`../agents/process/`](../agents/process/)**, not here — that tree is the canonical agent operating system (routing, ticket lifecycle, quality gates, deliberation, communication, enforcement, shared-file lanes), alongside [`../agents/knowledge/`](../agents/knowledge/) and [`../agents/templates/`](../agents/templates/).
 
-1. **Phase 0 — Setup** (this commit): agents defined, process docs in place.
-2. **Phase 1 — Discovery**: BA runs a structured interview with the user; outputs personas, stories, ADRs.
-3. **Phase 2 — Backlog freeze**: PM writes tickets with AC, dependencies, sizing; user signs off.
-4. **Phase 3 — Autonomous build**: PM dispatches tickets; agents work to artifact contracts; user reviews PRs only.
+## Where the project stands
 
-See `process/discovery.md`, `process/ticket-lifecycle.md`, `process/quality-gates.md`, `process/communication.md`.
+Discovery and Phases 1–6 are behind us: 138 of 146 tickets are `done`. What remains is the end-to-end path ticket (T-0153, in progress), four post-launch capability tickets, three v1.1 candidates, and the operator inputs in [`launch-checklist.md`](./launch-checklist.md). Current state per ticket is always [`tickets/INDEX.md`](./tickets/INDEX.md) — sprint reports in [`status/`](./status/) are point-in-time snapshots and lag it.
 
 ## Reading order for a new agent
 
-1. `.claude/agents/<your-role>.md` — your charter
-2. `docs/process/communication.md` — how to talk to other agents
-3. `docs/process/ticket-lifecycle.md` — where you fit
-4. `docs/architecture/overview.md` — the system at a glance
-5. The ADRs that apply to your work
+1. [`../CLAUDE.md`](../CLAUDE.md) — the working agreement and the quality bar
+2. `../.claude/agents/<your-role>.md` — your charter
+3. [`../agents/process/ticket-lifecycle.md`](../agents/process/ticket-lifecycle.md) — where you fit
+4. [`architecture/patterns.md`](./architecture/patterns.md) — the shape your code must take
+5. The ADRs that apply to your work, then your ticket
