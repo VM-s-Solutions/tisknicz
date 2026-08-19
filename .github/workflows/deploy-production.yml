@@ -227,9 +227,24 @@ jobs:
           PGUSER: ${{ secrets.POSTGRES_ADMIN_USER }}
         run: |
           set -euo pipefail
-          sudo apt-get update && sudo apt-get install -y postgresql-client
+          # postgresql-client already ships in the GitHub runner image, so the
+          # unconditional `apt-get update` bought nothing and cost everything:
+          # on 2026-08-19 it went silent right after `noble-security InRelease`
+          # and stayed there until the 20-minute job timeout killed it — twice
+          # in a row. Every downstream job (backend, functions, seed, smoke) is
+          # gated behind this one, so a hung package index took the whole
+          # deploy down while the database was reachable the entire time.
+          # Only reach for apt when psql genuinely is missing, and bound it so
+          # a wedged mirror fails in minutes instead of eating the job.
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo timeout 300 apt-get update
+            sudo timeout 300 apt-get install -y postgresql-client
+          fi
+          psql --version
           FQDN="$PG_SERVER.postgres.database.azure.com"
-          psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require" \
+          # connect_timeout: a blocked firewall rule should surface as a failed
+          # step, not as a socket hanging until the job times out.
+          psql "host=$FQDN port=5432 dbname=makables user=$PGUSER sslmode=require connect_timeout=30" \
             -v ON_ERROR_STOP=1 -f ${{ runner.temp }}/migrate.sql
 
       - name: Remove temp firewall rule
