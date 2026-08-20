@@ -97,6 +97,24 @@ runner once the VNet is wired.
 - **Production:** `workflow_dispatch` only, gated by typing `PRODUCTION` into the
   confirm input.
 
+### When a host fails with `OneDeploy ... Conflict (CODE: 409)`
+
+The four API hosts, the frontend and the Functions app all sit on **one** App
+Service Plan worker, and the `bicep` job bounces every site a few minutes
+before the deploy jobs run. If OneDeploy reaches a site that still has a
+deployment in flight or is mid-restart, Kudu answers `409 Conflict` — the
+package is fine, the timing is not. On 2026-08-20 the maker host lost that
+race in two consecutive dev runs (`32350253265`, `32350273747`) while its
+three siblings deployed the same commit successfully; re-running the identical
+job later pushed the unchanged package with no other action.
+
+The workflows now absorb this: the matrix is `fail-fast: false` (one host's
+conflict no longer cancels the others mid-deploy) and every App Service deploy
+waits for the site to report `Running`, settles 2 minutes and retries once. If
+**both** attempts 409, it is no longer a race — check whether a deployment is
+genuinely stuck (`az webapp deployment list-publishing-profiles` / the app's
+Deployment Center) and `az webapp restart` the site before re-running the job.
+
 ## Verify a deploy actually worked (not just "az succeeded")
 
 1. **Hosts booted:** `GET https://app-makables-customer-weu-dev.azurewebsites.net/`

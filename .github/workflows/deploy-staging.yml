@@ -384,6 +384,11 @@ jobs:
       id-token: write
       contents: read
     strategy:
+      # A transient OneDeploy 409 on ONE host must never cancel the other
+      # three: on 2026-08-20 (run 32350253265) the maker conflict cancelled
+      # customer/admin/public mid-deploy, leaving the environment on a mixed
+      # set of builds even though nothing was wrong with those three.
+      fail-fast: false
       matrix:
         host:
           - { project: 'Makables.Web.Customer', app: 'app-makables-customer-weu-dev' }
@@ -420,7 +425,40 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - uses: azure/webapps-deploy@v3
+      # OneDeploy answers 409 Conflict when the target site already has a
+      # deployment in flight or is mid-restart — the four API hosts and the
+      # frontend share ONE App Service Plan worker, and the bicep job bounces
+      # all of them minutes earlier. On 2026-08-20 the maker host lost that
+      # race in two consecutive dev runs (32350253265, 32350273747) while its
+      # three siblings deployed fine, and re-running the identical job an hour
+      # later deployed the same package with no change: the conflict is
+      # transient. Settle, then retry once, before failing the environment.
+      - name: Deploy to App Service
+        id: deploy
+        continue-on-error: true
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ matrix.host.app }}
+          package: ${{ runner.temp }}/publish
+
+      - name: Wait for the site to settle
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          APP='${{ matrix.host.app }}'
+          echo "::warning::deploy of $APP failed (OneDeploy conflict?) — settling before one retry"
+          for i in $(seq 1 10); do
+            state=$(az webapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo Unknown)
+            echo "  check $i: site state=$state"
+            [ "$state" = "Running" ] && break
+            sleep 30
+          done
+          # Give an in-flight OneDeploy / container swap time to release the site.
+          sleep 120
+
+      - name: Deploy to App Service (retry)
+        if: steps.deploy.outcome == 'failure'
+        uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ matrix.host.app }}
           package: ${{ runner.temp }}/publish
@@ -470,7 +508,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     needs: [bicep]
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       id-token: write
       contents: read
@@ -524,7 +562,34 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - uses: azure/webapps-deploy@v3
+      # Same transient OneDeploy 409 the backend matrix guards against (see
+      # the comment there) — one settle + one retry before failing.
+      - name: Deploy to App Service
+        id: deploy
+        continue-on-error: true
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: web-makables-weu-dev
+          package: frontend/.next/standalone
+
+      - name: Wait for the site to settle
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          APP='web-makables-weu-dev'
+          echo "::warning::deploy of $APP failed (OneDeploy conflict?) — settling before one retry"
+          for i in $(seq 1 10); do
+            state=$(az webapp show -g "$RG" -n "$APP" --query state -o tsv 2>/dev/null || echo Unknown)
+            echo "  check $i: site state=$state"
+            [ "$state" = "Running" ] && break
+            sleep 30
+          done
+          # Give an in-flight OneDeploy / container swap time to release the site.
+          sleep 120
+
+      - name: Deploy to App Service (retry)
+        if: steps.deploy.outcome == 'failure'
+        uses: azure/webapps-deploy@v3
         with:
           app-name: web-makables-weu-dev
           package: frontend/.next/standalone
