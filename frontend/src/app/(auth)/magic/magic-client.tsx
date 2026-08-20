@@ -89,7 +89,9 @@ function Consume({ token }: { token: string }) {
       const result = await consumeMagicLink('customer', { token });
       if (cancelled) return;
       if (result.success) {
-        router.push('/');
+        // `replace`: the consumed magic-link URL is single-use and must
+        // not stay one Back press away (see LoginForm).
+        router.replace('/');
         return;
       }
       setError(mapConsumeError(result.error.code, result.error.message));

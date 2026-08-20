@@ -17,6 +17,7 @@ import {
 } from '@/lib/api-client-helpers/catalog';
 import { formatWeight } from '@/lib/format/weight';
 import { formatCzk } from '@/lib/money/formatter';
+import { getDisplaySession } from '@/lib/auth/display-session';
 import { canonicalUrl } from '@/lib/seo/site-url';
 import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { ProductGallery } from './product-gallery';
@@ -72,7 +73,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { productId } = await params;
-  const result = await getProductById(productId);
+  // The (public) layout already reads the cookie store for the
+  // session-aware navbar, so this costs no extra round trip.
+  const [result, session] = await Promise.all([getProductById(productId), getDisplaySession()]);
 
   if (!result.success) {
     if (result.error.type === 'NotFound') {
@@ -109,7 +112,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
       </Link>
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
         <ProductGallery images={product.images} title={product.title} />
-        <ProductInfo product={product} />
+        <ProductInfo product={product} isMaker={session?.audience === 'maker'} />
       </div>
 
       {description ? (
@@ -129,8 +132,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
  * Right-column info block. Server Component — the only state on this
  * page lives in <see cref="ProductGallery"/>. Renders title, price,
  * by-maker link (with verified badge), weight, and the order CTA.
+ *
+ * `isMaker` swaps the CTA for a note: an account is bound to one
+ * audience (`User.MatchesAudience`), so a maker following the CTA hit a
+ * login screen their own credentials could never satisfy.
  */
-export function ProductInfo({ product }: { readonly product: ProductDetail }) {
+export function ProductInfo({
+  product,
+  isMaker = false,
+}: {
+  readonly product: ProductDetail;
+  readonly isMaker?: boolean;
+}) {
   return (
     <Card variant="accent" padding="md" className="flex h-fit flex-col gap-5">
       <div className="flex flex-col gap-3">
@@ -203,13 +216,17 @@ export function ProductInfo({ product }: { readonly product: ProductDetail }) {
       </div>
 
       <div className="pt-2">
-        <Link
-          href={`/objednavka?productId=${encodeURIComponent(product.productId)}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
-        >
-          {t('catalog.product_detail.cta.order')}
-          <Icon name="arrowRight" size={16} />
-        </Link>
+        {isMaker ? (
+          <p className="text-sm text-zinc-400">{t('catalog.product_detail.cta.maker_note')}</p>
+        ) : (
+          <Link
+            href={`/objednavka?productId=${encodeURIComponent(product.productId)}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+          >
+            {t('catalog.product_detail.cta.order')}
+            <Icon name="arrowRight" size={16} />
+          </Link>
+        )}
       </div>
     </Card>
   );

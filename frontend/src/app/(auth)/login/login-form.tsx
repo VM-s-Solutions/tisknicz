@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { login } from '@/lib/api-client-helpers/auth';
+import { safeRedirectTarget } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 import type { ApiHost } from '@/lib/runtime/api-fetch';
 
@@ -24,12 +25,8 @@ import type { ApiHost } from '@/lib/runtime/api-fetch';
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Open-redirect guard (checkout-flow Gate 3 F1): accept only
-  // path-only targets — a single leading slash, not protocol-relative
-  // `//host` (nor `/\host`, which WHATWG URL parsing normalises to
-  // `//host`). Anything else falls back to the role default below.
-  const rawRedirect = searchParams.get('redirect');
-  const safeRedirect = rawRedirect !== null && /^\/(?![/\\])/.test(rawRedirect) ? rawRedirect : null;
+  // Open-redirect guard (checkout-flow Gate 3 F1) — see `safeRedirectTarget`.
+  const safeRedirect = safeRedirectTarget(searchParams.get('redirect'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,7 +53,12 @@ export function LoginForm() {
 
     if (result.success) {
       const target = safeRedirect ?? (host === 'maker' ? '/dashboard/maker/objednavky' : '/');
-      router.push(target);
+      // `replace`, never `push`: a pushed /login stays one Back press
+      // away and re-renders the form to an already-authenticated user
+      // (reported as "back gives me a login screen even though I'm
+      // logged in"). The page's already-signed-in panel is the
+      // second line of defence for entries pushed before this change.
+      router.replace(target);
       // Re-render the server tree so session-aware chrome (navbar
       // account menu, dashboard layouts) picks up the fresh cookie.
       router.refresh();
