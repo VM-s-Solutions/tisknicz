@@ -334,7 +334,7 @@ async function apiFetchCore<TValue>(
       });
     } catch (cause) {
       response = undefined;
-      lastNetworkError = transientError(cause);
+      lastNetworkError = transientError(cause, timeoutSignal.aborted);
       // A caller-driven abort is a deliberate cancellation, not a blip.
       if (options.signal?.aborted) break;
       continue;
@@ -344,7 +344,9 @@ async function apiFetchCore<TValue>(
   }
 
   if (!response) {
-    return err(lastNetworkError ?? transientError(new Error('fetch produced no response')));
+    return err(
+      lastNetworkError ?? transientError(new Error('fetch produced no response'), false),
+    );
   }
 
   const correlationId = response.headers.get('x-correlation-id') ?? undefined;
@@ -560,11 +562,32 @@ async function readAudienceCookieHeader(host: ApiHost): Promise<string | null> {
   }
 }
 
-function transientError(cause: unknown): ApiError {
-  const isAbort = cause instanceof DOMException && cause.name === 'AbortError';
+/**
+ * Classify a thrown fetch into the two transport errors the UI tells
+ * apart.
+ *
+ * The timeout verdict comes from the budget's OWN signal, never from the
+ * thrown exception's name. `AbortSignal.timeout()` aborts with a
+ * `TimeoutError` DOMException per spec — Chrome and Firefox do exactly
+ * that, while older WebKit reports the same expiry as `AbortError`.
+ * Keying on `AbortError` therefore had the two messages effectively
+ * swapped in Chrome: a request that really did outlive its budget read
+ * "Server je momentálně nedostupný", and "Server neodpověděl včas" only
+ * ever appeared for a request torn down by something else (a navigation
+ * mid-flight, a dev-server reload). `timedOut` is the signal's own
+ * `aborted` state, so it is right in every engine; the `TimeoutError`
+ * name check stays as a belt-and-braces second opinion.
+ *
+ * Everything else is "unreachable" — a refused connection, a DNS
+ * failure, a CORS rejection, or a caller's own `AbortController`. A
+ * deliberate caller abort is a cancellation whose `Result` the caller
+ * discards, so its copy never reaches the screen.
+ */
+function transientError(cause: unknown, timedOut: boolean): ApiError {
+  const isTimeout = timedOut || (cause instanceof Error && cause.name === 'TimeoutError');
   return {
-    code: isAbort ? 'network.timeout' : 'network.unreachable',
-    message: isAbort
+    code: isTimeout ? 'network.timeout' : 'network.unreachable',
+    message: isTimeout
       ? 'Server neodpověděl včas. Zkuste to prosím znovu.'
       : 'Server je momentálně nedostupný. Zkuste to prosím znovu.',
     type: 'Transient',
