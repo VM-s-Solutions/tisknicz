@@ -47,8 +47,10 @@ public class User : Auditable
 ### Password policy
 
 - **Algorithm:** Argon2id via `Konscious.Security.Cryptography.Argon2`.
-- **Parameters:** memorySize 65536 KB (64 MiB), iterations 3, parallelism 1. Targets ~100 ms per hash on App Service B2. Reviewed yearly.
-- **Storage format:** versioned, e.g. `argon2id$v=19$m=65536,t=3,p=1$<salt-b64>$<hash-b64>`. The version prefix lets us migrate parameters later by re-hashing on next login.
+- **Parameters:** memorySize 19456 KB (19 MiB), iterations 2, parallelism 1 — the configuration named in the OWASP Password Storage Cheat Sheet for Argon2id. Reviewed yearly.
+- **Storage format:** versioned, e.g. `argon2id$v=19$m=19456,t=2,p=1$<salt-b64>$<hash-b64>`. The version prefix lets us migrate parameters later by re-hashing on next login.
+
+  > **Revised 2026-08-20 (was 64 MiB / t=3).** The original parameters were picked against a "~100 ms per hash on App Service B2" target that the pure-managed Konscious implementation never met. Measured on the dev B2 plan, a warm `POST /api/v1/auth/login` took **1547–1759 ms**, against 28–101 ms for every other maker-API endpoint. Argon2id pins a core for that whole time, and the dev and prod plans both host six runtimes on two vCPUs, so each login also stalled the four other API hosts, the Functions host and the Next.js frontend. Moving to the OWASP configuration keeps the policy on a documented recommendation rather than below it, at roughly a fifth of the work. Existing hashes carry their own parameters in the prefix, so they keep verifying and `IPasswordHasher.NeedsRehash` (already honoured in `Login.cs`) rewrites each one on its owner's next successful login — that one login pays both an old-policy verify and a new-policy hash.
 - **Rules:** minimum 10 characters; no other complexity requirement (matches NIST 800-63B guidance and the user's directive). Passwords are checked against the top-100 list of breached passwords (kept as a static file; refreshed quarterly) — if matched, registration is refused with `auth.passwordTooCommon`.
 - **No periodic forced reset.** Reset only on user request or compromise.
 

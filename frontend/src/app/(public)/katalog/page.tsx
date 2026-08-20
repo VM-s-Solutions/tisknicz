@@ -8,11 +8,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import {
   CATALOG_DEFAULT_PAGE_SIZE,
   type CatalogFilterInput,
-  getCatalogCategories,
   getPagedMakers,
   type MakerLegalType,
   type MakerListItem,
 } from '@/lib/api-client-helpers/catalog';
+import { getCachedCatalogCategories } from '@/lib/catalog/category-cache';
 import { CATALOG_CATEGORIES } from '@/lib/catalog/categories';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
@@ -49,9 +49,9 @@ export const dynamic = 'force-dynamic';
  * list itself has its own error surface).
  */
 async function loadCategoryOptions(): Promise<readonly { slug: string; label: string }[]> {
-  const result = await getCatalogCategories();
-  if (result.success && result.value.items.length > 0) {
-    return result.value.items.map((c) => ({ slug: c.slug, label: c.name }));
+  const items = await getCachedCatalogCategories();
+  if (items.length > 0) {
+    return items.map((c) => ({ slug: c.slug, label: c.name }));
   }
   return CATALOG_CATEGORIES.map((c) => ({ slug: c.slug, label: t(c.labelKey) }));
 }
