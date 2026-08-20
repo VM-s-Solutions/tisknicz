@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { login } from '@/lib/api-client-helpers/auth';
+import { safeRedirectTarget } from '@/lib/auth';
 import { t } from '@/lib/i18n';
 
 /**
@@ -18,7 +19,7 @@ import { t } from '@/lib/i18n';
  * `auth.forbidden`. NO register / magic-link / OAuth affordance: admins
  * are provisioned, not self-registered (US-admin-0001 no-OAuth lock).
  *
- * On success `router.push(redirectTo)` lands on the guarded redirect
+ * On success `router.replace(redirectTo)` lands on the guarded redirect
  * target (open-redirect guard: path-only, single leading slash — the
  * customer LoginForm precedent). Errors map the BusinessErrorMessage
  * code to a keyed admin message (vykání).
@@ -26,11 +27,8 @@ import { t } from '@/lib/i18n';
 export function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Open-redirect guard: accept only path-only targets (one leading
-  // slash, not protocol-relative `//host`). Anything else falls back to
-  // the admin overview.
-  const rawRedirect = searchParams.get('redirect') ?? '/dashboard/admin';
-  const redirectTo = /^\/(?![/\\])/.test(rawRedirect) ? rawRedirect : '/dashboard/admin';
+  // Open-redirect guard — see `safeRedirectTarget`.
+  const redirectTo = safeRedirectTarget(searchParams.get('redirect')) ?? '/dashboard/admin';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +43,8 @@ export function AdminLoginForm() {
     setSubmitting(false);
 
     if (result.success) {
-      router.push(redirectTo);
+      // `replace` so Back never returns to the login form (see LoginForm).
+      router.replace(redirectTo);
       return;
     }
 

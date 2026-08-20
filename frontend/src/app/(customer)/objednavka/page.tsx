@@ -8,6 +8,7 @@ import { Icon } from '@/components/ui/icon';
 import { getMakerBySlug, getProductById } from '@/lib/api-client-helpers/catalog';
 import { getMyProfile } from '@/lib/api-client-helpers/profile';
 import { getWidgetConfig } from '@/lib/api-client-helpers/shipping';
+import { getDisplaySession } from '@/lib/auth/display-session';
 import { t } from '@/lib/i18n';
 import { OrderFormClient } from './order-form-client';
 import { OrderSummary } from './order-summary';
@@ -62,11 +63,19 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
     getWidgetConfig(),
   ]);
 
-  // Entry guard 2 — unauthenticated → login redirect with the original
-  // URL (the login page consumes `?redirect=`). NOTE: the login page
-  // serves at /login — the (auth) route group adds no URL segment.
+  // Entry guard 2 — no customer session.
+  //
+  // A signed-in MAKER is not an anonymous visitor: `User.MatchesAudience`
+  // binds their account to the maker audience, so their credentials can
+  // never mint a customer JWT. Bouncing them to /login produced an
+  // endless login screen (reported bug). They get an explanation here
+  // instead; only genuinely anonymous visitors are redirected.
   if (!profileResult.success) {
     if (profileResult.error.type === 'Unauthorized') {
+      const session = await getDisplaySession();
+      if (session?.audience === 'maker') {
+        return <MakerAccountState email={session.email} productId={productId} />;
+      }
       const target = `/objednavka?productId=${encodeURIComponent(productId)}`;
       redirect(`/login?redirect=${encodeURIComponent(target)}`);
     }
@@ -138,6 +147,48 @@ function InvalidLinkState() {
             {t('checkout.invalidLink.cta')}
             <Icon name="arrowRight" size={16} />
           </Link>
+        }
+      />
+    </section>
+  );
+}
+
+/**
+ * A maker pressed "Objednat". Their account cannot hold a customer
+ * session, so the only ways forward are switching accounts or
+ * registering a customer one — both offered here rather than behind a
+ * login form that would reject them.
+ */
+function MakerAccountState({
+  email,
+  productId,
+}: {
+  readonly email: string;
+  readonly productId: string;
+}) {
+  return (
+    <section className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
+      <EmptyState
+        icon="user"
+        title={t('checkout.makerAccount.title')}
+        description={t('checkout.makerAccount.body', { email })}
+        action={
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={`/produkt/${encodeURIComponent(productId)}`}
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+            >
+              <Icon name="arrowLeft" size={16} />
+              {t('checkout.makerAccount.backToProduct')}
+            </Link>
+            <Link
+              href="/register?type=customer"
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+            >
+              {t('checkout.makerAccount.register')}
+              <Icon name="arrowRight" size={16} />
+            </Link>
+          </div>
         }
       />
     </section>

@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { accessCookieName, refreshCookieName, type Audience } from '@/lib/auth';
+import {
+  accessCookieName,
+  guardedRouteAudience,
+  refreshCookieName,
+  type Audience,
+} from '@/lib/auth';
 import { isJwtExpiredOrInvalid } from '@/lib/auth/jwt-expiry';
 
 /**
@@ -154,7 +159,7 @@ function guardOrNext(
   patchedRequestHeaders: Headers | null,
   patchedPairs: Map<string, string>,
 ): NextResponse {
-  const audience = inferAudience(request.nextUrl.pathname);
+  const audience = guardedRouteAudience(request.nextUrl.pathname);
   if (audience) {
     const cookieName = accessCookieName(audience);
     const hasAccess =
@@ -170,13 +175,6 @@ function guardOrNext(
   return patchedRequestHeaders
     ? NextResponse.next({ request: { headers: patchedRequestHeaders } })
     : NextResponse.next();
-}
-
-function inferAudience(pathname: string): Audience | undefined {
-  if (pathname.startsWith('/dashboard/zakaznik')) return 'customer';
-  if (pathname.startsWith('/dashboard/maker')) return 'maker';
-  if (pathname.startsWith('/dashboard/admin')) return 'admin';
-  return undefined;
 }
 
 export const config = {

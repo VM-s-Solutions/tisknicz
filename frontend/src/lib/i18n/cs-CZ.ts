@@ -85,6 +85,21 @@ export const messages = {
   'auth.login.account_locked': 'Účet je dočasně uzamčen kvůli opakovaným neúspěšným pokusům. Zkuste to za chvíli.',
   'auth.login.email_not_confirmed': 'E-mail dosud nebyl potvrzen. Zkontrolujte prosím schránku.',
 
+  // "Už jste přihlášeni" panel on /login. An account is bound to exactly
+  // one audience (`User.MatchesAudience`), so a signed-in maker bounced
+  // here from a customer-only route could never satisfy the form — they
+  // got an endless login screen instead. Vykání, like the rest of auth.
+  'auth.signedIn.title': 'Už jste přihlášeni',
+  'auth.signedIn.subtitle': 'Přihlašovat se znovu nemusíte — pokračujte tam, kam jste mířili.',
+  'auth.signedIn.as': 'Přihlášeni jako {email}',
+  'auth.signedIn.role.customer': 'zákaznický účet',
+  'auth.signedIn.role.maker': 'účet makera',
+  'auth.signedIn.role.admin': 'účet administrátora',
+  'auth.signedIn.continue': 'Pokračovat',
+  'auth.signedIn.switch': 'Přihlásit se jiným účtem',
+  'auth.signedIn.switching': 'Odhlašuji…',
+  'auth.signedIn.switch_failed': 'Odhlášení se nepodařilo. Zkuste to prosím znovu.',
+
   // Auth — Google OAuth trigger (T-0026 frontend wiring).
   'auth.google.signInButton': 'Pokračovat přes Google',
   'auth.google.startFailed': 'Přihlášení přes Google se nepodařilo spustit. Zkuste to prosím znovu.',
@@ -469,6 +484,8 @@ export const messages = {
   'catalog.product_detail.rating': '{rating} (hodnocení: {count})',
   'catalog.product_detail.rating_none': 'Zatím bez hodnocení',
   'catalog.product_detail.cta.order': 'Objednat',
+  'catalog.product_detail.cta.maker_note':
+    'Objednávat může jen zákaznický účet — jste přihlášeni jako maker.',
   'catalog.product_detail.weight': 'Hmotnost: {value}',
   'catalog.product_detail.description.heading': 'Popis',
   'catalog.product_detail.gallery.thumbnail_aria': 'Náhled {n}',
@@ -1028,6 +1045,11 @@ export const messages = {
   'checkout.invalidLink.cta': 'Přejít do katalogu',
   'checkout.loadError.title': 'Objednávku nyní nelze připravit',
   'checkout.loadError.body': 'Zkuste prosím obnovit stránku za chvíli.',
+  'checkout.makerAccount.title': 'Objednávku může vytvořit jen zákaznický účet',
+  'checkout.makerAccount.body':
+    'Jste přihlášeni jako maker ({email}). Účet makera objednávky přijímá, nezadává — každý účet patří k jedné roli. Pro nákup se odhlaste a použijte zákaznický účet.',
+  'checkout.makerAccount.backToProduct': 'Zpět na výrobek',
+  'checkout.makerAccount.register': 'Vytvořit zákaznický účet',
 
   'checkout.contact.legend': 'Kontaktní údaje',
   'checkout.contact.name': 'Jméno a příjmení',

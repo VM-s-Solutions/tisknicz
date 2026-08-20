@@ -42,3 +42,26 @@ describe('product detail fulfillment-type badge', () => {
     expect(screen.getByText('Skladem')).toBeInTheDocument();
   });
 });
+
+/**
+ * An account is bound to one audience (`User.MatchesAudience`), so the
+ * order CTA sent a signed-in maker to a login screen their credentials
+ * could never satisfy. The CTA is replaced by a note instead.
+ */
+describe('product detail order CTA', () => {
+  it('links to checkout for a visitor who is not a maker', () => {
+    render(<ProductInfo product={baseProduct} />);
+    expect(screen.getByRole('link', { name: /Objednat/ })).toHaveAttribute(
+      'href',
+      '/objednavka?productId=p1',
+    );
+  });
+
+  it('replaces the CTA with an explanation for a signed-in maker', () => {
+    render(<ProductInfo product={baseProduct} isMaker />);
+    expect(screen.queryByRole('link', { name: /Objednat/ })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Objednávat může jen zákaznický účet — jste přihlášeni jako maker.'),
+    ).toBeInTheDocument();
+  });
+});
