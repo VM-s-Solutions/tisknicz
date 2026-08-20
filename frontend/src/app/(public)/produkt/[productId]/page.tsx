@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -21,6 +22,16 @@ import { getDisplaySession } from '@/lib/auth/display-session';
 import { canonicalUrl } from '@/lib/seo/site-url';
 import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { ProductGallery } from './product-gallery';
+/**
+ * Per-request memo: `generateMetadata` and the page body both need the
+ * same read, and `apiFetch` composes a fresh `AbortSignal.timeout` per
+ * call — Next's fetch memoization opts OUT whenever an `init.signal` is
+ * present (`next/dist/server/lib/dedupe-fetch.js`), so without `cache()`
+ * every view issues two identical backend GETs. Scope is one server
+ * request; `router.refresh()` is a new request and re-fetches.
+ */
+const loadProduct = cache(getProductById);
+
 
 interface PageProps {
   readonly params: Promise<{ productId: string }>;
@@ -30,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { productId } = await params;
   // Canonical stays the requested URL even on a NotFound (T-0131 AC-9).
   const url = canonicalUrl(`/produkt/${productId}`);
-  const result = await getProductById(productId);
+  const result = await loadProduct(productId);
   if (!result.success) {
     // Only branch the title on NotFound — a transient backend error
     // shouldn't tell a search-engine indexer that the product doesn't
@@ -75,7 +86,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { productId } = await params;
   // The (public) layout already reads the cookie store for the
   // session-aware navbar, so this costs no extra round trip.
-  const [result, session] = await Promise.all([getProductById(productId), getDisplaySession()]);
+  const [result, session] = await Promise.all([loadProduct(productId), getDisplaySession()]);
 
   if (!result.success) {
     if (result.error.type === 'NotFound') {

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -23,6 +24,16 @@ import { truncateForMeta } from '@/lib/seo/truncate-for-meta';
 import { ProductCard } from './product-card';
 import { ProductFilters } from './product-filters-client';
 import { ReviewsSection } from './reviews-section';
+/**
+ * Per-request memo: `generateMetadata` and the page body both need the
+ * same read, and `apiFetch` composes a fresh `AbortSignal.timeout` per
+ * call — Next's fetch memoization opts OUT whenever an `init.signal` is
+ * present (`next/dist/server/lib/dedupe-fetch.js`), so without `cache()`
+ * every view issues two identical backend GETs. Scope is one server
+ * request; `router.refresh()` is a new request and re-fetches.
+ */
+const loadMaker = cache(getMakerBySlug);
+
 
 interface PageProps {
   readonly params: Promise<{ slug: string }>;
@@ -34,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Canonical stays the requested URL even on a NotFound — a 404 page is
   // not indexed, but the canonical is kept consistent (T-0131 C/AC-9).
   const url = canonicalUrl(`/katalog/${slug}`);
-  const result = await getMakerBySlug(slug);
+  const result = await loadMaker(slug);
   if (!result.success) {
     // Only branch the title on NotFound — a transient backend error
     // shouldn't tell a search-engine indexer that the maker doesn't
@@ -115,7 +126,7 @@ function filterProducts(
 export default async function MakerProfilePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const sp = await searchParams;
-  const result = await getMakerBySlug(slug);
+  const result = await loadMaker(slug);
 
   if (!result.success) {
     if (result.error.type === 'NotFound') {

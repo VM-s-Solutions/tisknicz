@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -9,6 +10,16 @@ import { t } from '@/lib/i18n';
 import { DeleteProductButton } from '../_components/delete-product-button';
 import { ImageManager } from '../_components/image-manager';
 import { ProductForm } from '../_components/product-form';
+/**
+ * Per-request memo: `generateMetadata` and the page body both need the
+ * detail, and `apiFetch` composes a fresh `AbortSignal.timeout` per call
+ * — Next's fetch memoization opts OUT whenever an `init.signal` is
+ * present (`next/dist/server/lib/dedupe-fetch.js`), so without `cache()`
+ * every edit view issues two identical backend GETs. Scope is one server
+ * request; `router.refresh()` is a new request and re-fetches.
+ */
+const loadProduct = cache(getMyProductById);
+
 
 interface PageProps {
   readonly params: Promise<{ productId: string }>;
@@ -19,7 +30,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { productId } = await params;
-  const result = await getMyProductById(productId);
+  const result = await loadProduct(productId);
   if (!result.success) {
     // Don't branch on `NotFound` here — the page itself renders the
     // not-found shell via the framework, and the metadata fallback is
@@ -53,7 +64,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  */
 export default async function MakerProductEditPage({ params }: PageProps) {
   const { productId } = await params;
-  const result = await getMyProductById(productId);
+  // The category list is reference data that does not depend on the
+  // product, so both reads go out together. Awaiting the options inline
+  // in the JSX (the previous shape) put a second full backend round trip
+  // AFTER the detail had already resolved.
+  const [result, categoryOptions] = await Promise.all([
+    loadProduct(productId),
+    loadProductCategoryOptions(),
+  ]);
 
   if (!result.success) {
     if (result.error.type === 'NotFound') {
@@ -104,7 +122,7 @@ export default async function MakerProductEditPage({ params }: PageProps) {
           </Alert>
         ) : null}
 
-        <ProductForm mode="edit" initial={product} categoryOptions={await loadProductCategoryOptions()} />
+        <ProductForm mode="edit" initial={product} categoryOptions={categoryOptions} />
 
         <ImageManager productId={product.productId} images={product.images} />
 

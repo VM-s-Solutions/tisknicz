@@ -119,4 +119,49 @@ public class Argon2idPasswordHasherTests
         hasher.NeedsRehash("").Should().BeTrue();
         hasher.NeedsRehash("not-a-hash").Should().BeTrue();
     }
+
+    /// <summary>
+    /// Pins the shipped policy to ADR 0012 §Password policy — the OWASP
+    /// Password Storage Cheat Sheet configuration for Argon2id. Nothing in
+    /// appsettings overrides this section, so these defaults ARE production;
+    /// a silent drift here changes every password hash the platform writes.
+    /// </summary>
+    [Fact]
+    public void Default_policy_matches_the_OWASP_configuration_in_ADR_0012()
+    {
+        var policy = new Argon2idOptions();
+
+        policy.MemorySizeKib.Should().Be(19456, "19 MiB is the OWASP Argon2id memory cost");
+        policy.Iterations.Should().Be(2);
+        policy.DegreeOfParallelism.Should().Be(1);
+        policy.SaltSizeBytes.Should().Be(16);
+        policy.HashSizeBytes.Should().Be(32);
+    }
+
+    /// <summary>
+    /// The 2026-08-20 policy revision LOWERED the cost (64 MiB / t=3 →
+    /// 19 MiB / t=2). Accounts hashed under the old policy must keep
+    /// logging in, and must be re-hashed on the way through — the same
+    /// migration contract as a future bump, exercised in the direction the
+    /// platform is actually travelling.
+    /// </summary>
+    [Fact]
+    public void A_hash_written_under_the_previous_64MiB_policy_still_verifies_and_is_flagged_for_rehash()
+    {
+        var legacyPolicy = new Argon2idOptions
+        {
+            MemorySizeKib = 65536,
+            Iterations = 3,
+            DegreeOfParallelism = 1,
+        };
+        var legacyHash = CreateHasher(legacyPolicy).Hash("correct horse battery staple");
+        legacyHash.Should().StartWith("argon2id$v=19$m=65536,t=3,p=1$");
+
+        var current = CreateHasher(new Argon2idOptions());
+
+        current.Verify("correct horse battery staple", legacyHash).Should().BeTrue();
+        current.Verify("Tr0ub4dor&3", legacyHash).Should().BeFalse();
+        current.NeedsRehash(legacyHash).Should().BeTrue("Login re-hashes to the current policy");
+        current.NeedsRehash(current.Hash("correct horse battery staple")).Should().BeFalse();
+    }
 }
