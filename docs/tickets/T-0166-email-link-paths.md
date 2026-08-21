@@ -1,7 +1,7 @@
 ---
 id: T-0166
 title: Fix dead transactional email link paths (confirm / magic / reset all 404)
-status: in_review
+status: done
 size: S
 owner:
 created: 2026-08-21
@@ -75,3 +75,5 @@ too (`confirm` vs `verify`) — do not "fix" by renaming the frontend route. Fro
 - 2026-08-21 reviewer fold ([review](../review/runs/T-0166.md)): route-existence guard added to the
   redirect test (blocking item) + dead `/auth/*` fixture templates dropped from 8 handler test
   files (LOW). Suites after fold: unit 2079/2079, frontend 173/173
+- 2026-08-21 `in_review → done` — merged via PR #138 (CI green: Backend, Frontend, Bicep, NSwag
+  parity; this state flip rides the merge commit itself)

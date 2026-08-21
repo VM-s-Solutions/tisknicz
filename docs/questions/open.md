@@ -616,5 +616,11 @@ same edit.
   - **Maker decline:** new `Decline` transition on Paid → auto-refund via the existing `RefundOrder` path + customer email; per the T-0148 SLA discussion this likely wants pairing with the accept-by timer. Alternative: keep admin-mediated (status quo), but then the Paid action bar must say so explicitly (that copy ships in T-0174 either way).
   - **Customer cancel (PendingPayment only):** new `CancelByCustomer` transition reusing `OrderCancellationSource.Customer` (enum value already exists) — low-risk since no money has moved; the 24 h auto-cancel remains the backstop.
   - Do neither; rely on messages + admin — zero build, keeps both audited dead ends.
+- **Data point (2026-08-21, T-0166 run):** `docs/status/sprint-7.md` records a **user-confirmed
+  decision from 2026-06-03**: the Order entity exposes `PendingPayment | Paid | Accepted →
+  Cancelled` edges, with role enforcement in the command layer — *customer cancels from
+  PendingPayment only; maker cancels ("refuses") from Paid only; admin from any state (audited)*.
+  The domain edges already exist; T-0181 is likely command-layer + UI + refund wiring, and the
+  "should it exist" half of this question may already be answered — confirm scope, not principle.
 - **Status:** open
 - **Answer (filled by user):**
