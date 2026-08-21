@@ -20,6 +20,45 @@ public class PublicAppUrlsOptionsValidatorTests
         ok.Should().BeTrue(err);
     }
 
+    /// <summary>
+    /// T-0166 (audit AUTH-H1): the frontend `(auth)` route group adds NO URL
+    /// segment, so the real pages are /verify, /magic and /reset. The old
+    /// "/auth/*" defaults 404'd in every environment — only WebBaseUrl is
+    /// overridden at deploy time, never the paths. Pinned exactly so a
+    /// regression back to a prefixed (or renamed) path fails loudly here.
+    /// </summary>
+    [Fact]
+    public void Default_paths_target_the_real_frontend_routes()
+    {
+        var opts = ValidDefaults();
+
+        opts.MagicLinkPath.Should().Be("/magic?token={token}");
+        opts.EmailConfirmationPath.Should().Be("/verify?token={token}");
+        opts.PasswordResetPath.Should().Be("/reset?token={token}");
+    }
+
+    /// <summary>
+    /// T-0166 AC-1: the full composed action URLs, using the same composition
+    /// contract as EmailSendService.BuildActionUrl (base trimmed of trailing
+    /// '/', path template's {token} substituted URL-escaped).
+    /// </summary>
+    [Theory]
+    [InlineData("https://makables.cz")]
+    [InlineData("https://makables.cz/")]
+    public void Default_paths_compose_to_real_frontend_urls(string baseUrl)
+    {
+        var opts = ValidDefaults();
+        opts.WebBaseUrl = baseUrl;
+
+        string Compose(string template) =>
+            opts.WebBaseUrl.TrimEnd('/') +
+            template.Replace(PublicAppUrlsOptions.TokenPlaceholder, Uri.EscapeDataString("tok/1+2"));
+
+        Compose(opts.EmailConfirmationPath).Should().Be("https://makables.cz/verify?token=tok%2F1%2B2");
+        Compose(opts.MagicLinkPath).Should().Be("https://makables.cz/magic?token=tok%2F1%2B2");
+        Compose(opts.PasswordResetPath).Should().Be("https://makables.cz/reset?token=tok%2F1%2B2");
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("data:text/html,foo")]
