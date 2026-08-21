@@ -24,14 +24,20 @@ public sealed class PublicAppUrlsOptions
     /// <summary>Web frontend base URL, e.g. <c>https://makables.cz</c>. No trailing slash.</summary>
     public string WebBaseUrl { get; set; } = "https://makables.cz";
 
+    // T-0166: the frontend's `(auth)` route group adds NO URL segment — the
+    // real pages live at /magic, /verify and /reset. The previous "/auth/*"
+    // defaults 404'd in every environment (only WebBaseUrl is ever overridden),
+    // so every transactional email link was dead. Note the leaf mismatch too:
+    // the confirmation page is /verify, not /confirm.
+
     /// <summary>Path template for the magic-link consume page. MUST contain <see cref="TokenPlaceholder"/>.</summary>
-    public string MagicLinkPath { get; set; } = "/auth/magic?token={token}";
+    public string MagicLinkPath { get; set; } = "/magic?token={token}";
 
     /// <summary>Path template for the email-confirmation page. MUST contain <see cref="TokenPlaceholder"/>.</summary>
-    public string EmailConfirmationPath { get; set; } = "/auth/confirm?token={token}";
+    public string EmailConfirmationPath { get; set; } = "/verify?token={token}";
 
     /// <summary>Path template for the password-reset page. MUST contain <see cref="TokenPlaceholder"/>.</summary>
-    public string PasswordResetPath { get; set; } = "/auth/reset?token={token}";
+    public string PasswordResetPath { get; set; } = "/reset?token={token}";
 }
 
 /// <summary>

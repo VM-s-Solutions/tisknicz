@@ -81,6 +81,23 @@ function apiProxyRewrites() {
     }));
 }
 
+/**
+ * Legacy auth-path redirects (T-0166). Transactional emails sent before the
+ * PublicAppUrlsOptions fix carried "/auth/*" links, but the `(auth)` route
+ * group adds no URL segment — the real pages are /verify, /magic and /reset
+ * (note the /auth/confirm → /verify leaf rename). Permanent redirects keep
+ * every already-delivered email link working; Next forwards the ?token query
+ * automatically.
+ */
+function legacyAuthRedirects() {
+  return [
+    { source: '/auth/confirm', destination: '/verify', permanent: true },
+    { source: '/auth/verify', destination: '/verify', permanent: true },
+    { source: '/auth/magic', destination: '/magic', permanent: true },
+    { source: '/auth/reset', destination: '/reset', permanent: true },
+  ];
+}
+
 const nextConfig: NextConfig = {
   // Self-host on Azure App Service (Linux/Node) — `standalone` emits a
   // minimal `.next/standalone` server (server.js + traced node_modules) that
@@ -102,6 +119,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async rewrites() {
     return apiProxyRewrites();
+  },
+  async redirects() {
+    return legacyAuthRedirects();
   },
   images: {
     formats: ['image/avif', 'image/webp'],

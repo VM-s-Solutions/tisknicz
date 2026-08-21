@@ -35,12 +35,13 @@ public class EmailSendServiceTests
 
     public EmailSendServiceTests()
     {
+        // T-0166: keep the three path templates at their code DEFAULTS so this
+        // suite pins the URLs production actually sends. The old fixture set
+        // explicit "/auth/*" values, which masked the fact that the shipped
+        // defaults pointed at routes that do not exist (AUTH-H1).
         var urls = Options.Create(new PublicAppUrlsOptions
         {
             WebBaseUrl = "https://makables.test",
-            MagicLinkPath = "/auth/magic?token={token}",
-            EmailConfirmationPath = "/auth/confirm?token={token}",
-            PasswordResetPath = "/auth/reset?token={token}",
         });
         // T-0106: admin dispute-digest recipient resolves at send time.
         var emailOptions = Options.Create(new EmailOptions
@@ -100,8 +101,8 @@ public class EmailSendServiceTests
             && m.ToAddress == "anna@example.cz"
             && m.LanguageCode == LanguageCode.CsCZ
             && m.Data.ContainsKey("action_url")
-            && ((string)m.Data["action_url"]).StartsWith("https://makables.test/auth/magic?token=")
-            && m.PlainTextBody.Contains("https://makables.test/auth/magic?token=")
+            && ((string)m.Data["action_url"]).StartsWith("https://makables.test/magic?token=")
+            && m.PlainTextBody.Contains("https://makables.test/magic?token=")
             && !m.PlainTextBody.Contains("{{action_url}}")),
             Arg.Any<CancellationToken>());
     }
