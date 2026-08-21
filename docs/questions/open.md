@@ -588,3 +588,33 @@ same edit.
   - **Accept the shared bucket and size it for aggregate traffic** (what ships today) — correct while the anonymous surface is cheap, cacheable reads; degrades as soon as real scraping starts.
 - **Status:** open
 - **Answer (filled by user):**
+
+## Q-0040 — Reactivation policy for soft-deleted entities (products, makers, categories)
+- **From:** PM/BA (Phase 8 UX sweep — findings MAKER-H4, ADM-H5)
+- **Ticket / context:** T-0180 (reactivation paths); audit `docs/review/ux-functional-audit-2026-08-21.md`
+- **Asked:** 2026-08-21
+- **Blocking:** blocks T-0180 only; interim guards (hide the second delete, irreversibility copy, arm-confirm disarm) ship in T-0174/T-0176 regardless
+- **Owner:** user (product/trust call — who may undo a removal)
+- **Resolve-by:** v1.1
+- **Question:** Soft delete is the platform default, but nothing exposes an undo: a maker who deletes a product by mistake loses the listing + images permanently (from their point of view), and an admin who deactivates a maker or category two clicks deep has no reactivate. Who may restore what?
+- **Options the agent has considered:**
+  - **Recommended default:** makers may reactivate their *own* soft-deleted products (symmetry with delete; catalog gate re-applies automatically); maker/category reactivation is admin-only via `IAdminAuditableCommand` (audited, mirrors VerifyMaker/DeactivateMaker).
+  - Admin-only for everything — makers ask support; safest but adds operator load for a self-inflicted, low-risk action.
+  - No reactivation; make deletes hard-confirmed and explicitly irreversible — smallest build, worst recovery story.
+- **Status:** open
+- **Answer (filled by user):**
+
+## Q-0041 — Order escape hatches: maker decline of a Paid order, customer cancel of an unpaid order
+- **From:** PM/BA (Phase 8 UX sweep — findings MAKER-H3, CUST-M3)
+- **Ticket / context:** T-0181 (order escape hatches); audit `docs/review/ux-functional-audit-2026-08-21.md`
+- **Asked:** 2026-08-21
+- **Blocking:** blocks T-0181 only; interim copy (maker: "nemůžeš vyrobit? napiš zákazníkovi" in the Paid action bar; customer: 24 h auto-cancel explanation on the PendingPayment page) ships in T-0174/T-0172
+- **Owner:** user (money-moving state-machine additions; a wrong guess costs real refunds)
+- **Resolve-by:** v1.1
+- **Question:** Two dead ends exist by design today: a maker who cannot fulfil a Paid order can only accept or ignore it (T-0071 locked "no DeclineOrder — admin handles via T-0107"), and a customer cannot cancel an unpaid order (only the silent 24 h auto-cancel, T-0083). Should either become a first-class action?
+- **Options the agent has considered:**
+  - **Maker decline:** new `Decline` transition on Paid → auto-refund via the existing `RefundOrder` path + customer email; per the T-0148 SLA discussion this likely wants pairing with the accept-by timer. Alternative: keep admin-mediated (status quo), but then the Paid action bar must say so explicitly (that copy ships in T-0174 either way).
+  - **Customer cancel (PendingPayment only):** new `CancelByCustomer` transition reusing `OrderCancellationSource.Customer` (enum value already exists) — low-risk since no money has moved; the 24 h auto-cancel remains the backstop.
+  - Do neither; rely on messages + admin — zero build, keeps both audited dead ends.
+- **Status:** open
+- **Answer (filled by user):**

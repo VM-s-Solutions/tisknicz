@@ -247,6 +247,33 @@ Until the user answers these in `docs/questions/open.md` (or directly), the abov
 
 ---
 
+## Phase 8 — Site-wide UX functional sweep (2026-08-21 audit)
+
+**Origin:** operator directive 2026-08-21 ("refactor the design of the whole website — functionally, easier to use and cleaner"). Five parallel read-only audits (public / auth / customer / maker / admin) produced ~60 findings, consolidated in [docs/review/ux-functional-audit-2026-08-21.md](../review/ux-functional-audit-2026-08-21.md); finding IDs (AUTH-H1, PUB-M3, …) are referenced from each ticket. Functional usability only — no visual redesign. 13 tickets are `ready` (DoR passed); 3 stay `draft` (two blocked on business questions Q-0040/Q-0041, one pending a contract-grooming pass).
+
+| Ticket | Title | Phase | Size | State | Depends on | Stories | ADRs |
+|---|---|---|---|---|---|---|---|
+| T-0166 | **Fix dead transactional email link paths** — `PublicAppUrlsOptions` defaults point at `/auth/*`; real routes are `/verify`, `/magic`, `/reset` → confirm/magic/reset emails 404 in every environment (AUTH-H1). Defaults fixed + URL-composition tests + `/auth/:path*` redirects. [T-0166](T-0166-email-link-paths.md) | 8 | S | ready | — | US-customer-0003, 0005, 0006 | 0012, 0019 |
+| T-0167 | **Google OAuth callback lands in the app** — callback currently ends on raw JSON on the API host (AUTH-H2); 302 to frontend on success/failure + mapped `oauth_error` copy. NSwag regen. [T-0167](T-0167-oauth-callback-redirect.md) | 8 | M | ready | — | US-customer-0004 | 0012 |
+| T-0168 | **Token-flow recovery paths** — magic-link maker host fallback, verify double-fire guard + idempotent ConfirmEmail, anonymous resend-confirmation endpoint, mount the orphaned `EmailConfirmationBanner`, reset re-request link (AUTH-H3/M1/M2/M6/L4, CUST-H2). NSwag regen. [T-0168](T-0168-token-flow-recovery.md) | 8 | M | ready | T-0166 | US-customer-0003, 0005, 0006; US-maker-0002 | 0012, 0019 |
+| T-0169 | **Redirect continuity sweep** — returnUrl preserved incl. query string end-to-end, `continueHref` on login, admin hint on dual `auth.forbidden`, shared terminal-401 navigation, `/admin/login` parity (AUTH-M3/M4/M5/L2/L3, PUB-L7, CUST-M6). [T-0169](T-0169-redirect-continuity.md) | 8 | M | ready | T-0166 | US-customer-0001, 0002, 0016; US-maker-0002 | 0012 |
+| T-0170 | **Katalog filter/pagination state integrity** — URL-synced filter panels, `useTransition` pending feedback, honest empty states + page clamp, retry keeps filters, one history policy (PUB-H1/H2/H3/M3/M7). [T-0170](T-0170-katalog-state-integrity.md) | 8 | M | ready | — | US-customer-0007, 0008 | 0024 |
+| T-0171 | **Public error surfaces + navigation context** — (public)+root `error.tsx`, contextual back links/breadcrumb, true review counts, data-driven landing tiles, logout failure copy, admin-audience Objednat gate, skeleton/nav polish (PUB-M1/M2/M4/M5/M6/L1–L6/L8). [T-0171](T-0171-public-error-navigation.md) | 8 | M | ready | — | US-customer-0007, 0008, 0009 | 0024 |
+| T-0172 | **Checkout + pre-payment usability** — scroll/focus to first error, profile name/phone prefill, `FileDownloadButton` for attachments (raw `<a>` 404s today), dirty guard, confirmation terminal-state precedence, final poll tick (CUST-H1/H3/H4/M2/M4/M5/L1/L3). [T-0172](T-0172-checkout-flow-usability.md) | 8 | M | ready | — | US-customer-0010, 0011, 0013 | 0022, 0024 |
+| T-0173 | **Customer + maker dashboard polish** — profile failure states (no raw `error.message`), filter-preserving retries, entity links, dispute-form disclosure, maker state filter + page clamp + `/dashboard/maker` redirect, bank-account banner + payout-cadence copy (CUST-M1/L2/L4/L5, MAKER-M4/L1–L5). [T-0173](T-0173-dashboard-list-detail-polish.md) | 8 | M | ready | — | US-customer-0012, 0016, 0018; US-maker-0005, 0012, 0015 | 0024 |
+| T-0174 | **Maker product + review form feedback** — unlock reply form after success, upload `timeoutMs` 120 s (the documented 8 s trap), `SaveButton` + dirty tracking + scroll-to-error, created-notice + public link, multi-file queue + N/10 indicator, inactive-grid filter (MAKER-H1/H2/M1/M2/M6-fe/M7/L6). [T-0174](T-0174-maker-form-feedback.md) | 8 | M | ready | — | US-maker-0004, 0014 | 0022, 0024 |
+| T-0175 | **Admin list infrastructure + route resilience** — one pagination (5 copies today), GET-form search parity, retry keeps params, Unauthorized redirects on makers/kategorie, loading/error boundaries for kategorie/overview, pageSize/page hygiene (ADM-H3/H4/M1/M2/M3/L1/L5/L7). [T-0175](T-0175-admin-list-infrastructure.md) | 8 | M | ready | — | US-admin-0002, 0009, 0013 | 0024 |
+| T-0176 | **Admin action feedback + modal a11y** — success confirmations on refund/state-change/complete-batch, un-brick category row, hoist outbox notices, shared focus-trapped Dialog, arm-confirm disarm, fee-override prefill, typed download errors (ADM-H6/M5/M6/M10/L2/L3/L4/L6). [T-0176](T-0176-admin-action-feedback.md) | 8 | M | ready | T-0175 | US-admin-0009, 0012, 0013, 0018 | 0024 |
+| T-0177 | **Admin audit-trail integrity + cross-links** — server-side `targetId` filter (order detail currently client-filters the global slice and can show empty history), entity cross-links, list-state-preserving back links, notes tooltip (ADM-H2/M4/M7/M8). NSwag admin regen. [T-0177](T-0177-admin-audit-trail-crosslinks.md) | 8 | M | ready | T-0175 | US-admin-0009, 0012 | 0014, 0022 |
+| T-0178 | **Admin user lookup backing the GDPR erase** — server-verified identity before the strongest destructive flow (today: blind GUID+email paste, typo reported as "already deleted"); lookup-only default recorded (no browse page at MVP); `user.lookup` PII-read audit; NSwag admin regen (ADM-H1/M9). [T-0178](T-0178-admin-user-lookup.md) | 8 | M | ready | — | US-admin-0012 | 0013, 0014, 0022 |
+| T-0179 | **Maker awareness reads + image commands** — attention-count badges (nav + order tabs), payout accrued-balance/next-batch summary read, set-primary product image command (MAKER-M3-read/M5/M6-be). No business blocker; needs a contract-grooming pass (thin `IXxxQueries` reads + one aggregate command) before `ready`. | 8 | M | draft | T-0173, T-0174 | US-maker-0004, 0005, 0012 | — |
+| T-0180 | **Reactivation paths for soft-deleted entities** — maker restores an own soft-deleted product; admin reactivates a maker/category (MAKER-H4, ADM-H5). Blocked on **Q-0040** (who may restore what; audit posture). Interim guards (hide second delete, irreversibility copy) ship in T-0174/T-0176. | 8 | M | draft | T-0174, T-0176 | US-maker-0004; US-admin-0004, 0013 | 0014 |
+| T-0181 | **Order escape hatches** — maker decline of a Paid order + customer cancel of an unpaid order (MAKER-H3, CUST-M3). Blocked on **Q-0041** (refund semantics, state-machine additions, notification flows). Interim guidance copy ships in T-0172/T-0174. | 8 | M | draft | T-0172, T-0174 | US-customer-0010; US-maker-0006 | 0016, 0017 |
+
+**Phase 8 total:** 16 tickets (T-0166–T-0181, filed 2026-08-21 from the site-wide UX audit). Recommended first pick: **T-0166** (registration→activation is broken end-to-end in every environment; S-sized). Surfaces are disjoint — after T-0166, the auth (T-0167–0169), public (T-0170–0171), customer/maker (T-0172–0174) and admin (T-0175–0178) tracks can run in parallel; T-0177+T-0178 both regen the admin client, so ship them sequenced or in one bundle.
+
+---
+
 ## Totals
 
 | Phase | Tickets | Effort (approx) |
@@ -258,6 +285,7 @@ Until the user answers these in `docs/questions/open.md` (or directly), the abov
 | 5 — Post-order | 27 | ~15 days |
 | 6 — Polish | 9 | ~7 days |
 | 7 — Business-model pivot | 12 | not yet estimated (several rows blocked on open decisions §5; T-0142 must split before sizing is meaningful) |
+| 8 — UX functional sweep | 16 | ~10 days (13 ready: 1 S + 12 M; 3 draft) |
 | **Total (Phases 1–6)** | **104** | **~67 days** of agent-equivalent work |
 
 Phase 7 (12 tickets, T-0140–T-0151) is tracked separately from the Phases 1–6 baseline — it is a post-MVP addition discovered from the 2026-07-04 business-decision meetings, not part of the original sequential build plan, and most of it cannot be estimated with confidence until the open §5 decisions land.
@@ -288,6 +316,8 @@ Total: ~10 working weeks from sign-off to production launch. Conservative.
 ---
 
 ## Status
+
+**2026-08-21:** Phase 8 filed — site-wide UX functional sweep from the operator directive "refactor the design of the whole website (functionally)". Five parallel surface audits (~60 findings, [docs/review/ux-functional-audit-2026-08-21.md](../review/ux-functional-audit-2026-08-21.md)) consolidated into T-0166–T-0181: 13 `ready` with full ticket files, 3 `draft` (Q-0040 reactivation policy, Q-0041 order escape hatches, T-0179 contract grooming). Plan lives on branch `plan/site-ux-functional-sweep`. Recommended first pick: T-0166 (all transactional email links 404 — registration/reset/magic broken end-to-end).
 
 **2026-07-17:** T-0152 (session-aware nav + dashboard chrome + maker-login fix + Apple UI removal) shipped `done` and T-0153 (core sell→order path E2E completion, `ready`) filed — both queued under Cross-cutting follow-ups per direct user request; T-0153 is the recommended next pick (its only prerequisite is Azure access for the dev-env revival).
 
