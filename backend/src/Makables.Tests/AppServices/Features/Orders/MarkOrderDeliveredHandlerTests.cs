@@ -55,9 +55,6 @@ public class MarkOrderDeliveredHandlerTests
         var urls = Options.Create(new PublicAppUrlsOptions
         {
             WebBaseUrl = WebBaseUrl,
-            MagicLinkPath = "/auth/magic?token={token}",
-            EmailConfirmationPath = "/auth/confirm?token={token}",
-            PasswordResetPath = "/auth/reset?token={token}",
         });
 
         _sut = new MarkOrderDelivered.Handler(

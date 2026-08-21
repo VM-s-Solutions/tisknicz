@@ -1,7 +1,7 @@
 ---
 id: T-0166
 title: Fix dead transactional email link paths (confirm / magic / reset all 404)
-status: ready
+status: in_review
 size: S
 owner:
 created: 2026-08-21
@@ -67,3 +67,11 @@ too (`confirm` vs `verify`) — do not "fix" by renaming the frontend route. Fro
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-21 selected by PM via `/execute` (first ready ticket, no dependencies)
+- 2026-08-21 `ready → in_progress`, branch `feat/T-0166-email-link-paths`
+- 2026-08-21 `in_progress → in_review` — implementation `cb2b7fe`; unit 2077/2077, frontend 143/143,
+  AC-2 + AC-3 verified in the running app (see [test plan](../test-plans/T-0166.md)); integration
+  suite Docker-limited locally (runs in CI)
+- 2026-08-21 reviewer fold ([review](../review/runs/T-0166.md)): route-existence guard added to the
+  redirect test (blocking item) + dead `/auth/*` fixture templates dropped from 8 handler test
+  files (LOW). Suites after fold: unit 2079/2079, frontend 173/173

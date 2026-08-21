@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import nextConfig from '../../next.config';
 
 /**
@@ -24,6 +26,17 @@ describe('next.config legacy auth redirects', () => {
       expect(rule, `missing redirect for ${source}`).toBeDefined();
       expect(rule!.destination).toBe(destination);
       expect(rule!.permanent).toBe(true);
+    }
+  });
+
+  // Review gate for T-0166: pinned path strings alone would stay green if
+  // someone renamed an (auth) page folder — the exact refactor that would
+  // recreate AUTH-H1. Assert the redirect targets (which are also the
+  // PublicAppUrlsOptions email-link targets) are real routes on disk.
+  it('every redirect target is a real (auth) route on disk', () => {
+    for (const leaf of ['verify', 'magic', 'reset'] as const) {
+      const page = join(process.cwd(), 'src', 'app', '(auth)', leaf, 'page.tsx');
+      expect(existsSync(page), `src/app/(auth)/${leaf}/page.tsx must exist`).toBe(true);
     }
   });
 });
