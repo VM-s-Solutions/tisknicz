@@ -23,9 +23,8 @@ describe('next.config legacy auth redirects', () => {
       ['/auth/reset', '/reset'],
     ] as const) {
       const rule = bySource.get(source);
-      expect(rule, `missing redirect for ${source}`).toBeDefined();
-      expect(rule!.destination).toBe(destination);
-      expect(rule!.permanent).toBe(true);
+      // Object shape keeps the failing `source` visible in the assertion diff.
+      expect({ source, rule }).toMatchObject({ source, rule: { destination, permanent: true } });
     }
   });
 
@@ -36,7 +35,7 @@ describe('next.config legacy auth redirects', () => {
   it('every redirect target is a real (auth) route on disk', () => {
     for (const leaf of ['verify', 'magic', 'reset'] as const) {
       const page = join(process.cwd(), 'src', 'app', '(auth)', leaf, 'page.tsx');
-      expect(existsSync(page), `src/app/(auth)/${leaf}/page.tsx must exist`).toBe(true);
+      expect({ page, exists: existsSync(page) }).toEqual({ page, exists: true });
     }
   });
 });
