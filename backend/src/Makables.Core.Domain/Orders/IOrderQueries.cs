@@ -104,4 +104,33 @@ public interface IOrderQueries
     /// <c>IgnoreQueryFilters</c>). WARN-only: never blocks the config save.
     /// </summary>
     Task<int> CountInFlightByCountryAsync(string countryCode, CancellationToken ct);
+
+    /// <summary>
+    /// Platform earnings between <paramref name="fromInclusive"/> and
+    /// <paramref name="toExclusive"/>, recognised at <c>PaidAt</c> — the
+    /// admin overview's earnings panel (T-0182). <b>Unscoped — admin host
+    /// only</b>: the sums span every maker and customer on the platform,
+    /// exactly like <see cref="CountInFlightByCountryAsync"/>.
+    ///
+    /// <para>
+    /// A sale counts as earned once its payment cleared and was not
+    /// reversed — <c>Paid | Accepted | Shipped | Delivered | Completed |
+    /// Disputed</c>. <c>PendingPayment</c> never took money;
+    /// <c>Cancelled</c> and <c>Refunded</c> gave it back, so both are out
+    /// of the fee sums but their refunded amounts still show in
+    /// <see cref="PlatformRevenueDto.RefundedMinor"/> (which spans every
+    /// order paid in the window, so a partial refund on a still-live
+    /// order is visible too).
+    /// </para>
+    ///
+    /// <para>
+    /// One round-trip, <c>AsNoTracking</c>, no aggregate materialized;
+    /// soft-deleted rows are excluded by the global query filter. An
+    /// empty window returns a zeroed row, never null.
+    /// </para>
+    /// </summary>
+    Task<PlatformRevenueDto> GetPlatformRevenueAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken ct);
 }

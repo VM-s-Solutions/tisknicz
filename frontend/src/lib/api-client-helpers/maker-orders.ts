@@ -212,6 +212,31 @@ export async function getMakerOrderDetail(
  * US-maker-0006). The backend re-validates the transition — stale calls
  * return 409 <c>order.invalidTransition</c>.
  */
+/**
+ * The maker REFUSES a paid order they cannot fulfil (T-0181 / Q-0041).
+ * Paid-only and only within the configured window of `paidAt` — past it
+ * the backend answers 409 `order.refusalWindowExpired` and the maker must
+ * go through admin support. The full amount is refunded before the order
+ * is cancelled, so a gateway failure leaves the order untouched.
+ */
+export async function refuseOrder(
+  orderId: string,
+  reason: string,
+): Promise<Result<RefuseOrderResult, ApiError>> {
+  return apiFetch<RefuseOrderResult>(
+    'maker',
+    `${Base}/${encodeURIComponent(orderId)}/refuse`,
+    { method: 'POST', json: { reason } },
+  );
+}
+
+/** Mirror of `RefuseOrder.RefuseOrderResponse`. */
+export interface RefuseOrderResult {
+  readonly orderId: string;
+  readonly state: string;
+  readonly refundedAmountMinor: number;
+}
+
 export async function acceptOrder(
   orderId: string,
 ): Promise<Result<AcceptOrderResult, ApiError>> {

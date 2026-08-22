@@ -239,6 +239,17 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasDatabaseName("ix_orders_payout_unclaimed")
             .HasFilter("state = 'Delivered' AND payout_batch_id IS NULL AND is_active");
 
+        // T-0182: backs the admin earnings panel — the revenue window
+        // filters on (paid_at >= from AND paid_at < to) and would otherwise
+        // seq-scan a growing orders table on every dashboard load. Partial
+        // WHERE matches the house convention (ix_orders_state /
+        // ix_orders_payout_batch_id): an order that never cleared payment,
+        // or a soft-deleted one, can never contribute revenue, so the index
+        // only covers rows that can. Not unique → no translator entry.
+        builder.HasIndex(o => o.PaidAt)
+            .HasDatabaseName("ix_orders_paid_at")
+            .HasFilter("paid_at IS NOT NULL AND is_active");
+
         // T-0101: payout_batch_id → payout_batches(id) ON DELETE RESTRICT.
         // An order references the batch that paid it — legal traceability.
         // Deleting a batch row must not cascade into orphaning settlement

@@ -2112,6 +2112,24 @@ export const messages = {
   'dashboard.maker.products.filter.inactive': 'Neaktivní',
   'dashboard.maker.products.filter.empty':
     'Tomuto filtru neodpovídají žádné produkty na této stránce.',
+  // T-0181 — order escape hatches (Q-0041)
+  'dashboard.maker.orders.detail.refuse_hint':
+    'Nemůžeš objednávku vyrobit? Napiš zákazníkovi ve zprávách níže, nebo ji odmítni — peníze se zákazníkovi vrátí.',
+  'dashboard.maker.orders.detail.refuse': 'Odmítnout objednávku',
+  'dashboard.maker.orders.detail.refuse_title': 'Odmítnout objednávku?',
+  'dashboard.maker.orders.detail.refuse_intro':
+    'Objednávka se zruší a zákazníkovi vrátíme celou zaplacenou částku. Tuto akci nelze vzít zpět.',
+  'dashboard.maker.orders.detail.refuse_reason': 'Důvod odmítnutí (uvidí ho zákazník)',
+  'dashboard.maker.orders.detail.refuse_confirm': 'Ano, odmítnout a vrátit peníze',
+  'dashboard.maker.orders.detail.refuse_window_expired':
+    'Lhůta pro odmítnutí už uplynula. Napiš prosím podpoře, domluvíme se na dalším postupu.',
+  'order.page.cancel': 'Zrušit objednávku',
+  'order.page.cancel_title': 'Zrušit objednávku?',
+  'order.page.cancel_intro':
+    'Objednávka se zruší. Nic jste zatím nezaplatili, takže se nevrací žádné peníze.',
+  'order.page.cancel_confirm': 'Ano, zrušit',
+  'order.page.cancelled_notice': 'Objednávka byla zrušena.',
+
   'dashboard.maker.orders.detail.paid_hint':
     'Nemůžeš objednávku vyrobit? Napiš zákazníkovi ve zprávách níže — domluvíte se na dalším postupu.',
 

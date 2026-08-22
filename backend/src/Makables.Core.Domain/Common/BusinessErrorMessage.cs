@@ -42,6 +42,16 @@ public static class BusinessErrorMessage
     public const string OrderNotFound = "order.notFound";
     public const string OrderAlreadyAccepted = "order.alreadyAccepted";
     public const string OrderInvalidTransition = "order.invalidTransition";
+
+    /// <summary>
+    /// The maker tried to REFUSE a paid order after
+    /// <c>CountryConfiguration.MakerRefusalWindowHours</c> elapsed since
+    /// <c>PaidAt</c> (T-0181 / Q-0041). Past the window the refusal is an
+    /// admin-mediated decision (T-0107), which is the pre-T-0181 status
+    /// quo — so this is a boundary on a NEW maker capability, not a
+    /// restriction of anything that existed before.
+    /// </summary>
+    public const string OrderRefusalWindowExpired = "order.refusalWindowExpired";
     public const string OrderNotPayableYet = "order.notPayableYet";
     /// <summary>
     /// Quantity must equal 1 at MVP. T-0061 user decision Q4 keeps the

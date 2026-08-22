@@ -1,7 +1,7 @@
 ---
 id: T-0181
 title: "Order escape hatches: customer cancels unpaid, maker refuses paid within 2 days"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -38,10 +38,11 @@ decision of **2026-06-03** (recorded in `docs/status/sprint-7.md`) had already s
 made-to-order goods it would return money after production may have started.
 
 ## Scope
-- **Domain:** no state-machine change needed — `Order.Cancel` already accepts
-  `PendingPayment | Paid | Accepted` and stamps `OrderCancellationSource`
-  (`Order.cs:796-808`). Add `OrderCancellationSource.Maker` (the enum has Customer / AutoExpiry /
-  Admin only) + migration.
+- **Domain:** ~~no state-machine change needed~~ **CORRECTED during implementation** — a full
+  `Refund()` ends in `Refunded`, but the answer asks for the order to be *cancelled*, and two
+  terminal transitions cannot both run. Added ONE aggregate method `Order.RefuseByMaker(clock,
+  refundedAmountMinor)` that records the money and stamps the cancellation as a single transition
+  (CLAUDE.md §2.2). Plus `OrderCancellationSource.Maker` + migration.
 - **Config:** `CountryConfiguration.MakerRefusalWindowHours` (default **48**) — the window is a
   policy, so it is a config row, never a hard-coded constant (ADR 0004; no country branching).
 - **Backend — customer:** `CancelPendingOrder` command on the Customer host,
@@ -112,3 +113,9 @@ the money path; `MarkOrderDelivered` (T-0076) is the Silent-Success idempotency 
 - 2026-08-21 filed `draft` (Phase 8 UX sweep plan) — blocked on Q-0041
 - 2026-08-22 `draft → ready` — Q-0041 answered; today's time bound composes with the 2026-06-03
   role decision, so roles + window + money path are all determined. No open question remains
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0181-order-escape-hatches`
+- 2026-08-22 `in_progress → in_review` — backend 2110/2110 (+19), frontend tsc clean + vitest
+  229/229 (+3); NSwag regen for customer + maker. **Ticket corrected mid-build**: the "no
+  state-machine change" claim was wrong (see Scope). A live Comgate-sandbox refund was NOT observed
+  — recorded in the [test plan](../test-plans/T-0181.md) row 22, not claimed.
+  See [review run](../review/runs/T-0181.md)

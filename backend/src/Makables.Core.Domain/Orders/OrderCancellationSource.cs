@@ -35,4 +35,15 @@ public enum OrderCancellationSource : short
     /// only introduces the enum value).
     /// </summary>
     Admin = 2,
+
+    /// <summary>
+    /// The MAKER refused a paid order they cannot fulfil, within the
+    /// <c>CountryConfiguration.MakerRefusalWindowHours</c> window
+    /// (T-0181 / Q-0041, user-confirmed 2026-08-22 on top of the
+    /// 2026-06-03 role decision). Deliberately distinct from
+    /// <see cref="Admin"/>: a dispute trail must be able to say "the maker
+    /// refused" without it reading as "the platform intervened" — that
+    /// distinction is the whole point of this enum.
+    /// </summary>
+    Maker = 3,
 }

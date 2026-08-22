@@ -349,6 +349,23 @@ public sealed class OrdersController(
     /// Cancelled) surface as 409.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Customer cancels their own UNPAID order (T-0181 / Q-0041, audit
+    /// CUST-M3). <c>PendingPayment</c> ONLY — no money has moved there, so
+    /// there is no refund and no time window. A paid order is the maker's
+    /// "refuse" action, never the customer's (409 otherwise). Re-calling on
+    /// an already-cancelled order is a 200 (Silent Success).
+    /// </summary>
+    [HttpPost("{orderId}/cancel")]
+    [ProducesResponseType(typeof(CancelPendingOrder.CancelPendingOrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancel(string orderId, CancellationToken ct) =>
+        HandleResult(await Mediator.Send(
+            new CancelPendingOrder.Command(orderId, session.GetUserId() ?? string.Empty), ct));
+
     [HttpPost("{orderId}/deliver")]
     [ProducesResponseType(typeof(MarkOrderDeliveredApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]

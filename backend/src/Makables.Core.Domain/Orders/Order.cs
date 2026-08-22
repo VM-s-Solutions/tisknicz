@@ -1015,6 +1015,58 @@ public sealed class Order : Auditable
         return BusinessResult.Success();
     }
 
+    /// <summary>
+    /// The MAKER refuses a paid order they cannot fulfil, returning the
+    /// full amount (T-0181 / Q-0041, user-confirmed 2026-08-22 on top of
+    /// the 2026-06-03 role decision: <i>"maker cancels/refuses from Paid
+    /// only"</i>).
+    ///
+    /// <para>
+    /// <b>Why this is its own method rather than Refund + Cancel.</b> A
+    /// full <see cref="Refund"/> lands the order in
+    /// <see cref="OrderState.Refunded"/>, but the user asked for the order
+    /// to be <i>cancelled</i> — and two terminal transitions cannot both
+    /// run. Recording the money and stamping the cancellation is therefore
+    /// ONE state change, expressed as one aggregate method (CLAUDE.md §2.2
+    /// — every legal transition is a method), so the money record and the
+    /// attribution can never drift apart.
+    /// </para>
+    ///
+    /// <para>
+    /// <see cref="OrderCancellationSource.Maker"/> is what lets a dispute
+    /// trail say "the maker refused" instead of "the platform intervened".
+    /// The TIME WINDOW is deliberately NOT enforced here — it is a tunable
+    /// business policy read from <c>CountryConfiguration</c> by the command
+    /// layer (ADR 0004), not an invariant of the aggregate.
+    /// </para>
+    /// </summary>
+    /// <param name="refundedAmountMinor">
+    /// What the provider actually returned — normally
+    /// <see cref="TotalAmountMinor"/>. Recorded on
+    /// <see cref="RefundedAmountMinor"/> so reporting sees the money.
+    /// </param>
+    public BusinessResult RefuseByMaker(IClock clock, long refundedAmountMinor)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        if (refundedAmountMinor < 0)
+            throw new ArgumentException("Refunded amount cannot be negative.", nameof(refundedAmountMinor));
+
+        // Paid ONLY. Accepted means the maker already took the job on;
+        // backing out there is an admin-mediated dispute, not a refusal.
+        if (State != OrderState.Paid)
+            return InvalidTransition();
+
+        if (refundedAmountMinor > RemainingRefundableMinor)
+            return BusinessResult.Failure(
+                Error.Conflict("amountMinor", BusinessErrorMessage.PaymentRefundAmountExceedsRemaining));
+
+        RefundedAmountMinor += refundedAmountMinor;
+        State = OrderState.Cancelled;
+        CancelledAt = clock.UtcNow;
+        CancellationSource = OrderCancellationSource.Maker;
+        return BusinessResult.Success();
+    }
+
     // === T-0106: dispute parenthesis-state (patterns §A.22) ===
 
     /// <summary>

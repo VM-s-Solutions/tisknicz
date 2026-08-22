@@ -323,6 +323,28 @@ export async function getCustomerOrderDetail(
  * <c>order.invalidTransition</c> (409) only surfaces for genuinely
  * ineligible states.
  */
+/**
+ * The customer cancels their own UNPAID order (T-0181 / Q-0041, audit
+ * CUST-M3). `PendingPayment` only — no money has moved, so there is no
+ * refund and no window; a paid order answers 409 (that is the maker's
+ * "refuse" action). Re-calling on an already-cancelled order is a 200.
+ */
+export async function cancelPendingOrder(
+  orderId: string,
+): Promise<Result<CancelPendingOrderResult, ApiError>> {
+  return apiFetch<CancelPendingOrderResult>(
+    'customer',
+    `${Base}/${encodeURIComponent(orderId)}/cancel`,
+    { method: 'POST' },
+  );
+}
+
+/** Mirror of `CancelPendingOrder.CancelPendingOrderResponse`. */
+export interface CancelPendingOrderResult {
+  readonly orderId: string;
+  readonly state: string;
+}
+
 export async function markOrderDelivered(
   orderId: string,
 ): Promise<Result<MarkOrderDeliveredResult, ApiError>> {
