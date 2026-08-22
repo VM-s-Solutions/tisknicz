@@ -1,7 +1,7 @@
 ---
 id: T-0171
 title: "Public surface: error boundaries, contextual back-navigation, honest counts, audience-gated CTA"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -86,3 +86,4 @@ Files per audit: `public-navbar.tsx:63-160`, `app/page.tsx:24-31,130-147`, `prod
 - 2026-08-22 `in_progress → in_review` — tsc clean, vitest 225/225 (+3 new); stale-category notice
   SSR-verified on the running app; PUB-L1 + PUB-L2 deferred with rationale in the
   [test plan](../test-plans/T-0171.md); see [review run](../review/runs/T-0171.md)
+- 2026-08-22 `in_review → done` — merged via PR #147; CI green

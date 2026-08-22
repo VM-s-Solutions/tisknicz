@@ -81,6 +81,7 @@ export function DisputeEscalationClient({
   deliveredAt,
 }: DisputeEscalationClientProps) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<string>(DisputeCategory.NotDelivered);
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +119,33 @@ export function DisputeEscalationClient({
 
     setError(resolveErrorMessage(result.error));
     setSubmitting(false);
+  }
+
+  // T-0173 (audit CUST-L5): the full category + description form sat
+  // permanently open under EVERY Paid-or-later thread, visually
+  // contradicting its own intro ("write to the maker first, escalate
+  // after 7 days"). It is a disclosure now — the intent is unchanged,
+  // the invitation is not.
+  if (!open) {
+    return (
+      <div className="flex flex-col gap-3 border-t border-zinc-800 pt-4">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-200">
+            {t('customer.orderDetail.dispute.heading')}
+          </h3>
+          <p className="mt-1 text-sm text-zinc-400">{t('customer.orderDetail.dispute.intro')}</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => setOpen(true)}
+        >
+          {t('dashboard.customer.orders.dispute.disclosure')}
+        </Button>
+      </div>
+    );
   }
 
   return (

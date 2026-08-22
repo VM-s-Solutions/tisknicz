@@ -101,6 +101,14 @@ export default async function CustomerOrdersPage({ searchParams }: PageProps) {
   const hasActiveFilters =
     state !== undefined || dateFrom !== undefined || dateTo !== undefined;
 
+  /** The URL the user is actually on — so a retry re-runs THIS request. */
+  const currentHref = (params: Record<string, string>, currentPage: number): string => {
+    const sp = new URLSearchParams(params);
+    if (currentPage > 1) sp.set('page', String(currentPage));
+    const query = sp.toString();
+    return query ? `${ROUTE_PATH}?${query}` : ROUTE_PATH;
+  };
+
   return (
     <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -126,7 +134,7 @@ export default async function CustomerOrdersPage({ searchParams }: PageProps) {
               hasActiveFilters={hasActiveFilters}
             />
           ) : (
-            <OrdersError error={result.error} />
+            <OrdersError error={result.error} retryHref={currentHref(baseParams, page)} />
           )}
         </div>
       </div>
@@ -203,7 +211,18 @@ function OrdersNoMatch() {
   );
 }
 
-function OrdersError({ error }: { readonly error: ApiError }) {
+function OrdersError({
+  error,
+  retryHref,
+}: {
+  readonly error: ApiError;
+  /** Current URL — T-0173 (audit CUST-L2 / MAKER-L2): the retry used to
+   * link the bare route, silently discarding the tab, filters and page
+   * the user was on. A Validation failure (e.g. an inverted date range)
+   * is the one case where clearing IS the fix, so it says so instead. */
+  readonly retryHref: string;
+}) {
+  const isValidation = error.type === 'Validation';
   // AC-5 (review NEW-3): Czech copy mapped from the error code — a 400
   // (e.g. inverted date range) must not read as a server outage.
   return (
@@ -214,10 +233,10 @@ function OrdersError({ error }: { readonly error: ApiError }) {
           <p className="mt-1 text-sm opacity-90">{resolveErrorMessage(error)}</p>
         </div>
         <Link
-          href={ROUTE_PATH}
+          href={isValidation ? ROUTE_PATH : retryHref}
           className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 transition-colors duration-150 hover:border-red-400/60 hover:text-red-200"
         >
-          {t('customer.orders.error.retry')}
+          {isValidation ? t('dashboard.orders.retry_clear_filters') : t('customer.orders.error.retry')}
         </Link>
       </div>
     </Alert>

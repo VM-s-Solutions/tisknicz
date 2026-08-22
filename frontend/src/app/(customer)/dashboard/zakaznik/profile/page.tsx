@@ -1,7 +1,9 @@
 import { EmailConfirmationBanner } from '@/components/shared/email-confirmation-banner';
 import { PageHeader } from '@/components/shared/page-header';
+import { ProfileLoadError } from '@/components/shared/profile-load-error';
 import { Alert } from '@/components/ui/alert';
 import { getMyProfile } from '@/lib/api-client-helpers/profile';
+import { redirect } from 'next/navigation';
 import { t } from '@/lib/i18n';
 import { CustomerProfileClient } from './profile-client';
 
@@ -23,6 +25,14 @@ export const dynamic = 'force-dynamic';
 export default async function CustomerProfilePage() {
   const result = await getMyProfile('customer');
 
+  // T-0173 (audit CUST-M1): an expired session rendered a dead-end alert
+  // carrying the RAW backend message — against the project's own rule that
+  // `error.message` never reaches the UI — while the orders page one route
+  // over redirected correctly. Parity restored.
+  if (!result.success && result.error.type === 'Unauthorized') {
+    redirect(`/login?redirect=${encodeURIComponent('/dashboard/zakaznik/profile')}`);
+  }
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
       <PageHeader title={t('dashboard.customer.profile.title')} />
@@ -37,7 +47,7 @@ export default async function CustomerProfilePage() {
           <CustomerProfileClient initialProfile={result.value} />
         </>
       ) : (
-        <Alert variant="error">{result.error.message}</Alert>
+        <ProfileLoadError error={result.error} />
       )}
     </div>
   );

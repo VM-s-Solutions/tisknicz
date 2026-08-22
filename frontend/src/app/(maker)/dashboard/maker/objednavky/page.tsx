@@ -83,6 +83,9 @@ function readString(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
+/** Nothing deep-links past this; keeps an absurd page off the API. */
+const MAX_DEEP_LINK_PAGE = 10_000;
+
 function parsePositiveInt(raw: string, fallback: number, max: number = Number.MAX_SAFE_INTEGER): number {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
@@ -93,7 +96,9 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
   const sp = await searchParams;
 
   const tab = parseOrderListTab(readString(sp.tab));
-  const page = parsePositiveInt(readString(sp.page), 1);
+  // Bound the deep-linked page so a hand-typed ?page=9007199254740991
+  // never reaches the backend (T-0173, audit MAKER-L5).
+  const page = parsePositiveInt(readString(sp.page), 1, MAX_DEEP_LINK_PAGE);
   // Honor a URL-provided pageSize (clamped to the backend's MaxPageSize)
   // so deep links and pagination URLs round-trip cleanly (produkty
   // precedent, T-0049 review M2). UX-only clamp — backend authoritative.
@@ -144,6 +149,15 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
   const paginationParams: Record<string, string> = { ...filterParams };
   if (tab !== DEFAULT_ORDER_LIST_TAB) paginationParams.tab = tab;
 
+  /** The URL the maker is actually on — a retry must re-run THIS request,
+   * tab and filters included (T-0173, audit MAKER-L2). */
+  const currentHref = (() => {
+    const sp = new URLSearchParams(paginationParams);
+    if (page > 1) sp.set('page', String(page));
+    const query = sp.toString();
+    return query ? `${ROUTE_PATH}?${query}` : ROUTE_PATH;
+  })();
+
   return (
     <section className="py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -170,7 +184,7 @@ export default async function MakerOrdersPage({ searchParams }: PageProps) {
           {result.success ? (
             <OrdersResults data={result.value} tab={tab} baseParams={paginationParams} />
           ) : (
-            <OrdersError error={result.error} />
+            <OrdersError error={result.error} retryHref={currentHref} />
           )}
         </div>
       </div>
@@ -194,6 +208,30 @@ function OrdersResults({ data, tab, baseParams }: OrdersResultsProps) {
   const totalPages = data.totalPages ?? 1;
   const hasNext = data.hasNextPage ?? false;
   const hasPrevious = data.hasPreviousPage ?? false;
+
+  // T-0173 (audit MAKER-L5): a page past the end returned zero items with a
+  // NONZERO total, so the maker saw an empty box under a count claiming
+  // orders exist. Offer the last real page instead of a dead end.
+  if (data.items.length === 0 && data.page > totalPages) {
+    const lastPageParams = new URLSearchParams(baseParams);
+    if (totalPages > 1) lastPageParams.set('page', String(totalPages));
+    const query = lastPageParams.toString();
+    return (
+      <EmptyState
+        icon="search"
+        title={t('dashboard.maker.orders.outOfRange.title')}
+        description={t('dashboard.maker.orders.outOfRange.description')}
+        action={
+          <Link
+            href={query ? `${ROUTE_PATH}?${query}` : ROUTE_PATH}
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          >
+            {t('dashboard.maker.orders.outOfRange.lastPage')}
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <>
@@ -245,7 +283,18 @@ function OrdersEmpty({ tab }: { readonly tab: OrderListTab }) {
   );
 }
 
-function OrdersError({ error }: { readonly error: ApiError }) {
+function OrdersError({
+  error,
+  retryHref,
+}: {
+  readonly error: ApiError;
+  /** Current URL — T-0173 (audit CUST-L2 / MAKER-L2): the retry used to
+   * link the bare route, silently discarding the tab, filters and page
+   * the user was on. A Validation failure (e.g. an inverted date range)
+   * is the one case where clearing IS the fix, so it says so instead. */
+  readonly retryHref: string;
+}) {
+  const isValidation = error.type === 'Validation';
   // AC-10 polish (review NEW-3): Czech copy mapped from the error code —
   // a 400 (e.g. inverted date range) must not read as a server outage.
   return (
@@ -256,10 +305,10 @@ function OrdersError({ error }: { readonly error: ApiError }) {
           <p className="mt-1 text-sm opacity-90">{resolveErrorMessage(error)}</p>
         </div>
         <Link
-          href={ROUTE_PATH}
+          href={isValidation ? ROUTE_PATH : retryHref}
           className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
         >
-          {t('dashboard.maker.orders.error.retry')}
+          {isValidation ? t('dashboard.orders.retry_clear_filters') : t('dashboard.maker.orders.error.retry')}
         </Link>
       </div>
     </Alert>
