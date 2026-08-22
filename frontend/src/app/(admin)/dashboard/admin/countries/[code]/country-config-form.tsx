@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useTransition } from 'react';
+import { useId, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/alert';
+import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dropdown } from '@/components/ui/dropdown';
@@ -420,40 +421,17 @@ function ProviderConfirmModal({
   const titleId = useId();
   const [typed, setTyped] = useState('');
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose, busy]);
+  // Scroll lock + Esc handling live in the shared Dialog (T-0176).
 
   const typedValid = typed.trim() !== '';
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
+    <Dialog
+      titleId={titleId}
+      title={t('dashboard.admin.ops.country.providerModal.title')}
+      onClose={onClose}
+      closeDisabled={busy}
     >
-      <div
-        aria-hidden="true"
-        onClick={() => {
-          if (!busy) onClose();
-        }}
-        className="absolute inset-0 bg-black/70"
-      />
-      <div className="relative z-10 my-8 w-full max-w-lg rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
-        <h2 id={titleId} className="text-lg font-semibold text-white">
-          {t('dashboard.admin.ops.country.providerModal.title')}
-        </h2>
-        <div className="mt-4 flex flex-col gap-4">
           <p className="text-sm text-zinc-400">
             {t('dashboard.admin.ops.country.providerModal.intro')}
           </p>
@@ -495,8 +473,6 @@ function ProviderConfirmModal({
                 : t('dashboard.admin.ops.country.providerModal.confirm')}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

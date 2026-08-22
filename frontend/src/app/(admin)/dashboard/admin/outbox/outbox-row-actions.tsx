@@ -11,6 +11,7 @@ import {
   retryOutboxEvent,
 } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
+import { useActionNotice } from '../_components/action-notice';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 
 /**
@@ -33,7 +34,6 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
   const [ackOpen, setAckOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [isRefreshing, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState<'retry' | 'ack' | null>(null);
   const inFlightRef = useRef(false);
@@ -41,6 +41,7 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
   const trimmedReason = reason.trim();
   const reasonValid = trimmedReason !== '' && trimmedReason.length <= REASON_MAX_LENGTH;
   const busy = submitting !== null || isRefreshing;
+  const notice = useActionNotice();
 
   function refresh() {
     startTransition(() => {
@@ -53,12 +54,13 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
     inFlightRef.current = true;
     setSubmitting('retry');
     setError(null);
-    setSuccess(null);
 
     const result = await retryOutboxEvent(eventId);
 
     if (result.success) {
-      setSuccess(
+      // Reported UP to the page-level provider: this row is about to
+      // leave the stalled set, taking any in-row notice with it (T-0176).
+      notice.report(
         t('dashboard.admin.ops.outbox.retry.success', { retryCount: result.value.retryCount }),
       );
       refresh();
@@ -75,12 +77,11 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
     inFlightRef.current = true;
     setSubmitting('ack');
     setError(null);
-    setSuccess(null);
 
     const result = await acknowledgeOutboxEvent(eventId, trimmedReason);
 
     if (result.success) {
-      setSuccess(t('dashboard.admin.ops.outbox.ack.success'));
+      notice.report(t('dashboard.admin.ops.outbox.ack.success'));
       refresh();
     } else {
       setError(resolveErrorMessage(result.error));
@@ -93,7 +94,6 @@ export function OutboxRowActions({ eventId }: { readonly eventId: string }) {
   return (
     <div className="flex flex-col gap-3">
       {error ? <Alert variant="error">{error}</Alert> : null}
-      {success ? <Alert variant="success">{success}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button

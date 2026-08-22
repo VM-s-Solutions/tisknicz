@@ -1,7 +1,7 @@
 ---
 id: T-0176
 title: "Admin action feedback: money-action confirmations, un-bricked rows, focus-trapped modals"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -79,3 +79,8 @@ never-disarming confirm buttons, non-prefilled fee override) compound it.
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0176-admin-action-feedback`
+- 2026-08-22 `in_progress → in_review` — tsc clean, vitest 215/215 (+9 new); shared focus-trapped
+  `Dialog` adopted by all three modal shells; ADM-L2 (return-label card) deferred to the T-0179
+  contract pass with rationale in the [test plan](../test-plans/T-0176.md); see
+  [review run](../review/runs/T-0176.md)

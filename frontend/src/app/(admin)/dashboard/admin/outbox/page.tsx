@@ -15,6 +15,7 @@ import { t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils/dates';
 import { AdminPagination } from '../_components/admin-pagination';
 import { parsePage } from '../_components/list-params';
+import { ActionNoticeProvider } from '../_components/action-notice';
 import { OutboxRowActions } from './outbox-row-actions';
 
 /**
@@ -153,73 +154,74 @@ function OutboxList({
 
   return (
     <>
-      <div className="rounded-xl border border-zinc-800 bg-surface-card">
-        <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-sm font-semibold text-zinc-100">
-              {t('dashboard.admin.ops.outbox.title')}
-            </h2>
-            <Badge
-              dot={false}
-              aria-label={t('dashboard.admin.ops.outbox.list.count', { count: list.totalCount })}
-            >
-              {list.totalCount}
-            </Badge>
+      <ActionNoticeProvider>        <div className="rounded-xl border border-zinc-800 bg-surface-card">
+          <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-sm font-semibold text-zinc-100">
+                {t('dashboard.admin.ops.outbox.title')}
+              </h2>
+              <Badge
+                dot={false}
+                aria-label={t('dashboard.admin.ops.outbox.list.count', { count: list.totalCount })}
+              >
+                {list.totalCount}
+              </Badge>
+            </div>
           </div>
-        </div>
-        <ul className="divide-y divide-zinc-800">
-          {list.items.map((event) => (
-            <li key={event.id} className="flex flex-col gap-4 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-zinc-100">{event.eventType}</span>
-                  <span className="font-mono text-xs text-zinc-500">{event.id}</span>
-                </div>
-                <Badge variant="warning">
-                  {t('dashboard.admin.ops.outbox.list.retryCount', { count: event.retryCount })}
-                </Badge>
-              </div>
-
-              <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1">
-                  <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                    {t('dashboard.admin.ops.outbox.list.aggregateId')}
-                  </dt>
-                  <dd className="break-all font-mono text-sm text-zinc-200">{event.aggregateId}</dd>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                    {t('dashboard.admin.ops.outbox.list.createdAt')}
-                  </dt>
-                  <dd className="text-sm text-zinc-200">{formatDateTime(event.createdAt)}</dd>
-                </div>
-                {event.lastErrorCode && event.lastErrorCode.trim() !== '' ? (
-                  <div className="flex flex-col gap-1 sm:col-span-2">
-                    <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                      {t('dashboard.admin.ops.outbox.list.lastErrorCode')}
-                    </dt>
-                    <dd className="break-all font-mono text-sm text-amber-300">
-                      {event.lastErrorCode}
-                    </dd>
+          <ul className="divide-y divide-zinc-800">
+            {list.items.map((event) => (
+              <li key={event.id} className="flex flex-col gap-4 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-zinc-100">{event.eventType}</span>
+                    <span className="font-mono text-xs text-zinc-500">{event.id}</span>
                   </div>
-                ) : null}
-              </dl>
+                  <Badge variant="warning">
+                    {t('dashboard.admin.ops.outbox.list.retryCount', { count: event.retryCount })}
+                  </Badge>
+                </div>
 
-              <div className="border-t border-zinc-800 pt-4">
-                <OutboxRowActions eventId={event.id} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+                <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                      {t('dashboard.admin.ops.outbox.list.aggregateId')}
+                    </dt>
+                    <dd className="break-all font-mono text-sm text-zinc-200">{event.aggregateId}</dd>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                      {t('dashboard.admin.ops.outbox.list.createdAt')}
+                    </dt>
+                    <dd className="text-sm text-zinc-200">{formatDateTime(event.createdAt)}</dd>
+                  </div>
+                  {event.lastErrorCode && event.lastErrorCode.trim() !== '' ? (
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                        {t('dashboard.admin.ops.outbox.list.lastErrorCode')}
+                      </dt>
+                      <dd className="break-all font-mono text-sm text-amber-300">
+                        {event.lastErrorCode}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
 
-      <AdminPagination spacing="tight"
-        page={list.page}
-        totalPages={totalPages}
-        hasNext={list.hasNextPage ?? false}
-        hasPrevious={list.hasPreviousPage ?? false}
-        routePath={ROUTE_PATH}
-      />
+                <div className="border-t border-zinc-800 pt-4">
+                  <OutboxRowActions eventId={event.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <AdminPagination spacing="tight"
+          page={list.page}
+          totalPages={totalPages}
+          hasNext={list.hasNextPage ?? false}
+          hasPrevious={list.hasPreviousPage ?? false}
+          routePath={ROUTE_PATH}
+        />
+      </ActionNoticeProvider>
     </>
   );
 }

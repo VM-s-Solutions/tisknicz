@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -30,10 +31,21 @@ export function PayoutBatchCard({ batch }: { readonly batch: AdminPayoutBatch })
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [, startTransition] = useTransition();
+  // T-0176 (audit ADM-M6): completing a batch moves real money and used
+  // to end with the modal merely closing.
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   const isProcessing = batch.state === PayoutBatchState.Processing;
 
-  function handleCompleted() {
+  function handleCompleted(result: { readonly alreadyCompleted: boolean }) {
+    setSuccessNotice(
+      result.alreadyCompleted
+        ? t('dashboard.admin.ops.payouts.complete.alreadyCompleted')
+        : t('dashboard.admin.ops.payouts.complete.success', {
+            batchId: batch.batchNumber,
+            total: formatCzk(batch.totalAmountMinor, batch.currency),
+          }),
+    );
     startTransition(() => {
       router.refresh();
     });
@@ -41,6 +53,7 @@ export function PayoutBatchCard({ batch }: { readonly batch: AdminPayoutBatch })
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {successNotice ? <Alert variant="success">{successNotice}</Alert> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-zinc-100">{batch.batchNumber}</span>

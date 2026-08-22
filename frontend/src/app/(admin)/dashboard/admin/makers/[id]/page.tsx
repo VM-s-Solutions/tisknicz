@@ -154,6 +154,7 @@ export default async function AdminMakerDetailPage({ params, searchParams }: Pag
         ) : null}
 
         <MakerFeeOverrideForm
+          currentOverrideBp={maker.feeRateOverrideBp}
           makerId={maker.makerId}
           countryCode={countryCode}
           countryDefaultBp={countryDefaultBp}
