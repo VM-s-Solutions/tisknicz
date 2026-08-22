@@ -230,6 +230,16 @@ export function OrderActions({
         ) : null}
       </div>
 
+      {/* T-0174 interim guidance (audit MAKER-H3): there is deliberately no
+          decline action on a Paid order (T-0071 lock — admin handles it via
+          T-0107), but the maker must not be left guessing what to do when
+          they cannot fulfil. A real decline path is Q-0041 / T-0181. */}
+      {showAccept ? (
+        <p className="text-sm text-zinc-500">
+          {t('dashboard.maker.orders.detail.paid_hint')}
+        </p>
+      ) : null}
+
       {confirmOpen ? (
         <ShipConfirmDialog
           orderId={orderId}
