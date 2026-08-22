@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Icon } from '@/components/ui/icon';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { HeroSceneWrapper } from '@/components/shared/hero-scene-wrapper';
 import { PublicFooter } from '@/components/shared/public-footer';
 import { PublicNavbar } from '@/components/shared/public-navbar';
 import { getDisplaySession } from '@/lib/auth/display-session';
+import { getCachedCatalogCategories } from '@/lib/catalog/category-cache';
 import { t } from '@/lib/i18n';
 import { canonicalUrl } from '@/lib/seo/site-url';
 
@@ -21,7 +22,26 @@ export function generateMetadata(): Metadata {
   };
 }
 
-const CATEGORIES = [
+/**
+ * Icon + blurb per category slug. The NAMES and the list itself are
+ * data-driven (T-0171, audit PUB-M5): the tiles used to be fully
+ * hardcoded, so an admin renaming or deactivating a category left a
+ * landing tile pointing at a slug the catalog silently ignores — the
+ * visitor got the FULL unfiltered catalog with nothing checked.
+ * Presentation for a slug we have no art for falls back gracefully.
+ */
+const CATEGORY_PRESENTATION: Record<string, { readonly icon: IconName; readonly description: string }> = {
+  '3d-tisk': { icon: 'printer', description: 'FDM, SLA, resin tisk na zakázku' },
+  'klasicky-tisk': { icon: 'image', description: 'Vizitky, letáky, brožury, plakáty' },
+  'potisk-textilu': { icon: 'tshirt', description: 'DTF, DTG, sítotisk, sublimace' },
+  'laser-cnc': { icon: 'laser', description: 'Gravírování, řezání, frézování' },
+  'velkoformat': { icon: 'frame', description: 'Bannery, rollupy, samolepky' },
+  'handmade': { icon: 'palette', description: 'Originální výrobky, dekorace' },
+};
+
+const FALLBACK_PRESENTATION = { icon: 'package' as const, description: '' };
+
+const LEGACY_CATEGORIES = [
   { name: '3D tisk', slug: '3d-tisk', icon: 'printer' as const, description: 'FDM, SLA, resin tisk na zakázku' },
   { name: 'Klasický tisk', slug: 'klasicky-tisk', icon: 'image' as const, description: 'Vizitky, letáky, brožury, plakáty' },
   { name: 'Potisk textilu', slug: 'potisk-textilu', icon: 'tshirt' as const, description: 'DTF, DTG, sítotisk, sublimace' },
@@ -31,7 +51,20 @@ const CATEGORIES = [
 ];
 
 export default async function HomePage() {
-  const session = await getDisplaySession();
+  const [session, liveCategories] = await Promise.all([
+    getDisplaySession(),
+    getCachedCatalogCategories(),
+  ]);
+
+  // Live taxonomy when the read succeeds; the launch six when it does not
+  // (the landing page must never hard-fail on a category read).
+  const categories = (liveCategories.length > 0
+    ? liveCategories.map((c) => ({ name: c.name, slug: c.slug }))
+    : LEGACY_CATEGORIES.map((c) => ({ name: c.name, slug: c.slug }))
+  ).map((c) => ({
+    ...c,
+    ...(CATEGORY_PRESENTATION[c.slug] ?? FALLBACK_PRESENTATION),
+  }));
   return (
     <div className="min-h-screen bg-surface-primary">
       <PublicNavbar session={session} />
@@ -127,7 +160,7 @@ export default async function HomePage() {
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
 
           <div className="mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-y-0">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <Link
                 key={cat.slug}
                 href={`/katalog?category=${cat.slug}`}

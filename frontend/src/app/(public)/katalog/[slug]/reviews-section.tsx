@@ -6,6 +6,8 @@ import { Stars } from '@/components/ui/stars';
 
 interface ReviewsSectionProps {
   readonly reviews: readonly MakerReviewItem[];
+  /** True total from the maker's rating stats — the list itself is capped. */
+  readonly totalCount: number;
 }
 
 /**
@@ -15,16 +17,20 @@ interface ReviewsSectionProps {
  * bordered box: header row with a count, review rows divided by
  * hairlines — no nested cards.
  */
-export function ReviewsSection({ reviews }: ReviewsSectionProps) {
+export function ReviewsSection({ reviews, totalCount }: ReviewsSectionProps) {
   return (
     <section className="rounded-xl border border-zinc-800 bg-surface-card">
       <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-zinc-800 bg-surface-secondary/60 px-4 py-3">
         <h2 className="text-sm font-semibold text-zinc-100">
           {t('catalog.maker.reviews.heading')}
         </h2>
-        {reviews.length > 0 ? (
+        {/* T-0171 (audit PUB-M4): the badge showed `reviews.length`, which is
+            capped at 5, while the seller panel showed the real ratingCount on
+            the same screen — two numbers contradicting each other. Show the
+            true total, and say so when the list below is only a slice. */}
+        {totalCount > 0 ? (
           <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-xs font-medium text-zinc-400">
-            {reviews.length}
+            {totalCount}
           </span>
         ) : null}
       </div>

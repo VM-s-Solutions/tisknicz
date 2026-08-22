@@ -50,6 +50,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,7 +62,12 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
   }
 
   function isActive(href: string): boolean {
-    return href === '/' ? pathname === '/' : pathname.startsWith(href);
+    if (href === '/') return pathname === '/';
+    // T-0171 (audit PUB-L8): a product page is one hop deeper into the
+    // catalog, but matched no nav item — orientation vanished exactly
+    // where the visitor had gone furthest.
+    if (href === '/katalog') return pathname.startsWith('/katalog') || pathname.startsWith('/produkt');
+    return pathname.startsWith(href);
   }
 
   async function handleLogout(): Promise<void> {
@@ -70,6 +76,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
     // Logout is idempotent on the backend and clears the cookies even on
     // command failure; a network error still warrants leaving the UI in
     // a logged-in state the user can retry from.
+    setLogoutError(null);
     const result = await logout(session.audience);
     setLoggingOut(false);
     if (result.success) {
@@ -79,7 +86,12 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
       // Re-render the server tree so every session-aware surface picks
       // up the cleared cookie.
       router.refresh();
+      return;
     }
+    // T-0171 (audit PUB-M6): a failed logout used to be completely
+    // silent — the label flickered and nothing else happened, leaving
+    // the user unsure whether they were still signed in.
+    setLogoutError(t('nav.logout_failed'));
   }
 
   const accountMenu = session && (
@@ -154,6 +166,11 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
                 <Icon name="logOut" size={16} />
                 {loggingOut ? t('nav.logging_out') : t('nav.logout')}
               </button>
+              {logoutError ? (
+                <p role="alert" className="px-2.5 pb-1 text-xs text-error">
+                  {logoutError}
+                </p>
+              ) : null}
             </div>
           </div>
         </>

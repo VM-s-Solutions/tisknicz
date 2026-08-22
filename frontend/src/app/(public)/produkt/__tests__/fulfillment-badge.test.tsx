@@ -57,8 +57,11 @@ describe('product detail order CTA', () => {
     );
   });
 
-  it('replaces the CTA with an explanation for a signed-in maker', () => {
-    render(<ProductInfo product={baseProduct} isMaker />);
+  // T-0171 (audit PUB-L6): widened from maker-only — an admin session hit
+  // the same unsatisfiable login loop, since an account is bound to ONE
+  // audience and no non-customer session can mint a customer JWT.
+  it('replaces the CTA with an explanation for any signed-in non-customer', () => {
+    render(<ProductInfo product={baseProduct} isOtherAudience />);
     expect(screen.queryByRole('link', { name: /Objednat/ })).not.toBeInTheDocument();
     expect(
       screen.getByText('Objednávat může jen zákaznický účet — jste přihlášeni jako maker.'),

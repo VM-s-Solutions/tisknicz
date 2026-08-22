@@ -1,7 +1,7 @@
 ---
 id: T-0171
 title: "Public surface: error boundaries, contextual back-navigation, honest counts, audience-gated CTA"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -82,3 +82,7 @@ Files per audit: `public-navbar.tsx:63-160`, `app/page.tsx:24-31,130-147`, `prod
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0171-public-error-navigation`
+- 2026-08-22 `in_progress → in_review` — tsc clean, vitest 225/225 (+3 new); stale-category notice
+  SSR-verified on the running app; PUB-L1 + PUB-L2 deferred with rationale in the
+  [test plan](../test-plans/T-0171.md); see [review run](../review/runs/T-0171.md)

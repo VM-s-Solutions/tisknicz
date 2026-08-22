@@ -73,7 +73,10 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
   if (!profileResult.success) {
     if (profileResult.error.type === 'Unauthorized') {
       const session = await getDisplaySession();
-      if (session?.audience === 'maker') {
+      // T-0171 (audit PUB-L6): widened from maker-only. ANY signed-in
+      // non-customer audience (admin included) can never satisfy this
+      // guard, so bouncing them to /login is the endless-login bug.
+      if (session !== null && session.audience !== 'customer') {
         return <MakerAccountState email={session.email} productId={productId} />;
       }
       const target = `/objednavka?productId=${encodeURIComponent(productId)}`;

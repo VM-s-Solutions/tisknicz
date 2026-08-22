@@ -6,6 +6,7 @@ import {
   NavigationTransitionProvider,
   TransitionDim,
 } from '@/components/shared/navigation-transition';
+import { ScrollToTop } from '@/components/shared/scroll-to-top';
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Stars } from '@/components/ui/stars';
+import { RefreshButton } from '@/components/shared/refresh-button';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 import {
@@ -146,8 +148,16 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
           {t('catalog.maker.back_to_catalog')}
         </Link>
         <Alert variant="error">
-          <p className="font-semibold">{t('catalog.maker.error.title')}</p>
-          <p className="mt-1">{resolveErrorMessage(result.error)}</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="font-semibold">{t('catalog.maker.error.title')}</p>
+              <p className="mt-1">{resolveErrorMessage(result.error)}</p>
+            </div>
+            {/* T-0171 (audit PUB-L4): a transient read failure offered only
+                "back to catalog" — leaving the visitor no way to simply try
+                this page again. */}
+            <RefreshButton />
+          </div>
         </Alert>
       </section>
     );
@@ -207,10 +217,13 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
                 isFiltered={isFiltered}
               />
             </TransitionDim>
-            <ReviewsSection reviews={profile.reviews} />
+            <ReviewsSection reviews={profile.reviews} totalCount={profile.ratingCount} />
           </div>
         </div>
       </NavigationTransitionProvider>
+      {/* T-0171 (PUB-L3): the profile is as long as /katalog, which has had
+          this since T-0046 — the maker page made you scroll all the way back. */}
+      <ScrollToTop />
     </section>
   );
 }

@@ -1,7 +1,7 @@
 ---
 id: T-0169
 title: "Redirect continuity sweep: returnUrl preserved end-to-end, audience-aware landing, shared 401 navigation"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -77,3 +77,4 @@ with no pointer to `/admin/login`, and terminal client-side 401s show text with 
 - 2026-08-22 `in_progress → in_review` — tsc clean, vitest 213/213 (+7 new); surfaced and fixed a
   null `useSearchParams()` crash path; admin already-signed-in panel deferred with rationale in the
   [test plan](../test-plans/T-0169.md); see [review run](../review/runs/T-0169.md)
+- 2026-08-22 `in_review → done` — merged via PR #145 (merge 4c19c12; CI green)
