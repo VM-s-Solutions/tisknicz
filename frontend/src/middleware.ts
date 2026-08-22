@@ -167,7 +167,11 @@ function guardOrNext(
     if (!hasAccess) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = audience === 'admin' ? '/admin/login' : '/login';
-      loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
+      // T-0169 (audit PUB-L7 / CUST-M6): the redirect carried only the
+      // pathname, so a shared deep link like
+      // /dashboard/zakaznik/objednavky?state=Shipped&page=3 came back as
+      // the unfiltered page 1 after login. Search params ride along.
+      loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`);
       return NextResponse.redirect(loginUrl);
     }
   }

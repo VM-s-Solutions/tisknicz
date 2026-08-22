@@ -13,6 +13,8 @@ import {
   consumeMagicLink,
   requestMagicLink,
 } from '@/lib/api-client-helpers/auth';
+import { safeRedirectTarget } from '@/lib/auth';
+import { continueHref } from '@/lib/auth/route-audience';
 import { t } from '@/lib/i18n';
 
 /**
@@ -23,7 +25,10 @@ import { t } from '@/lib/i18n';
 export function MagicClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  return token ? <Consume token={token} /> : <RequestLink />;
+  // T-0169 (audit AUTH-L2): a consumed magic link always landed on '/',
+  // dropping the page the user was originally bounced from.
+  const redirect = safeRedirectTarget(searchParams.get('redirect'));
+  return token ? <Consume token={token} redirect={redirect} /> : <RequestLink />;
 }
 
 function RequestLink() {
@@ -80,7 +85,7 @@ function RequestLink() {
   );
 }
 
-function Consume({ token }: { token: string }) {
+function Consume({ token, redirect }: { readonly token: string; readonly redirect: string | null }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   // One-time token: guard against StrictMode's dev double-mount so the
@@ -97,7 +102,7 @@ function Consume({ token }: { token: string }) {
         // `replace`: the consumed magic-link URL is single-use and must
         // not stay one Back press away (see LoginForm). `refresh` so the
         // session-aware chrome picks the new cookies up (T-0152).
-        router.replace('/');
+        router.replace(continueHref('customer', redirect));
         router.refresh();
         return;
       }
@@ -110,7 +115,7 @@ function Consume({ token }: { token: string }) {
       if (result.error.code === 'auth.forbidden') {
         const makerResult = await consumeMagicLink('maker', { token });
         if (makerResult.success) {
-          router.replace('/dashboard/maker/objednavky');
+          router.replace(continueHref('maker', redirect));
           router.refresh();
           return;
         }

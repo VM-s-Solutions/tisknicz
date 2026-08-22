@@ -2181,6 +2181,10 @@ export const messages = {
   'dashboard.admin.ops.users.resolved.userId': 'ID uživatele',
   'dashboard.admin.ops.users.resolved.role': 'Role',
   'dashboard.admin.ops.users.resolved.inFlight': 'Rozpracované objednávky',
+  // T-0169 — redirect continuity (UX functional sweep)
+  'auth.login.admin_account_hint':
+    'S tímto účtem se přihlaste v administraci na /admin/login. Zákaznické ani makerské přihlášení pro něj neplatí.',
+  'auth.login.admin_login_link': 'Přejít na přihlášení do administrace',
 } as const;
 
 export type MessageKey = keyof typeof messages;

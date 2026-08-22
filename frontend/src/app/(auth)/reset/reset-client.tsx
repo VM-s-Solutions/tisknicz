@@ -12,6 +12,7 @@ import {
   confirmPasswordReset,
   requestPasswordReset,
 } from '@/lib/api-client-helpers/auth';
+import { loginHrefWithRedirect } from '@/lib/auth/route-audience';
 import { t } from '@/lib/i18n';
 
 /**
@@ -24,11 +25,12 @@ import { t } from '@/lib/i18n';
  */
 export function ResetClient() {
   const searchParams = useSearchParams();
+  const loginHref = loginHrefWithRedirect(searchParams.get('redirect'));
   const token = searchParams.get('token');
-  return token ? <ConfirmReset token={token} /> : <RequestReset />;
+  return token ? <ConfirmReset token={token} loginHref={loginHref} /> : <RequestReset loginHref={loginHref} />;
 }
 
-function RequestReset() {
+function RequestReset({ loginHref }: { readonly loginHref: string }) {
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -54,7 +56,7 @@ function RequestReset() {
         <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-3">
           <p className="text-sm text-zinc-300">{t('auth.reset.request_done_body')}</p>
           <p className="text-sm">
-            <Link href="/login" className="text-brand-400 hover:underline">
+            <Link href={loginHref} className="text-brand-400 hover:underline">
               {t('auth.login.submit')}
             </Link>
           </p>
@@ -94,7 +96,7 @@ function RequestReset() {
   );
 }
 
-function ConfirmReset({ token }: { token: string }) {
+function ConfirmReset({ token, loginHref }: { readonly token: string; readonly loginHref: string }) {
   const [newPassword, setNewPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ function ConfirmReset({ token }: { token: string }) {
         <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-3">
           <p className="text-sm text-zinc-300">{t('auth.reset.confirm_done_body')}</p>
           <p className="text-sm">
-            <Link href="/login" className="text-brand-400 hover:underline">
+            <Link href={loginHref} className="text-brand-400 hover:underline">
               {t('auth.login.submit')}
             </Link>
           </p>

@@ -45,6 +45,10 @@ export function AdminLoginForm() {
     if (result.success) {
       // `replace` so Back never returns to the login form (see LoginForm).
       router.replace(redirectTo);
+      // T-0169 (audit AUTH-L3): the customer form refreshes the server
+      // tree so session-aware chrome picks up the fresh cookie; the admin
+      // form skipped it and rendered the shell in its logged-out state.
+      router.refresh();
       return;
     }
 

@@ -1,7 +1,7 @@
 ---
 id: T-0169
 title: "Redirect continuity sweep: returnUrl preserved end-to-end, audience-aware landing, shared 401 navigation"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -73,3 +73,7 @@ with no pointer to `/admin/login`, and terminal client-side 401s show text with 
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0169-redirect-continuity`
+- 2026-08-22 `in_progress → in_review` — tsc clean, vitest 213/213 (+7 new); surfaced and fixed a
+  null `useSearchParams()` crash path; admin already-signed-in panel deferred with rationale in the
+  [test plan](../test-plans/T-0169.md); see [review run](../review/runs/T-0169.md)

@@ -53,6 +53,16 @@ export function guardedRouteAudience(pathname: string): Audience | undefined {
     ?.audience;
 }
 
+/**
+ * API host → audience. The login form talks in hosts (it tries one, then
+ * the other), while the redirect helpers below reason in audiences —
+ * T-0169 needs the bridge to route a successful login through
+ * {@link continueHref}.
+ */
+export function hostToAudience(host: 'customer' | 'maker' | 'admin' | 'public'): Audience {
+  return host === 'maker' ? 'maker' : host === 'admin' ? 'admin' : 'customer';
+}
+
 /** Where an audience lands when no explicit redirect target applies. */
 export function audienceHome(audience: Audience): string {
   switch (audience) {
@@ -77,4 +87,15 @@ export function continueHref(audience: Audience, redirect: string | null): strin
   if (redirect === null) return audienceHome(audience);
   const owner = routeAudience(redirect);
   return owner !== undefined && owner !== audience ? audienceHome(audience) : redirect;
+}
+
+/**
+ * `/login` with the caller's redirect target preserved (T-0169, audit
+ * AUTH-L2). The register / verify / reset funnels all linked to a bare
+ * `/login`, so a user bounced out of a protected page lost their
+ * destination the moment they stepped sideways into another auth flow.
+ */
+export function loginHrefWithRedirect(redirect: string | null | undefined): string {
+  if (!redirect) return '/login';
+  return `/login?redirect=${encodeURIComponent(redirect)}`;
 }
