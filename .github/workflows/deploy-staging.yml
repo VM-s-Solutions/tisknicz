@@ -555,6 +555,11 @@ jobs:
           set -euo pipefail
           cp -r .next/static .next/standalone/.next/static
           if [ -d public ]; then cp -r public .next/standalone/public; fi
+          # Multi-worker entry point (web-app.bicep runs `node cluster.js`).
+          # It is NOT part of the traced standalone output, so a missing copy
+          # here is a site that never binds its port — fail loudly instead.
+          test -f deploy/cluster.js
+          cp deploy/cluster.js .next/standalone/cluster.js
 
       - uses: azure/login@v2
         with:

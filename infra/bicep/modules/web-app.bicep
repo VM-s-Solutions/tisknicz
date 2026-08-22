@@ -45,6 +45,11 @@ param adminApiInternalBaseUrl string
 @description('Public API absolute origin for SSR fetches (API_PUBLIC_INTERNAL_BASE_URL).')
 param publicApiInternalBaseUrl string
 
+@description('Next.js server processes forked by deploy/cluster.js. Keep at the plan vCPU count.')
+@minValue(1)
+@maxValue(8)
+param webClusterWorkers int = 2
+
 resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   name: appName
   location: location
@@ -67,9 +72,15 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
       // fetches the storefront's first paint depends on; App Service
       // defaults to HTTP/1.1 unless opted in.
       http20Enabled: true
-      // The Next.js `output: 'standalone'` build emits server.js; run it
-      // directly (no `next start` / npm install needed at runtime).
-      appCommandLine: 'node server.js'
+      // The Next.js `output: 'standalone'` build emits server.js, which is a
+      // SINGLE Node process on a single JS thread doing SSR *and* the
+      // /api-proxy rewrite *and* next/image. deploy/cluster.js (copied into
+      // the package by the deploy workflow) forks `webClusterWorkers` copies
+      // of that server behind one shared listening socket, so the frontend
+      // stops competing for CPU with one runnable thread against four
+      // multi-threaded .NET hosts on the same plan. See the file header for
+      // the measurements.
+      appCommandLine: 'node cluster.js'
       appSettings: [
         {
           // App Service builds the app on deploy when this is true (Oryx). We
@@ -95,6 +106,15 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'NODE_ENV'
           value: 'production'
+        }
+        {
+          // Next.js server processes forked by deploy/cluster.js. Match the
+          // plan's vCPU count (B2 dev and P1v3 prod are both 2) — more
+          // workers than cores only adds context switching and ~110 MB of
+          // RSS each. Set to 1 to fall back to the plain single-process
+          // server without a redeploy.
+          name: 'WEB_CLUSTER_WORKERS'
+          value: string(webClusterWorkers)
         }
         {
           name: 'NEXT_PUBLIC_SITE_URL'
