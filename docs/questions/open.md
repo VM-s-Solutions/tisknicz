@@ -601,8 +601,22 @@ same edit.
   - **Recommended default:** makers may reactivate their *own* soft-deleted products (symmetry with delete; catalog gate re-applies automatically); maker/category reactivation is admin-only via `IAdminAuditableCommand` (audited, mirrors VerifyMaker/DeactivateMaker).
   - Admin-only for everything — makers ask support; safest but adds operator load for a self-inflicted, low-risk action.
   - No reactivation; make deletes hard-confirmed and explicitly irreversible — smallest build, worst recovery story.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user, 2026-08-22):** **Ownership of the deletion decides who may undo it.**
+  - Product deleted **by the maker** → the maker may restore it themselves.
+  - Product deleted **by an admin** → the maker has NO claim to restore it (admin-only; a platform
+    removal is a moderation decision, not a self-service one).
+  - **Categories:** only an admin approves. A maker MAY propose/add a category, but it stays
+    invisible on every public surface until approved.
+- **Implementation note (agent, same day):** the distinction is already recordable —
+  `Auditable.DeactivatedBy` is stamped with the acting user id on every soft delete
+  (`DeleteProduct.cs:67` passes the session user), so "who deleted this" is a read, not a new
+  column. T-0180 compares `DeactivatedBy` against the owning maker's user id to decide whether the
+  restore button renders at all; the backend re-checks (the button is not the gate).
+- **Scope note:** the CATEGORY half of this answer is **already ticketed as
+  [T-0163](../tickets/T-0163-maker-proposed-categories.md)** (Phase 7, draft — "maker-proposed
+  categories with admin approval; product withheld from every public surface until approved").
+  This answer confirms that design; T-0180 covers reactivation only and does not duplicate it.
 
 ## Q-0041 — Order escape hatches: maker decline of a Paid order, customer cancel of an unpaid order
 - **From:** PM/BA (Phase 8 UX sweep — findings MAKER-H3, CUST-M3)
@@ -622,5 +636,24 @@ same edit.
   PendingPayment only; maker cancels ("refuses") from Paid only; admin from any state (audited)*.
   The domain edges already exist; T-0181 is likely command-layer + UI + refund wiring, and the
   "should it exist" half of this question may already be answered — confirm scope, not principle.
-- **Status:** open
-- **Answer (filled by user):**
+- **Status:** answered
+- **Answer (filled by user, 2026-08-22):**
+  - **A paid order CAN be cancelled, but only within a bounded window — "two days, for example".**
+  - **The customer can definitely cancel an UNPAID (`PendingPayment`) order.**
+- **Resolution (agent, same day) — the two answers compose, no ambiguity left.** Today's answer
+  supplies the TIME BOUND; the 2026-06-03 user-confirmed decision above already supplied the ROLES
+  (*customer cancels from PendingPayment only; maker cancels/"refuses" from Paid only; admin from
+  any state, audited*). Together they fully determine T-0181:
+  1. **Customer → `PendingPayment` only.** No money has moved, so no refund path and no window;
+     the 24 h auto-expiry (T-0083) stays the backstop. Matches "zákazník … nezaplacenou určitě".
+  2. **Maker → `Paid` only, within 2 days of `Order.PaidAt`.** This is the "refuses" edge from
+     2026-06-03 plus today's bound. Past the window the maker must go through admin (T-0107), which
+     is the status quo — so the window is a *widening* of what makers can do, never a narrowing of
+     the customer's protection. Triggers the existing `RefundOrder` path + customer notification.
+  3. **Admin → any state**, unchanged (T-0107 already ships this).
+  The 2-day window is a command-layer policy compared against `PaidAt` via `IClock`; the exact
+  duration lands in `CountryConfiguration` rather than a hard-coded constant so it can be tuned
+  without a deploy (ADR 0004 — never branch on country/policy in code).
+- **NOT granted:** a customer-facing cancellation of a PAID order. Neither answer asks for one, and
+  for made-to-order goods it would hand back money after production may have started. If that is
+  ever wanted it is a separate decision with a separate refund policy.
