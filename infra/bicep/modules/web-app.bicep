@@ -52,7 +52,13 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
     serverFarmId: appServicePlanId
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'NODE|20-lts'
+      // Node 20 left support in April 2026 — the portal flags it as a
+      // deprecated runtime module (no further bug/security fixes). 22-lts
+      // is the current App Service LTS image and satisfies Next 16's
+      // engines constraint (>=20.9.0). Keep this and the CI
+      // `node-version` in the deploy workflows on the SAME major — the
+      // standalone bundle is built against whatever CI used.
+      linuxFxVersion: 'NODE|22-lts'
       alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -73,7 +79,18 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~20'
+          value: '~22'
+        }
+        {
+          // The platform's startup probe defaults to 230s. Six always-on
+          // apps share ONE Linux plan (4 API hosts + this + Functions), so a
+          // deploy bounces all of them onto the same 2 cores at once and the
+          // single-threaded Next server can miss that window — the site then
+          // dies with "did not respond to startup probe on port 8080 ...
+          // No listening ports were detected" even though nothing is wrong
+          // with the build. Give the cold start real headroom (max 1800).
+          name: 'WEBSITES_CONTAINER_START_TIME_LIMIT'
+          value: '600'
         }
         {
           name: 'NODE_ENV'
