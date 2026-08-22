@@ -2125,6 +2125,10 @@ export const messages = {
   'catalog.empty.no_makers.description':
     'Zatím tu žádní výrobci nejsou. Vyrábíte? Buďte mezi prvními, kdo tu nabídne své výrobky.',
   'catalog.empty.no_makers.cta': 'Chci se stát makerem',
+
+  // T-0172 — checkout + pre-payment flow usability (UX functional sweep)
+  'checkout.confirm.stateDetailHint':
+    'Aktuální stav objednávky a všechny podrobnosti najdete v jejím detailu.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

@@ -105,24 +105,19 @@ export default async function PaymentConfirmationPage({ params, searchParams }: 
     );
   }
 
-  // Row 4 — the gateway reported cancellation/failure: failure frame,
-  // no poll. The order is still held for 24h (T-0083); retry lives on
-  // the T-0084b pay button.
-  if (FAILURE_STATUS_VALUES.has(status)) {
-    return (
-      <Frame>
-        <FailureView orderId={detail.orderId} />
-      </Frame>
-    );
-  }
-
-  // Row 5 — terminal/unexpected states with a non-failure param.
+  // Row 4 — ANY non-PendingPayment terminal state (Cancelled, Refunded,
+  // Disputed, …) wins over whatever `?status=` says. Order matters
+  // (T-0172, audit CUST-M2): the gateway's failure param used to
+  // short-circuit FIRST, so an order the webhook had already Cancelled
+  // showed a FailureView promising "you can still pay within 24 h" —
+  // a pay button the cancelled detail page does not have. The backend
+  // state is the only truth; the redirect param is just a hint.
   if (detail.state !== OrderState.PendingPayment) {
     return (
       <Frame>
         <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-4 text-center">
           <Badge variant="default">{t(orderStateLabelKey(detail.state))}</Badge>
-          <p className="text-sm text-zinc-400">{t('order.page.banner.detailComing')}</p>
+          <p className="text-sm text-zinc-400">{t('checkout.confirm.stateDetailHint')}</p>
           <Link
             href={`/objednavka/${encodeURIComponent(detail.orderId)}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-200"
@@ -131,6 +126,17 @@ export default async function PaymentConfirmationPage({ params, searchParams }: 
             <Icon name="arrowRight" size={14} />
           </Link>
         </Card>
+      </Frame>
+    );
+  }
+
+  // Row 5 — still PendingPayment and the gateway reported failure:
+  // failure frame, no poll. The order really is held for 24h (T-0083);
+  // retry lives on the T-0084b pay button.
+  if (FAILURE_STATUS_VALUES.has(status)) {
+    return (
+      <Frame>
+        <FailureView orderId={detail.orderId} />
       </Frame>
     );
   }

@@ -1,7 +1,7 @@
 ---
 id: T-0172
 title: "Checkout + pre-payment flow: in-viewport errors, profile prefill, working downloads, honest confirmation"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -79,3 +79,8 @@ orders, and a refresh silently discards the whole form.
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-21 `ready → in_progress`, branch `feat/T-0172-checkout-flow-usability` (main loop;
+  stacked on the T-0170 branch — merges sequentially)
+- 2026-08-21 `in_progress → in_review` — tsc clean, vitest 193/193 (+3 new);
+  [review run](../review/runs/T-0172.md) (self, flagged); manual-browser items listed in the
+  [test plan](../test-plans/T-0172.md) rows 5–9
