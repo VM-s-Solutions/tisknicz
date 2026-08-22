@@ -2147,6 +2147,21 @@ export const messages = {
   'auth.oauth.error_email_not_verified':
     'Váš e-mail u Googlu není ověřený, přihlášení proto nejde dokončit. Přihlaste se prosím jinak.',
   'checkout.emailNotConfirmedProfileLink': 'Poslat potvrzovací e-mail znovu můžete ze svého profilu.',
+  // T-0175 — admin list infrastructure (UX functional sweep). One
+  // pagination replaces five near-identical copies, so one key set.
+  'dashboard.admin.pagination.page_of': 'Stránka {page} z {total}',
+  'dashboard.admin.pagination.previous': 'Předchozí',
+  'dashboard.admin.pagination.next': 'Další',
+  'dashboard.admin.list.filtered_empty.title': 'Tomuto filtru nic neodpovídá',
+  'dashboard.admin.list.filtered_empty.description':
+    'Zkuste filtry rozvolnit, nebo je vymažte a začněte znovu.',
+  'dashboard.admin.list.filtered_empty.reset': 'Vymazat filtry',
+  'dashboard.admin.makers.search.reset': 'Vymazat filtry',
+  'dashboard.admin.overview.error.body':
+    'Zkuste načtení zopakovat. Pokud potíže trvají, zkontrolujte stav API.',
+  'dashboard.admin.orderDetail.error.title': 'Detail objednávky se nepodařilo načíst',
+  'dashboard.admin.orderDetail.error.body':
+    'Zkuste načtení zopakovat, nebo se vraťte na seznam objednávek.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

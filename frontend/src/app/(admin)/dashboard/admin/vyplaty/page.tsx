@@ -12,7 +12,8 @@ import {
   getProcessingPayoutsCount,
 } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
-import { OpsPagination } from '../ops-pagination';
+import { AdminPagination } from '../_components/admin-pagination';
+import { parsePage } from '../_components/list-params';
 import { PayoutBatchCard } from './payout-batch-card';
 
 /**
@@ -57,7 +58,7 @@ function parsePositiveInt(raw: string, fallback: number): number {
 
 export default async function AdminPayoutsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
-  const page = parsePositiveInt(readString(sp.page), 1);
+  const page = parsePage(sp.page);
 
   const [countResult, listResult] = await Promise.all([
     getProcessingPayoutsCount(),
@@ -175,7 +176,7 @@ function PayoutList({
         </ul>
       </div>
 
-      <OpsPagination
+      <AdminPagination spacing="tight"
         page={list.page}
         totalPages={totalPages}
         hasNext={list.hasNextPage ?? false}

@@ -1,7 +1,7 @@
 ---
 id: T-0167
 title: Google OAuth callback must land the user in the app, not on raw JSON
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -77,3 +77,4 @@ Frontend mapping mirrors `mapStartGoogleOAuthError`.
 - 2026-08-22 `in_progress → in_review` — backend 2082/2082, frontend tsc clean + vitest 199/199
   (+6 new); NSwag regenerated for the new resend endpoint; see
   [test plan](../test-plans/T-0167-T-0168.md) + [review run](../review/runs/T-0167-T-0168.md)
+- 2026-08-22 `in_review → done` — merged via PR #142 (merge f71d2e7; CI green)

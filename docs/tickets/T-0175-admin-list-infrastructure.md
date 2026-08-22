@@ -1,7 +1,7 @@
 ---
 id: T-0175
 title: "Admin list infrastructure: one pagination, one filter pattern, resilient routes"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -78,3 +78,6 @@ Copies inventoried in the audit: `orders/pagination.tsx`, `faktury/pagination.ts
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0175-admin-list-infrastructure`
+- 2026-08-22 `in_progress → in_review` — tsc clean, vitest 200/200 (+7 new); five pagination copies
+  deleted; see [test plan](../test-plans/T-0175.md) + [review run](../review/runs/T-0175.md)
