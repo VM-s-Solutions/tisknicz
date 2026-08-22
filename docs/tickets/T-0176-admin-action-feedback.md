@@ -1,7 +1,7 @@
 ---
 id: T-0176
 title: "Admin action feedback: money-action confirmations, un-bricked rows, focus-trapped modals"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -84,3 +84,4 @@ never-disarming confirm buttons, non-prefilled fee override) compound it.
   `Dialog` adopted by all three modal shells; ADM-L2 (return-label card) deferred to the T-0179
   contract pass with rationale in the [test plan](../test-plans/T-0176.md); see
   [review run](../review/runs/T-0176.md)
+- 2026-08-22 `in_review → done` — merged via PR #144 (merge 5f4bd46; CI green)
