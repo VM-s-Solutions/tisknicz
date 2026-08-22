@@ -25,6 +25,15 @@ namespace Makables.Core.AppServices.Features.Auth;
 /// </summary>
 public static class ConfirmEmail
 {
+    /// <summary>
+    /// Outcome-idempotency window (T-0168, audit AUTH-M1): mail-scanner
+    /// prefetch, a page refresh or a second click burns the one-time
+    /// token, then told an already-CONFIRMED user their link is invalid
+    /// with no way forward. A replay of a token consumed within this
+    /// window whose user is confirmed reports success instead.
+    /// </summary>
+    public static readonly TimeSpan AlreadyConfirmedGrace = TimeSpan.FromHours(24);
+
     public sealed record Command(string RawToken) : ICommand, IPersistOnFailureCommand;
 
     public sealed class Validator : AbstractValidator<Command>
@@ -51,10 +60,28 @@ public static class ConfirmEmail
             // Pre-read for purpose check — claiming a MagicLink or
             // PasswordReset token from this handler would silently burn it.
             var token = await tokens.GetByHashAsync(hash, cancellationToken);
-            if (token is null
-                || token.Purpose != OneTimeTokenPurpose.EmailConfirmation
-                || !token.IsRedeemable(now))
+            if (token is null || token.Purpose != OneTimeTokenPurpose.EmailConfirmation)
             {
+                return Invalid();
+            }
+            if (!token.IsRedeemable(now))
+            {
+                // Replay of a recently consumed token: the caller holds the
+                // REAL token (nothing enumerable), so if its user is already
+                // confirmed the truthful answer is success, not "invalid
+                // link". Expired-but-never-consumed tokens fall through to
+                // Invalid (ConsumedAt is null).
+                if (token.ConsumedAt is { } consumedAt
+                    && now - consumedAt <= AlreadyConfirmedGrace)
+                {
+                    var replayUser = await users.GetByIdAsync(token.UserId, cancellationToken);
+                    if (replayUser is { IsActive: true, EmailConfirmedAt: not null })
+                    {
+                        logger.LogInformation(
+                            "Email-confirmation replay within grace for {UserId}.", replayUser.Id);
+                        return BusinessResult.Success();
+                    }
+                }
                 return Invalid();
             }
 

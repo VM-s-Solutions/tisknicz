@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
+import { ResendConfirmationForm } from '@/components/shared/resend-confirmation-form';
 import {
   type CompanyPreview,
   lookupCompanyPreview,
@@ -147,6 +148,13 @@ export function RegisterForm() {
             {t('auth.register.login_link')}
           </Link>
         </p>
+        {/* T-0168 (audit AUTH-M2): a lost confirmation email used to be a
+            dead end for a logged-out user — offer the resend right where
+            they wait for it. */}
+        <div className="mt-2 w-full border-t border-zinc-800/80 pt-4 text-left">
+          <p className="mb-3 text-sm text-zinc-400">{t('auth.verify.resend')}</p>
+          <ResendConfirmationForm defaultEmail={email} compact />
+        </div>
       </div>
     );
   }

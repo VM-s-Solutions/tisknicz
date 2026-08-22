@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Makables.Config.Auth;
 using Makables.Config.Extensions;
+using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 
 namespace Makables.Config.Controllers.Auth;
 
@@ -41,7 +43,9 @@ namespace Makables.Config.Controllers.Auth;
 // shared-NAT office or a multi-tab session can't lock itself out; they still
 // fall under the global per-host envelope (secops Gate-3 fold).
 [EnableRateLimiting(MakablesRateLimitingExtensions.AuthPolicyName)]
-public sealed class AuthController(IHostAudience hostAudience) : MakablesApiController
+public sealed class AuthController(
+    IHostAudience hostAudience,
+    IOptions<PublicAppUrlsOptions> publicAppUrls) : MakablesApiController
 {
     public sealed record RegisterRequest(
         string Email,
@@ -51,6 +55,7 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
         string? CompanyRegistrationNumber = null);
     public sealed record LoginRequest(string Email, string Password);
     public sealed record ConfirmEmailRequest(string Token);
+    public sealed record ResendConfirmationRequest(string Email);
     public sealed record RequestPasswordResetRequest(string Email);
     public sealed record ConfirmPasswordResetRequest(string Token, string NewPassword);
     public sealed record RequestMagicLinkRequest(string Email);
@@ -247,12 +252,32 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
 
         AuthCookies.ClearOAuthCsrfCookie(Response);
 
+        // T-0167 (audit AUTH-H2): this is a BROWSER landing, not an API
+        // response — returning JSON stranded the user on the API host
+        // (success set cookies but showed a bare payload; failures showed
+        // raw JSON errors). 302 back to the frontend either way. Targets
+        // are built ONLY from the configured WebBaseUrl (never request
+        // headers) and carry no token, email or other PII — the error
+        // query holds just the machine-readable BusinessErrorMessage code
+        // the login page maps to Czech copy.
         if (result.IsSuccess && result.Value is not null)
         {
             AuthCookies.SetSessionCookies(Response, hostAudience.Value, result.Value);
+            return Redirect(OAuthSuccessLandingUrl());
         }
-        return HandleResult(result);
+        return Redirect(OAuthErrorLandingUrl(result.Error?.Code ?? BusinessErrorMessage.AuthOAuthInvalidState));
     }
+
+    private string PublicWebBase => publicAppUrls.Value.WebBaseUrl.TrimEnd('/');
+
+    /// <summary>Audience home after a completed OAuth login (mirrors the frontend's audienceHome).</summary>
+    private string OAuthSuccessLandingUrl() =>
+        hostAudience.Value == MakablesHosts.Maker
+            ? $"{PublicWebBase}/dashboard/maker/objednavky"
+            : $"{PublicWebBase}/";
+
+    private string OAuthErrorLandingUrl(string errorCode) =>
+        $"{PublicWebBase}/login?oauth_error={Uri.EscapeDataString(errorCode)}";
 
     [HttpPost("refresh")]
     [AllowAnonymous]
@@ -294,6 +319,25 @@ public sealed class AuthController(IHostAudience hostAudience) : MakablesApiCont
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest body, CancellationToken ct)
     {
         var result = await Mediator.Send(new ConfirmEmail.Command(body.Token), ct);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Anonymous re-send of the confirmation email (T-0168, audit
+    /// AUTH-M2): a LOGGED-OUT user whose login fails with
+    /// <c>auth.emailNotConfirmed</c> previously had no resend path — the
+    /// only affordance required being logged in, which they could not do.
+    /// Uniform 200 regardless of account existence/state (the
+    /// <c>IOneTimeTokenIssuer</c> pipeline owns enumeration + per-email
+    /// rate limiting); the class-level auth rate bucket applies.
+    /// </summary>
+    [HttpPost("resend-confirmation")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest body, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new SendEmailConfirmation.Command(
+            Email: body.Email,
+            IpAddress: HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
         return HandleResult(result);
     }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
@@ -119,6 +120,7 @@ export function OrderFormClient({
 
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [lastErrorCode, setLastErrorCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const inFlightRef = useRef(false);
   // Focus target committed by the NEXT errored render (see FIELD_ANCHORS).
@@ -242,6 +244,7 @@ export function OrderFormClient({
 
     // Step 1 — mirror validation; any failure stops before the network.
     setFormError(null);
+    setLastErrorCode(null);
     if (shippingMethod === null) {
       setFormError(t('checkout.shipping.unavailable'));
       return;
@@ -279,6 +282,7 @@ export function OrderFormClient({
         setFieldErrors(normalized);
       }
       setFormError(buildFormError(result.error));
+      setLastErrorCode(result.error.code);
       queueFocusFirstError(normalized);
       inFlightRef.current = false;
       setSubmitting(false);
@@ -524,8 +528,18 @@ export function OrderFormClient({
           pressed — the old top-of-form alert sat off-viewport on a long
           form at 375 px (T-0172, CUST-H3). */}
       {formError ? (
-        <div ref={errorAnchorRef}>
+        <div ref={errorAnchorRef} className="flex flex-col gap-2">
           <Alert variant="error">{formError}</Alert>
+          {/* T-0168 (audit CUST-H2): the resend hint used to point at a
+              profile affordance that did not exist — link the profile
+              where the confirmation banner now lives. */}
+          {lastErrorCode === 'auth.emailNotConfirmed' ? (
+            <p className="text-sm text-zinc-300">
+              <Link href="/dashboard/zakaznik/profile" className="text-brand-400 hover:underline">
+                {t('checkout.emailNotConfirmedProfileLink')}
+              </Link>
+            </p>
+          ) : null}
         </div>
       ) : null}
 

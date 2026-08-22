@@ -100,6 +100,55 @@ public class ConfirmEmailHandlerTests
     }
 
     [Fact]
+    public async Task Replay_of_recently_consumed_token_for_confirmed_user_returns_success()
+    {
+        // T-0168 (audit AUTH-M1): StrictMode double-fire, refresh or a
+        // mail-scanner prefetch burns the token; the SECOND call must not
+        // tell a confirmed user their link is invalid.
+        var token = IssueRedeemable(_clock.UtcNow);
+        token.Consume(_clock.UtcNow.AddMinutes(-2));
+        _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
+        _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(CreateUser(confirmed: true));
+
+        var result = await _handler.Handle(new ConfirmEmail.Command("raw"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _tokens.DidNotReceive().TryConsumeAsync(Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Replay_outside_the_grace_window_returns_invalid()
+    {
+        var issuedAt = _clock.UtcNow.AddHours(-30);
+        var token = OneTimeToken.Issue("hash", "user-1", OneTimeTokenPurpose.EmailConfirmation,
+            issuedAt + TimeSpan.FromHours(24), issuedAt);
+        token.Consume(_clock.UtcNow - ConfirmEmail.AlreadyConfirmedGrace - TimeSpan.FromMinutes(1));
+        _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
+        _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(CreateUser(confirmed: true));
+
+        var result = await _handler.Handle(new ConfirmEmail.Command("raw"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.AuthEmailConfirmationInvalid);
+    }
+
+    [Fact]
+    public async Task Replay_for_an_unconfirmed_user_returns_invalid()
+    {
+        // Token consumed but the confirmation never landed (crashed txn):
+        // success here would lie — the user is NOT confirmed.
+        var token = IssueRedeemable(_clock.UtcNow);
+        token.Consume(_clock.UtcNow.AddMinutes(-2));
+        _tokens.GetByHashAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(token);
+        _users.GetByIdAsync("user-1", Arg.Any<CancellationToken>()).Returns(CreateUser(confirmed: false));
+
+        var result = await _handler.Handle(new ConfirmEmail.Command("raw"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be(BusinessErrorMessage.AuthEmailConfirmationInvalid);
+    }
+
+    [Fact]
     public async Task Happy_path_claims_token_and_marks_email_confirmed()
     {
         var token = IssueRedeemable(_clock.UtcNow);

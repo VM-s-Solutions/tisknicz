@@ -1,3 +1,4 @@
+import { EmailConfirmationBanner } from '@/components/shared/email-confirmation-banner';
 import { PageHeader } from '@/components/shared/page-header';
 import { Alert } from '@/components/ui/alert';
 import { getMyProfile } from '@/lib/api-client-helpers/profile';
@@ -26,7 +27,15 @@ export default async function CustomerProfilePage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-8">
       <PageHeader title={t('dashboard.customer.profile.title')} />
       {result.success ? (
-        <CustomerProfileClient initialProfile={result.value} />
+        <>
+          {/* T-0168 (audit CUST-H2): checkout's unconfirmed-email error
+              says "resend from your profile" — this banner is that
+              affordance; it existed but was mounted NOWHERE. */}
+          {!result.value.emailConfirmed ? (
+            <EmailConfirmationBanner email={result.value.email} />
+          ) : null}
+          <CustomerProfileClient initialProfile={result.value} />
+        </>
       ) : (
         <Alert variant="error">{result.error.message}</Alert>
       )}

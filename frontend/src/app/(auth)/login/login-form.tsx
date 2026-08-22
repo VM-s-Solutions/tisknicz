@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
+import { ResendConfirmationForm } from '@/components/shared/resend-confirmation-form';
 import { login } from '@/lib/api-client-helpers/auth';
 import { safeRedirectTarget } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -32,6 +33,11 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  // T-0167 (audit AUTH-H2): the Google callback 302s failures back here
+  // as `?oauth_error=<code>` — map the code to owned Czech copy instead
+  // of stranding the user on the API host's raw JSON.
+  const oauthError = searchParams.get('oauth_error');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,12 +72,21 @@ export function LoginForm() {
     }
 
     setServerError(mapLoginError(result.error.code, result.error.message));
+    // A logged-out user with an unconfirmed email had NO resend path
+    // anywhere (T-0168, audit AUTH-M2) — offer it right at the error.
+    setShowResendConfirmation(result.error.code === 'auth.emailNotConfirmed');
   }
 
   return (
     <div className="flex flex-col gap-5">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {oauthError && !serverError ? (
+          <Alert variant="error">{mapOAuthError(oauthError)}</Alert>
+        ) : null}
         {serverError && <Alert variant="error">{serverError}</Alert>}
+        {showResendConfirmation ? (
+          <ResendConfirmationForm defaultEmail={email} compact />
+        ) : null}
         <Input
           type="email"
           icon="mail"
@@ -141,5 +156,24 @@ function mapLoginError(code: string, fallback: string): string {
       return t('auth.login.email_not_confirmed');
     default:
       return fallback;
+  }
+}
+
+/**
+ * Czech copy for the machine-readable code the OAuth callback carries in
+ * `?oauth_error=` (T-0167). Unknown codes get the generic OAuth failure —
+ * never the raw code.
+ */
+function mapOAuthError(code: string): string {
+  switch (code) {
+    case 'auth.forbidden':
+    case 'auth.oauthNotAllowedForAdmin':
+      return t('auth.oauth.error_wrong_account_type');
+    case 'auth.oauthEmailNotVerified':
+      return t('auth.oauth.error_email_not_verified');
+    case 'auth.oauthInvalidState':
+      return t('auth.oauth.error_expired');
+    default:
+      return t('auth.oauth.error_generic');
   }
 }

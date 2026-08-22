@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -82,30 +83,58 @@ function RequestLink() {
 function Consume({ token }: { token: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // One-time token: guard against StrictMode's dev double-mount so the
+  // second fire can't burn/err a link the first fire already consumed
+  // (same class as verify-client, T-0168 / audit AUTH-M1).
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (firedRef.current) return;
+    firedRef.current = true;
     void (async () => {
       const result = await consumeMagicLink('customer', { token });
-      if (cancelled) return;
       if (result.success) {
         // `replace`: the consumed magic-link URL is single-use and must
-        // not stay one Back press away (see LoginForm).
+        // not stay one Back press away (see LoginForm). `refresh` so the
+        // session-aware chrome picks the new cookies up (T-0152).
         router.replace('/');
+        router.refresh();
         return;
       }
-      setError(mapConsumeError(result.error.code, result.error.message));
+      // T-0168 (audit AUTH-H3): the request form offers magic links to
+      // EVERYONE, but consume was hardcoded to the customer host — a
+      // maker's link died with an unmapped 403. The backend deliberately
+      // does not burn the token on an audience mismatch, so retrying the
+      // maker host completes the login (mirrors LoginForm's dual-host
+      // fallback).
+      if (result.error.code === 'auth.forbidden') {
+        const makerResult = await consumeMagicLink('maker', { token });
+        if (makerResult.success) {
+          router.replace('/dashboard/maker/objednavky');
+          router.refresh();
+          return;
+        }
+        setError(mapConsumeError(makerResult.error.code));
+        return;
+      }
+      setError(mapConsumeError(result.error.code));
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [token, router]);
 
   if (error) {
     return (
-      <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
+      <Card padding="lg" variant="elevated" className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-white">{t('auth.magic.failed_title')}</h2>
         <p className="text-sm text-zinc-300">{error}</p>
+        {/* Recovery paths (T-0168): the failure card used to dead-end. */}
+        <div className="flex flex-wrap items-center gap-4 border-t border-zinc-800/80 pt-4 text-sm">
+          <Link href="/magic" className="text-brand-400 hover:underline">
+            {t('auth.magic.request_new')}
+          </Link>
+          <Link href="/login" className="text-zinc-300 hover:underline">
+            {t('auth.login.submit')}
+          </Link>
+        </div>
       </Card>
     );
   }
@@ -118,11 +147,17 @@ function Consume({ token }: { token: string }) {
   );
 }
 
-function mapConsumeError(code: string, fallback: string): string {
+/**
+ * Every consume failure maps to owned Czech copy — the backend `Error`
+ * carries no message, so the previous raw-code fallback surfaced the
+ * generic 403 text ("K této akci nemáte oprávnění.") for a maker's link.
+ */
+function mapConsumeError(code: string): string {
   switch (code) {
+    case 'auth.forbidden':
+      return t('auth.magic.failed_wrong_audience');
     case 'auth.magicLinkInvalid':
-      return t('auth.magic.failed_body');
     default:
-      return fallback;
+      return t('auth.magic.failed_body');
   }
 }
