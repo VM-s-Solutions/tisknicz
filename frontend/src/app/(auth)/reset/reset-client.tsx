@@ -100,6 +100,8 @@ function ConfirmReset({ token }: { token: string }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
+  const [tokenDead, setTokenDead] = useState(false);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setServerError(null);
@@ -111,6 +113,9 @@ function ConfirmReset({ token }: { token: string }) {
       return;
     }
     setServerError(mapConfirmError(result.error.code, result.error.message));
+    // T-0168 (audit AUTH-M6): with a burned/expired token the form below
+    // can never succeed — surface the way to a fresh link.
+    setTokenDead(result.error.code === 'auth.passwordResetInvalid');
   }
 
   if (done) {
@@ -136,6 +141,13 @@ function ConfirmReset({ token }: { token: string }) {
         <p className="text-sm text-zinc-400">{t('auth.reset.confirm_intro')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           {serverError && <Alert variant="error">{serverError}</Alert>}
+          {tokenDead ? (
+            <p className="text-sm text-zinc-300">
+              <Link href="/reset" className="text-brand-400 hover:underline">
+                {t('auth.reset.request_new_link')}
+              </Link>
+            </p>
+          ) : null}
           <Input
             type="password"
             icon="lock"

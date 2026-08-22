@@ -87,6 +87,26 @@ export async function confirmEmail(host: ApiHost, input: ConfirmEmailInput): Pro
   return result.success ? ok(undefined) : result;
 }
 
+export interface ResendConfirmationInput {
+  email: string;
+}
+
+/**
+ * Anonymous confirmation-email resend (T-0168). Uniform 200 regardless
+ * of account existence — success only means "if such an unconfirmed
+ * account exists, a new link is on its way".
+ */
+export async function resendConfirmation(
+  host: ApiHost,
+  input: ResendConfirmationInput,
+): Promise<Result<void, ApiError>> {
+  const result = await apiFetch<unknown>(host, `${Base}/resend-confirmation`, {
+    method: 'POST',
+    json: input,
+  });
+  return result.success ? ok(undefined) : result;
+}
+
 // ---- Password reset ----
 
 export interface RequestPasswordResetInput {

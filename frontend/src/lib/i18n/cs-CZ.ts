@@ -2129,6 +2129,24 @@ export const messages = {
   // T-0172 — checkout + pre-payment flow usability (UX functional sweep)
   'checkout.confirm.stateDetailHint':
     'Aktuální stav objednávky a všechny podrobnosti najdete v jejím detailu.',
+
+  // auth-recovery-bundle (T-0167 + T-0168) — UX functional sweep
+  'auth.resend.action': 'Poslat potvrzovací e-mail znovu',
+  'auth.resend.sent':
+    'Pokud u nás máte nepotvrzený účet, nový potvrzovací e-mail je na cestě. Zkontrolujte prosím schránku.',
+  'auth.verify.failed_already_confirmed_hint': 'Pokud jste e-mail už potvrdili, stačí se přihlásit:',
+  'auth.magic.request_new': 'Poslat nový odkaz',
+  'auth.reset.request_new_link': 'Vyžádat nový odkaz pro obnovení hesla',
+  'auth.magic.failed_wrong_audience':
+    'Tento přihlašovací odkaz se nepodařilo použít. Vyžádejte si prosím nový, nebo se přihlaste heslem.',
+  'auth.oauth.error_generic': 'Přihlášení přes Google se nezdařilo. Zkuste to prosím znovu.',
+  'auth.oauth.error_expired':
+    'Přihlášení přes Google vypršelo nebo bylo přerušeno. Zkuste to prosím znovu.',
+  'auth.oauth.error_wrong_account_type':
+    'Tento účet se přes Google přihlásit nemůže. Přihlaste se prosím heslem nebo odkazem v e-mailu.',
+  'auth.oauth.error_email_not_verified':
+    'Váš e-mail u Googlu není ověřený, přihlášení proto nejde dokončit. Přihlaste se prosím jinak.',
+  'checkout.emailNotConfirmedProfileLink': 'Poslat potvrzovací e-mail znovu můžete ze svého profilu.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

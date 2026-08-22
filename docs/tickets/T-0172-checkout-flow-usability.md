@@ -1,7 +1,7 @@
 ---
 id: T-0172
 title: "Checkout + pre-payment flow: in-viewport errors, profile prefill, working downloads, honest confirmation"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -84,3 +84,4 @@ orders, and a refresh silently discards the whole form.
 - 2026-08-21 `in_progress → in_review` — tsc clean, vitest 193/193 (+3 new);
   [review run](../review/runs/T-0172.md) (self, flagged); manual-browser items listed in the
   [test plan](../test-plans/T-0172.md) rows 5–9
+- 2026-08-22 `in_review → done` — merged via PR #141 (merge 387c3af; CI green)
