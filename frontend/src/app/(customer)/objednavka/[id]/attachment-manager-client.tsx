@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState, type ChangeEvent } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -8,6 +9,7 @@ import {
   type OrderAttachmentSummary,
   uploadOrderAttachment,
 } from '@/lib/api-client-helpers/orders-client';
+import { FileDownloadButton } from './order-actions-client';
 import { formatFileSize } from '@/lib/format/file-size';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
@@ -48,10 +50,25 @@ export function AttachmentManagerClient({
   orderId,
   initialAttachments,
 }: AttachmentManagerClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const nextIdRef = useRef(0);
   const [uploads, setUploads] = useState<readonly ManagedUpload[]>([]);
   const [rejections, setRejections] = useState<readonly string[]>([]);
+
+  // The `?attachmentsFailed=N` handoff warning must not resurrect on a
+  // refresh AFTER the files were successfully re-uploaded — strip the
+  // param once this retry surface has mounted (T-0172, CUST-L3).
+  useEffect(() => {
+    if (!searchParams.has('attachmentsFailed')) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('attachmentsFailed');
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount
+  }, []);
 
   const occupiedSlots =
     initialAttachments.length + uploads.filter((u) => u.status !== 'failed').length;
@@ -143,12 +160,17 @@ export function AttachmentManagerClient({
             >
               <div className="flex min-w-0 items-center gap-2">
                 <Icon name="file" size={16} className="shrink-0 text-zinc-500" />
-                <a
-                  href={attachment.downloadUrl}
-                  className="truncate text-sm text-zinc-200 transition-colors hover:text-zinc-50 hover:underline"
-                >
-                  {attachment.filename}
-                </a>
+                {/* Blob download through apiFetch — `downloadUrl` is a
+                    backend-relative API path, so a plain <a href> resolved
+                    against the FRONTEND origin and 404'd in every
+                    environment (T-0172, CUST-H1; the tracking surface's
+                    own rule at order-actions-client.tsx). A navigation
+                    would also drop the in-memory failed-upload retries. */}
+                <FileDownloadButton
+                  path={attachment.downloadUrl}
+                  filename={attachment.filename}
+                  label={attachment.filename}
+                />
                 <span className="shrink-0 text-xs text-zinc-500">
                   {formatFileSize(attachment.sizeBytes)}
                 </span>

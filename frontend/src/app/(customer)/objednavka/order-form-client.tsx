@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,8 +44,25 @@ interface PickupPoint {
   readonly name: string;
 }
 
+/**
+ * DOM ids of the form's inputs in visual order — the failed-submit
+ * focus pass walks this list (T-0172, audit CUST-H3: feedback rendered
+ * off-viewport at 375 px and `noValidate` disables native focusing).
+ * Keys match the camelCase field-error names.
+ */
+const FIELD_ANCHORS: readonly (readonly [field: string, elementId: string])[] = [
+  ['customerName', 'checkout-name'],
+  ['customerEmail', 'checkout-email'],
+  ['customerPhone', 'checkout-phone'],
+  ['zasilkovnaPickupPointId', 'checkout-shipping'],
+  ['customerNotes', 'checkout-notes'],
+];
+
 export interface OrderFormClientProps {
   readonly productId: string;
+  /** Profile prefills (T-0172, CUST-H4) — editable defaults, empty when absent. */
+  readonly defaultName: string;
+  readonly defaultPhone: string;
   /** Prefill from the customer profile (editable per T-0084a §C). */
   readonly defaultEmail: string;
   readonly personalPickupEnabled: boolean;
@@ -68,7 +85,9 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function OrderFormClient({
   productId,
+  defaultName,
   defaultEmail,
+  defaultPhone,
   personalPickupEnabled,
   pickupNote,
   pickupCity,
@@ -77,9 +96,12 @@ export function OrderFormClient({
 }: OrderFormClientProps) {
   const router = useRouter();
 
-  const [customerName, setCustomerName] = useState('');
+  // Profile values arrive as editable defaults — a returning customer
+  // used to retype name and phone on every order while the profile page
+  // maintained both (T-0172, CUST-H4).
+  const [customerName, setCustomerName] = useState(defaultName);
   const [customerEmail, setCustomerEmail] = useState(defaultEmail);
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerPhone, setCustomerPhone] = useState(defaultPhone);
   const [customerNotes, setCustomerNotes] = useState('');
 
   const [widgetFailed, setWidgetFailed] = useState(false);
@@ -99,8 +121,68 @@ export function OrderFormClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const inFlightRef = useRef(false);
+  // Focus target committed by the NEXT errored render (see FIELD_ANCHORS).
+  const pendingFocusIdRef = useRef<string | null>(null);
+  const errorAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const noShippingSelectable = !zasilkovnaAvailable && !personalPickupEnabled;
+
+  // Unsaved checkout input is lost silently on refresh/back/close
+  // (T-0172, CUST-M4). Armed only while something meaningful was entered
+  // and no submit is in flight (the create may already have succeeded).
+  const dirty =
+    customerName !== defaultName ||
+    customerEmail !== defaultEmail ||
+    customerPhone !== defaultPhone ||
+    customerNotes !== '' ||
+    attachments.length > 0 ||
+    pickupPoint !== null;
+  useEffect(() => {
+    if (!dirty || submitting) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older Chrome/WebKit only honour the prompt when returnValue is set.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [dirty, submitting]);
+
+  // After an errored render committed, bring the first errored field (or
+  // the form-level error beside the submit button) into view and focus it
+  // — running this inside the submit handler would race the re-render.
+  useEffect(() => {
+    if (!formError && Object.keys(fieldErrors).length === 0) return;
+    const targetId = pendingFocusIdRef.current;
+    pendingFocusIdRef.current = null;
+    if (targetId) {
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        element.focus({ preventScroll: true });
+        return;
+      }
+    }
+    if (formError) {
+      errorAnchorRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [formError, fieldErrors]);
+
+  /** Queue the first errored field for the post-render focus pass. */
+  function queueFocusFirstError(errors: Readonly<Record<string, string>>) {
+    const firstAnchor = FIELD_ANCHORS.find(([field]) => field in errors);
+    pendingFocusIdRef.current = firstAnchor ? firstAnchor[1] : null;
+  }
+
+  /** Field edits clear their own stale error immediately (CUST-L1). */
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
 
   function handleWidgetError() {
     setWidgetFailed(true);
@@ -166,7 +248,10 @@ export function OrderFormClient({
     }
     const errors = validateMirrors();
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      queueFocusFirstError(errors);
+      return;
+    }
 
     inFlightRef.current = true;
     setSubmitting(true);
@@ -189,10 +274,12 @@ export function OrderFormClient({
         router.push(buildLoginUrl(productId));
         return;
       }
-      if (result.error.fields) {
-        setFieldErrors(normalizeFieldErrors(result.error.fields));
+      const normalized = result.error.fields ? normalizeFieldErrors(result.error.fields) : {};
+      if (Object.keys(normalized).length > 0) {
+        setFieldErrors(normalized);
       }
       setFormError(buildFormError(result.error));
+      queueFocusFirstError(normalized);
       inFlightRef.current = false;
       setSubmitting(false);
       return;
@@ -226,7 +313,6 @@ export function OrderFormClient({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-      {formError ? <Alert variant="error">{formError}</Alert> : null}
       {noShippingSelectable ? (
         <Alert variant="error">{t('checkout.shipping.unavailable')}</Alert>
       ) : null}
@@ -238,32 +324,44 @@ export function OrderFormClient({
             {t('checkout.contact.legend')}
           </legend>
           <Input
+            id="checkout-name"
             type="text"
             label={t('checkout.contact.name')}
             placeholder={t('checkout.contact.namePlaceholder')}
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
+            onChange={(e) => {
+              setCustomerName(e.target.value);
+              clearFieldError('customerName');
+            }}
             error={fieldErrors.customerName}
             autoComplete="name"
             disabled={submitting}
             required
           />
           <Input
+            id="checkout-email"
             type="email"
             label={t('checkout.contact.email')}
             value={customerEmail}
-            onChange={(e) => setCustomerEmail(e.target.value)}
+            onChange={(e) => {
+              setCustomerEmail(e.target.value);
+              clearFieldError('customerEmail');
+            }}
             error={fieldErrors.customerEmail}
             autoComplete="email"
             disabled={submitting}
             required
           />
           <Input
+            id="checkout-phone"
             type="tel"
             label={t('checkout.contact.phone')}
             placeholder={t('checkout.contact.phonePlaceholder')}
             value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
+            onChange={(e) => {
+              setCustomerPhone(e.target.value);
+              clearFieldError('customerPhone');
+            }}
             error={fieldErrors.customerPhone}
             autoComplete="tel"
             disabled={submitting}
@@ -271,9 +369,13 @@ export function OrderFormClient({
           />
           <div className="flex flex-col gap-1.5">
             <Textarea
+              id="checkout-notes"
               label={t('checkout.contact.notes')}
               value={customerNotes}
-              onChange={(e) => setCustomerNotes(e.target.value)}
+              onChange={(e) => {
+                setCustomerNotes(e.target.value);
+                clearFieldError('customerNotes');
+              }}
               error={fieldErrors.customerNotes}
               rows={4}
               maxLength={ORDER_NOTES_MAX}
@@ -290,7 +392,7 @@ export function OrderFormClient({
       </Card>
 
       <Card variant="elevated" padding="md" className="flex flex-col gap-4">
-        <fieldset className="flex flex-col gap-3">
+        <fieldset id="checkout-shipping" className="flex flex-col gap-3">
           <legend className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
             <Icon name="truck" size={14} className="shrink-0" />
             {t('checkout.shipping.legend')}
@@ -417,6 +519,15 @@ export function OrderFormClient({
       </Card>
 
       <WithdrawalNotice fulfillmentType={fulfillmentType} />
+
+      {/* Form-level errors render HERE, beside the button the user just
+          pressed — the old top-of-form alert sat off-viewport on a long
+          form at 375 px (T-0172, CUST-H3). */}
+      {formError ? (
+        <div ref={errorAnchorRef}>
+          <Alert variant="error">{formError}</Alert>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <Button type="submit" size="lg" loading={submitting} disabled={noShippingSelectable}>

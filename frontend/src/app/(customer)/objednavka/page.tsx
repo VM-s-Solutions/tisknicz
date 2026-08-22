@@ -120,7 +120,9 @@ export default async function CheckoutPage({ searchParams }: PageProps) {
         <div className="lg:order-1">
           <OrderFormClient
             productId={product.productId}
+            defaultName={profileResult.value.fullName ?? ''}
             defaultEmail={profileResult.value.email}
+            defaultPhone={profileResult.value.phone ?? ''}
             personalPickupEnabled={maker.personalPickupEnabled}
             pickupNote={maker.pickupNote}
             pickupCity={maker.city}

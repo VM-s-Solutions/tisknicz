@@ -74,7 +74,17 @@ export function PaymentPollClient({ orderId, orderNumber }: PaymentPollClientPro
     const tick = () => {
       activeElapsedMsRef.current += POLL_INTERVAL_MS;
       if (activeElapsedMsRef.current >= POLL_CAP_MS) {
-        setView('capReached');
+        // One last look before giving up — the final tick used to burn
+        // its budget WITHOUT polling, so the effective last check ran
+        // ~one interval early (T-0172, audit CUST-M5). If the last poll
+        // resolves the state, its own setView wins; otherwise fall to
+        // the capReached frame.
+        stop();
+        void poll().finally(() => {
+          if (!disposed) {
+            setView((current) => (current === 'verifying' ? 'capReached' : current));
+          }
+        });
         return;
       }
       void poll();
