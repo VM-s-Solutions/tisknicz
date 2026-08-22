@@ -1,7 +1,7 @@
 ---
 id: T-0173
 title: "Customer + maker dashboard polish: failure states, filter-preserving retries, entity links, list ergonomics"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -89,3 +89,4 @@ surfaced where payouts fail without it.
   307-verified on the running app; CUST-L4 blocked on a contract change (neither order DTO carries
   productId/makerSlug — verified against the generated client) and moved to T-0179; MAKER-L3/L4
   deferred as LOW. See [test plan](../test-plans/T-0173.md) + [review run](../review/runs/T-0173.md)
+- 2026-08-22 `in_review → done` — merged via PR #148 (merge e62284d; CI green)
