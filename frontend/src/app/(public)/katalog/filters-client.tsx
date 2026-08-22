@@ -1,13 +1,15 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { type FormEvent, useMemo, useRef, useState } from 'react';
+import { useNavigationTransition } from '@/components/shared/navigation-transition';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Radio } from '@/components/ui/radio';
 import { RangeSlider } from '@/components/ui/range-slider';
+import { Spinner } from '@/components/ui/spinner';
 import type { MakerLegalType } from '@/lib/api-client-helpers/catalog';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n/cs-CZ';
@@ -83,8 +85,12 @@ const CATEGORY_SEARCH_THRESHOLD = 10;
  * - Below lg the panel collapses behind a toggle (the sidebar stacks
  *   above the results there); the toggle badge shows the active count.
  *
- * Uses <see cref="useRouter().replace"/> for in-place navigation; the
- * browser back button still restores prior URL state (AC-2).
+ * T-0170 (audit PUB-H1/H2/M7): every change navigates with `push`
+ * through {@link useNavigationTransition} — back undoes filter changes
+ * step-by-step, and the surrounding provider dims the results while the
+ * SSR round trip is in flight. The panel itself is remounted by the
+ * page via a `key` derived from the canonical URL state, so
+ * back/forward and reset links can never leave the controls stale.
  */
 export function CatalogFilters({
   categories,
@@ -93,9 +99,9 @@ export function CatalogFilters({
   initialMinRating,
   initialLegalType,
 }: CatalogFiltersProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { pending, navigate } = useNavigationTransition();
 
   const [selectedCategories, setSelectedCategories] = useState<readonly string[]>(initialCategories);
   const [city, setCity] = useState(initialCity);
@@ -123,7 +129,9 @@ export function CatalogFilters({
     if (next.legalType) params.set('legalType', next.legalType); else params.delete('legalType');
     params.delete('page');
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // Push, not replace — a filter change is a meaningful state the back
+    // button must be able to undo (T-0170, PUB-M7).
+    navigate(query ? `${pathname}?${query}` : pathname);
   };
 
   /** Re-push after {@link PUSH_DEBOUNCE_MS} of quiet — for continuous inputs. */
@@ -191,7 +199,7 @@ export function CatalogFilters({
     setMinRating('');
     setLegalType('');
     setCategoryQuery('');
-    router.replace(pathname, { scroll: false });
+    navigate(pathname);
   };
 
   const activeCount =
@@ -224,6 +232,12 @@ export function CatalogFilters({
           {activeCount > 0 ? (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-400/15 px-1.5 text-xs font-semibold text-brand-300">
               {activeCount}
+            </span>
+          ) : null}
+          {pending ? (
+            <span role="status" className="inline-flex items-center">
+              <Spinner size="sm" />
+              <span className="sr-only">{t('catalog.results.loading')}</span>
             </span>
           ) : null}
         </div>
@@ -334,11 +348,16 @@ export function CatalogFilters({
           autoComplete="off"
         />
 
-        <div className="border-t border-zinc-800/80 pt-4">
-          <Button type="button" variant="ghost" onClick={handleReset} className="w-full">
-            {t('catalog.filter.reset')}
-          </Button>
-        </div>
+        {activeCount > 0 ? (
+          // Only rendered while something is filtered — a reset that has
+          // nothing to reset was panel noise (unified with the maker-
+          // profile panel's behavior, T-0170).
+          <div className="border-t border-zinc-800/80 pt-4">
+            <Button type="button" variant="ghost" onClick={handleReset} className="w-full">
+              {t('catalog.filter.reset')}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </form>
   );

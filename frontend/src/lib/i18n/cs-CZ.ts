@@ -2114,6 +2114,17 @@ export const messages = {
     'Tomuto filtru neodpovídají žádné produkty na této stránce.',
   'dashboard.maker.orders.detail.paid_hint':
     'Nemůžeš objednávku vyrobit? Napiš zákazníkovi ve zprávách níže — domluvíte se na dalším postupu.',
+
+  // T-0170 — katalog filter/pagination state integrity (UX functional sweep)
+  'catalog.results.loading': 'Načítáme výsledky…',
+  'catalog.empty.out_of_range.title': 'Tato stránka výsledků už neexistuje',
+  'catalog.empty.out_of_range.description':
+    'Odkaz vede na stránku, která už v katalogu není. Výsledky ale nezmizely — začněte od první stránky.',
+  'catalog.empty.out_of_range.first_page': 'Na první stránku',
+  'catalog.empty.no_makers.title': 'Katalog se teprve plní',
+  'catalog.empty.no_makers.description':
+    'Zatím tu žádní výrobci nejsou. Vyrábíte? Buďte mezi prvními, kdo tu nabídne své výrobky.',
+  'catalog.empty.no_makers.cta': 'Chci se stát makerem',
 } as const;
 
 export type MessageKey = keyof typeof messages;

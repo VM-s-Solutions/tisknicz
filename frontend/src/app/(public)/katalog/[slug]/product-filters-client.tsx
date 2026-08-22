@@ -1,11 +1,13 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { type FormEvent, useRef, useState } from 'react';
+import { useNavigationTransition } from '@/components/shared/navigation-transition';
 import { Button } from '@/components/ui/button';
 import { Dropdown } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { t } from '@/lib/i18n';
 
 interface ProductFiltersProps {
@@ -15,28 +17,33 @@ interface ProductFiltersProps {
 }
 
 const RATING_OPTIONS = ['1', '2', '3', '4', '5'] as const;
-const PRICE_DEBOUNCE_MS = 400;
+// Unified with the catalog panel's debounce (T-0170 — the two panels had
+// drifted to 300 vs 400 ms for no reason).
+const PRICE_DEBOUNCE_MS = 300;
 
 /**
  * URL-state filter form for the product grid on the maker profile.
  * Same pattern as the catalog's <c>CatalogFilters</c>: pushes
  * <c>minPrice</c> / <c>maxPrice</c> (whole Kč) and <c>minRating</c>
  * (stars) into the search params; the Server Component re-renders the
- * grid with the filtered list. Price inputs are debounced 400 ms after
- * the last keystroke OR pushed immediately on submit; the rating select
+ * grid with the filtered list. Price inputs are debounced after the
+ * last keystroke OR pushed immediately on submit; the rating select
  * pushes immediately on change.
  *
- * Uses <c>router.replace</c> for in-place navigation so the browser
- * back button still restores prior URL state.
+ * T-0170 (PUB-H1/H2/M7): navigates with `push` through
+ * {@link useNavigationTransition} (back undoes filter steps; the grid
+ * dims while the round trip is in flight), and the page remounts the
+ * panel via a canonical-state `key` so back/forward never leaves stale
+ * inputs.
  */
 export function ProductFilters({
   initialMinPrice,
   initialMaxPrice,
   initialMinRating,
 }: ProductFiltersProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { pending, navigate } = useNavigationTransition();
 
   const [minPrice, setMinPrice] = useState(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
@@ -52,7 +59,8 @@ export function ProductFilters({
     else params.delete('maxPrice');
     if (next.minRating) params.set('minRating', next.minRating);
     else params.delete('minRating');
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const query = params.toString();
+    navigate(query ? `${pathname}?${query}` : pathname);
   };
 
   const handlePriceChange = (field: 'min' | 'max', value: string): void => {
@@ -92,7 +100,7 @@ export function ProductFilters({
     params.delete('maxPrice');
     params.delete('minRating');
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    navigate(query ? `${pathname}?${query}` : pathname);
   };
 
   const ratingOptions = RATING_OPTIONS.map((stars) => ({
@@ -111,6 +119,12 @@ export function ProductFilters({
         <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('catalog.maker.filter.heading')}
         </h2>
+        {pending ? (
+          <span role="status" className="inline-flex items-center">
+            <Spinner size="sm" />
+            <span className="sr-only">{t('catalog.results.loading')}</span>
+          </span>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

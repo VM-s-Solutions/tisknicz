@@ -2,6 +2,10 @@ import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import {
+  NavigationTransitionProvider,
+  TransitionDim,
+} from '@/components/shared/navigation-transition';
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -178,27 +182,35 @@ export default async function MakerProfilePage({ params, searchParams }: PagePro
         <Icon name="chevronLeft" size={16} />
         {t('catalog.maker.back_to_catalog')}
       </Link>
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
-          <SellerPanel profile={profile} />
-          <Card padding="md">
-            <ProductFilters
-              initialMinPrice={rawMinPrice}
-              initialMaxPrice={rawMaxPrice}
-              initialMinRating={minRatingStars === null ? '' : String(minRatingStars)}
-            />
-          </Card>
-        </aside>
+      <NavigationTransitionProvider>
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
+            <SellerPanel profile={profile} />
+            <Card padding="md">
+              {/* Keyed off canonical filter state so back/forward never
+                  leaves stale inputs (T-0170, PUB-H1 — same treatment as
+                  the catalog panel). */}
+              <ProductFilters
+                key={`${rawMinPrice}|${rawMaxPrice}|${minRatingStars ?? ''}`}
+                initialMinPrice={rawMinPrice}
+                initialMaxPrice={rawMaxPrice}
+                initialMinRating={minRatingStars === null ? '' : String(minRatingStars)}
+              />
+            </Card>
+          </aside>
 
-        <div className="flex min-w-0 flex-col gap-8">
-          <ProductsGrid
-            products={filteredProducts}
-            totalCount={profile.products.length}
-            isFiltered={isFiltered}
-          />
-          <ReviewsSection reviews={profile.reviews} />
+          <div className="flex min-w-0 flex-col gap-8">
+            <TransitionDim>
+              <ProductsGrid
+                products={filteredProducts}
+                totalCount={profile.products.length}
+                isFiltered={isFiltered}
+              />
+            </TransitionDim>
+            <ReviewsSection reviews={profile.reviews} />
+          </div>
         </div>
-      </div>
+      </NavigationTransitionProvider>
     </section>
   );
 }

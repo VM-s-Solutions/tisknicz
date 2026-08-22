@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import {
+  NavigationTransitionProvider,
+  TransitionDim,
+} from '@/components/shared/navigation-transition';
 import { PageHeader } from '@/components/shared/page-header';
+import { RefreshButton } from '@/components/shared/refresh-button';
 import { ScrollToTop } from '@/components/shared/scroll-to-top';
 import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
@@ -158,41 +163,49 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <PageHeader title={t('catalog.title')} subtitle={t('catalog.subtitle')} />
 
-        <div className="mt-10 flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
-          {/* Sticky only engages when the panel is SHORTER than the space
-              below `top`; the old scrolling category column made the card
-              taller than a laptop viewport, so it scrolled away instead.
-              The panel is now fixed-height regardless of category count
-              (the list lives in an overlay), so no cap is needed here —
-              and an `overflow` on this element would clip that overlay. */}
-          <aside className="lg:sticky lg:top-24">
-            <Card variant="elevated" padding="sm" className="sm:p-5">
-              <CatalogFilters
-                categories={categoryOptions}
-                initialCategories={selectedCategories}
-                initialCity={rawCity}
-                initialMinRating={initialMinRating}
-                initialLegalType={legalType}
-              />
-            </Card>
-          </aside>
+        <NavigationTransitionProvider>
+          <div className="mt-10 flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+            {/* Sticky only engages when the panel is SHORTER than the space
+                below `top`; the old scrolling category column made the card
+                taller than a laptop viewport, so it scrolled away instead.
+                The panel is now fixed-height regardless of category count
+                (the list lives in an overlay), so no cap is needed here —
+                and an `overflow` on this element would clip that overlay. */}
+            <aside className="lg:sticky lg:top-24">
+              <Card variant="elevated" padding="sm" className="sm:p-5">
+                {/* Keyed off the canonical filter state so back/forward and
+                    reset/retry links can never leave stale controls behind
+                    (T-0170, audit PUB-H1): a URL change remounts the panel
+                    with fresh initial values. */}
+                <CatalogFilters
+                  key={baseQuery}
+                  categories={categoryOptions}
+                  initialCategories={selectedCategories}
+                  initialCity={rawCity}
+                  initialMinRating={initialMinRating}
+                  initialLegalType={legalType}
+                />
+              </Card>
+            </aside>
 
-          <div className="min-w-0">
-            {result.success ? (
-              <CatalogResults
-                items={result.value.items}
-                page={result.value.page}
-                totalPages={result.value.totalPages}
-                hasNext={result.value.hasNextPage}
-                hasPrevious={result.value.hasPreviousPage}
-                totalCount={result.value.totalCount}
-                baseQuery={baseQuery}
-              />
-            ) : (
-              <CatalogError error={result.error} />
-            )}
+            <div className="min-w-0">
+              {result.success ? (
+                <CatalogResults
+                  items={result.value.items}
+                  page={result.value.page}
+                  totalPages={result.value.totalPages}
+                  hasNext={result.value.hasNextPage}
+                  hasPrevious={result.value.hasPreviousPage}
+                  totalCount={result.value.totalCount}
+                  baseQuery={baseQuery}
+                  hasActiveFilters={baseQuery !== ''}
+                />
+              ) : (
+                <CatalogError error={result.error} />
+              )}
+            </div>
           </div>
-        </div>
+        </NavigationTransitionProvider>
       </div>
       <ScrollToTop />
     </section>
@@ -207,6 +220,24 @@ interface CatalogResultsProps {
   readonly hasPrevious: boolean;
   readonly totalCount: number;
   readonly baseQuery: string;
+  readonly hasActiveFilters: boolean;
+}
+
+/**
+ * Which empty surface an empty item list actually is (T-0170, audit
+ * PUB-H3): a stale `?page=99` deep link, a filter that matches nothing,
+ * and a genuinely empty catalog are three different situations — the old
+ * single "no makers match your filter + clear filters" copy misdiagnosed
+ * two of them and dead-ended the out-of-range case entirely.
+ */
+export function catalogEmptyKind(input: {
+  readonly itemCount: number;
+  readonly totalCount: number;
+  readonly hasActiveFilters: boolean;
+}): 'none' | 'out_of_range' | 'filtered' | 'no_makers' {
+  if (input.itemCount > 0) return 'none';
+  if (input.totalCount > 0) return 'out_of_range';
+  return input.hasActiveFilters ? 'filtered' : 'no_makers';
 }
 
 function CatalogResults({
@@ -217,23 +248,78 @@ function CatalogResults({
   hasPrevious,
   totalCount,
   baseQuery,
+  hasActiveFilters,
 }: CatalogResultsProps) {
-  if (items.length === 0) {
-    return <CatalogEmpty />;
+  const emptyKind = catalogEmptyKind({ itemCount: items.length, totalCount, hasActiveFilters });
+
+  if (emptyKind === 'out_of_range') {
+    return (
+      <EmptyState
+        icon="search"
+        title={t('catalog.empty.out_of_range.title')}
+        description={t('catalog.empty.out_of_range.description')}
+        action={
+          <Link
+            href={baseQuery ? `/katalog?${baseQuery}` : '/katalog'}
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+          >
+            {t('catalog.empty.out_of_range.first_page')}
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (emptyKind === 'filtered') {
+    return (
+      <EmptyState
+        icon="search"
+        title={t('catalog.empty.title')}
+        description={t('catalog.empty.description')}
+        action={
+          <Link
+            href="/katalog"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+          >
+            {t('catalog.empty.reset')}
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (emptyKind === 'no_makers') {
+    return (
+      <EmptyState
+        icon="package"
+        title={t('catalog.empty.no_makers.title')}
+        description={t('catalog.empty.no_makers.description')}
+        action={
+          <Link
+            href="/pro-makery"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+          >
+            {t('catalog.empty.no_makers.cta')}
+          </Link>
+        }
+      />
+    );
   }
 
   return (
     <>
-      <p className="mb-5 text-sm text-zinc-500">
-        {t('catalog.pagination.results', { count: totalCount })}
-      </p>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
-        {items.map((item) => (
-          <li key={item.makerId} className="min-w-0">
-            <MakerCard item={item} />
-          </li>
-        ))}
-      </ul>
+      <TransitionDim>
+        <p className="mb-5 text-sm text-zinc-500">
+          {t('catalog.pagination.results', { count: totalCount })}
+        </p>
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
+          {items.map((item) => (
+            <li key={item.makerId} className="min-w-0">
+              <MakerCard item={item} />
+            </li>
+          ))}
+        </ul>
+      </TransitionDim>
       <Pagination
         page={page}
         totalPages={totalPages}
@@ -242,24 +328,6 @@ function CatalogResults({
         baseQuery={baseQuery}
       />
     </>
-  );
-}
-
-function CatalogEmpty() {
-  return (
-    <EmptyState
-      icon="search"
-      title={t('catalog.empty.title')}
-      description={t('catalog.empty.description')}
-      action={
-        <Link
-          href="/katalog"
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
-        >
-          {t('catalog.empty.reset')}
-        </Link>
-      }
-    />
   );
 }
 
@@ -280,12 +348,10 @@ function CatalogError({ error }: { readonly error: ApiError }) {
           <p className="font-semibold">{t('catalog.error.title')}</p>
           <p className="mt-1 text-sm">{resolveErrorMessage(error)}</p>
         </div>
-        <Link
-          href="/katalog"
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
-        >
-          {t('catalog.error.retry')}
-        </Link>
+        {/* router.refresh() on the CURRENT URL — the old <Link href="/katalog">
+            silently dropped the user's filters/page and self-links can no-op
+            in the client router (T-0170, audit PUB-M3). */}
+        <RefreshButton label={t('catalog.error.retry')} />
       </div>
     </Alert>
   );

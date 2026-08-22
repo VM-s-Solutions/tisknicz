@@ -13,6 +13,15 @@ import { Pagination } from '../pagination';
 const scrollTo = vi.fn();
 let reduceMotion = false;
 
+// T-0170: plain clicks navigate through the transition hook (fallback =
+// direct router.push when no provider wraps the component, as here).
+const push = vi.fn();
+const replace = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push, replace }),
+}));
+
 /**
  * jsdom follows a real <a> href and then logs "navigation not
  * implemented". The click handler is what's under test, not the
@@ -22,6 +31,8 @@ const swallowNavigation = (event: Event): void => event.preventDefault();
 
 beforeEach(() => {
   scrollTo.mockClear();
+  push.mockClear();
+  replace.mockClear();
   reduceMotion = false;
   vi.stubGlobal('scrollTo', scrollTo);
   vi.stubGlobal(
@@ -65,6 +76,15 @@ describe('catalog Pagination', () => {
     fireEvent.click(screen.getByRole('link', { name: /další/i }), { metaKey: true });
 
     expect(scrollTo).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('pushes the next page URL with the filter query preserved (T-0170)', () => {
+    renderPagination();
+
+    fireEvent.click(screen.getByRole('link', { name: /další/i }));
+
+    expect(push).toHaveBeenCalledWith('/katalog?category=3d-tisk&page=3', { scroll: false });
   });
 
   it('keeps the filter query on both page links', () => {

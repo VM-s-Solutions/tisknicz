@@ -1,7 +1,7 @@
 ---
 id: T-0170
 title: "Katalog filter/pagination state integrity: URL sync, pending feedback, honest empty states"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -74,3 +74,10 @@ filter".
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-21 `ready → in_progress`, branch `feat/T-0170-katalog-state-integrity` (main-loop
+  implementation — parallel agents unavailable, account session limit)
+- 2026-08-21 `in_progress → in_review` — tsc clean, vitest 190/190 (+5 new); out-of-range +
+  filtered-to-zero branches SSR-verified on the running app; [review run](../review/runs/T-0170.md)
+  (self, flagged); browser-interaction pass pending per [test plan](../test-plans/T-0170.md) row 9.
+  New shared primitives `navigation-transition.tsx` + `refresh-button.tsx` for reuse by
+  T-0171/T-0173/T-0175

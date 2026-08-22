@@ -12,11 +12,14 @@ import { CatalogFilters } from '../filters-client';
  * ignores everything but my newest pick".
  */
 
+// T-0170: filter changes PUSH (back undoes them step-by-step); `replace`
+// stays mocked to prove nothing calls it any more.
+const push = vi.fn();
 const replace = vi.fn();
 let currentSearch = '';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace }),
+  useRouter: () => ({ push, replace }),
   usePathname: () => '/katalog',
   useSearchParams: () => new URLSearchParams(currentSearch),
 }));
@@ -38,13 +41,14 @@ function renderFilters(initialCategories: readonly string[] = [], initialCity = 
   );
 }
 
-/** Query params of the most recent router.replace() call. */
+/** Query params of the most recent router.push() call. */
 function lastPushedParams(): URLSearchParams {
-  const lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+  const lastUrl = push.mock.calls.at(-1)?.[0] as string;
   return new URLSearchParams(lastUrl.split('?')[1] ?? '');
 }
 
 beforeEach(() => {
+  push.mockClear();
   replace.mockClear();
   currentSearch = '';
 });
@@ -109,7 +113,14 @@ describe('CatalogFilters categories', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Vymazat filtry' }));
 
-    expect(replace).toHaveBeenCalledWith('/katalog', { scroll: false });
+    expect(push).toHaveBeenCalledWith('/katalog', { scroll: false });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('hides the reset control while nothing is filtered (T-0170)', () => {
+    renderFilters();
+
+    expect(screen.queryByRole('button', { name: 'Vymazat filtry' })).not.toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {
@@ -262,7 +273,7 @@ describe('CatalogFilters legal type', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Vymazat filtry' }));
 
-    expect(replace).toHaveBeenCalledWith('/katalog', { scroll: false });
+    expect(push).toHaveBeenCalledWith('/katalog', { scroll: false });
     expect(screen.getByLabelText('Vše')).toBeChecked();
   });
 
