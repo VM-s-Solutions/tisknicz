@@ -1,7 +1,7 @@
 ---
 id: T-0173
 title: "Customer + maker dashboard polish: failure states, filter-preserving retries, entity links, list ergonomics"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -84,3 +84,8 @@ surfaced where payouts fail without it.
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/T-0173-dashboard-polish`
+- 2026-08-22 `in_progress → in_review` — tsc clean, vitest 226/226 (+1 new); `/dashboard/maker`
+  307-verified on the running app; CUST-L4 blocked on a contract change (neither order DTO carries
+  productId/makerSlug — verified against the generated client) and moved to T-0179; MAKER-L3/L4
+  deferred as LOW. See [test plan](../test-plans/T-0173.md) + [review run](../review/runs/T-0173.md)

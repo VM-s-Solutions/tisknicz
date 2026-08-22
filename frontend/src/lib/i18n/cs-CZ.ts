@@ -2188,6 +2188,21 @@ export const messages = {
 
   // T-0171 — public error surfaces + navigation context (UX functional sweep)
   'publicError.title': 'Něco se pokazilo',
+
+  // T-0173 — customer + maker dashboard polish (UX functional sweep)
+  'dashboard.profile.load_error.title': 'Profil se nepodařilo načíst',
+  'dashboard.orders.retry_clear_filters': 'Vymazat filtry',
+  'dashboard.maker.payouts.bank_missing.title': 'Chybí bankovní účet',
+  'dashboard.maker.payouts.bank_missing.body':
+    'Bez čísla účtu ti nemůžeme poslat výplatu. Doplň ho prosím v profilu.',
+  'dashboard.maker.payouts.bank_missing.cta': 'Doplnit v profilu',
+  'dashboard.maker.payouts.cadence_note':
+    'Výplaty připravujeme jednou týdně za doručené objednávky. Jakmile je dávka odeslaná, uvidíš ji zde jako „Vyplaceno".',
+  'dashboard.customer.orders.dispute.disclosure': 'Reklamovat objednávku',
+  'dashboard.maker.orders.outOfRange.title': 'Tato stránka už neexistuje',
+  'dashboard.maker.orders.outOfRange.description':
+    'Odkaz vede za poslední stránku výsledků. Objednávky ale nezmizely — vraťte se na poslední existující stránku.',
+  'dashboard.maker.orders.outOfRange.lastPage': 'Na poslední stránku',
   'publicError.body':
     'Stránku se nepodařilo zobrazit. Zkuste to prosím znovu — pokud potíže trvají, dejte nám vědět.',
   'nav.logout_failed': 'Odhlášení se nepodařilo. Zkuste to prosím znovu.',

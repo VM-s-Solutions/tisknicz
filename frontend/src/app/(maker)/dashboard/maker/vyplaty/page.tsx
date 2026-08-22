@@ -8,6 +8,7 @@ import {
   getMakerPayouts,
   type MakerPayoutsPage,
 } from '@/lib/api-client-helpers/payouts-client';
+import { getMyMakerProfile } from '@/lib/api-client-helpers/profile';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 import type { ApiError } from '@/lib/runtime/result';
@@ -55,7 +56,16 @@ export default async function MakerPayoutsPage({ searchParams }: PageProps) {
   // Junk (page=0, page=abc) clamps to 1 — backend Validator stays authoritative.
   const page = parsePositiveInt(readString(sp.page), 1);
 
-  const result = await getMakerPayouts({ page });
+  // The payout page never said what a maker most needs to know: that we
+  // cannot pay them at all without a bank account (T-0173, audit MAKER-M4).
+  // Read alongside the batches — a failed profile read must not break the
+  // page, so the banner simply doesn't render.
+  const [result, profileResult] = await Promise.all([
+    getMakerPayouts({ page }),
+    getMyMakerProfile('maker'),
+  ]);
+  const bankAccountMissing =
+    profileResult.success && (profileResult.value.bankAccount ?? '').trim() === '';
 
   if (!result.success && result.error.type === 'Unauthorized') {
     redirect(`/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
@@ -68,6 +78,36 @@ export default async function MakerPayoutsPage({ searchParams }: PageProps) {
           title={t('dashboard.maker.payouts.title')}
           subtitle={t('dashboard.maker.payouts.subtitle')}
         />
+
+        {bankAccountMissing ? (
+          <div className="mt-6">
+            <Alert variant="warning">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <p className="font-semibold">
+                    {t('dashboard.maker.payouts.bank_missing.title')}
+                  </p>
+                  <p className="mt-1 text-sm">
+                    {t('dashboard.maker.payouts.bank_missing.body')}
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/maker/profil"
+                  className="w-fit text-sm font-semibold underline underline-offset-2"
+                >
+                  {t('dashboard.maker.payouts.bank_missing.cta')}
+                </Link>
+              </div>
+            </Alert>
+          </div>
+        ) : null}
+
+        {/* MAKER-M3 (copy half): the page listed batches that already exist
+            but never explained the cadence, so "how much am I owed and when"
+            had no answer at all. The accrued-balance READ is T-0179. */}
+        <p className="mt-6 text-sm text-zinc-500">
+          {t('dashboard.maker.payouts.cadence_note')}
+        </p>
 
         <div className="mt-8">
           {result.success ? (
