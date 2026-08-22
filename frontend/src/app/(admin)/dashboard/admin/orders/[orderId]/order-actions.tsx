@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { Alert } from '@/components/ui/alert';
+import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dropdown } from '@/components/ui/dropdown';
@@ -50,9 +51,18 @@ export function OrderActions({
 }: OrderActionsProps) {
   const [refundOpen, setRefundOpen] = useState(false);
   const [stateOpen, setStateOpen] = useState(false);
+  // T-0176 (audit ADM-M6): the highest-stakes admin actions — a refund
+  // and a manual state change — used to end with the modal simply
+  // closing. A partial refund may not even change the state badge, so
+  // the only signal was a breakdown row quietly differing. The success
+  // notice lives on the PAGE (the modal that would have shown it is
+  // gone by then) and survives the router.refresh().
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-3">
+      {successNotice ? <Alert variant="success">{successNotice}</Alert> : null}
+      <div className="flex flex-wrap items-center gap-3">
       <Button type="button" variant="danger" size="lg" onClick={() => setRefundOpen(true)}>
         <Icon name="creditCard" size={16} />
         {t('dashboard.admin.orderActions.refund.trigger')}
@@ -70,6 +80,7 @@ export function OrderActions({
           totalAmountMinor={totalAmountMinor}
           currency={currency}
           onClose={() => setRefundOpen(false)}
+          onRefunded={(message) => setSuccessNotice(message)}
         />
       ) : null}
 
@@ -79,63 +90,9 @@ export function OrderActions({
           orderNumber={orderNumber}
           currentState={state}
           onClose={() => setStateOpen(false)}
+          onChanged={(message) => setSuccessNotice(message)}
         />
       ) : null}
-    </div>
-  );
-}
-
-/**
- * Lightweight modal shell (T-0087b ShipConfirmDialog focus-trap pattern —
- * no shared Dialog primitive yet; `window.confirm` is off-limits). Esc +
- * Cancel + backdrop close, but ONLY when not busy — a money POST in
- * flight must not be dismissable out from under itself.
- */
-function ModalShell({
-  titleId,
-  title,
-  onClose,
-  closeDisabled,
-  children,
-}: {
-  readonly titleId: string;
-  readonly title: string;
-  readonly onClose: () => void;
-  readonly closeDisabled: boolean;
-  readonly children: React.ReactNode;
-}) {
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !closeDisabled) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose, closeDisabled]);
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
-    >
-      <div
-        aria-hidden="true"
-        onClick={() => {
-          if (!closeDisabled) onClose();
-        }}
-        className="absolute inset-0 bg-black/70"
-      />
-      <div className="relative z-10 my-8 w-full max-w-lg rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
-        <h2 id={titleId} className="text-lg font-semibold text-white">
-          {title}
-        </h2>
-        <div className="mt-4 flex flex-col gap-4">{children}</div>
       </div>
     </div>
   );
@@ -148,6 +105,7 @@ function RefundModal({
   totalAmountMinor,
   currency,
   onClose,
+  onRefunded,
 }: {
   readonly orderId: string;
   readonly orderNumber: string;
@@ -155,6 +113,7 @@ function RefundModal({
   readonly totalAmountMinor: number;
   readonly currency: string;
   readonly onClose: () => void;
+  readonly onRefunded: (message: string) => void;
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -196,6 +155,12 @@ function RefundModal({
       startTransition(() => {
         router.refresh();
       });
+      onRefunded(
+        t('dashboard.admin.orderActions.refund.success', {
+          amount: formatCzk(parsedWhole * 100, currency),
+          orderNumber,
+        }),
+      );
       onClose();
       return;
     }
@@ -206,7 +171,7 @@ function RefundModal({
   }
 
   return (
-    <ModalShell
+    <Dialog
       titleId={titleId}
       title={t('dashboard.admin.orderActions.refund.title', { orderNumber })}
       onClose={onClose}
@@ -273,7 +238,7 @@ function RefundModal({
             : t('dashboard.admin.orderActions.refund.submit')}
         </Button>
       </div>
-    </ModalShell>
+    </Dialog>
   );
 }
 
@@ -297,11 +262,13 @@ function StateChangeModal({
   orderNumber,
   currentState,
   onClose,
+  onChanged,
 }: {
   readonly orderId: string;
   readonly orderNumber: string;
   readonly currentState: OrderState;
   readonly onClose: () => void;
+  readonly onChanged: (message: string) => void;
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -336,6 +303,12 @@ function StateChangeModal({
       startTransition(() => {
         router.refresh();
       });
+      onChanged(
+        t('dashboard.admin.orderActions.state.success', {
+          orderNumber,
+          state: t(orderStateLabelKey(targetState as OrderState)),
+        }),
+      );
       onClose();
       return;
     }
@@ -346,7 +319,7 @@ function StateChangeModal({
   }
 
   return (
-    <ModalShell
+    <Dialog
       titleId={titleId}
       title={t('dashboard.admin.orderActions.state.title', { orderNumber })}
       onClose={onClose}
@@ -396,6 +369,6 @@ function StateChangeModal({
             : t('dashboard.admin.orderActions.state.submit')}
         </Button>
       </div>
-    </ModalShell>
+    </Dialog>
   );
 }

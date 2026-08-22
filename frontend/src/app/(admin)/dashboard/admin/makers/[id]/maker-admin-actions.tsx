@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useArmConfirm } from '../../_components/use-arm-confirm';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -32,7 +33,9 @@ export function MakerAdminActions({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<null | 'verify' | 'refresh' | 'deactivate'>(null);
-  const [armDeactivate, setArmDeactivate] = useState(false);
+  // T-0176 (ADM-L3): armed state now stands down on Escape / after a
+  // short timeout instead of sitting one stray click from firing forever.
+  const { armed: armDeactivate, arm: armDeactivateNow, disarm: disarmDeactivate } = useArmConfirm();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -47,7 +50,7 @@ export function MakerAdminActions({
     const result = await action();
     if (result.success) {
       setNotice(successMessage);
-      setArmDeactivate(false);
+      disarmDeactivate();
       router.refresh();
     } else if (result.error) {
       setError(resolveErrorMessage(result.error as Parameters<typeof resolveErrorMessage>[0]));
@@ -106,9 +109,10 @@ export function MakerAdminActions({
             disabled={busy !== null}
             onClick={() => {
               if (!armDeactivate) {
-                setArmDeactivate(true);
+                armDeactivateNow();
                 return;
               }
+              disarmDeactivate();
               void run(
                 'deactivate',
                 () => deactivateMaker(makerId),

@@ -2162,6 +2162,14 @@ export const messages = {
   'dashboard.admin.orderDetail.error.title': 'Detail objednávky se nepodařilo načíst',
   'dashboard.admin.orderDetail.error.body':
     'Zkuste načtení zopakovat, nebo se vraťte na seznam objednávek.',
+
+  // T-0176 — admin action feedback (UX functional sweep)
+  'dashboard.admin.orderActions.refund.success':
+    'Refundace {amount} u objednávky {orderNumber} byla provedena.',
+  'dashboard.admin.orderActions.state.success':
+    'Stav objednávky {orderNumber} byl změněn na „{state}".',
+  // Payout-complete + outbox retry/ack success copy already exist above —
+  // reused by the new page-level notices, not duplicated.
 } as const;
 
 export type MessageKey = keyof typeof messages;

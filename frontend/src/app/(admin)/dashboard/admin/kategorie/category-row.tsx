@@ -14,6 +14,7 @@ import {
   updateCategory,
 } from '@/lib/api-client-helpers/admin-categories';
 import { t } from '@/lib/i18n';
+import { useArmConfirm } from '../_components/use-arm-confirm';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 
 /**
@@ -29,7 +30,8 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description ?? '');
   const [sortOrder, setSortOrder] = useState(String(item.sortOrder));
-  const [armDeactivate, setArmDeactivate] = useState(false);
+  // T-0176 (ADM-L3): auto-disarm, same as the maker actions.
+  const { armed: armDeactivate, arm: armDeactivateNow, disarm: disarmDeactivate } = useArmConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,19 +58,24 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
 
   async function handleDeactivate() {
     if (!armDeactivate) {
-      setArmDeactivate(true);
+      armDeactivateNow();
       return;
     }
     setBusy(true);
     setError(null);
     const result = await deactivateCategory(item.id);
     if (result.success) {
-      setArmDeactivate(false);
+      disarmDeactivate();
       router.refresh();
-    } else {
-      setError(resolveErrorMessage(result.error));
+      // T-0176 (audit ADM-H6): the success path never reset `busy`, and
+      // router.refresh() does NOT remount this client row — so a
+      // successfully deactivated category left its own Edit button
+      // (disabled={busy}) permanently dead until a hard reload.
       setBusy(false);
+      return;
     }
+    setError(resolveErrorMessage(result.error));
+    setBusy(false);
   }
 
   return (
@@ -101,7 +108,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
             disabled={busy}
             onClick={() => {
               setEditing((v) => !v);
-              setArmDeactivate(false);
+              disarmDeactivate();
             }}
           >
             {!editing ? <Icon name="edit" size={14} /> : null}

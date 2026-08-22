@@ -60,14 +60,20 @@ export function MakerFeeOverrideForm({
   makerId,
   countryCode,
   countryDefaultBp,
+  currentOverrideBp,
 }: {
   readonly makerId: string;
   readonly countryCode: string;
   readonly countryDefaultBp: number | undefined;
+  /** Existing override, so adjusting 3 % → 2,5 % doesn't mean reading it
+   * off the header card and retyping (T-0176, audit ADM-L4). */
+  readonly currentOverrideBp?: number | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('set');
-  const [percent, setPercent] = useState('');
+  const [percent, setPercent] = useState(
+    currentOverrideBp != null ? bpToPercentDisplay(currentOverrideBp) : '',
+  );
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
+import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
@@ -41,18 +42,7 @@ export function CompleteBatchModal({
   const [submitting, setSubmitting] = useState(false);
   const inFlightRef = useRef(false);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !submitting) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose, submitting]);
+  // Scroll lock + Esc handling live in the shared Dialog (T-0176).
 
   const refValid = bankReference.trim() !== '';
   const canSubmit = refValid && !submitting;
@@ -86,24 +76,12 @@ export function CompleteBatchModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
+    <Dialog
+      titleId={titleId}
+      title={t('dashboard.admin.ops.payouts.complete.title')}
+      onClose={onClose}
+      closeDisabled={submitting}
     >
-      <div
-        aria-hidden="true"
-        onClick={() => {
-          if (!submitting) onClose();
-        }}
-        className="absolute inset-0 bg-black/70"
-      />
-      <div className="relative z-10 my-8 w-full max-w-lg rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
-        <h2 id={titleId} className="text-lg font-semibold text-white">
-          {t('dashboard.admin.ops.payouts.complete.title')}
-        </h2>
-        <div className="mt-4 flex flex-col gap-4">
           <p className="text-sm text-zinc-400">
             {t('dashboard.admin.ops.payouts.complete.intro')}
           </p>
@@ -152,8 +130,6 @@ export function CompleteBatchModal({
                 : t('dashboard.admin.ops.payouts.complete.submit')}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

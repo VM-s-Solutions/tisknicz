@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { downloadPayoutCsv } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
 
 /**
  * Operator payout-CSV download (T-0118c §3, A.4). The cross-maker bank file
@@ -44,21 +45,24 @@ interface PayoutCsvDownloadProps {
 
 export function PayoutCsvDownload({ batchId, batchNumber }: PayoutCsvDownloadProps) {
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(false);
+  // T-0176 (audit ADM-L6): the error was a bare boolean, so an expired
+  // session, a 500 and a timeout all read identically. Keep the specific
+  // message like every other admin surface does.
+  const [error, setError] = useState<string | null>(null);
   const inFlightRef = useRef(false);
 
   async function handleDownload(): Promise<void> {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setPending(true);
-    setError(false);
+    setError(null);
 
     const result = await downloadPayoutCsv(batchId);
     if (result.success) {
       const namePart = batchNumber.trim() !== '' ? batchNumber.trim() : batchId;
       triggerBlobDownload(result.value, `vyplaty-${namePart}.csv`);
     } else {
-      setError(true);
+      setError(resolveErrorMessage(result.error));
     }
 
     inFlightRef.current = false;
@@ -82,7 +86,8 @@ export function PayoutCsvDownload({ batchId, batchNumber }: PayoutCsvDownloadPro
       </Button>
       {error ? (
         <Alert variant="error">
-          <p className="text-sm">{t('dashboard.admin.ops.payouts.csv.error')}</p>
+          <p className="text-sm font-semibold">{t('dashboard.admin.ops.payouts.csv.error')}</p>
+          <p className="mt-1 text-sm">{error}</p>
         </Alert>
       ) : null}
     </div>
