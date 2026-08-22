@@ -17,6 +17,9 @@ interface PaginationProps {
   readonly pageSize: number;
   /** The default the page falls back to — only emitted when different. */
   readonly defaultPageSize: number;
+  /** Active display filter (T-0174) — only emitted when set, so the
+   * chip selection survives page changes. */
+  readonly filter?: string;
 }
 
 /**
@@ -26,7 +29,7 @@ interface PaginationProps {
  * disabled state uses a non-link span for keyboard/screen-reader
  * semantics.
  */
-export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, defaultPageSize }: PaginationProps) {
+export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, defaultPageSize, filter }: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
@@ -38,6 +41,9 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, d
     // URLs stay clean (`?page=2` not `?page=2&pageSize=24`).
     if (pageSize !== defaultPageSize) {
       sp.set('pageSize', String(pageSize));
+    }
+    if (filter) {
+      sp.set('filter', filter);
     }
     return `/dashboard/maker/produkty?${sp.toString()}`;
   };

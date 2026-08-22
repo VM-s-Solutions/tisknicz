@@ -259,7 +259,11 @@ export async function uploadProductImage(
   return apiFetch<UploadProductImageResponse>(
     'maker',
     `${Base}/${encodeURIComponent(productId)}/images`,
-    { method: 'POST', body: formData },
+    // T-0174 (audit MAKER-H2): a multi-MB photo on a normal uplink blows
+    // the 8 s apiFetch default and the abort used to surface as "invalid
+    // file". Multipart uploads get the documented long budget (mirrors
+    // UPLOAD_TIMEOUT_MS in profile.ts).
+    { method: 'POST', body: formData, timeoutMs: 120_000 },
   );
 }
 

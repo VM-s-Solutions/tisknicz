@@ -1,13 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dropdown } from '@/components/ui/dropdown';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { SaveButton, type SaveState } from '@/components/ui/save-button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createProduct,
@@ -46,14 +47,66 @@ const FULFILLMENT_TYPE_LABEL_KEYS: Record<FulfillmentType, MessageKey> = {
   [FulfillmentTypeValues.InStock]: 'product.fulfillmentType.InStock',
 };
 
+/** The persisted truth the dirty check compares against. */
+interface FormSnapshot {
+  readonly title: string;
+  readonly description: string;
+  readonly categoryId: string;
+  readonly priceType: PriceType;
+  readonly fulfillmentType: FulfillmentType;
+  readonly priceKc: string;
+  readonly weightGrams: string;
+}
+
+function snapshotFrom(initial: MakerProductDetail | undefined): FormSnapshot {
+  return {
+    title: initial?.title ?? '',
+    description: initial?.description ?? '',
+    categoryId: initial?.categoryId ?? '',
+    priceType: (initial?.priceType as PriceType | undefined) ?? PriceTypeValues.Fixed,
+    fulfillmentType:
+      (initial?.fulfillmentType as FulfillmentType | undefined) ?? FulfillmentTypeValues.MadeToOrder,
+    // Initial Kč uses Math.trunc to mirror lib/money/formatter.ts's
+    // formatCzk (whole-CZK display, haléře dropped). Math.round here
+    // would silently bump prices ending in ≥50 haléř upward — and an
+    // unedited submit would persist the rounded value back to the
+    // backend. T-0049 Copilot round-6 M2.
+    priceKc: initial ? String(Math.trunc(initial.priceAmountMinor / 100)) : '',
+    weightGrams: initial ? String(initial.weightGrams) : '',
+  };
+}
+
+/**
+ * DOM ids of the form's inputs in visual order — the scroll-to-error
+ * pass (T-0174, audit MAKER-M1: a failed submit at the bottom of a long
+ * form produced no in-viewport change) walks this list and brings the
+ * first errored field into view. Keys match the camelCase field-error
+ * names produced by `applyError`.
+ */
+const FIELD_ANCHORS: readonly (readonly [field: string, elementId: string])[] = [
+  ['title', 'product-title'],
+  ['categoryId', 'product-category'],
+  ['fulfillmentType', 'product-fulfillment-type'],
+  ['description', 'product-description'],
+  ['priceType', 'product-price-type'],
+  ['priceAmountMinor', 'product-price'],
+  ['weightGrams', 'product-weight'],
+];
+
 /**
  * Shared product editor used by the create and edit routes (T-0049
- * AC-4 / AC-5 / AC-6). The form has no client-side validation rules —
- * the backend's FluentValidation is the source of truth, and field-
- * level errors surface inline via the <c>fields</c> map on
- * <c>ApiError</c> (T-0049 AC-5). Native HTML <c>required</c> and
- * <c>min</c> are kept for UX-only sanity checks; they don't replace
- * the backend rules.
+ * AC-4 / AC-5 / AC-6; feedback reworked in T-0174). The form has no
+ * client-side validation rules — the backend's FluentValidation is the
+ * source of truth, and field-level errors surface inline via the
+ * <c>fields</c> map on <c>ApiError</c> (T-0049 AC-5).
+ *
+ * <para>
+ * Edit mode submits through the shared <c>SaveButton</c> with dirty
+ * tracking, so save confirmation happens at the button the maker just
+ * pressed (the old top-of-form success alert rendered off-viewport on
+ * long forms and never cleared). Unsaved changes arm a
+ * <c>beforeunload</c> guard in both modes (audit MAKER-M2).
+ * </para>
  *
  * <para>
  * Price is shown to the maker in Kč; the backend stores
@@ -65,33 +118,53 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
   const router = useRouter();
 
   // Form state. Init from `initial` in edit mode; otherwise empty.
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? '');
-  const [priceType, setPriceType] = useState<PriceType>(
-    (initial?.priceType as PriceType | undefined) ?? PriceTypeValues.Fixed,
-  );
+  const [persisted, setPersisted] = useState<FormSnapshot>(() => snapshotFrom(initial));
+  const [title, setTitle] = useState(persisted.title);
+  const [description, setDescription] = useState(persisted.description);
+  const [categoryId, setCategoryId] = useState(persisted.categoryId);
+  const [priceType, setPriceType] = useState<PriceType>(persisted.priceType);
   // Defaults to "Na zakázku" — the form's explicit default selection
   // (AC-1), matching the platform's dominant use case (T-0144).
-  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(
-    (initial?.fulfillmentType as FulfillmentType | undefined) ?? FulfillmentTypeValues.MadeToOrder,
-  );
-  // Initial Kč uses Math.trunc to mirror lib/money/formatter.ts's
-  // formatCzk (whole-CZK display, haléře dropped). Math.round here
-  // would silently bump prices ending in ≥50 haléř upward — and an
-  // unedited submit would persist the rounded value back to the
-  // backend. T-0049 Copilot round-6 M2.
-  const [priceKc, setPriceKc] = useState<string>(
-    initial ? String(Math.trunc(initial.priceAmountMinor / 100)) : '',
-  );
-  const [weightGrams, setWeightGrams] = useState<string>(
-    initial ? String(initial.weightGrams) : '',
-  );
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>(persisted.fulfillmentType);
+  const [priceKc, setPriceKc] = useState<string>(persisted.priceKc);
+  const [weightGrams, setWeightGrams] = useState<string>(persisted.weightGrams);
 
-  const [submitting, setSubmitting] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [topError, setTopError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
-  const [savedFlash, setSavedFlash] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  // Element id to scroll+focus once the errored render committed. Focus
+  // must NOT run inside `applyError` — at that moment the inputs are
+  // still disabled from the in-flight submit and `.focus()` would no-op.
+  const pendingFocusIdRef = useRef<string | null>(null);
+
+  const submitting = saveState === 'saving';
+  const current: FormSnapshot = {
+    title,
+    description,
+    categoryId,
+    priceType,
+    fulfillmentType,
+    priceKc,
+    weightGrams,
+  };
+  const dirty = (Object.keys(current) as (keyof FormSnapshot)[]).some(
+    (key) => current[key] !== persisted[key],
+  );
+
+  // Unsaved edits are silently lost on refresh/close (audit MAKER-M2) —
+  // arm the native guard only while the form is actually dirty.
+  useEffect(() => {
+    if (!dirty || submitting) return;
+    const guard = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older Chrome/WebKit only honour the prompt when returnValue is
+      // set; the string itself is never shown by modern browsers.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [dirty, submitting]);
 
   const priceTypeOptions = PRICE_TYPES.map((value) => ({
     value,
@@ -107,8 +180,7 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
     event.preventDefault();
     setTopError(null);
     setFieldErrors({});
-    setSavedFlash(false);
-    setSubmitting(true);
+    setSaveState('saving');
 
     // Parse numeric inputs once. NaN protection only — the backend
     // validates the real rules (range, positivity, etc.).
@@ -144,29 +216,38 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
 
     if (mode === 'create') {
       const result = await createProduct(payload);
-      setSubmitting(false);
       if (!result.success) {
+        setSaveState('idle');
         applyError(result.error.type, result.error.fields);
         return;
       }
-      router.push(`/dashboard/maker/produkty/${encodeURIComponent(result.value.id)}`);
+      // Marking the just-created values as persisted disarms the
+      // beforeunload guard before the client-side navigation below.
+      setPersisted(current);
+      setSaveState('saved');
+      // `?created=1` drives the created-confirmation on the edit page
+      // (audit MAKER-M7 — the handoff used to be silent).
+      router.push(
+        `/dashboard/maker/produkty/${encodeURIComponent(result.value.id)}?created=1`,
+      );
       return;
     }
 
     if (!initial) {
       // Edit mode requires `initial`; defensive guard for an impossible
       // state. No i18n key — this is a developer-time invariant.
-      setSubmitting(false);
+      setSaveState('idle');
       setTopError(t('dashboard.maker.products.form.error.generic'));
       return;
     }
     const result = await updateProduct(initial.productId, payload);
-    setSubmitting(false);
     if (!result.success) {
+      setSaveState('idle');
       applyError(result.error.type, result.error.fields);
       return;
     }
-    setSavedFlash(true);
+    setPersisted(current);
+    setSaveState('saved');
     router.refresh();
   }
 
@@ -176,6 +257,8 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
    * matching input (AC-5); everything else surfaces as a top-of-form
    * alert with generic i18n copy (we deliberately do NOT render the
    * raw error message — it might not be Czech-safe or audience-safe).
+   * Either way the first affected element is scrolled into view — the
+   * form is long and the submit sits at the bottom (audit MAKER-M1).
    */
   function applyError(
     errorType: string,
@@ -201,19 +284,36 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
       }
       setFieldErrors(mapped);
       setTopError(t('dashboard.maker.products.form.error.validation_summary'));
+      const firstAnchor = FIELD_ANCHORS.find(([field]) => field in mapped);
+      pendingFocusIdRef.current = firstAnchor ? firstAnchor[1] : null;
       return;
     }
     setTopError(t('dashboard.maker.products.form.error.generic'));
+    pendingFocusIdRef.current = null;
   }
+
+  // After an errored render commits (inputs re-enabled), bring the first
+  // errored input into view and focus it; a generic failure scrolls the
+  // top alert into view instead.
+  useEffect(() => {
+    if (!topError) return;
+    const targetId = pendingFocusIdRef.current;
+    pendingFocusIdRef.current = null;
+    if (!targetId) {
+      formRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return;
+    }
+    const element = document.getElementById(targetId);
+    if (!element) return;
+    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    element.focus({ preventScroll: true });
+  }, [topError, fieldErrors]);
 
   const isOnRequest = priceType === PriceTypeValues.OnRequest;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {topError ? <Alert variant="error">{topError}</Alert> : null}
-      {savedFlash ? (
-        <Alert variant="success">{t('dashboard.maker.products.form.success.updated')}</Alert>
-      ) : null}
 
       <Card variant="elevated" padding="lg">
         <section className="flex flex-col gap-4">
@@ -331,16 +431,16 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
       </Card>
 
       <div className="flex items-center justify-end gap-3">
-        <Button type="submit" loading={submitting} variant="primary">
-          {!submitting ? (
-            <Icon name={mode === 'create' ? 'plus' : 'save'} size={16} />
-          ) : null}
-          {submitting
-            ? t('dashboard.maker.products.form.submit.saving')
-            : mode === 'create'
-              ? t('dashboard.maker.products.form.submit.create')
-              : t('dashboard.maker.products.form.submit.update')}
-        </Button>
+        {mode === 'edit' ? (
+          <SaveButton state={saveState} dirty={dirty} />
+        ) : (
+          <Button type="submit" loading={submitting} variant="primary">
+            {!submitting ? <Icon name="plus" size={16} /> : null}
+            {submitting
+              ? t('dashboard.maker.products.form.submit.saving')
+              : t('dashboard.maker.products.form.submit.create')}
+          </Button>
+        )}
       </div>
     </form>
   );

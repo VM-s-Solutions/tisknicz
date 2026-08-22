@@ -116,7 +116,12 @@ export function MakerProductCard({ item }: ProductCardProps) {
           <Icon name="edit" size={14} />
           {t('dashboard.maker.products.actions.edit')}
         </Link>
-        <DeleteProductButton productId={item.productId} variant="card" />
+        {/* An inactive product is already soft-deleted — offering a second
+            "Smazat" invited a meaningless re-delete (T-0174, MAKER-H4 guard;
+            reactivation itself is Q-0040 / T-0180). */}
+        {item.isActive ? (
+          <DeleteProductButton productId={item.productId} variant="card" />
+        ) : null}
       </div>
     </Card>
   );

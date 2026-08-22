@@ -41,6 +41,19 @@ function parsePositiveInt(raw: string, fallback: number, max: number = Number.MA
   return Math.min(parsed, max);
 }
 
+/**
+ * Display filter over the fetched page (T-0174, audit MAKER-L6b): soft-
+ * deleted products used to clutter the grid forever with no way to hide
+ * them. The backend read has no is-active parameter yet, so this filters
+ * the CURRENT page's items — counts and pagination stay those of the
+ * unfiltered set (noted in the ticket; a backend param is the follow-up).
+ */
+type ActivityFilter = 'all' | 'active' | 'inactive';
+
+function parseFilter(raw: string): ActivityFilter {
+  return raw === 'active' || raw === 'inactive' ? raw : 'all';
+}
+
 export default async function MakerProductsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const page = parsePositiveInt(readString(sp.page), 1);
@@ -52,6 +65,7 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
     MAKER_PRODUCTS_DEFAULT_PAGE_SIZE,
     MAKER_PRODUCTS_MAX_PAGE_SIZE,
   );
+  const filter = parseFilter(readString(sp.filter));
 
   const result = await getMyProducts({ page, pageSize });
 
@@ -75,7 +89,7 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
         </div>
 
         {result.success ? (
-          <MakerProductsResults data={result.value} />
+          <MakerProductsResults data={result.value} filter={filter} />
         ) : (
           <MakerProductsError />
         )}
@@ -84,7 +98,13 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
   );
 }
 
-function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
+function MakerProductsResults({
+  data,
+  filter,
+}: {
+  readonly data: MakerProductsPage;
+  readonly filter: ActivityFilter;
+}) {
   if (data.items.length === 0) {
     return <MakerProductsEmpty />;
   }
@@ -98,16 +118,28 @@ function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
   const hasNext = data.hasNextPage ?? false;
   const hasPrevious = data.hasPreviousPage ?? false;
 
+  const visibleItems =
+    filter === 'all' ? data.items : data.items.filter((item) => item.isActive === (filter === 'active'));
+
   return (
     <>
-      <p className="mb-6 text-sm text-zinc-500">
-        {t('dashboard.maker.products.count', { count: data.totalCount })}
-      </p>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {data.items.map((item) => (
-          <MakerProductCard key={item.productId} item={item} />
-        ))}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-500">
+          {t('dashboard.maker.products.count', { count: data.totalCount })}
+        </p>
+        <ActivityFilterChips active={filter} pageSize={data.pageSize} />
       </div>
+      {visibleItems.length === 0 ? (
+        <p className="py-8 text-center text-sm text-zinc-500">
+          {t('dashboard.maker.products.filter.empty')}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleItems.map((item) => (
+            <MakerProductCard key={item.productId} item={item} />
+          ))}
+        </div>
+      )}
       <Pagination
         page={data.page}
         totalPages={totalPages}
@@ -115,8 +147,48 @@ function MakerProductsResults({ data }: { readonly data: MakerProductsPage }) {
         hasPrevious={hasPrevious}
         pageSize={data.pageSize}
         defaultPageSize={MAKER_PRODUCTS_DEFAULT_PAGE_SIZE}
+        filter={filter === 'all' ? undefined : filter}
       />
     </>
+  );
+}
+
+function ActivityFilterChips({
+  active,
+  pageSize,
+}: {
+  readonly active: ActivityFilter;
+  readonly pageSize: number;
+}) {
+  const options: readonly { value: ActivityFilter; labelKey: Parameters<typeof t>[0] }[] = [
+    { value: 'all', labelKey: 'dashboard.maker.products.filter.all' },
+    { value: 'active', labelKey: 'dashboard.maker.products.filter.active' },
+    { value: 'inactive', labelKey: 'dashboard.maker.products.filter.inactive' },
+  ];
+  return (
+    <nav aria-label={t('dashboard.maker.products.filter.label')} className="flex items-center gap-2">
+      {options.map((option) => {
+        const sp = new URLSearchParams();
+        if (option.value !== 'all') sp.set('filter', option.value);
+        if (pageSize !== MAKER_PRODUCTS_DEFAULT_PAGE_SIZE) sp.set('pageSize', String(pageSize));
+        const query = sp.toString();
+        const isActive = option.value === active;
+        return (
+          <Link
+            key={option.value}
+            href={query ? `/dashboard/maker/produkty?${query}` : '/dashboard/maker/produkty'}
+            aria-current={isActive ? 'page' : undefined}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              isActive
+                ? 'border-brand-500/60 text-brand-300'
+                : 'border-zinc-700 text-zinc-400 hover:border-brand-500/60 hover:text-brand-300'
+            }`}
+          >
+            {t(option.labelKey)}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

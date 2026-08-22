@@ -23,6 +23,7 @@ const loadProduct = cache(getMyProductById);
 
 interface PageProps {
   readonly params: Promise<{ productId: string }>;
+  readonly searchParams: Promise<{ created?: string }>;
 }
 
 // The dashboard always reflects the latest backend state.
@@ -62,8 +63,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * page so it stays out of the primary edit flow.
  * </para>
  */
-export default async function MakerProductEditPage({ params }: PageProps) {
+export default async function MakerProductEditPage({ params, searchParams }: PageProps) {
   const { productId } = await params;
+  // `?created=1` arrives once, from the create form's redirect — the
+  // handoff used to be silent and makers didn't realise the product was
+  // already live in the public catalog (T-0174, audit MAKER-M7).
+  const { created } = await searchParams;
+  const justCreated = created === '1';
   // The category list is reference data that does not depend on the
   // product, so both reads go out together. Awaiting the options inline
   // in the JSX (the previous shape) put a second full backend round trip
@@ -115,6 +121,23 @@ export default async function MakerProductEditPage({ params }: PageProps) {
           </h1>
           <p className="mt-3 text-base text-zinc-400">{product.title}</p>
         </header>
+
+        {justCreated ? (
+          <Alert variant="success">
+            <p className="font-semibold">
+              {t('dashboard.maker.products.edit.created_notice.title')}
+            </p>
+            <p className="mt-1">
+              {t('dashboard.maker.products.edit.created_notice.body')}{' '}
+              <Link
+                href={`/produkt/${encodeURIComponent(product.productId)}`}
+                className="font-semibold underline underline-offset-2"
+              >
+                {t('dashboard.maker.products.edit.created_notice.public_link')}
+              </Link>
+            </p>
+          </Alert>
+        ) : null}
 
         {!product.isActive ? (
           <Alert variant="warning">

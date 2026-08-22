@@ -15,6 +15,8 @@ import {
   uploadProductImage,
 } from '@/lib/api-client-helpers/maker-products';
 import { t, type MessageKey } from '@/lib/i18n';
+import { resolveErrorMessage } from '@/lib/runtime/errors';
+import type { ApiError } from '@/lib/runtime/result';
 
 interface ImageManagerProps {
   readonly productId: string;
@@ -24,48 +26,74 @@ interface ImageManagerProps {
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp';
 const THUMB_WIDTH = 280;
 const THUMB_HEIGHT = 210;
+/** Backend cap (Product.MaxImages) — mirrored so the maker sees "N/10"
+ * before the 409 does the teaching. */
+const MAX_IMAGES = 10;
+
+interface QueueProgress {
+  readonly current: number;
+  readonly total: number;
+}
 
 /**
- * Existing-images grid + single-file uploader for the maker product
- * edit page (T-0049 AC-9 / AC-10). Server Components on the route
- * shell pass the current images list as a prop; mutations
- * (<see cref="uploadProductImage"/>, <see cref="removeProductImage"/>)
- * call <c>router.refresh()</c> on success so the parent Server
- * Component re-fetches and the grid stays consistent with backend
- * state.
+ * Existing-images grid + uploader for the maker product edit page
+ * (T-0049 AC-9 / AC-10; reworked in T-0174, audit MAKER-M6). The picker
+ * accepts multiple files and uploads them sequentially — per-file errors
+ * stay attributable and the one-file backend endpoint sees no burst.
+ * A visible "N/10" counter surfaces the cap before the 409 would.
  *
  * <para>
- * No client-side preview before upload — fire-and-await per the
- * ticket. The browser sets the multipart boundary in
- * <c>Content-Type</c> itself; the helper builds the <c>FormData</c>
- * and passes it as the raw body.
+ * Mutations call <c>router.refresh()</c> on completion so the parent
+ * Server Component re-fetches and the grid stays consistent with
+ * backend state. The browser sets the multipart boundary itself.
  * </para>
  */
 export function ImageManager({ productId, images }: ImageManagerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<QueueProgress | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<readonly string[]>([]);
+  const [skippedNotice, setSkippedNotice] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    // Always reset the input value so re-selecting the same file
-    // re-fires onChange. We do this regardless of success so
-    // cancellation paths still let the user retry.
+  const uploading = progress !== null;
+  const capacityLeft = Math.max(0, MAX_IMAGES - images.length);
+  const atCapacity = capacityLeft === 0;
+
+  async function handleFilesChange(event: ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(event.target.files ?? []);
+    // Always reset the input value so re-selecting the same files
+    // re-fires onChange, on success and failure alike.
     if (event.target) {
       event.target.value = '';
     }
-    if (!file) return;
-    setUploadError(null);
-    setUploading(true);
-    const result = await uploadProductImage(productId, file);
-    setUploading(false);
-    if (!result.success) {
-      setUploadError(t(mapUploadErrorCode(result.error.code, result.error.type)));
-      return;
+    if (picked.length === 0) return;
+
+    setUploadErrors([]);
+    setSkippedNotice(null);
+
+    const queue = picked.slice(0, capacityLeft);
+    const skipped = picked.length - queue.length;
+    if (skipped > 0) {
+      setSkippedNotice(
+        t('dashboard.maker.products.images.skipped_over_cap', { count: skipped, max: MAX_IMAGES }),
+      );
     }
+    if (queue.length === 0) return;
+
+    const failures: string[] = [];
+    for (const [index, file] of queue.entries()) {
+      setProgress({ current: index + 1, total: queue.length });
+      const result = await uploadProductImage(productId, file);
+      if (!result.success) {
+        failures.push(`${file.name}: ${describeUploadError(result.error)}`);
+      }
+    }
+    setProgress(null);
+    setUploadErrors(failures);
+    // One refresh for the whole batch — every success is already
+    // persisted server-side; failures are listed for retry.
     router.refresh();
   }
 
@@ -83,21 +111,41 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
 
   return (
     <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <span className="icon-tile h-9 w-9">
-          <Icon name="image" size={16} />
-        </span>
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-semibold text-white">
-            {t('dashboard.maker.products.images.title')}
-          </h2>
-          <p className="text-sm text-zinc-400">
-            {t('dashboard.maker.products.images.description')}
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="icon-tile h-9 w-9">
+            <Icon name="image" size={16} />
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-lg font-semibold text-white">
+              {t('dashboard.maker.products.images.title')}
+            </h2>
+            <p className="text-sm text-zinc-400">
+              {t('dashboard.maker.products.images.description')}
+            </p>
+          </div>
         </div>
+        <span className="whitespace-nowrap text-sm text-zinc-400">
+          {t('dashboard.maker.products.images.counter', {
+            count: images.length,
+            max: MAX_IMAGES,
+          })}
+        </span>
       </div>
 
-      {uploadError ? <Alert variant="error">{uploadError}</Alert> : null}
+      {uploadErrors.length > 0 ? (
+        <Alert variant="error">
+          <p className="font-semibold">
+            {t('dashboard.maker.products.images.error.batch_failed')}
+          </p>
+          <ul className="mt-1 list-inside list-disc text-sm">
+            {uploadErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </Alert>
+      ) : null}
+      {skippedNotice ? <Alert variant="warning">{skippedNotice}</Alert> : null}
       {removeError ? <Alert variant="error">{removeError}</Alert> : null}
 
       {images.length > 0 ? (
@@ -156,12 +204,18 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
             {t('dashboard.maker.products.images.empty')}
           </p>
         ) : null}
+        {atCapacity ? (
+          <p className="relative text-sm text-zinc-500">
+            {t('dashboard.maker.products.images.at_capacity', { max: MAX_IMAGES })}
+          </p>
+        ) : null}
         <input
           ref={fileInputRef}
           type="file"
           accept={ACCEPTED_TYPES}
-          onChange={handleFileChange}
-          disabled={uploading}
+          multiple
+          onChange={handleFilesChange}
+          disabled={uploading || atCapacity}
           className="hidden"
           id="product-image-upload"
         />
@@ -171,17 +225,20 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             loading={uploading}
-            disabled={uploading}
+            disabled={uploading || atCapacity}
           >
             <Icon name="upload" size={16} />
             {uploading
               ? t('dashboard.maker.products.images.uploading')
               : t('dashboard.maker.products.images.upload_button')}
           </Button>
-          {uploading ? (
-            <span className="flex items-center gap-2 text-sm text-zinc-400">
+          {progress ? (
+            <span className="flex items-center gap-2 text-sm text-zinc-400" role="status">
               <Spinner size="sm" />
-              {t('dashboard.maker.products.images.uploading')}
+              {t('dashboard.maker.products.images.uploading_progress', {
+                current: progress.current,
+                total: progress.total,
+              })}
             </span>
           ) : null}
         </div>
@@ -191,18 +248,24 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
 }
 
 /**
+ * Human copy for one failed file. File-validation codes map to the
+ * specific local keys; transport failures (timeout, unreachable — audit
+ * MAKER-H2: an aborted big upload used to read "invalid file") go
+ * through the shared resolver so the maker sees the truthful transient
+ * copy; anything else falls back to the generic invalid-file text.
+ */
+function describeUploadError(error: ApiError): string {
+  if (error.code.startsWith('network.')) {
+    return resolveErrorMessage(error);
+  }
+  return t(mapUploadErrorCode(error.code, error.type));
+}
+
+/**
  * Map a backend <c>ApiError</c> code into one of the local i18n keys.
- * Codes that don't match a known image-upload failure fall through to
- * the generic <c>invalid</c> copy (better than leaking a raw backend
- * string into the UI).
- *
- * <para>
  * <c>product.imageLimitReached</c> covers the 10-image cap (409 from
- * <c>AddProductImage</c>). The file.* codes come from
- * <c>BusinessErrorMessage.FileTooLarge / FileUnsupportedType /
- * FileInvalid</c> emitted by the controller's
- * <c>ImageUploadValidator</c> path.
- * </para>
+ * <c>AddProductImage</c>); the file.* codes come from
+ * <c>ImageUploadValidator</c>.
  */
 function mapUploadErrorCode(code: string, errorType: string): MessageKey {
   if (code === 'file.tooLarge' || code === 'file.too_large') {

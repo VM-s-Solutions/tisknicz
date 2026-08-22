@@ -769,7 +769,7 @@ export const messages = {
 
   'dashboard.maker.products.delete.button': 'Smazat produkt',
   'dashboard.maker.products.delete.confirm.title': 'Smazat produkt?',
-  'dashboard.maker.products.delete.confirm.body': 'Produkt přestane být viditelný ve veřejném katalogu. Zákazníci s ním nebudou moci vytvářet nové objednávky.',
+  'dashboard.maker.products.delete.confirm.body': 'Produkt přestane být viditelný ve veřejném katalogu a zákazníci s ním nebudou moci vytvářet nové objednávky. Smazaný produkt zatím nejde obnovit — pro návrat do nabídky bys ho musel vytvořit znovu.',
   'dashboard.maker.products.delete.confirm.confirm_button': 'Ano, smazat',
   'dashboard.maker.products.delete.confirm.cancel_button': 'Zrušit',
   'dashboard.maker.products.delete.error': 'Produkt se nepodařilo smazat. Zkuste to prosím znovu.',
@@ -2092,6 +2092,28 @@ export const messages = {
   'dashboard.admin.ops.error.body':
     'Při načítání stránky došlo k chybě. Zkuste ji prosím obnovit.',
   'dashboard.admin.ops.error.retry': 'Zkusit znovu',
+
+  // T-0174 — maker product + review form feedback (UX functional sweep)
+  'dashboard.maker.products.edit.created_notice.title': 'Produkt je vytvořený a veřejný.',
+  'dashboard.maker.products.edit.created_notice.body':
+    'Teď přidej fotky, ať zákazníky zaujme.',
+  'dashboard.maker.products.edit.created_notice.public_link': 'Zobrazit v katalogu',
+  'dashboard.maker.products.images.counter': 'Fotky: {count}/{max}',
+  'dashboard.maker.products.images.uploading_progress': 'Nahrávám {current}. z {total}…',
+  'dashboard.maker.products.images.at_capacity':
+    'Máš nahraný maximální počet fotek ({max}). Před nahráním další jednu smaž.',
+  'dashboard.maker.products.images.skipped_over_cap':
+    'Souborů nad limit {max} fotek: {count} — nebyly nahrány.',
+  'dashboard.maker.products.images.error.batch_failed':
+    'Některé soubory se nepodařilo nahrát:',
+  'dashboard.maker.products.filter.label': 'Zobrazit',
+  'dashboard.maker.products.filter.all': 'Vše',
+  'dashboard.maker.products.filter.active': 'Aktivní',
+  'dashboard.maker.products.filter.inactive': 'Neaktivní',
+  'dashboard.maker.products.filter.empty':
+    'Tomuto filtru neodpovídají žádné produkty na této stránce.',
+  'dashboard.maker.orders.detail.paid_hint':
+    'Nemůžeš objednávku vyrobit? Napiš zákazníkovi ve zprávách níže — domluvíte se na dalším postupu.',
 } as const;
 
 export type MessageKey = keyof typeof messages;
