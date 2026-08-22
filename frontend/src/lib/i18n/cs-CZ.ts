@@ -2185,6 +2185,16 @@ export const messages = {
   'auth.login.admin_account_hint':
     'S tímto účtem se přihlaste v administraci na /admin/login. Zákaznické ani makerské přihlášení pro něj neplatí.',
   'auth.login.admin_login_link': 'Přejít na přihlášení do administrace',
+
+  // T-0171 — public error surfaces + navigation context (UX functional sweep)
+  'publicError.title': 'Něco se pokazilo',
+  'publicError.body':
+    'Stránku se nepodařilo zobrazit. Zkuste to prosím znovu — pokud potíže trvají, dejte nám vědět.',
+  'nav.logout_failed': 'Odhlášení se nepodařilo. Zkuste to prosím znovu.',
+  'catalog.maker.reviews.shown_slice': 'Zobrazujeme posledních {count} recenzí.',
+  'catalog.category_gone': 'Tato kategorie už v katalogu není, zobrazujeme proto všechny výrobce.',
+  'product.order_cta.other_audience':
+    'Objednávat mohou jen zákaznické účty. Přihlaste se prosím jako zákazník.',
 } as const;
 
 export type MessageKey = keyof typeof messages;

@@ -157,6 +157,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   if (initialMinRating) baseParams.set('minRating', initialMinRating);
   if (legalType) baseParams.set('legalType', legalType);
   const baseQuery = baseParams.toString();
+  const droppedCategoryCount = rawCategories.length - selectedCategories.length;
 
   return (
     <section className="py-14 lg:py-18">
@@ -189,6 +190,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             </aside>
 
             <div className="min-w-0">
+              {/* T-0171 (audit PUB-M5): an admin-renamed or deactivated
+                  category silently produced the FULL unfiltered catalog with
+                  nothing checked in the sidebar — the visitor had no way to
+                  tell their link had gone stale. */}
+              {droppedCategoryCount > 0 ? (
+                <div className="mb-5">
+                  <Alert variant="warning">{t('catalog.category_gone')}</Alert>
+                </div>
+              ) : null}
               {result.success ? (
                 <CatalogResults
                   items={result.value.items}

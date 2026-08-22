@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Stars } from '@/components/ui/stars';
+import { RefreshButton } from '@/components/shared/refresh-button';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 import {
@@ -102,8 +103,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {t('catalog.maker.back_to_catalog')}
         </Link>
         <Alert variant="error">
-          <p className="font-semibold">{t('catalog.product_detail.error.title')}</p>
-          <p className="mt-1">{resolveErrorMessage(result.error)}</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="font-semibold">{t('catalog.product_detail.error.title')}</p>
+              <p className="mt-1">{resolveErrorMessage(result.error)}</p>
+            </div>
+            {/* T-0171 (audit PUB-L4): a transient read failure offered only
+                "back to catalog" — leaving the visitor no way to simply try
+                this page again. */}
+            <RefreshButton />
+          </div>
         </Alert>
       </section>
     );
@@ -114,16 +123,35 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-      <Link
-        href="/katalog"
-        className="inline-flex items-center gap-1.5 self-start text-sm text-zinc-400 transition-colors hover:text-zinc-200"
-      >
-        <Icon name="chevronLeft" size={16} />
-        {t('catalog.maker.back_to_catalog')}
-      </Link>
+      {/* T-0171 (audit PUB-M2): the back link jumped over the maker profile
+          the visitor was browsing, straight to a bare /katalog. It now
+          returns to the owning maker; the catalog stays one hop further. */}
+      <nav aria-label={t('catalog.maker.back_to_catalog')} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
+        <Link
+          href="/katalog"
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200"
+        >
+          <Icon name="chevronLeft" size={16} />
+          {t('catalog.title')}
+        </Link>
+        <span aria-hidden="true">/</span>
+        <Link
+          href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
+          className="transition-colors hover:text-zinc-200"
+        >
+          {product.makerCompanyName}
+        </Link>
+      </nav>
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-8">
         <ProductGallery images={product.images} title={product.title} />
-        <ProductInfo product={product} isMaker={session?.audience === 'maker'} />
+        <ProductInfo
+          product={product}
+          // T-0171 (audit PUB-L6): admins hit the same unsatisfiable login
+          // loop makers did (fixed in 49b3637) — an account is bound to ONE
+          // audience, so no non-customer session can ever mint a customer
+          // JWT. Gate on 'not a customer', not on 'is a maker'.
+          isOtherAudience={session !== null && session.audience !== 'customer'}
+        />
       </div>
 
       {description ? (
@@ -144,16 +172,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
  * page lives in <see cref="ProductGallery"/>. Renders title, price,
  * by-maker link (with verified badge), weight, and the order CTA.
  *
- * `isMaker` swaps the CTA for a note: an account is bound to one
+ * `isOtherAudience` swaps the CTA for a note: an account is bound to one
  * audience (`User.MatchesAudience`), so a maker following the CTA hit a
  * login screen their own credentials could never satisfy.
  */
 export function ProductInfo({
   product,
-  isMaker = false,
+  isOtherAudience = false,
 }: {
   readonly product: ProductDetail;
-  readonly isMaker?: boolean;
+  readonly isOtherAudience?: boolean;
 }) {
   return (
     <Card variant="accent" padding="md" className="flex h-fit flex-col gap-5">
@@ -227,7 +255,7 @@ export function ProductInfo({
       </div>
 
       <div className="pt-2">
-        {isMaker ? (
+        {isOtherAudience ? (
           <p className="text-sm text-zinc-400">{t('catalog.product_detail.cta.maker_note')}</p>
         ) : (
           <Link
