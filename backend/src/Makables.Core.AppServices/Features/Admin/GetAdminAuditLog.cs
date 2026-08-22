@@ -24,7 +24,9 @@ public static class GetAdminAuditLog
         string? ActionCode,
         string? TargetEntity,
         DateTimeOffset? DateFrom,
-        DateTimeOffset? DateTo) : IQuery<GetAdminAuditLogResponse>;
+        DateTimeOffset? DateTo,
+        /// <summary>Scopes the log to ONE entity (T-0177, audit ADM-H2).</summary>
+        string? TargetId = null) : IQuery<GetAdminAuditLogResponse>;
 
     /// <summary>Globally-unique name (NSwag PR #38 convention).</summary>
     public sealed record GetAdminAuditLogResponse(PagedData<AdminAuditLogItemDto> Entries);
@@ -43,6 +45,10 @@ public static class GetAdminAuditLog
                 .InclusiveBetween(1, MaxPageSize)
                 .WithErrorCode(BusinessErrorMessage.MinValue);
 
+            RuleFor(q => q.TargetId)
+                .MaximumLength(40).WithErrorCode(BusinessErrorMessage.MaxLength)
+                .When(q => !string.IsNullOrEmpty(q.TargetId));
+
             When(q => q.DateFrom.HasValue && q.DateTo.HasValue, () =>
                 RuleFor(q => q.DateFrom!.Value)
                     .LessThanOrEqualTo(q => q.DateTo!.Value)
@@ -58,7 +64,7 @@ public static class GetAdminAuditLog
         {
             var filter = new AdminAuditLogFilter(
                 query.AdminUserId, query.ActionCode, query.TargetEntity,
-                query.DateFrom, query.DateTo);
+                query.DateFrom, query.DateTo, query.TargetId);
 
             var page = await adminQueries.GetAdminAuditLogPagedAsync(
                 filter, query.Page, query.PageSize, cancellationToken);

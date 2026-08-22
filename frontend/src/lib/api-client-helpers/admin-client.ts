@@ -232,6 +232,8 @@ export interface AdminAuditPage {
 export interface AdminAuditInput {
   readonly page?: number;
   readonly pageSize?: number;
+  /** Exact entity id — pairs with `targetEntity` (T-0177). */
+  readonly targetId?: string;
   readonly adminUserId?: string;
   readonly actionCode?: string;
   readonly targetEntity?: string;
@@ -265,6 +267,12 @@ export async function getAdminAuditLog(
   if (input.targetEntity !== undefined && input.targetEntity !== '') {
     params.set('targetEntity', input.targetEntity);
   }
+  // T-0177 (audit ADM-H2): scope the log to ONE entity server-side. The
+  // order detail used to fetch the entity-coarse slice and narrow it
+  // client-side, which could render an empty evidence trail.
+  if (input.targetId !== undefined && input.targetId !== '') {
+    params.set('targetId', input.targetId);
+  }
   if (input.dateFrom !== undefined && input.dateFrom !== '') params.set('dateFrom', input.dateFrom);
   if (input.dateTo !== undefined && input.dateTo !== '') params.set('dateTo', input.dateTo);
   const query = params.toString();
@@ -295,3 +303,50 @@ export async function getAdminAuditLog(
 // and the row swaps the disabled button for the blob-island download
 // button (the maker `fee-invoice-download.tsx` mechanism). Until then no
 // download path exists and none is faked.
+
+// ---- Admin user lookup (T-0178, audit ADM-H1) ----
+
+/** Server-resolved identity behind the GDPR erase screen. */
+export interface AdminUserLookup {
+  readonly userId: string;
+  readonly email: string;
+  readonly fullName: string;
+  readonly role: string;
+  readonly countryCodePrimary: string;
+  readonly isActive: boolean;
+  readonly emailConfirmed: boolean;
+  readonly deactivatedAt: string | null;
+  readonly createdAt: string;
+  readonly makerId: string | null;
+  readonly inFlightOrderCount: number;
+}
+
+interface LookupAdminUserEnvelope {
+  readonly user: AdminUserLookup;
+}
+
+/**
+ * Resolve ONE user by id or email (exactly one). The erase screen used to
+ * advance on identifiers the admin pasted in with nothing verifying them,
+ * and its retype interlock matched the admin's own typing — this is the
+ * server identity it now confirms against.
+ *
+ * An already-erased account RESOLVES (with `deactivatedAt` set) so the UI
+ * can distinguish it from "no such user"; `user.notFound` means genuinely
+ * nothing matched (audit ADM-M9 — conflating the two reported a typo as a
+ * completed erasure).
+ */
+export async function lookupAdminUser(
+  selector: { readonly id?: string; readonly email?: string },
+): Promise<Result<AdminUserLookup, ApiError>> {
+  const params = new URLSearchParams();
+  if (selector.id !== undefined && selector.id !== '') params.set('id', selector.id);
+  if (selector.email !== undefined && selector.email !== '') params.set('email', selector.email);
+
+  const result = await apiFetch<LookupAdminUserEnvelope>(
+    'admin',
+    `/api/v1/admin-users/lookup?${params.toString()}`,
+    { method: 'GET' },
+  );
+  return result.success ? ok(result.value.user) : result;
+}

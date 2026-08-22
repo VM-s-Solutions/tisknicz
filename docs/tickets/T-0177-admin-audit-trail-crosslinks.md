@@ -1,7 +1,7 @@
 ---
 id: T-0177
 title: "Admin audit-trail integrity (server-side targetId filter) + entity cross-links"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -79,3 +79,8 @@ the perf gate.
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/admin-read-integrity-bundle` (bundled with its
+  sibling — one admin host, one NSwag regen)
+- 2026-08-22 `in_progress → in_review` — backend 2091/2091 (+9), frontend tsc clean + vitest
+  215/215; NSwag admin regen; see [test plan](../test-plans/T-0177-T-0178.md) +
+  [review run](../review/runs/T-0177-T-0178.md)

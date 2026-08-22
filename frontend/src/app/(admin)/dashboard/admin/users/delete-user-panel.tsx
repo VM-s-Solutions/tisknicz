@@ -7,8 +7,11 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  type AdminUserLookup,
+  lookupAdminUser,
+} from '@/lib/api-client-helpers/admin-client';
 import { eraseUser } from '@/lib/api-client-helpers/admin-ops-client';
-import { userHasInFlightOrders } from '@/lib/api-client-helpers/admin-orders';
 import { t } from '@/lib/i18n';
 import { resolveErrorMessage } from '@/lib/runtime/errors';
 
@@ -29,7 +32,7 @@ import { resolveErrorMessage } from '@/lib/runtime/errors';
  *     this screen (no other admin surface type-to-confirms). The backend
  *     re-checks via `user.deleteConfirmationMismatch`.
  *   - In-flight-order block (A.2b) — server-enforced. T-0127 added the
- *     per-user in-flight signal (`userHasInFlightOrders`), so the block is
+ *     per-user in-flight signal (now carried by the T-0178 lookup), so the block is
  *     now surfaced PROACTIVELY: on lookup-submit the panel probes the
  *     filtered admin-orders read; if the user has any order in an in-flight
  *     state the destructive button is disabled PRE-call with the
@@ -59,50 +62,61 @@ type Phase = 'lookup' | 'confirm' | 'deleted';
  *   - `unknown` — the probe read failed transiently; do NOT pre-disable (the
  *     backend gate re-checks at submit and stays authoritative).
  */
-type InFlightVerdict = 'clear' | 'blocked' | 'unknown';
-
 export function DeleteUserPanel() {
   const [phase, setPhase] = useState<Phase>('lookup');
-  const [userId, setUserId] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [inFlightVerdict, setInFlightVerdict] = useState<InFlightVerdict>('unknown');
+  // Free-text selector: an id OR an email. T-0178 (audit ADM-H1) — the
+  // screen used to demand BOTH and verify NEITHER.
+  const [selector, setSelector] = useState('');
+  const [resolved, setResolved] = useState<AdminUserLookup | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
   const probeRef = useRef(false);
 
   async function handleLookupSubmit() {
-    const id = userId.trim();
-    if (probeRef.current || id === '' || userEmail.trim() === '') return;
+    const value = selector.trim();
+    if (probeRef.current || value === '') return;
     probeRef.current = true;
     setProbing(true);
+    setLookupError(null);
 
-    // Proactive in-flight probe (T-0127 AC-12). A failed read → `unknown`
-    // (do NOT pre-disable on a transient error — the backend gate is
-    // authoritative and re-checks at submit).
-    const result = await userHasInFlightOrders(id);
-    setInFlightVerdict(result.success ? (result.value ? 'blocked' : 'clear') : 'unknown');
+    // Resolve the identity SERVER-side. The erase then confirms against
+    // what the backend returned, not against what the admin typed.
+    const result = await lookupAdminUser(
+      value.includes('@') ? { email: value } : { id: value },
+    );
+
+    if (result.success) {
+      setResolved(result.value);
+      setPhase('confirm');
+    } else {
+      // "No such user" must never read as "already deleted" — that
+      // reported a typo as a completed erasure (audit ADM-M9).
+      setLookupError(
+        result.error.code === 'user.notFound'
+          ? t('dashboard.admin.ops.users.lookup.notFound')
+          : resolveErrorMessage(result.error),
+      );
+    }
 
     probeRef.current = false;
     setProbing(false);
-    setPhase('confirm');
   }
 
   function reset() {
     setPhase('lookup');
-    setUserId('');
-    setUserEmail('');
-    setInFlightVerdict('unknown');
+    setSelector('');
+    setResolved(null);
+    setLookupError(null);
   }
 
   if (phase === 'deleted') {
-    return <DeletedConfirmation userId={userId.trim()} onReset={reset} />;
+    return <DeletedConfirmation userId={resolved?.userId ?? ''} onReset={reset} />;
   }
 
-  if (phase === 'confirm') {
+  if (phase === 'confirm' && resolved) {
     return (
       <EraseConfirmation
-        userId={userId.trim()}
-        userEmail={userEmail.trim()}
-        inFlightVerdict={inFlightVerdict}
+        user={resolved}
         onDeleted={() => setPhase('deleted')}
         onBack={reset}
       />
@@ -120,35 +134,26 @@ export function DeleteUserPanel() {
         </p>
       </div>
 
-      <Input
-        label={t('dashboard.admin.ops.users.lookup.idLabel')}
-        value={userId}
-        onChange={(e) => setUserId(e.target.value)}
-        disabled={probing}
-        autoComplete="off"
-        spellCheck={false}
-      />
-      <p className="-mt-2 text-xs text-zinc-500">{t('dashboard.admin.ops.users.lookup.idHint')}</p>
+      {lookupError ? <Alert variant="error">{lookupError}</Alert> : null}
 
       <Input
-        type="email"
-        label={t('dashboard.admin.ops.users.lookup.emailLabel')}
-        value={userEmail}
-        onChange={(e) => setUserEmail(e.target.value)}
+        label={t('dashboard.admin.ops.users.lookup.selectorLabel')}
+        value={selector}
+        onChange={(e) => setSelector(e.target.value)}
         disabled={probing}
         autoComplete="off"
         spellCheck={false}
       />
       <p className="-mt-2 text-xs text-zinc-500">
-        {t('dashboard.admin.ops.users.lookup.emailHint')}
+        {t('dashboard.admin.ops.users.lookup.selectorHint')}
       </p>
 
       <div className="flex justify-end">
         <Button
           type="button"
-          variant="danger"
+          variant="secondary"
           loading={probing}
-          disabled={userId.trim() === '' || userEmail.trim() === '' || probing}
+          disabled={selector.trim() === '' || probing}
           onClick={() => void handleLookupSubmit()}
         >
           {!probing ? <Icon name="search" size={16} /> : null}
@@ -175,18 +180,22 @@ function IrreversibilityBanner() {
 }
 
 function EraseConfirmation({
-  userId,
-  userEmail,
-  inFlightVerdict,
+  user,
   onDeleted,
   onBack,
 }: {
-  readonly userId: string;
-  readonly userEmail: string;
-  readonly inFlightVerdict: InFlightVerdict;
+  /** SERVER-resolved identity — the retype interlock matches against this,
+   * never against something the admin typed (T-0178, audit ADM-H1). */
+  readonly user: AdminUserLookup;
   readonly onDeleted: () => void;
   readonly onBack: () => void;
 }) {
+  const userId = user.userId;
+  const userEmail = user.email;
+  // The backend gate stays authoritative; this only pre-disables so the
+  // admin isn't invited to type a confirmation that will 409.
+  const preBlockedByInFlight = user.inFlightOrderCount > 0;
+  const alreadyErased = !user.isActive || user.deactivatedAt !== null;
   const [confirmEmail, setConfirmEmail] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -199,8 +208,8 @@ function EraseConfirmation({
   // order → the destructive button is disabled PRE-call with the inline
   // reason. The backend T-0110 gate stays authoritative; `unknown` (transient
   // probe failure) does NOT pre-disable.
-  const preBlocked = inFlightVerdict === 'blocked';
-  const showInFlightReason = preBlocked || inFlightBlocked;
+  const preBlocked = preBlockedByInFlight || alreadyErased;
+  const showInFlightReason = preBlockedByInFlight || inFlightBlocked;
 
   const trimmedReason = reason.trim();
   // Presentational predicate ONLY — the server re-checks every gate (T-0110).
@@ -249,11 +258,29 @@ function EraseConfirmation({
       {/* A.2a — ALWAYS visible, prominent. */}
       <IrreversibilityBanner />
 
-      <div className="rounded-xl border border-zinc-800 bg-surface-secondary p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          {t('dashboard.admin.ops.users.targetEmailLabel')}
-        </p>
-        <p className="mt-1 break-all font-mono text-sm text-zinc-100">{userEmail}</p>
+      {alreadyErased ? (
+        <Alert variant="warning">{t('dashboard.admin.ops.users.erase.alreadyDeleted')}</Alert>
+      ) : null}
+
+      {/* Everything here came from the BACKEND — the screen no longer echoes
+          what the operator pasted in (T-0178, audit ADM-H1). */}
+      <div className="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-surface-secondary p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            {t('dashboard.admin.ops.users.targetEmailLabel')}
+          </p>
+          <p className="mt-1 break-all font-mono text-sm text-zinc-100">{userEmail}</p>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <dt className="text-zinc-500">{t('dashboard.admin.ops.users.resolved.name')}</dt>
+          <dd className="text-zinc-200">{user.fullName}</dd>
+          <dt className="text-zinc-500">{t('dashboard.admin.ops.users.resolved.userId')}</dt>
+          <dd className="break-all font-mono text-xs text-zinc-300">{user.userId}</dd>
+          <dt className="text-zinc-500">{t('dashboard.admin.ops.users.resolved.role')}</dt>
+          <dd className="text-zinc-200">{user.role}</dd>
+          <dt className="text-zinc-500">{t('dashboard.admin.ops.users.resolved.inFlight')}</dt>
+          <dd className="text-zinc-200">{user.inFlightOrderCount}</dd>
+        </dl>
       </div>
 
       {/* In-flight block (A.2b) — surfaced PROACTIVELY when the lookup probe
