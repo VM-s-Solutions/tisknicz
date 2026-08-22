@@ -1,7 +1,7 @@
 ---
 id: T-0174
 title: "Maker product + review forms: unlock reply form, upload timeout, in-viewport save feedback, multi-upload"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -94,3 +94,4 @@ adding 8 photos takes 8 pick-and-wait cycles with the 10-image cap discoverable 
   pass recorded in [review run](../review/runs/T-0174.md) (reviewer agent unavailable, flagged);
   real-browser maker-session pass pending per [test plan](../test-plans/T-0174.md) row 6.
   Follow-up noted: backend is-active filter param for the product list (display filter ships now)
+- 2026-08-21 `in_review → done` — merged via PR #139 (merge d92fe15; CI green)
