@@ -158,6 +158,9 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
     if (!dirty || submitting) return;
     const guard = (event: BeforeUnloadEvent) => {
       event.preventDefault();
+      // Older Chrome/WebKit only honour the prompt when returnValue is
+      // set; the string itself is never shown by modern browsers.
+      event.returnValue = '';
     };
     window.addEventListener('beforeunload', guard);
     return () => window.removeEventListener('beforeunload', guard);

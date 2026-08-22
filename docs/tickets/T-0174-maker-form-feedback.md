@@ -1,7 +1,7 @@
 ---
 id: T-0174
 title: "Maker product + review forms: unlock reply form, upload timeout, in-viewport save feedback, multi-upload"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -88,3 +88,9 @@ adding 8 photos takes 8 pick-and-wait cycles with the 10-image cap discoverable 
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-21 `ready → in_progress`, branch `feat/T-0174-maker-form-feedback` (main-loop
+  implementation — parallel agents unavailable, account session limit)
+- 2026-08-21 `in_progress → in_review` — tsc clean, vitest 185/185 (+12 new tests); self-review
+  pass recorded in [review run](../review/runs/T-0174.md) (reviewer agent unavailable, flagged);
+  real-browser maker-session pass pending per [test plan](../test-plans/T-0174.md) row 6.
+  Follow-up noted: backend is-active filter param for the product list (display filter ships now)
