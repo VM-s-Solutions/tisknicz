@@ -1,7 +1,7 @@
 ---
 id: T-0170
 title: "Katalog filter/pagination state integrity: URL sync, pending feedback, honest empty states"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -81,3 +81,4 @@ filter".
   (self, flagged); browser-interaction pass pending per [test plan](../test-plans/T-0170.md) row 9.
   New shared primitives `navigation-transition.tsx` + `refresh-button.tsx` for reuse by
   T-0171/T-0173/T-0175
+- 2026-08-22 `in_review → done` — merged via PR #140 (merge 1ec7f27; CI green)

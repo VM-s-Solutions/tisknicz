@@ -1,7 +1,7 @@
 ---
 id: T-0168
 title: "Recovery paths for token flows: magic-link makers, verify double-fire, resend confirmation, reset re-request"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -84,3 +84,8 @@ check: `ConsumeMagicLink.cs:90-98`. Verify client: `verify-client.tsx:27-38`.
 
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed)
+- 2026-08-22 `ready → in_progress`, branch `feat/auth-recovery-bundle` (bundled with the sibling
+  auth ticket — one PR, secops-hardening-bundle precedent)
+- 2026-08-22 `in_progress → in_review` — backend 2082/2082, frontend tsc clean + vitest 199/199
+  (+6 new); NSwag regenerated for the new resend endpoint; see
+  [test plan](../test-plans/T-0167-T-0168.md) + [review run](../review/runs/T-0167-T-0168.md)
