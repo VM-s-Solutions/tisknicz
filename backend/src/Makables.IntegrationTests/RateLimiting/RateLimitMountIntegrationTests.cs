@@ -67,9 +67,9 @@ namespace Makables.IntegrationTests.RateLimiting;
 /// </para>
 ///
 /// <para>
-/// We test on the <b>Admin</b> host (global envelope 30/min) so the tight
-/// auth policy (10/min) is unambiguously the limiter that trips first on the
-/// auth surface. The two pre-existing partitioned policies
+/// We test on the <b>Admin</b> host (global envelope
+/// <c>AdminEnvelopePermitLimit</c>/min) so the tight auth policy (10/min) is
+/// unambiguously the limiter that trips first on the auth surface. The two pre-existing partitioned policies
 /// (<c>addresses-autocomplete</c>, <c>shipping-widget-config</c>) are
 /// untouched and keep their own tests.
 /// </para>
@@ -192,8 +192,8 @@ public sealed class RateLimitMountIntegrationTests : IAsyncLifetime
         // cookie-bearing, so it must NOT share the tight 10/min auth bucket
         // (a multi-tab session / shared-NAT office would lock itself out).
         // Twelve cookieless refresh calls (each a fast 401) must NOT trip the
-        // auth 429 — they fall under only the per-host global envelope (admin
-        // 30/min), which 12 requests stay safely under.
+        // auth 429 — they fall under only the per-host global envelope, which
+        // 12 requests stay safely under at any admin limit we would set.
         using var client = _factory.CreateClient();
 
         var sawTooManyRequests = false;
@@ -209,7 +209,7 @@ public sealed class RateLimitMountIntegrationTests : IAsyncLifetime
 
         sawTooManyRequests.Should().BeFalse(
             "refresh is [DisableRateLimiting]-excluded from the 10/min auth bucket; " +
-            "12 calls stay under the 30/min admin global envelope");
+            "12 calls stay under the admin global envelope");
     }
 
     [Fact]

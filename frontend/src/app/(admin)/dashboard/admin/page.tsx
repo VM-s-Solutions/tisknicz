@@ -5,11 +5,15 @@ import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { getAdminOrders, OrderState } from '@/lib/api-client-helpers/admin-client';
 import {
+  getPlatformRevenue,
   getProcessingPayoutsCount,
   getStalledOutboxCount,
+  type PlatformRevenue,
+  type RevenueWindow,
 } from '@/lib/api-client-helpers/admin-ops-client';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
+import { EARNINGS_PARAM, EarningsPanel, parseRevenueWindow } from './earnings-panel';
 
 /**
  * Admin overview (T-0118a, US-admin-0002 + T-0118c re-wire). Server
@@ -24,6 +28,12 @@ import type { MessageKey } from '@/lib/i18n';
  * (re-wired in T-0118c — they were "—" placeholders in T-0118a before the
  * contracts existed) and deep-link to their ops surfaces. Any count whose
  * read fails renders "—" gracefully (AC-4 — never throws).
+ *
+ * T-0186 adds the earnings panel — what the platform actually made on
+ * sales — over a rolling day/week/month window taken from `?earnings=`.
+ * It joins the same Promise.all fan-out, so the added money read costs no
+ * extra round-trip on the page's critical path, and it degrades on its own
+ * (a failed revenue read leaves the KPI tiles intact and vice versa).
  */
 
 export function generateMetadata(): Metadata {
@@ -63,17 +73,35 @@ async function readCount(
   return result.value;
 }
 
-export default async function AdminOverviewPage() {
+/** T-0186 revenue read → `null` on failure (the panel says so, rather than showing a fake zero). */
+async function readRevenue(window: RevenueWindow): Promise<PlatformRevenue | null> {
+  const result = await getPlatformRevenue(window);
+  if (!result.success) {
+    if (result.error.type === 'Unauthorized') {
+      redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
+    }
+    return null;
+  }
+  return result.value;
+}
+
+interface AdminOverviewPageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function AdminOverviewPage({ searchParams }: AdminOverviewPageProps) {
+  const earningsWindow = parseRevenueWindow((await searchParams)[EARNINGS_PARAM]);
   // Parallel count probes — one round-trip each off the existing reads + the
   // T-0126 ops count endpoints. The probes are independent, so Promise.all
   // collapses the waterfall to ~1 RTT (Gate 8 fold).
-  const [paid, accepted, shipped, disputed, processingPayouts, stalledOutbox] = await Promise.all([
+  const [paid, accepted, shipped, disputed, processingPayouts, stalledOutbox, revenue] = await Promise.all([
     countOrdersInState(OrderState.Paid),
     countOrdersInState(OrderState.Accepted),
     countOrdersInState(OrderState.Shipped),
     countOrdersInState(OrderState.Disputed),
     readCount(getProcessingPayoutsCount),
     readCount(getStalledOutboxCount),
+    readRevenue(earningsWindow),
   ]);
 
   return (
@@ -92,6 +120,10 @@ export default async function AdminOverviewPage() {
             {t('dashboard.admin.overview.subtitle')}
           </p>
         </header>
+
+        <div className="mb-10">
+          <EarningsPanel window={earningsWindow} revenue={revenue} />
+        </div>
 
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
           {t('dashboard.admin.overview.orders.heading')}

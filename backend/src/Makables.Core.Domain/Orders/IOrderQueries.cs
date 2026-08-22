@@ -108,7 +108,7 @@ public interface IOrderQueries
     /// <summary>
     /// Platform earnings between <paramref name="fromInclusive"/> and
     /// <paramref name="toExclusive"/>, recognised at <c>PaidAt</c> — the
-    /// admin overview's earnings panel (T-0182). <b>Unscoped — admin host
+    /// admin overview's earnings panel (T-0186). <b>Unscoped — admin host
     /// only</b>: the sums span every maker and customer on the platform,
     /// exactly like <see cref="CountInFlightByCountryAsync"/>.
     ///

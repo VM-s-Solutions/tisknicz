@@ -239,7 +239,7 @@ internal sealed class OrderEntityConfiguration : IEntityTypeConfiguration<Order>
             .HasDatabaseName("ix_orders_payout_unclaimed")
             .HasFilter("state = 'Delivered' AND payout_batch_id IS NULL AND is_active");
 
-        // T-0182: backs the admin earnings panel — the revenue window
+        // T-0186: backs the admin earnings panel — the revenue window
         // filters on (paid_at >= from AND paid_at < to) and would otherwise
         // seq-scan a growing orders table on every dashboard load. Partial
         // WHERE matches the house convention (ix_orders_state /

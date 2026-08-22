@@ -14,9 +14,9 @@ namespace Makables.Config.Extensions;
 ///
 /// <list type="bullet">
 ///   <item><description><see cref="PolicyName"/> ("default") — per-host
-///     envelope. Defaults: Customer 100/min, Maker 60/min, Admin 30/min,
-///     Public 60/min. Tunable later via configuration; baked-in for
-///     simplicity. Mounted as the per-host <c>GlobalLimiter</c> (T-0136 /
+///     envelope. Defaults: Customer 100/min, Maker 60/min,
+///     Admin <see cref="AdminEnvelopePermitLimit"/>/min, Public 60/min.
+///     Tunable later via configuration; baked-in for simplicity. Mounted as the per-host <c>GlobalLimiter</c> (T-0136 /
 ///     Q-0011) so it applies to EVERY endpoint that doesn't carry a tighter
 ///     <c>[EnableRateLimiting(...)]</c> attribute (which overrides the
 ///     global). Partitioned per authenticated <c>sub</c> claim, else per
@@ -112,6 +112,33 @@ public static class MakablesRateLimitingExtensions
     /// crawler.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Envelope for the authenticated admin console.
+    ///
+    /// <para>
+    /// Raised from 30/min (T-0186). The admin surfaces are read-heavy by
+    /// construction: the overview alone costs SEVEN backend calls in one
+    /// render — four <c>pageSize=1</c> order-count probes, two ops counts
+    /// and the earnings read. Thirty per minute allowed barely four page
+    /// loads, so switching the earnings window between day / week / month a
+    /// few times was enough to start 429-ing. The failure was also invisible
+    /// in the browser: the SSR fetch fails, the page still returns 200, and
+    /// the operator just sees panels reporting they could not load.
+    /// </para>
+    ///
+    /// <para>
+    /// The limiter is a fairness / runaway-client bound here, not an
+    /// authentication control — the auth endpoints keep their own much
+    /// tighter per-IP envelope (<see cref="AuthPolicyName"/>, 10/min), and
+    /// this partition key is the authenticated <c>sub</c>, so a raised
+    /// ceiling gives an attacker nothing they did not already have to log
+    /// in to reach. 180/min is roughly a page load every two seconds
+    /// sustained — comfortably above real console use, still far below what
+    /// an unattended script produces.
+    /// </para>
+    /// </summary>
+    public const int AdminEnvelopePermitLimit = 180;
+
     public const int BlobStreamPermitLimit = 1000;
 
     public static IServiceCollection AddMakablesRateLimiting(
@@ -122,7 +149,7 @@ public static class MakablesRateLimitingExtensions
         {
             MakablesHosts.Customer => (100, TimeSpan.FromMinutes(1)),
             MakablesHosts.Maker    => (60, TimeSpan.FromMinutes(1)),
-            MakablesHosts.Admin    => (30, TimeSpan.FromMinutes(1)),
+            MakablesHosts.Admin    => (AdminEnvelopePermitLimit, TimeSpan.FromMinutes(1)),
             MakablesHosts.Public   => (PublicEnvelopePermitLimit, TimeSpan.FromMinutes(1)),
             _                      => (60, TimeSpan.FromMinutes(1)),
         };

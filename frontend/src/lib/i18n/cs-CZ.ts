@@ -1531,9 +1531,13 @@ export const messages = {
   // Admin shell — nav + header
   'dashboard.admin.common.filterHeading': 'Filtry',
   'dashboard.admin.shell.brand': 'Makables Admin',
+  'dashboard.admin.shell.brandName': 'Makables',
+  'dashboard.admin.shell.brandBadge': 'Admin',
+  'dashboard.admin.shell.navAria': 'Sekce administrace',
   'dashboard.admin.shell.identityFallback': 'Administrátor',
   'dashboard.admin.shell.logout': 'Odhlásit se',
-  'dashboard.admin.shell.openMenu': 'Otevřít menu',
+  'dashboard.admin.shell.loggingOut': 'Odhlašuji…',
+  'dashboard.admin.shell.logoutFailed': 'Odhlášení se nepodařilo. Zkuste to prosím znovu.',
   'dashboard.admin.nav.overview': 'Přehled',
   'dashboard.admin.nav.orders': 'Objednávky',
   'dashboard.admin.nav.invoices': 'Faktury',
@@ -1546,7 +1550,6 @@ export const messages = {
   'dashboard.admin.nav.users': 'Uživatelé',
   'dashboard.admin.nav.config': 'Nastavení zemí',
   'dashboard.admin.nav.categories': 'Kategorie',
-  'dashboard.admin.nav.pendingBadge': 'Připravujeme',
 
   // Admin categories (T-0119 / US-admin-0013)
   'dashboard.admin.categories.metadata.title': 'Kategorie — Administrace',
@@ -1619,6 +1622,25 @@ export const messages = {
     'Tato sekce se připravuje — odkaz vede na budoucí přehled.',
   'dashboard.admin.overview.countFollowUp':
     'Souhrnné počty zatím nejsou k dispozici. Otevřete seznam pro aktuální data.',
+  'dashboard.admin.overview.earnings.heading': 'Výdělky platformy',
+  'dashboard.admin.overview.earnings.window.day': 'Posledních 24 hodin',
+  'dashboard.admin.overview.earnings.window.week': 'Posledních 7 dní',
+  'dashboard.admin.overview.earnings.window.month': 'Posledních 30 dní',
+  'dashboard.admin.overview.earnings.windowAria': 'Období výdělků',
+  'dashboard.admin.overview.earnings.fee': 'Naše provize',
+  'dashboard.admin.overview.earnings.feeNote': 'Co platformě zůstalo z prodejů za zvolené období.',
+  'dashboard.admin.overview.earnings.gross': 'Obrat',
+  'dashboard.admin.overview.earnings.grossNote': 'Celkem zaplaceno zákazníky.',
+  'dashboard.admin.overview.earnings.payout': 'K výplatě makerům',
+  'dashboard.admin.overview.earnings.payoutNote': 'Podíl makerů z téhož obratu.',
+  'dashboard.admin.overview.earnings.orders': 'Zaplacené objednávky',
+  'dashboard.admin.overview.earnings.ordersNote': 'Počet prodejů, které v období proběhly.',
+  'dashboard.admin.overview.earnings.refunded': 'Vráceno zákazníkům',
+  'dashboard.admin.overview.earnings.refundedNote':
+    'Refundace u objednávek zaplacených v období. Provizi nesnižuje — vratka se nedělí na podíl platformy a makera.',
+  'dashboard.admin.overview.earnings.basis':
+    'Počítáno z okamžiku zaplacení. Zrušené a refundované objednávky se do provize nezapočítávají.',
+  'dashboard.admin.overview.earnings.unavailable': 'Výdělky se nepodařilo načíst.',
   'dashboard.admin.overview.error.title': 'Přehled se nepodařilo načíst',
   'dashboard.admin.overview.error.retry': 'Zkusit znovu',
 
