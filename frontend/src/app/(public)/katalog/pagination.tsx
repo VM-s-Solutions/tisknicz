@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import type { MouseEvent } from 'react';
+import { useNavigationTransition } from '@/components/shared/navigation-transition';
 import { Icon } from '@/components/ui/icon';
+import { Spinner } from '@/components/ui/spinner';
 import { t } from '@/lib/i18n';
-import { scrollToTop } from '@/lib/utils/scroll';
 
 interface PaginationProps {
   readonly page: number;
@@ -40,15 +41,17 @@ function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
  * back button and crawlers both see real hrefs; the disabled state uses
  * a non-Link span to keep keyboard/screen-reader semantics.
  *
- * Paging jumps the reader from the bottom of one result set to the top
- * of the next, so the links opt out of the router's instant scroll
- * (`scroll={false}`) and drive {@link scrollToTop} instead — the motion
- * makes it read as "same list, next page" rather than a teleport. The
- * scroll starts on click, in parallel with the server render, so it is
- * not waiting on the fetch. Client Component only for that handler; all
- * props stay serializable so the page above it remains server-rendered.
+ * T-0170 (audit PUB-H2): plain clicks route through
+ * {@link useNavigationTransition} — the surrounding provider dims the
+ * results while the server render is in flight and the scroll-to-top
+ * fires only once the NEW page's data arrived. The old behavior
+ * scrolled on click, teleporting the reader to the top of the OLD page
+ * which then silently swapped. Modified clicks (new tab etc.) keep the
+ * real href.
  */
 export function Pagination({ page, totalPages, hasNext, hasPrevious, baseQuery }: PaginationProps) {
+  const { pending, navigate } = useNavigationTransition();
+
   if (totalPages <= 1) {
     return null;
   }
@@ -59,17 +62,23 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseQuery }
     return `/katalog?${sp.toString()}`;
   };
 
-  const handleNavigate = (event: MouseEvent<HTMLAnchorElement>): void => {
+  const handleNavigate = (event: MouseEvent<HTMLAnchorElement>, href: string): void => {
     if (opensElsewhere(event)) return;
-    scrollToTop();
+    event.preventDefault();
+    navigate(href, { scrollTop: true });
   };
 
   return (
     <nav aria-label={t('catalog.pagination.page_of', { page, total: totalPages })} className="mt-10">
       <div aria-hidden="true" className="divider-glow" />
       <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        {hasPrevious ? (
-          <Link href={hrefFor(page - 1)} scroll={false} onClick={handleNavigate} className={PAGE_LINK}>
+        {hasPrevious && !pending ? (
+          <Link
+            href={hrefFor(page - 1)}
+            scroll={false}
+            onClick={(event) => handleNavigate(event, hrefFor(page - 1))}
+            className={PAGE_LINK}
+          >
             <Icon name="arrowLeft" size={16} />
             {t('catalog.pagination.previous')}
           </Link>
@@ -80,12 +89,20 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, baseQuery }
           </span>
         )}
 
-        <p className="text-sm text-zinc-400" aria-live="polite">
-          {t('catalog.pagination.page_of', { page, total: totalPages })}
+        <p className="flex items-center gap-2 text-sm text-zinc-400" aria-live="polite">
+          {pending ? <Spinner size="sm" /> : null}
+          {pending
+            ? t('catalog.results.loading')
+            : t('catalog.pagination.page_of', { page, total: totalPages })}
         </p>
 
-        {hasNext ? (
-          <Link href={hrefFor(page + 1)} scroll={false} onClick={handleNavigate} className={PAGE_LINK}>
+        {hasNext && !pending ? (
+          <Link
+            href={hrefFor(page + 1)}
+            scroll={false}
+            onClick={(event) => handleNavigate(event, hrefFor(page + 1))}
+            className={PAGE_LINK}
+          >
             {t('catalog.pagination.next')}
             <Icon name="arrowRight" size={16} />
           </Link>
