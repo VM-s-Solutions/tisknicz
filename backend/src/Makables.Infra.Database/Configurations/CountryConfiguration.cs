@@ -55,6 +55,12 @@ internal sealed class CountryConfigurationEntityConfiguration : IEntityTypeConfi
         builder.Property(c => c.ReducedVatRateBp).HasColumnName("reduced_vat_rate_bp");
         builder.Property(c => c.InvoicingMode).HasColumnName("invoicing_mode").HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.PlatformFeeRateBp).HasColumnName("platform_fee_rate_bp").IsRequired();
+        // T-0181 (Q-0041): how long a maker may still refuse a paid order.
+        // A tunable policy row, not a constant (ADR 0004).
+        builder.Property(c => c.MakerRefusalWindowHours)
+            .HasColumnName("maker_refusal_window_hours")
+            .HasDefaultValue(48)
+            .IsRequired();
         builder.Property(c => c.DefaultShippingPriceMinor)
             .HasColumnName("default_shipping_price_minor")
             .IsRequired();

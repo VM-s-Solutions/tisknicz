@@ -100,6 +100,31 @@ public sealed class OrdersController(
         HandleResult(await mediator.Send(new AcceptOrder.Command(orderId), ct));
 
     /// <summary>
+    /// Maker REFUSES a paid order they cannot fulfil (T-0181 / Q-0041).
+    /// Paid-only and only within
+    /// <c>CountryConfiguration.MakerRefusalWindowHours</c> of
+    /// <c>PaidAt</c> — past that the refusal goes through admin support
+    /// (409 <c>order.refusalWindowExpired</c>), which is the pre-T-0181
+    /// status quo. Refunds the full remaining amount through the payment
+    /// provider BEFORE mutating the order, then cancels it with
+    /// <c>CancellationSource = Maker</c> and notifies the customer.
+    /// Re-calling on an already-cancelled order is a 200 (Silent Success)
+    /// with no second refund.
+    /// </summary>
+    [HttpPost("{orderId}/refuse")]
+    [ProducesResponseType(typeof(RefuseOrder.RefuseOrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Refuse(
+        string orderId, [FromBody] RefuseOrderRequest body, CancellationToken ct) =>
+        HandleResult(await mediator.Send(new RefuseOrder.Command(orderId, body.Reason), ct));
+
+    /// <summary>Body for <see cref="Refuse"/> — the maker must say why.</summary>
+    public sealed record RefuseOrderRequest(string Reason);
+
+    /// <summary>
     /// Maker confirms shipment of an Accepted Zásilkovna order. Calls
     /// the Packeta adapter to create the shipment, stamps the carrier
     /// ref + tracking URL onto the Order, transitions Accepted → Shipped,

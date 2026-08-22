@@ -45,6 +45,21 @@ public sealed class CountryConfiguration : Auditable
     /// </summary>
     public long DefaultShippingPriceMinor { get; private set; }
 
+    /// <summary>
+    /// How long after <c>Order.PaidAt</c> a maker may still REFUSE a paid
+    /// order they cannot fulfil (T-0181 / Q-0041 — "two days, for
+    /// example"). Past the window the maker must go through admin support,
+    /// which is the pre-T-0181 status quo, so the window only ever widens
+    /// what a maker can do.
+    ///
+    /// <para>
+    /// A row rather than a constant on purpose (ADR 0004): this is a
+    /// business policy that will be tuned, and tuning it must not need a
+    /// deploy. Seed CZ value is 48 (two days).
+    /// </para>
+    /// </summary>
+    public int MakerRefusalWindowHours { get; private set; } = 48;
+
     // Business identifiers
     public string TaxIdLabel { get; private set; } = default!;            // e.g. "DIČ"
     public string? TaxIdFormat { get; private set; }                      // regex; nullable

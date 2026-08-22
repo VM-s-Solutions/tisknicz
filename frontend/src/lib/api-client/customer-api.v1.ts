@@ -66,6 +66,11 @@ export interface ICustomerApi {
     /**
      * @return OK
      */
+    cancel(orderId: string): Promise<CancelPendingOrderResponse>;
+
+    /**
+     * @return OK
+     */
     deliver(orderId: string): Promise<MarkOrderDeliveredApiResponse>;
 
     /**
@@ -901,6 +906,74 @@ export class CustomerApi implements ICustomerApi {
             });
         }
         return Promise.resolve<UploadOrderAttachmentResponse>(null as any);
+    }
+
+    /**
+     * @return OK
+     */
+    cancel(orderId: string): Promise<CancelPendingOrderResponse> {
+        let url_ = this.baseUrl + "/api/v1/orders/{orderId}/cancel";
+        if (orderId === undefined || orderId === null)
+            throw new globalThis.Error("The parameter 'orderId' must be defined.");
+        url_ = url_.replace("{orderId}", encodeURIComponent("" + orderId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCancel(_response);
+        });
+    }
+
+    protected processCancel(response: Response): Promise<CancelPendingOrderResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = CancelPendingOrderResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorDto.fromJS(resultData409);
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CancelPendingOrderResponse>(null as any);
     }
 
     /**
@@ -2429,6 +2502,58 @@ export class CustomerApi implements ICustomerApi {
         }
         return Promise.resolve<void>(null as any);
     }
+}
+
+export class CancelPendingOrderResponse implements ICancelPendingOrderResponse {
+    orderId!: string;
+    state!: OrderState;
+
+    [key: string]: any;
+
+    constructor(data?: ICancelPendingOrderResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.orderId = _data["orderId"];
+            this.state = _data["state"];
+        }
+    }
+
+    static fromJS(data: any): CancelPendingOrderResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CancelPendingOrderResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["orderId"] = this.orderId;
+        data["state"] = this.state;
+        return data;
+    }
+}
+
+export interface ICancelPendingOrderResponse {
+    orderId: string;
+    state: OrderState;
+
+    [key: string]: any;
 }
 
 export class ConfirmEmailRequest implements IConfirmEmailRequest {

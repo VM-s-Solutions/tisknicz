@@ -377,4 +377,82 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
             _ => // CreatedAtDesc (default)
                 q.OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id),
         };
+
+    /// <summary>
+    /// The six states in which a cleared payment still stands as revenue.
+    /// <c>PendingPayment</c> never took money; <c>Cancelled</c> and
+    /// <c>Refunded</c> reversed it. Static so the recognition rule is a
+    /// single source of truth (T-0182), mirroring <see cref="InFlightStates"/>.
+    /// </summary>
+    private static readonly OrderState[] EarnedStates =
+    [
+        OrderState.Paid,
+        OrderState.Accepted,
+        OrderState.Shipped,
+        OrderState.Delivered,
+        OrderState.Completed,
+        OrderState.Disputed,
+    ];
+
+    public async Task<PlatformRevenueDto> GetPlatformRevenueAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        CancellationToken ct)
+    {
+        if (toExclusive <= fromInclusive)
+        {
+            return EmptyRevenue;
+        }
+
+        // Unscoped (admin host only); soft-deleted rows excluded by the
+        // global Auditable filter (no IgnoreQueryFilters). Half-open window
+        // on PaidAt so adjacent windows never double-count the boundary
+        // order. One round-trip: the earned sums and the refund line are
+        // conditional aggregates over the SAME row set, so they cannot
+        // disagree about which orders the window contained.
+        var totals = await db.Set<Order>()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => o.PaidAt != null && o.PaidAt >= fromInclusive && o.PaidAt < toExclusive)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                PaidOrderCount = g.Count(o => EarnedStates.Contains(o.State)),
+                GrossVolumeMinor = g.Sum(o => EarnedStates.Contains(o.State) ? o.TotalAmountMinor : 0L),
+                PlatformFeeMinor = g.Sum(o => EarnedStates.Contains(o.State) ? o.PlatformFeeAmountMinor : 0L),
+                MakerPayoutMinor = g.Sum(o => EarnedStates.Contains(o.State) ? o.MakerPayoutAmountMinor : 0L),
+                // Deliberately NOT state-filtered: a partial refund on a
+                // still-live order is money out of the window too.
+                RefundedMinor = g.Sum(o => o.RefundedAmountMinor),
+            })
+            .SingleOrDefaultAsync(ct);
+
+        // No order was paid in the window — GroupBy yields no row at all.
+        if (totals is null)
+        {
+            return EmptyRevenue;
+        }
+
+        return new PlatformRevenueDto(
+            totals.PaidOrderCount,
+            totals.GrossVolumeMinor,
+            totals.PlatformFeeMinor,
+            totals.MakerPayoutMinor,
+            totals.RefundedMinor,
+            LaunchCurrency);
+    }
+
+    /// <summary>
+    /// ISO 4217 code stamped on every revenue window. Czech-only at launch
+    /// (CLAUDE.md) — orders carry a per-row <c>Currency</c> snapshot, but
+    /// summing across currencies would be meaningless, so the aggregate
+    /// declares the one currency the platform trades in rather than
+    /// silently mixing them. Adding the next country replaces this with a
+    /// per-currency grouping.
+    /// </summary>
+    private const string LaunchCurrency = "CZK";
+
+    private static readonly PlatformRevenueDto EmptyRevenue =
+        new(PaidOrderCount: 0, GrossVolumeMinor: 0, PlatformFeeMinor: 0, MakerPayoutMinor: 0,
+            RefundedMinor: 0, Currency: LaunchCurrency);
 }

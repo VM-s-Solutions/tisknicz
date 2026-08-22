@@ -105,6 +105,24 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
         HandleResult(await Mediator.Send(
             new GetAllInvoices.Query(page, pageSize, type, country, recipient, dateFrom, dateTo), ct));
 
+    /// <summary>
+    /// Platform earnings over a rolling window (T-0182) — what the platform
+    /// made on sales, for the overview's earnings panel. Unscoped
+    /// (cross-tenant money aggregate), admin audience only. Read-only and
+    /// non-failing: a window with no sales returns zeros, never 404. No
+    /// audit row — the aggregate discloses no personal data (ADR 0014
+    /// read-side carve-out covers PII reads only).
+    /// </summary>
+    [HttpGet]
+    [Route("api/v{version:apiVersion}/platform-revenue")]
+    [ProducesResponseType(typeof(GetPlatformRevenue.GetPlatformRevenueResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetPlatformRevenueAsync(
+        [FromQuery] RevenueWindow window = RevenueWindow.Day,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetPlatformRevenue.Query(window), ct));
+
     /// <summary>Admin audit log (US-admin-0015). List omits before/after JSONB.</summary>
     [HttpGet]
     [Route("api/v{version:apiVersion}/audit-log")]

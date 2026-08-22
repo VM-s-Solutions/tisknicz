@@ -24,6 +24,7 @@ import { t } from '@/lib/i18n';
 import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-labels';
 import { ORDER_ATTACHMENT_MAX_FILES } from '@/lib/utils/validation';
 import { AttachmentManagerClient } from './attachment-manager-client';
+import { CancelOrderClient } from './cancel-order-client';
 import { DisputeEscalationClient } from './dispute-escalation-client';
 import { FileDownloadButton, MarkDeliveredButton } from './order-actions-client';
 import { OrderBreakdown, OrderPriceCards } from './order-breakdown';
@@ -153,6 +154,10 @@ export default async function OrderPage({ params, searchParams }: PageProps) {
       <OrderBreakdown detail={detail} />
 
       <PayButtonClient orderId={detail.orderId} />
+
+      {/* T-0181 (Q-0041, audit CUST-M3): a real exit — the only way out
+          used to be the silent 24 h auto-expiry. */}
+      <CancelOrderClient orderId={detail.orderId} />
 
       <Card variant="elevated" padding="md">
         <AttachmentManagerClient
