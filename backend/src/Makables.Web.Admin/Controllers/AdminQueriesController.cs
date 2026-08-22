@@ -106,7 +106,7 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
             new GetAllInvoices.Query(page, pageSize, type, country, recipient, dateFrom, dateTo), ct));
 
     /// <summary>
-    /// Platform earnings over a rolling window (T-0182) — what the platform
+    /// Platform earnings over a rolling window (T-0186) — what the platform
     /// made on sales, for the overview's earnings panel. Unscoped
     /// (cross-tenant money aggregate), admin audience only. Read-only and
     /// non-failing: a window with no sales returns zeros, never 404. No
@@ -119,7 +119,7 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPlatformRevenueAsync(
-        [FromQuery] RevenueWindow window = RevenueWindow.Day,
+        [FromQuery] GetPlatformRevenue.RevenueWindow window = GetPlatformRevenue.RevenueWindow.Day,
         CancellationToken ct = default) =>
         HandleResult(await Mediator.Send(new GetPlatformRevenue.Query(window), ct));
 

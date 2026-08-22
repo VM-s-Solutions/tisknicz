@@ -12,6 +12,7 @@
 - backend/src/Makables.Core.AppServices/Features/Admin/GetAllInvoices.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Admin/GetAllOrders.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Admin/GetPayoutBatches.cs:1:T1  feature file is missing nested "record Response"
+- backend/src/Makables.Core.AppServices/Features/Admin/GetPlatformRevenue.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Admin/GetProcessingPayoutsCount.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxCount.cs:1:T1  feature file is missing nested "record Response"
 - backend/src/Makables.Core.AppServices/Features/Admin/GetStalledOutboxEvents.cs:1:T1  feature file is missing nested "record Response"

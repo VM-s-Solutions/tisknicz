@@ -1,7 +1,7 @@
 namespace Makables.Core.Domain.Orders.Queries;
 
 /// <summary>
-/// Platform earnings over one reporting window (T-0182). Aggregate read —
+/// Platform earnings over one reporting window (T-0186). Aggregate read —
 /// <b>unscoped, admin host only</b>: it sums money across every maker and
 /// customer, so it must never be reachable from the customer/maker hosts
 /// (ADR 0013 puts that boundary on the host audience).

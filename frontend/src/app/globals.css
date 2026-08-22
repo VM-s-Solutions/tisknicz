@@ -180,6 +180,10 @@ body {
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  /* Height, not just width: without it a horizontal scroller (the dashboard
+     section rails) fell back to the chunky platform default and drew a heavy
+     bar straight across the chrome. */
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-surface-primary);

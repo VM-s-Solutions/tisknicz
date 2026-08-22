@@ -7,27 +7,7 @@ using MediatR;
 namespace Makables.Core.AppServices.Features.Admin;
 
 /// <summary>
-/// Rolling reporting window for <see cref="GetPlatformRevenue"/>. Rolling
-/// (last N × 24 h back from "now") rather than calendar-aligned: a calendar
-/// month would need a per-country civil timezone to know where the day
-/// starts, and the admin surface is a live operational readout, not a
-/// bookkeeping period. The invoice + payout surfaces remain the record for
-/// accounting periods.
-/// </summary>
-public enum RevenueWindow
-{
-    /// <summary>Last 24 hours.</summary>
-    Day = 0,
-
-    /// <summary>Last 7 days.</summary>
-    Week = 1,
-
-    /// <summary>Last 30 days.</summary>
-    Month = 2,
-}
-
-/// <summary>
-/// Admin overview earnings panel (T-0182): what the platform earned on
+/// Admin overview earnings panel (T-0186): what the platform earned on
 /// sales over a rolling <see cref="RevenueWindow"/>. Read-only, admin-host
 /// only — the aggregate spans every maker and customer, and ADR 0013 puts
 /// that boundary on the host audience (a customer/maker JWT 401s here).
@@ -43,6 +23,25 @@ public enum RevenueWindow
 /// </summary>
 public static class GetPlatformRevenue
 {
+    /// <summary>
+    /// Rolling reporting window. Rolling (last N × 24 h back from "now")
+    /// rather than calendar-aligned: a calendar month would need a
+    /// per-country civil timezone to know where the day starts, and this is
+    /// a live operational readout, not a bookkeeping period. The invoice +
+    /// payout surfaces remain the record for accounting periods.
+    /// </summary>
+    public enum RevenueWindow
+    {
+        /// <summary>Last 24 hours.</summary>
+        Day = 0,
+
+        /// <summary>Last 7 days.</summary>
+        Week = 1,
+
+        /// <summary>Last 30 days.</summary>
+        Month = 2,
+    }
+
     public sealed record Query(RevenueWindow Window) : IQuery<GetPlatformRevenueResponse>;
 
     /// <summary>Globally-unique name (NSwag PR #38 convention).</summary>

@@ -9,6 +9,14 @@ export interface DashboardNavItem {
   readonly href: string;
   readonly labelKey: MessageKey;
   readonly icon: IconName;
+  /**
+   * Highlight this item ONLY on an exact path match. Needed for a section
+   * root that is a prefix of every sibling (the admin overview lives at
+   * `/dashboard/admin`, so a prefix match would light it up on every
+   * admin page at once). Omitted ⇒ the item also matches its own
+   * sub-routes, so a detail page keeps its section highlighted.
+   */
+  readonly exact?: boolean;
 }
 
 /**
@@ -18,23 +26,43 @@ export interface DashboardNavItem {
  * `usePathname` active state. Scrolls horizontally on narrow viewports
  * instead of wrapping.
  */
-export function DashboardNav({ items }: { items: readonly DashboardNavItem[] }) {
+export function DashboardNav({
+  items,
+  ariaLabelKey = 'nav.dashboard_aria',
+}: {
+  items: readonly DashboardNavItem[];
+  /**
+   * Landmark label for the rail. Defaults to the account-navigation
+   * wording the customer/maker dashboards use; the admin console passes
+   * its own so a screen reader announces a console section rail rather
+   * than a personal account menu.
+   */
+  ariaLabelKey?: MessageKey;
+}) {
   const pathname = usePathname();
 
   return (
     <nav
       className="border-b border-zinc-800/80 bg-surface-secondary/40"
-      aria-label={t('nav.dashboard_aria')}
+      aria-label={t(ariaLabelKey)}
     >
       <div className="mx-auto w-full max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2 py-3">
+        {/* gap-1 + px-3 rather than the roomier gap-2/px-4 this rail shipped
+            with: the admin console has ten sections and the roomier spacing
+            pushed the last one ("Audit log") past the 1280 content width, so
+            the primary desktop width could not reach it without scrolling.
+            The five-item customer/maker rails are unaffected — they had room
+            to spare either way. */}
+        <div className="flex items-center gap-1 py-3">
           {items.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   active
                     ? 'border-brand-500/40 bg-brand-400/10 text-brand-200'
                     : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-100'

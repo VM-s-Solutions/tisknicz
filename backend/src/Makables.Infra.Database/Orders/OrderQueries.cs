@@ -382,7 +382,7 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
     /// The six states in which a cleared payment still stands as revenue.
     /// <c>PendingPayment</c> never took money; <c>Cancelled</c> and
     /// <c>Refunded</c> reversed it. Static so the recognition rule is a
-    /// single source of truth (T-0182), mirroring <see cref="InFlightStates"/>.
+    /// single source of truth (T-0186), mirroring <see cref="InFlightStates"/>.
     /// </summary>
     private static readonly OrderState[] EarnedStates =
     [

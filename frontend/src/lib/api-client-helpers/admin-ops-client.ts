@@ -41,14 +41,16 @@ import {
   type IRetryOutboxEventResponse,
   type IStalledOutboxEventDto,
   type IUpdateCountryConfigurationResponse,
+  type IGetPlatformRevenueResponse,
   InvoicingMode,
   PayoutBatchState,
+  RevenueWindow,
 } from '../api-client/admin-api.v1';
 import { apiFetch } from '../runtime/api-fetch';
 import { type ApiError, type Result, ok } from '../runtime/result';
 
 // Re-export the enums so route code never imports `lib/api-client/` directly.
-export { InvoicingMode, PayoutBatchState };
+export { InvoicingMode, PayoutBatchState, RevenueWindow };
 
 // Leading slash matters: apiFetch concatenates `${baseUrl}${path}` against
 // host URLs with no trailing slash (admin-client.ts precedent).
@@ -58,6 +60,7 @@ const PayoutBase = '/api/v1/payout-batches';
 const UsersBase = '/api/v1/users';
 const InvoicesBase = '/api/v1/admin-invoices';
 const MakersBase = '/api/v1/makers';
+const RevenueBase = '/api/v1/platform-revenue';
 
 /**
  * Streaming-download budget (payouts-client.ts precedent): the operator
@@ -477,4 +480,39 @@ export async function eraseUser(
     method: 'POST',
     json: { confirmedEmail: input.confirmedEmail, reason: input.reason },
   });
+}
+
+// ---- Platform revenue (T-0186 GET /platform-revenue?window=) ----
+
+/**
+ * Mirror of <c>GetPlatformRevenueResponse</c> (T-0186). The two instants
+ * arrive as ISO 8601 strings on the wire; every amount is minor units
+ * (<c>long</c> server-side) and is rendered with <c>formatCzk</c> — the
+ * frontend does no money arithmetic of its own (CLAUDE.md §4).
+ */
+export type PlatformRevenue = Readonly<
+  Omit<IGetPlatformRevenueResponse, 'fromInclusive' | 'toExclusive'>
+> & {
+  readonly fromInclusive: string;
+  readonly toExclusive: string;
+};
+
+/**
+ * Platform earnings over a rolling window (T-0186) — backs the admin
+ * overview's earnings panel. `null` on failure so the panel degrades to
+ * "—" like the KPI tiles rather than throwing the whole overview
+ * (AC-4 precedent).
+ *
+ * The window enum is the ONLY input, and the backend Validator rejects
+ * anything outside it — the caller cannot widen the reporting period by
+ * hand-crafting a query string.
+ */
+export async function getPlatformRevenue(
+  window: RevenueWindow,
+): Promise<Result<PlatformRevenue, ApiError>> {
+  return apiFetch<PlatformRevenue>(
+    'admin',
+    `${RevenueBase}?window=${encodeURIComponent(window)}`,
+    { method: 'GET' },
+  );
 }

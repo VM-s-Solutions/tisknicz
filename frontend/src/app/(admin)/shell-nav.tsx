@@ -1,177 +1,135 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { DashboardNav, type DashboardNavItem } from '@/components/shared/dashboard-nav';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { logout } from '@/lib/api-client-helpers/auth';
 import { t } from '@/lib/i18n';
-import type { MessageKey } from '@/lib/i18n';
 
 /**
- * Admin shell navigation (T-0118a, AC-3). The only client island in the
- * shell — it owns the active-section highlight (`usePathname` +
- * `aria-current`), the mobile menu toggle, and the logout action (the
- * customer profile-client logout precedent: POST /auth/logout then route
- * to /admin/login). The session gate itself lives server-side in
- * `layout.tsx`; this component renders only for an authenticated admin.
+ * Admin shell chrome (T-0118a AC-3, redesigned in T-0186).
  *
- * The live sections (Přehled / Objednávky / Faktury / Audit log +, since
- * T-0118c, Výplaty / Fronta událostí / Uživatelé / Nastavení zemí, since
- * T-0140 Makeři) are real `<Link>`s. `PENDING_NAV` stays empty for now —
- * kept as the seam for the next not-yet-built section (Option H: no live
- * link to a not-yet-built route).
+ * The header is TWO rows, and that is the whole point of the redesign.
+ * One row could not hold a brand, ten section links and an account block
+ * side by side: `justify-between` handed the middle nav as much width as
+ * it wanted, the brand lost its own and broke across two lines, the nav
+ * wrapped into ragged rows of different lengths, and the identity was
+ * squeezed into a `max-w-48 truncate` that cut the operator's own name in
+ * half. Splitting identity (row 1) from navigation (row 2) removes the
+ * competition instead of tuning it:
+ *
+ * <list type="bullet">
+ *   <item><description>Row 1 — brand + who you are + sign out. Nothing here can wrap: the brand is `whitespace-nowrap`, and with the nav gone from this row the identity has room to render in full.</description></item>
+ *   <item><description>Row 2 — the section rail, delegated to the shared <see cref="DashboardNav"/> that the customer and maker dashboards already use. It scrolls horizontally instead of wrapping, so ten sections stay on one honest line at every width and the admin console finally looks like the rest of the app.</description></item>
+ * </list>
+ *
+ * Sharing the rail also retires this file's private nav-link renderer and
+ * its own mobile drawer — one section-navigation implementation for all
+ * three audiences. The `exact` flag exists for the overview: its href is a
+ * prefix of every other admin route, so a prefix match would light it up
+ * on every page.
+ *
+ * Still the only client island in the shell — the session gate is
+ * server-side in `layout.tsx`; this renders only for an authenticated
+ * admin.
  */
-
-interface NavItem {
-  readonly href: string;
-  readonly labelKey: MessageKey;
-}
-
-const LIVE_NAV: readonly NavItem[] = [
-  { href: '/dashboard/admin', labelKey: 'dashboard.admin.nav.overview' },
-  { href: '/dashboard/admin/orders', labelKey: 'dashboard.admin.nav.orders' },
-  { href: '/dashboard/admin/faktury', labelKey: 'dashboard.admin.nav.invoices' },
-  { href: '/dashboard/admin/vyplaty', labelKey: 'dashboard.admin.nav.payouts' },
-  { href: '/dashboard/admin/outbox', labelKey: 'dashboard.admin.nav.outbox' },
-  { href: '/dashboard/admin/users', labelKey: 'dashboard.admin.nav.users' },
-  { href: '/dashboard/admin/countries/CZ', labelKey: 'dashboard.admin.nav.config' },
-  { href: '/dashboard/admin/kategorie', labelKey: 'dashboard.admin.nav.categories' },
-  { href: '/dashboard/admin/makers', labelKey: 'dashboard.admin.nav.makers' },
-  { href: '/dashboard/admin/audit', labelKey: 'dashboard.admin.nav.audit' },
+const ADMIN_NAV: readonly DashboardNavItem[] = [
+  { href: '/dashboard/admin', labelKey: 'dashboard.admin.nav.overview', icon: 'barChart', exact: true },
+  { href: '/dashboard/admin/orders', labelKey: 'dashboard.admin.nav.orders', icon: 'package' },
+  { href: '/dashboard/admin/faktury', labelKey: 'dashboard.admin.nav.invoices', icon: 'receipt' },
+  { href: '/dashboard/admin/vyplaty', labelKey: 'dashboard.admin.nav.payouts', icon: 'wallet' },
+  { href: '/dashboard/admin/outbox', labelKey: 'dashboard.admin.nav.outbox', icon: 'refresh' },
+  { href: '/dashboard/admin/users', labelKey: 'dashboard.admin.nav.users', icon: 'users' },
+  { href: '/dashboard/admin/countries/CZ', labelKey: 'dashboard.admin.nav.config', icon: 'globe' },
+  { href: '/dashboard/admin/kategorie', labelKey: 'dashboard.admin.nav.categories', icon: 'tag' },
+  { href: '/dashboard/admin/makers', labelKey: 'dashboard.admin.nav.makers', icon: 'building' },
+  { href: '/dashboard/admin/audit', labelKey: 'dashboard.admin.nav.audit', icon: 'shield' },
 ];
 
-/** Sections with no slice yet — rendered visibly pending, never as live links (AC-3). */
-const PENDING_NAV: readonly MessageKey[] = [];
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard/admin') return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 export function AdminShellNav({ identity }: { readonly identity: string }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function handleLogout(): Promise<void> {
+    if (loggingOut) return;
     setLoggingOut(true);
-    await logout('admin');
-    router.push('/admin/login');
+    setLogoutError(null);
+    const result = await logout('admin');
+    setLoggingOut(false);
+    if (result.success) {
+      router.push('/admin/login');
+      // Re-render the server tree so the shell picks up the cleared cookie.
+      router.refresh();
+      return;
+    }
+    // A failed logout used to be silent here — the button stopped spinning
+    // and nothing else happened, leaving the operator unsure whether the
+    // admin session was actually closed (public-navbar precedent, T-0171).
+    setLogoutError(t('dashboard.admin.shell.logoutFailed'));
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-zinc-800 bg-surface-primary">
+    // No bottom border on the header itself — the nav rail is the last row
+    // and carries it, so keeping both would stack two hairlines into one
+    // thick seam.
+    <header className="sticky top-0 z-20 bg-surface-primary">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label={t('dashboard.admin.shell.openMenu')}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800 lg:hidden"
-          >
-            <Icon name="list" size={18} />
-          </button>
-          <Link href="/dashboard/admin" className="text-base font-semibold tracking-tight text-white">
-            {t('dashboard.admin.shell.brand')}
-          </Link>
-        </div>
-
-        <nav
-          className="hidden min-w-0 flex-wrap items-center justify-center gap-1 lg:flex"
-          aria-label={t('dashboard.admin.shell.brand')}
+        <Link
+          href="/dashboard/admin"
+          className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
         >
-          {LIVE_NAV.map((item) => (
-            <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <span className="hidden max-w-48 truncate text-sm text-zinc-400 sm:block">
-            {identity}
+          {t('dashboard.admin.shell.brandName')}
+          {/* The console badge, not part of the wordmark — it keeps
+              "Makables" and "Admin" from ever being wrapped apart. */}
+          <span className="rounded-md border border-brand-500/40 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-brand-300">
+            {t('dashboard.admin.shell.brandBadge')}
           </span>
+        </Link>
+
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          {/* Full identity, no truncation: row 1 no longer shares its width
+              with the section links, so the operator can read their whole
+              sign-in. `break-all` keeps even a long address complete rather
+              than clipping it. */}
+          <span className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-800 bg-surface-secondary/60 px-3 py-1.5 text-sm text-zinc-300 sm:flex">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-brand-500/15 text-brand-300">
+              <Icon name="user" size={13} strokeWidth={1.75} />
+            </span>
+            <span className="break-all">{identity}</span>
+          </span>
+
+          {/* Signing out of an admin console is routine and reversible, so
+              it reads as a neutral hairline action. The red-bordered
+              destructive weight belongs on refunds and erasures — spending
+              it here made the loudest control on the page the one that does
+              the least. */}
           <Button
             type="button"
-            variant="dangerGhost"
+            variant="outline"
             size="sm"
             loading={loggingOut}
             onClick={handleLogout}
           >
             <Icon name="logOut" size={15} />
-            {t('dashboard.admin.shell.logout')}
+            {loggingOut ? t('dashboard.admin.shell.loggingOut') : t('dashboard.admin.shell.logout')}
           </Button>
         </div>
       </div>
 
-      {open ? (
-        <nav className="border-t border-zinc-800 px-4 py-3 lg:hidden" aria-label={t('dashboard.admin.shell.brand')}>
-          <ul className="flex flex-col gap-1">
-            {LIVE_NAV.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  item={item}
-                  active={isActive(pathname, item.href)}
-                  onNavigate={() => setOpen(false)}
-                  block
-                />
-              </li>
-            ))}
-            {PENDING_NAV.map((labelKey) => (
-              <li key={labelKey}>
-                <PendingNavEntry labelKey={labelKey} block />
-              </li>
-            ))}
-          </ul>
-        </nav>
+      {logoutError ? (
+        <p
+          role="alert"
+          className="mx-auto max-w-7xl px-4 pb-2 text-right text-xs text-error sm:px-6 lg:px-8"
+        >
+          {logoutError}
+        </p>
       ) : null}
+
+      <DashboardNav items={ADMIN_NAV} ariaLabelKey="dashboard.admin.shell.navAria" />
     </header>
-  );
-}
-
-function NavLink({
-  item,
-  active,
-  onNavigate,
-  block = false,
-}: {
-  readonly item: NavItem;
-  readonly active: boolean;
-  readonly onNavigate?: () => void;
-  readonly block?: boolean;
-}) {
-  return (
-    <Link
-      href={item.href}
-      aria-current={active ? 'page' : undefined}
-      onClick={onNavigate}
-      className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        block ? 'block' : ''
-      } ${
-        active
-          ? 'bg-brand-400/10 text-brand-400'
-          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-      }`}
-    >
-      {t(item.labelKey)}
-    </Link>
-  );
-}
-
-function PendingNavEntry({ labelKey, block = false }: { readonly labelKey: MessageKey; readonly block?: boolean }) {
-  return (
-    <span
-      aria-disabled="true"
-      className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 ${
-        block ? '' : 'inline-flex'
-      }`}
-    >
-      {t(labelKey)}
-      <span className="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-        {t('dashboard.admin.nav.pendingBadge')}
-      </span>
-    </span>
   );
 }
