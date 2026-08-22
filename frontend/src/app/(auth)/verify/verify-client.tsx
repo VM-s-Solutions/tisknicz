@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { confirmEmail } from '@/lib/api-client-helpers/auth';
+import { loginHrefWithRedirect } from '@/lib/auth/route-audience';
 import { t } from '@/lib/i18n';
 
 type State = 'pending' | 'success' | 'failed' | 'missing-token';
@@ -23,6 +24,7 @@ type State = 'pending' | 'success' | 'failed' | 'missing-token';
 export function VerifyClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const loginHref = loginHrefWithRedirect(searchParams.get('redirect'));
   const [state, setState] = useState<State>(token ? 'pending' : 'missing-token');
   // T-0168 (audit AUTH-M1): the token is ONE-TIME — StrictMode's dev
   // double-mount used to fire the POST twice, burning the token on the
@@ -62,7 +64,7 @@ export function VerifyClient() {
         <h2 className="text-lg font-semibold text-white">{t('auth.verify.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.verify.success_body')}</p>
         <p className="text-sm">
-          <Link href="/login" className="text-brand-400 hover:underline">
+          <Link href={loginHref} className="text-brand-400 hover:underline">
             {t('auth.login.submit')}
           </Link>
         </p>
@@ -79,7 +81,7 @@ export function VerifyClient() {
           everyone else can issue themselves a fresh link. */}
       <p className="text-sm text-zinc-300">
         {t('auth.verify.failed_already_confirmed_hint')}{' '}
-        <Link href="/login" className="text-brand-400 hover:underline">
+        <Link href={loginHref} className="text-brand-400 hover:underline">
           {t('auth.login.submit')}
         </Link>
       </p>

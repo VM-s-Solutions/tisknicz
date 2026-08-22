@@ -11,6 +11,7 @@ import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { ResendConfirmationForm } from '@/components/shared/resend-confirmation-form';
 import { login } from '@/lib/api-client-helpers/auth';
 import { safeRedirectTarget } from '@/lib/auth';
+import { continueHref, hostToAudience } from '@/lib/auth/route-audience';
 import { t } from '@/lib/i18n';
 import type { ApiHost } from '@/lib/runtime/api-fetch';
 
@@ -34,6 +35,13 @@ export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  // T-0169 (audit AUTH-L2): a user bounced here from a protected page who
+  // chooses "register" instead used to lose the destination entirely.
+  const registerHref = (type: 'customer' | 'maker'): string => {
+    const params = new URLSearchParams({ type });
+    if (safeRedirect) params.set('redirect', safeRedirect);
+    return `/register?${params.toString()}`;
+  };
   // T-0167 (audit AUTH-H2): the Google callback 302s failures back here
   // as `?oauth_error=<code>` — map the code to owned Czech copy instead
   // of stranding the user on the API host's raw JSON.
@@ -58,7 +66,12 @@ export function LoginForm() {
     setSubmitting(false);
 
     if (result.success) {
-      const target = safeRedirect ?? (host === 'maker' ? '/dashboard/maker/objednavky' : '/');
+      // T-0169 (audit AUTH-M3): using the raw redirect meant a customer
+      // logging in with ?redirect=/dashboard/maker/... was bounced by the
+      // guard straight back to /login, which then rendered the
+      // "you're already signed in" panel seconds after signing in.
+      // continueHref drops a target owned by another audience.
+      const target = continueHref(hostToAudience(host), safeRedirect);
       // `replace`, never `push`: a pushed /login stays one Back press
       // away and re-renders the form to an already-authenticated user
       // (reported as "back gives me a login screen even though I'm
@@ -71,7 +84,14 @@ export function LoginForm() {
       return;
     }
 
-    setServerError(mapLoginError(result.error.code, result.error.message));
+    // Both hosts rejected a correct password: this is an admin account
+    // (or a disabled audience). Point them at the admin login instead of
+    // the unmapped generic 403 copy (audit AUTH-M4).
+    setServerError(
+      result.error.code === 'auth.forbidden'
+        ? t('auth.login.admin_account_hint')
+        : mapLoginError(result.error.code, result.error.message),
+    );
     // A logged-out user with an unconfirmed email had NO resend path
     // anywhere (T-0168, audit AUTH-M2) — offer it right at the error.
     setShowResendConfirmation(result.error.code === 'auth.emailNotConfirmed');
@@ -83,7 +103,18 @@ export function LoginForm() {
         {oauthError && !serverError ? (
           <Alert variant="error">{mapOAuthError(oauthError)}</Alert>
         ) : null}
-        {serverError && <Alert variant="error">{serverError}</Alert>}
+        {serverError && (
+          <Alert variant="error">
+            <p>{serverError}</p>
+            {serverError === t('auth.login.admin_account_hint') ? (
+              <p className="mt-2">
+                <Link href="/admin/login" className="font-semibold underline underline-offset-2">
+                  {t('auth.login.admin_login_link')}
+                </Link>
+              </p>
+            ) : null}
+          </Alert>
+        )}
         {showResendConfirmation ? (
           <ResendConfirmationForm defaultEmail={email} compact />
         ) : null}
@@ -132,11 +163,11 @@ export function LoginForm() {
         <div className="mt-2 border-t border-zinc-800 pt-3">
           <p>{t('auth.login.no_account')}</p>
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-            <Link href="/register?type=customer" className="text-brand-400 hover:underline">
+            <Link href={registerHref('customer')} className="text-brand-400 hover:underline">
               {t('auth.login.register_customer_link')}
             </Link>
             <span aria-hidden="true">•</span>
-            <Link href="/register?type=maker" className="text-brand-400 hover:underline">
+            <Link href={registerHref('maker')} className="text-brand-400 hover:underline">
               {t('auth.login.register_maker_link')}
             </Link>
           </div>

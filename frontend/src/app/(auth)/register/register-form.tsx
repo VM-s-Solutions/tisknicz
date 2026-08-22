@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useRef, useState, type FormEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import {
   lookupCompanyPreview,
   registerCustomer,
 } from '@/lib/api-client-helpers/auth';
+import { loginHrefWithRedirect } from '@/lib/auth/route-audience';
 import { t } from '@/lib/i18n';
 import { isValidCzechIco, normalizeIcoInput } from '@/lib/validation/czech-ico';
 
@@ -41,6 +43,12 @@ type PreviewState =
 const PREVIEW_DEBOUNCE_MS = 400;
 
 export function RegisterForm() {
+  // T-0169 (AUTH-L2): keep the destination the user was bounced from.
+  // `useSearchParams()` is null when the form renders outside a router
+  // context (Next allows it; our unit tests hit exactly that), so this
+  // read stays optional rather than throwing on mount.
+  const searchParams = useSearchParams();
+  const loginHref = loginHrefWithRedirect(searchParams?.get('redirect') ?? null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -144,7 +152,7 @@ export function RegisterForm() {
         <h2 className="text-lg font-semibold text-white">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         <p className="text-sm text-zinc-400">
-          <Link href="/login" className="text-brand-400 hover:underline">
+          <Link href={loginHref} className="text-brand-400 hover:underline">
             {t('auth.register.login_link')}
           </Link>
         </p>
@@ -278,7 +286,7 @@ export function RegisterForm() {
       <GoogleSignInButton host="customer" onError={setServerError} />
       <p className="text-center text-sm text-zinc-400">
         {t('auth.register.already_have_account')}{' '}
-        <Link href="/login" className="text-brand-400 hover:underline">
+        <Link href={loginHref} className="text-brand-400 hover:underline">
           {t('auth.register.login_link')}
         </Link>
       </p>
