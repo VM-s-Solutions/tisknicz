@@ -86,4 +86,15 @@ public interface IAdminQueries
     /// </summary>
     Task<PagedData<AdminPayoutBatchListItemDto>> GetPayoutBatchesPagedAsync(
         int page, int pageSize, CancellationToken ct);
+
+    /// <summary>
+    /// Resolve ONE user for the GDPR erase screen (T-0178, audit ADM-H1) by
+    /// exact id or normalized email — exactly one of the two. Ignores the
+    /// soft-delete filter so an already-erased account resolves and the UI
+    /// can say "already erased" instead of pretending it never existed.
+    /// Returns <c>null</c> when nothing matches (the handler maps to
+    /// <c>user.notFound</c>); the caller must NOT conflate the two states.
+    /// </summary>
+    Task<AdminUserLookupDto?> LookupUserAsync(
+        string? userId, string? email, CancellationToken ct);
 }

@@ -119,7 +119,51 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
         [FromQuery] string? targetEntity = null,
         [FromQuery] DateTimeOffset? dateFrom = null,
         [FromQuery] DateTimeOffset? dateTo = null,
+        // T-0177 (audit ADM-H2): scopes the log to one entity so the order
+        // detail stops client-filtering the global slice.
+        [FromQuery] string? targetId = null,
         CancellationToken ct = default) =>
         HandleResult(await Mediator.Send(
-            new GetAdminAuditLog.Query(page, pageSize, adminUserId, actionCode, targetEntity, dateFrom, dateTo), ct));
+            new GetAdminAuditLog.Query(page, pageSize, adminUserId, actionCode, targetEntity, dateFrom, dateTo, targetId), ct));
+
+    /// <summary>
+    /// Resolve one user for the GDPR erase screen (T-0178, audit ADM-H1) by
+    /// exact <c>id</c> OR <c>email</c> — exactly one. The erase flow used to
+    /// run on identifiers pasted in from outside the app with nothing
+    /// verifying them; this is the server-side identity the confirmation
+    /// screen matches against. An already-erased account still resolves
+    /// (with <c>deactivatedAt</c> set) so the UI can distinguish it from
+    /// "no such user" — conflating them reported a typo as a completed
+    /// erasure. 404 <c>user.notFound</c> when nothing matches.
+    /// </summary>
+    [HttpGet]
+    [Route("api/v{version:apiVersion}/admin-users/lookup")]
+    [ProducesResponseType(typeof(LookupAdminUser.LookupAdminUserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> LookupUser(
+        [FromQuery] string? id = null,
+        [FromQuery] string? email = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(new LookupAdminUser.Query(id, email), ct);
+
+        // T-0137 policy: audit the successful privileged PII read only (a 404
+        // discloses nothing). The resolved user id is the target — never the
+        // looked-up email, which must not land in the audit row or the logs.
+        if (result.IsSuccess && result.Value is not null)
+        {
+            await readAudit.AuditReadAsync(
+                actionCode: "user.lookup",
+                targetEntity: "user",
+                targetId: result.Value.User.UserId,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString() is { Length: > 0 } ua ? ua : null,
+                notes: null,
+                cancellationToken: ct);
+        }
+
+        return HandleResult(result);
+    }
 }

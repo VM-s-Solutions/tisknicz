@@ -51,9 +51,17 @@ export interface IAdminApi {
      * @param targetEntity (optional) 
      * @param dateFrom (optional) 
      * @param dateTo (optional) 
+     * @param targetId (optional) 
      * @return OK
      */
-    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAdminAuditLogResponse>;
+    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined, targetId: string | undefined): Promise<GetAdminAuditLogResponse>;
+
+    /**
+     * @param id (optional) 
+     * @param email (optional) 
+     * @return OK
+     */
+    lookup(id: string | undefined, email: string | undefined): Promise<LookupAdminUserResponse>;
 
     /**
      * @return OK
@@ -660,9 +668,10 @@ export class AdminApi implements IAdminApi {
      * @param targetEntity (optional) 
      * @param dateFrom (optional) 
      * @param dateTo (optional) 
+     * @param targetId (optional) 
      * @return OK
      */
-    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAdminAuditLogResponse> {
+    auditLog(page: number | undefined, pageSize: number | undefined, adminUserId: string | undefined, actionCode: string | undefined, targetEntity: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined, targetId: string | undefined): Promise<GetAdminAuditLogResponse> {
         let url_ = this.baseUrl + "/api/v1/audit-log?";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
@@ -692,6 +701,10 @@ export class AdminApi implements IAdminApi {
             throw new globalThis.Error("The parameter 'dateTo' cannot be null.");
         else if (dateTo !== undefined)
             url_ += "dateTo=" + encodeURIComponent(dateTo ? "" + dateTo.toISOString() : "") + "&";
+        if (targetId === null)
+            throw new globalThis.Error("The parameter 'targetId' cannot be null.");
+        else if (targetId !== undefined)
+            url_ += "targetId=" + encodeURIComponent("" + targetId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -736,6 +749,74 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<GetAdminAuditLogResponse>(null as any);
+    }
+
+    /**
+     * @param id (optional) 
+     * @param email (optional) 
+     * @return OK
+     */
+    lookup(id: string | undefined, email: string | undefined): Promise<LookupAdminUserResponse> {
+        let url_ = this.baseUrl + "/api/v1/admin-users/lookup?";
+        if (id === null)
+            throw new globalThis.Error("The parameter 'id' cannot be null.");
+        else if (id !== undefined)
+            url_ += "id=" + encodeURIComponent("" + id) + "&";
+        if (email === null)
+            throw new globalThis.Error("The parameter 'email' cannot be null.");
+        else if (email !== undefined)
+            url_ += "email=" + encodeURIComponent("" + email) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLookup(_response);
+        });
+    }
+
+    protected processLookup(response: Response): Promise<LookupAdminUserResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = LookupAdminUserResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ErrorDto.fromJS(resultData404);
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<LookupAdminUserResponse>(null as any);
     }
 
     /**
@@ -4549,6 +4630,94 @@ export interface IAdminPayoutBatchListItemDto {
     [key: string]: any;
 }
 
+export class AdminUserLookupDto implements IAdminUserLookupDto {
+    userId!: string;
+    email!: string;
+    fullName!: string;
+    role!: string;
+    countryCodePrimary!: string;
+    isActive!: boolean;
+    emailConfirmed!: boolean;
+    deactivatedAt!: Date | undefined;
+    createdAt!: Date;
+    makerId!: string | undefined;
+    inFlightOrderCount!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IAdminUserLookupDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.userId = _data["userId"];
+            this.email = _data["email"];
+            this.fullName = _data["fullName"];
+            this.role = _data["role"];
+            this.countryCodePrimary = _data["countryCodePrimary"];
+            this.isActive = _data["isActive"];
+            this.emailConfirmed = _data["emailConfirmed"];
+            this.deactivatedAt = _data["deactivatedAt"] ? new Date(_data["deactivatedAt"].toString()) : undefined as any;
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.makerId = _data["makerId"];
+            this.inFlightOrderCount = _data["inFlightOrderCount"];
+        }
+    }
+
+    static fromJS(data: any): AdminUserLookupDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AdminUserLookupDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["userId"] = this.userId;
+        data["email"] = this.email;
+        data["fullName"] = this.fullName;
+        data["role"] = this.role;
+        data["countryCodePrimary"] = this.countryCodePrimary;
+        data["isActive"] = this.isActive;
+        data["emailConfirmed"] = this.emailConfirmed;
+        data["deactivatedAt"] = this.deactivatedAt ? this.deactivatedAt.toISOString() : undefined as any;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["makerId"] = this.makerId;
+        data["inFlightOrderCount"] = this.inFlightOrderCount;
+        return data;
+    }
+}
+
+export interface IAdminUserLookupDto {
+    userId: string;
+    email: string;
+    fullName: string;
+    role: string;
+    countryCodePrimary: string;
+    isActive: boolean;
+    emailConfirmed: boolean;
+    deactivatedAt: Date | undefined;
+    createdAt: Date;
+    makerId: string | undefined;
+    inFlightOrderCount: number;
+
+    [key: string]: any;
+}
+
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
     token!: string;
 
@@ -6131,6 +6300,57 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+
+    [key: string]: any;
+}
+
+export class LookupAdminUserResponse implements ILookupAdminUserResponse {
+    user!: AdminUserLookupDto;
+
+    [key: string]: any;
+
+    constructor(data?: ILookupAdminUserResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.user = new AdminUserLookupDto();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.user = _data["user"] ? AdminUserLookupDto.fromJS(_data["user"]) : new AdminUserLookupDto();
+        }
+    }
+
+    static fromJS(data: any): LookupAdminUserResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new LookupAdminUserResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["user"] = this.user ? this.user.toJSON() : undefined as any;
+        return data;
+    }
+}
+
+export interface ILookupAdminUserResponse {
+    user: AdminUserLookupDto;
 
     [key: string]: any;
 }

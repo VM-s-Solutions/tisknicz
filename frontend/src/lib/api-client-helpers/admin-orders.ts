@@ -347,14 +347,15 @@ export async function userHasInFlightOrders(
 /**
  * The order's audit trail (the audit read for the detail route — §C.2).
  * Paired with the privileged header from {@link getAdminOrderDetail}
- * (T-0127). The generated `auditLog` query has no `targetId` filter, so we
- * fetch the `targetEntity: "order"` slice and narrow to this order client-
- * side (on the server) before paginating — the same shape the global audit
- * list (T-0118a) consumes.
+ * (T-0127).
  *
- * NOTE: because the backend filter is entity-coarse, a busy log could
- * page past this order's rows; the gap is bounded and logged with the
- * detail-DTO follow-up. A `targetId` query param is the clean fix.
+ * T-0177 (audit ADM-H2): this used to fetch the entity-coarse
+ * `targetEntity: "order"` slice and narrow it client-side, so on a busy
+ * marketplace an order's audit section could render EMPTY — with
+ * pagination counting the GLOBAL set — while its own entries sat on later
+ * pages. On the dispute/refund evidence surface that is actively
+ * dangerous. The backend now filters by `targetId`, so the page count and
+ * the rows describe this order and nothing else.
  */
 export async function getAdminOrderAuditTrail(
   orderId: string,
@@ -365,15 +366,12 @@ export async function getAdminOrderAuditTrail(
     Math.max(pageSize, 1),
     ADMIN_LIST_MAX_PAGE_SIZE,
   );
-  const result = await getAdminAuditLog({
+  return getAdminAuditLog({
     page: page > 0 ? page : 1,
     pageSize: clampedPageSize,
     targetEntity: 'order',
+    targetId: orderId,
   });
-  if (!result.success) return result;
-
-  const items = result.value.items.filter((entry) => entry.targetId === orderId);
-  return ok({ ...result.value, items });
 }
 
 export { ADMIN_LIST_DEFAULT_PAGE_SIZE, ADMIN_LIST_MAX_PAGE_SIZE };

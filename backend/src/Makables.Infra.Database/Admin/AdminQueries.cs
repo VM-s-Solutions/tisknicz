@@ -158,6 +158,8 @@ public sealed class AdminQueries(
             baseQuery = baseQuery.Where(a => a.ActionCode == filter.ActionCode);
         if (!string.IsNullOrEmpty(filter.TargetEntity))
             baseQuery = baseQuery.Where(a => a.TargetEntity == filter.TargetEntity);
+        if (!string.IsNullOrEmpty(filter.TargetId))
+            baseQuery = baseQuery.Where(a => a.TargetId == filter.TargetId);
         if (filter.DateRangeStart.HasValue)
             baseQuery = baseQuery.Where(a => a.CreatedAt >= filter.DateRangeStart.Value);
         if (filter.DateRangeEnd.HasValue)
@@ -385,4 +387,90 @@ public sealed class AdminQueries(
 
         return new PagedData<AdminPayoutBatchListItemDto>(items, page, pageSize, totalCount);
     }
+
+    public async Task<AdminUserLookupDto?> LookupUserAsync(
+        string? userId, string? email, CancellationToken ct)
+    {
+        var byId = !string.IsNullOrWhiteSpace(userId);
+        var byEmail = !string.IsNullOrWhiteSpace(email);
+        // Exactly one selector — the validator enforces it; this guard keeps
+        // the query honest if the handler is ever called directly.
+        if (byId == byEmail)
+        {
+            return null;
+        }
+
+        var normalizedEmail = byEmail ? User.NormalizeEmail(email!) : null;
+
+        // IgnoreQueryFilters: an already-erased / deactivated account MUST
+        // resolve, so the screen can say "already erased" rather than
+        // "not found" (audit ADM-M9 — a typo used to read as a completed
+        // erasure, a false GDPR-compliance signal).
+        var user = await db.Set<User>()
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(u => byId ? u.Id == userId : u.EmailNormalized == normalizedEmail)
+            .Select(u => new
+            {
+                u.Id,
+                u.Email,
+                u.FullName,
+                u.Role,
+                u.CountryCodePrimary,
+                u.IsActive,
+                u.EmailConfirmedAt,
+                u.DeactivatedAt,
+                u.CreatedAt,
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        var makerId = await db.Set<Maker>()
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(m => m.UserId == user.Id)
+            .Select(m => m.Id)
+            .FirstOrDefaultAsync(ct);
+
+        // Same predicate the erase command gates on, so the UI can pre-disable
+        // instead of letting the admin type a confirmation that will 409.
+        var inFlightCount = await orders.Unscoped()
+            .AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Where(o => (o.CustomerUserId == user.Id || (makerId != null && o.MakerId == makerId))
+                && InFlightStates.Contains(o.State))
+            .CountAsync(ct);
+
+        return new AdminUserLookupDto(
+            user.Id,
+            user.Email,
+            user.FullName,
+            user.Role.ToString(),
+            user.CountryCodePrimary,
+            user.IsActive,
+            user.EmailConfirmedAt is not null,
+            user.DeactivatedAt,
+            user.CreatedAt,
+            string.IsNullOrEmpty(makerId) ? null : makerId,
+            inFlightCount);
+    }
+
+    /// <summary>
+    /// Mirrors <c>DeleteUserPermanently.InFlightOrderStates</c>. Duplicated
+    /// rather than referenced because <c>Infra.Database</c> must not depend
+    /// on <c>Core.AppServices</c> (layering, CLAUDE.md §2.1); a drift here
+    /// only softens a UI pre-check — the command stays authoritative.
+    /// </summary>
+    private static readonly OrderState[] InFlightStates =
+    [
+        OrderState.PendingPayment,
+        OrderState.Paid,
+        OrderState.Accepted,
+        OrderState.Shipped,
+        OrderState.Disputed,
+    ];
 }

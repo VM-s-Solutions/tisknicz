@@ -2170,6 +2170,17 @@ export const messages = {
     'Stav objednávky {orderNumber} byl změněn na „{state}".',
   // Payout-complete + outbox retry/ack success copy already exist above —
   // reused by the new page-level notices, not duplicated.
+
+  // T-0178 — admin user lookup behind the GDPR erase (UX functional sweep)
+  'dashboard.admin.ops.users.lookup.selectorLabel': 'ID uživatele nebo e-mail',
+  'dashboard.admin.ops.users.lookup.selectorHint':
+    'Zadejte e-mail (obsahuje @) nebo ID uživatele. Účet dohledáme na serveru a jeho údaje ověříte v dalším kroku.',
+  'dashboard.admin.ops.users.lookup.notFound':
+    'Takový uživatel neexistuje. Zkontrolujte prosím zadané ID nebo e-mail — smazaný účet by se naopak zobrazil.',
+  'dashboard.admin.ops.users.resolved.name': 'Jméno',
+  'dashboard.admin.ops.users.resolved.userId': 'ID uživatele',
+  'dashboard.admin.ops.users.resolved.role': 'Role',
+  'dashboard.admin.ops.users.resolved.inFlight': 'Rozpracované objednávky',
 } as const;
 
 export type MessageKey = keyof typeof messages;

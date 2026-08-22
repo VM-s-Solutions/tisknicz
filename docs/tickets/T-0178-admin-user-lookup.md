@@ -1,7 +1,7 @@
 ---
 id: T-0178
 title: "Admin user lookup backing the GDPR erase (verified identity, honest not-found)"
-status: ready
+status: in_review
 size: M
 owner:
 created: 2026-08-21
@@ -81,3 +81,8 @@ composes over the T-0127 `customerUserId` filter — no new order read.
 ## Status log
 - 2026-08-21 `draft → ready` (Phase 8 UX sweep plan; DoR checklist passed; lookup-only scope
   default recorded in Context)
+- 2026-08-22 `ready → in_progress`, branch `feat/admin-read-integrity-bundle` (bundled with its
+  sibling — one admin host, one NSwag regen)
+- 2026-08-22 `in_progress → in_review` — backend 2091/2091 (+9), frontend tsc clean + vitest
+  215/215; NSwag admin regen; see [test plan](../test-plans/T-0177-T-0178.md) +
+  [review run](../review/runs/T-0177-T-0178.md)
