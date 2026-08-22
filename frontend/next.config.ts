@@ -124,7 +124,18 @@ const nextConfig: NextConfig = {
     return legacyAuthRedirects();
   },
   images: {
-    formats: ['image/avif', 'image/webp'],
+    // WebP only — AVIF is deliberately OFF. The optimizer re-encodes every
+    // (image, device width) pair on the frontend's own App Service instance,
+    // and AVIF costs multiples of WebP for single-digit-percent fewer bytes.
+    // Measured 2026-08-22 on the standalone build, one 1600x1200 JPEG through
+    // the full deviceSizes set with a cold `.next/cache/images`:
+    //   AVIF 0.83 s of encode CPU vs WebP 0.36 s (2.3x), and at w=640 the AVIF
+    //   was actually the LARGER file (78.6 kB vs 70.3 kB).
+    // Every modern browser sends `Accept: image/avif`, so on the shared
+    // 2-vCPU plan that tax was being paid on essentially every first view of
+    // every product photo and maker logo. Revisit if the frontend ever gets
+    // its own plan with cores to spare.
+    formats: ['image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [publicHostRemotePattern()].filter((pattern) => pattern !== null),
     // Next 16 refuses to optimize an upstream image whose hostname

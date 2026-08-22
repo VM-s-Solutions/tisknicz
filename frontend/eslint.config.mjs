@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // deploy/cluster.js is the App Service entry point, not app code: it is
+    // copied next to the standalone `server.js` and started with plain
+    // `node cluster.js`. The standalone package.json has no `"type":
+    // "module"`, and `server.js` is CommonJS — so `require()` is the only
+    // correct way to load it. Everything else stays linted.
+    files: ["deploy/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
