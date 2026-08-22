@@ -1,7 +1,7 @@
 ---
 id: T-0177
 title: "Admin audit-trail integrity (server-side targetId filter) + entity cross-links"
-status: in_review
+status: done
 size: M
 owner:
 created: 2026-08-21
@@ -84,3 +84,4 @@ the perf gate.
 - 2026-08-22 `in_progress → in_review` — backend 2091/2091 (+9), frontend tsc clean + vitest
   215/215; NSwag admin regen; see [test plan](../test-plans/T-0177-T-0178.md) +
   [review run](../review/runs/T-0177-T-0178.md)
+- 2026-08-22 `in_review → done` — merged via PR #146 (merge 60e410b; CI green)
