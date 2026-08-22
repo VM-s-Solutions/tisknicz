@@ -77,6 +77,14 @@ var baseAppSettings = [
     value: '8080'
   }
   {
+    // Startup probe headroom (default 230s). All six apps on the shared
+    // plan restart together on a deploy, so a cold .NET host can miss the
+    // default window and be killed as "no listening ports detected" —
+    // indistinguishable in the portal from a real ValidateOnStart crash.
+    name: 'WEBSITES_CONTAINER_START_TIME_LIMIT'
+    value: '600'
+  }
+  {
     name: 'PublicAppUrls__WebBaseUrl'
     value: publicWebBaseUrl
   }
