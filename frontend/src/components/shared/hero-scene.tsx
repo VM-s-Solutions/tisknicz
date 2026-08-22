@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { smoothingFactor } from '@/lib/motion/frame-rate';
 
 // Approved hero design (2026-07-06): zig-zag wireframe (3,4) torus knot facing
 // the viewer like the Makables logo, spinning right around a vertical axis
@@ -24,12 +25,21 @@ const HOLE_WARM_MIX = 0.8;
 const ABSORB_RATE = 0.7;
 const SCENE_CENTER: [number, number, number] = [0.25, 0.2, -1.2];
 
+// Authored at 60 fps. Do NOT apply it raw — see smoothingFactor.
+const CAMERA_FOLLOW_PER_60HZ_FRAME = 0.03;
+
 function CameraRig() {
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const targetX = state.pointer.x * 0.45;
     const targetY = state.pointer.y * 0.28;
-    state.camera.position.x += (targetX - state.camera.position.x) * 0.03;
-    state.camera.position.y += (targetY - state.camera.position.y) * 0.03;
+    // Rescale the 60 fps constant to this frame's actual duration. Applied
+    // raw it is frame-rate dependent: measured on a ProMotion display against
+    // the deployed dev site, Chrome runs this scene at 121 Hz and Safari at
+    // 61 Hz (neither drops frames), so the camera converged on the pointer
+    // twice as slowly in Safari and read as lag that Chrome never showed.
+    const follow = smoothingFactor(CAMERA_FOLLOW_PER_60HZ_FRAME, delta);
+    state.camera.position.x += (targetX - state.camera.position.x) * follow;
+    state.camera.position.y += (targetY - state.camera.position.y) * follow;
     state.camera.lookAt(0, 0, 0);
   });
 
