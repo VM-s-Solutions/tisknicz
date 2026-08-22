@@ -16,6 +16,7 @@ import { t } from '@/lib/i18n';
 import { formatCzk } from '@/lib/money/formatter';
 import { orderStateBadgeVariant, orderStateLabelKey } from '@/lib/orders/state-labels';
 import { formatDateTime } from '@/lib/utils/dates';
+import { AdminPagination } from '../../_components/admin-pagination';
 import { OrderActions } from './order-actions';
 import { DisputeForm } from './dispute-form';
 import { ReturnLabelForm } from './return-label-form';
@@ -316,75 +317,16 @@ function AuditTrailSection({
         </ul>
       )}
 
-      <AuditPagination
-        orderId={orderId}
+      <AdminPagination
+        routePath={`${ROUTE_BASE}/${encodeURIComponent(orderId)}`}
+        pageParam="auditPage"
+        spacing="none"
+        ariaLabel={t('dashboard.admin.orderActions.audit.heading')}
         page={page}
+        totalPages={auditTrail?.totalPages ?? 1}
         hasNext={auditTrail?.hasNextPage ?? false}
         hasPrevious={auditTrail?.hasPreviousPage ?? false}
       />
     </section>
-  );
-}
-
-function AuditPagination({
-  orderId,
-  page,
-  hasNext,
-  hasPrevious,
-}: {
-  readonly orderId: string;
-  readonly page: number;
-  readonly hasNext: boolean;
-  readonly hasPrevious: boolean;
-}) {
-  if (!hasNext && !hasPrevious) {
-    return null;
-  }
-
-  const hrefFor = (target: number): string => {
-    const base = `${ROUTE_BASE}/${encodeURIComponent(orderId)}`;
-    return target > 1 ? `${base}?auditPage=${target}` : base;
-  };
-
-  return (
-    <nav
-      className="flex flex-wrap items-center justify-between gap-3"
-      aria-label={t('dashboard.admin.orderActions.audit.heading')}
-    >
-      {hasPrevious ? (
-        <Link
-          href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
-        >
-          <Icon name="arrowLeft" size={16} />
-          {t('dashboard.admin.orderActions.audit.previous')}
-        </Link>
-      ) : (
-        <span
-          aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
-        >
-          <Icon name="arrowLeft" size={16} />
-          {t('dashboard.admin.orderActions.audit.previous')}
-        </span>
-      )}
-      {hasNext ? (
-        <Link
-          href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800"
-        >
-          {t('dashboard.admin.orderActions.audit.next')}
-          <Icon name="arrowRight" size={16} />
-        </Link>
-      ) : (
-        <span
-          aria-disabled="true"
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-500"
-        >
-          {t('dashboard.admin.orderActions.audit.next')}
-          <Icon name="arrowRight" size={16} />
-        </span>
-      )}
-    </nav>
   );
 }

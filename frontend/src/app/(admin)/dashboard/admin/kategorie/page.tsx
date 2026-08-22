@@ -3,6 +3,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { getAdminCategories } from '@/lib/api-client-helpers/admin-categories';
+import { redirect } from 'next/navigation';
 import { t } from '@/lib/i18n';
 import { CategoryRow } from './category-row';
 import { CreateCategoryForm } from './create-category-form';
@@ -31,6 +32,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminCategoriesPage() {
   const result = await getAdminCategories();
+
+  // T-0175 (audit ADM-H3): parity with every other admin route.
+  if (!result.success && result.error.type === 'Unauthorized') {
+    redirect(`/admin/login?redirect=${encodeURIComponent('/dashboard/admin/kategorie')}`);
+  }
 
   return (
     <section className="py-12 lg:py-16">

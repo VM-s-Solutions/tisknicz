@@ -7,8 +7,10 @@ import {
   type AdminMakerListItem,
   getAdminMakers,
 } from '@/lib/api-client-helpers/admin-makers';
+import { redirect } from 'next/navigation';
 import { t } from '@/lib/i18n';
-import { OpsPagination } from '../ops-pagination';
+import { AdminPagination } from '../_components/admin-pagination';
+import { parsePage } from '../_components/list-params';
 import { MakerSearchForm } from './maker-search-form';
 
 /**
@@ -49,9 +51,16 @@ function parsePositiveInt(raw: string, fallback: number): number {
 export default async function AdminMakersPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const search = readString(sp.search).trim();
-  const page = parsePositiveInt(readString(sp.page), 1);
+  const page = parsePage(sp.page);
 
   const result = await getAdminMakers({ page, search: search || undefined });
+
+  // T-0175 (audit ADM-H3): every other admin list bounces an expired
+  // session to the login; makers + kategorie showed a dead-end alert
+  // that never hinted re-login would fix it.
+  if (!result.success && result.error.type === 'Unauthorized') {
+    redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
+  }
 
   const extraParams: Record<string, string> = {};
   if (search) extraParams.search = search;
@@ -105,13 +114,13 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
                   ))}
                 </ul>
               </div>
-              <OpsPagination
+              <AdminPagination spacing="tight"
                 routePath={ROUTE_PATH}
                 page={result.value.makers.page}
                 totalPages={result.value.makers.totalPages}
                 hasNext={result.value.makers.hasNextPage}
                 hasPrevious={result.value.makers.hasPreviousPage}
-                extraParams={extraParams}
+                baseParams={extraParams}
               />
             </>
           )
