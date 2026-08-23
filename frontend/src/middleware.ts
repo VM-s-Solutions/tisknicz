@@ -40,6 +40,14 @@ import { isJwtExpiredOrInvalid } from '@/lib/auth/jwt-expiry';
 const AUDIENCES: readonly Audience[] = ['customer', 'maker', 'admin'];
 
 /**
+ * Per-audience refresh budget. This fetch BLOCKS the page render, and up to
+ * three of them can be needed at once, so the ceiling has to stay well under
+ * anything a human would call a hang. 8 s was the original value and meant a
+ * single unreachable host could stall a render for the whole of it.
+ */
+const REFRESH_TIMEOUT_MS = 3000;
+
+/**
  * Server-side origin per audience host. Mirrors the resolution in
  * `lib/runtime/api-fetch.ts`: internal absolute origin first (deployed —
  * also feeds the /api-proxy rewrites), then the public base when it is
@@ -62,30 +70,58 @@ function refreshOrigin(audience: Audience): string | null {
   return publicBase.startsWith('/') ? null : publicBase.replace(/\/+$/, '');
 }
 
-/** In-flight refresh de-dupe: refresh-token value → pending Set-Cookie strings (null = refresh rejected). */
-const inflightRefreshes = new Map<string, Promise<readonly string[] | null>>();
+/**
+ * Outcome of one refresh attempt. The distinction matters: a token the
+ * backend has DEFINITIVELY rejected is dead forever, so its cookies must be
+ * dropped — otherwise every subsequent request re-attempts the same doomed
+ * refresh and pays a blocking backend round trip for it, on every page and
+ * every RSC prefetch, until the visitor manually clears cookies (T-0189,
+ * reported as "the app is slow in Safari but fine in Chrome" — cookies are
+ * per-browser, so only the browser holding the stale ones paid the tax).
+ *
+ * A backend that is merely unreachable (blip, cold start, timeout) must NOT
+ * clear anything — that would log people out on a hiccup.
+ */
+type RefreshOutcome =
+  | { readonly status: 'rotated'; readonly setCookies: readonly string[] }
+  | { readonly status: 'rejected' }
+  | { readonly status: 'unavailable' };
 
-function refreshSession(audience: Audience, refreshToken: string): Promise<readonly string[] | null> {
+const REJECTED: RefreshOutcome = { status: 'rejected' };
+const UNAVAILABLE: RefreshOutcome = { status: 'unavailable' };
+
+/** In-flight refresh de-dupe: refresh-token value → pending outcome. */
+const inflightRefreshes = new Map<string, Promise<RefreshOutcome>>();
+
+function refreshSession(audience: Audience, refreshToken: string): Promise<RefreshOutcome> {
   const existing = inflightRefreshes.get(refreshToken);
   if (existing) return existing;
 
-  const attempt = (async (): Promise<readonly string[] | null> => {
+  const attempt = (async (): Promise<RefreshOutcome> => {
     const origin = refreshOrigin(audience);
-    if (!origin) return null;
+    if (!origin) return UNAVAILABLE;
     try {
       const response = await fetch(`${origin}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: { Cookie: `${refreshCookieName(audience)}=${refreshToken}` },
         // The backend reads the refresh token from the cookie; no body.
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS),
       });
-      if (!response.ok) return null;
-      const setCookies = response.headers.getSetCookie();
-      return setCookies.length > 0 ? setCookies : null;
+      if (response.ok) {
+        const setCookies = response.headers.getSetCookie();
+        // A 200 with no Set-Cookie is not a usable rotation, but it is also
+        // not the backend calling the token dead — treat it as a blip.
+        return setCookies.length > 0 ? { status: 'rotated', setCookies } : UNAVAILABLE;
+      }
+      // 401/403 = this refresh token is spent, revoked, reused, or signed by
+      // a retired key. Nothing will ever make it work again.
+      if (response.status === 401 || response.status === 403) return REJECTED;
+      // 5xx / 429 / anything else — the token may still be good.
+      return UNAVAILABLE;
     } catch {
-      // Backend unreachable — leave cookies untouched; the next request
-      // retries. Deleting here would log the user out on a blip.
-      return null;
+      // Backend unreachable or timed out — leave cookies untouched; the next
+      // request retries. Deleting here would log the user out on a blip.
+      return UNAVAILABLE;
     }
   })();
 
@@ -105,18 +141,40 @@ function cookiePairFor(setCookie: string, name: string): string | null {
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const forwardedSetCookies: string[] = [];
   const patchedPairs = new Map<string, string>();
+  const deadCookieNames: string[] = [];
 
-  for (const audience of AUDIENCES) {
+  // Which audiences actually need a refresh on this request.
+  const stale = AUDIENCES.filter((audience) => {
     const refreshValue = request.cookies.get(refreshCookieName(audience))?.value;
-    if (!refreshValue) continue;
-
+    if (!refreshValue) return false;
     const accessValue = request.cookies.get(accessCookieName(audience))?.value;
-    if (accessValue && !isJwtExpiredOrInvalid(accessValue)) continue;
+    return !(accessValue && !isJwtExpiredOrInvalid(accessValue));
+  });
 
-    const setCookies = await refreshSession(audience, refreshValue);
-    if (!setCookies) continue;
+  // Concurrently, not in sequence. These are independent per-host calls that
+  // BLOCK the render; awaiting them one after another made a browser holding
+  // stale cookies for all three audiences pay three round trips back to back
+  // on every single page and RSC request (CLAUDE.md §5).
+  const outcomes = await Promise.all(
+    stale.map(async (audience) => {
+      const refreshValue = request.cookies.get(refreshCookieName(audience))!.value;
+      return [audience, await refreshSession(audience, refreshValue)] as const;
+    }),
+  );
 
-    for (const sc of setCookies) {
+  for (const [audience, outcome] of outcomes) {
+    if (outcome.status === 'unavailable') continue;
+
+    if (outcome.status === 'rejected') {
+      // Drop the dead pair so the next request skips the refresh entirely
+      // instead of re-paying for a token that can never succeed. The visitor
+      // is logged out either way — this only decides whether they also get a
+      // permanent latency tax on every navigation until they clear cookies.
+      deadCookieNames.push(accessCookieName(audience), refreshCookieName(audience));
+      continue;
+    }
+
+    for (const sc of outcome.setCookies) {
       forwardedSetCookies.push(sc);
       for (const name of [accessCookieName(audience), refreshCookieName(audience)]) {
         const pair = cookiePairFor(sc, name);
@@ -130,21 +188,37 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // rotated tokens — the browser only learns them via Set-Cookie on the
   // response.
   let response: NextResponse;
-  if (patchedPairs.size > 0) {
+  if (patchedPairs.size > 0 || deadCookieNames.length > 0) {
     const requestHeaders = new Headers(request.headers);
     const existing = requestHeaders.get('cookie') ?? '';
+    const dropped = new Set(deadCookieNames);
     const kept = existing
       .split(';')
       .map((part) => part.trim())
-      .filter((part) => part !== '' && !patchedPairs.has(part.split('=', 1)[0] ?? ''));
+      .filter((part) => {
+        if (part === '') return false;
+        const name = part.split('=', 1)[0] ?? '';
+        // Rejected cookies must not reach this render either — the guard and
+        // the display session would otherwise still read a dead session.
+        return !patchedPairs.has(name) && !dropped.has(name);
+      });
     requestHeaders.set('cookie', [...kept, ...patchedPairs.values()].join('; '));
-    response = guardOrNext(request, requestHeaders, patchedPairs);
+    response = guardOrNext(request, requestHeaders, patchedPairs, dropped);
   } else {
     response = guardOrNext(request, null, patchedPairs);
   }
 
   for (const sc of forwardedSetCookies) {
     response.headers.append('set-cookie', sc);
+  }
+  // Expire the rejected pairs in the browser. Path=/ matches how the backend
+  // issues them; without a matching Path the browser keeps the original and
+  // the tax survives.
+  for (const name of deadCookieNames) {
+    response.headers.append(
+      'set-cookie',
+      `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict${request.nextUrl.protocol === 'https:' ? '; Secure' : ''}`,
+    );
   }
   return response;
 }
@@ -158,12 +232,18 @@ function guardOrNext(
   request: NextRequest,
   patchedRequestHeaders: Headers | null,
   patchedPairs: Map<string, string>,
+  deadCookieNames: ReadonlySet<string> = new Set(),
 ): NextResponse {
   const audience = guardedRouteAudience(request.nextUrl.pathname);
   if (audience) {
     const cookieName = accessCookieName(audience);
+    // A cookie whose refresh the backend just rejected is being expired on
+    // this very response, so it must not count as access here either — the
+    // guard would otherwise wave the visitor into a dashboard where every
+    // call 401s, which reads as a broken page rather than a logged-out one.
     const hasAccess =
-      patchedPairs.has(cookieName) || Boolean(request.cookies.get(cookieName)?.value);
+      patchedPairs.has(cookieName) ||
+      (!deadCookieNames.has(cookieName) && Boolean(request.cookies.get(cookieName)?.value));
     if (!hasAccess) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = audience === 'admin' ? '/admin/login' : '/login';
