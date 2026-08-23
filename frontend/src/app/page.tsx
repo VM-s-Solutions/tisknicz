@@ -69,21 +69,7 @@ export default async function HomePage() {
     <div className="min-h-screen bg-surface-primary">
       <PublicNavbar session={session} />
 
-      {/* The hero band stays dark in BOTH themes (T-0191). Every element of
-          the scene below — stars, accretion motes, the lensing halo, the
-          meteors — is drawn with THREE.AdditiveBlending, which adds light to
-          what is already there: over a light background it composites to
-          nothing and the artwork simply disappears. Re-authoring it for
-          light would mean re-tuning every colour and blend mode of an
-          approved piece, so the section pins the dark palette for its own
-          subtree instead. `data-theme` on a nested element re-declares the
-          token variables for its descendants (see globals.css), so the
-          headline, buttons and metric rules inside need no changes and the
-          `<fog>` colour in hero-scene.tsx keeps matching its surface. */}
-      <section
-        data-theme="dark"
-        className="relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-16 sm:py-20 lg:py-24"
-      >
+      <section className="relative overflow-hidden border-b border-zinc-800 bg-surface-primary py-16 sm:py-20 lg:py-24">
         {/* Animated wireframe knot + black hole. Self-gating: the wrapper
             only mounts it on wide viewports, on idle, with motion allowed
             and enough cores — so it never costs mobile or LCP. */}

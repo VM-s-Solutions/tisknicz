@@ -49,14 +49,21 @@ for why the fix is an indirection layer rather than 1 174 `dark:` variants.
 - **AC-6** — Chrome and WebKit.
   *Proof:* Chrome 151 via CDP and Safari/WebKit via safaridriver; both resolve
   the token indirection and the themed `color-mix()` opacity modifiers.
-- **AC-7** — The landing hero keeps its approved WebGL artwork.
-  *Proof:* the hero section pins `data-theme="dark"`; on a light page its
-  background stays `rgb(11,20,23)` and its `h1` `rgb(240,247,249)`, verified in
-  both browsers.
+- **AC-7** — The landing hero animation runs on the light background, and the
+  dark scene is unchanged.
+  *Proof:* Safari/WebKit captures of `/` at `data-theme=light` (hero
+  `rgb(245,245,247)`, `h1` `rgb(17,17,20)`, canvas 2028x933 with the knot,
+  event horizon and corona visible) and at `data-theme=dark` (unchanged from
+  the approved scene). Every additive-blended layer swaps to NormalBlending
+  and draws dark; the corona's interior is punched out on light so the event
+  horizon stays solid instead of turning grey-green.
+- **AC-8** — The light palette reads bright rather than tinted-grey.
+  *Proof:* rebuilt on apple.com's structure after the first cut was rejected
+  as boring — `#f5f5f7` canvas, pure-white cards, `#1d1d1f` ink,
+  `#d2d2d7`-weight hairlines. `check:contrast` still 168/168.
 
 ## Out of scope
 
 - Renaming `zinc-*` / `surface-*` utilities to semantic names — see ADR 0028
   alternatives. The indirection added here makes that a later, cheap rename.
-- Re-authoring the hero WebGL scene for a light background.
 - `opengraph-image.tsx` — a fixed-art social card, deliberately dark.

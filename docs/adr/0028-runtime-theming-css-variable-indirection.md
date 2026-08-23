@@ -48,13 +48,22 @@ Preference (`system` / `light` / `dark`) lives in `localStorage`.
 
 Because the theme selectors are plain attribute selectors rather than
 `:root[…]`, **a subtree can pin its own theme**: `<section data-theme="dark">`
-re-declares the tokens for its descendants. The landing hero uses this.
+re-declares the tokens for its descendants. The landing hero used this as its
+first-cut answer to the WebGL problem below; the scene was subsequently
+re-authored for light and the pin removed.
 
 ## Alternatives considered
 
 - **Sweep the utilities into `dark:` variants** — rejected: 1 174 call sites,
   every one a chance to typo a step, and it doubles the class string on almost
   every element in the app for no expressive gain.
+- **Mirroring the dark ramp's lightness for the light palette** — the obvious
+  first move, and what shipped in the first pass. Rejected after review: a
+  mirrored cyan-slate ramp reads as a flat, murky wash, because a hue that
+  gives a large dark field its character makes a large light field look dirty.
+  The light palette is now built on the apple.com model instead — near-neutral
+  greys, near-black ink, true-white cards on a `#f5f5f7` canvas — with contrast
+  carried by surface steps rather than by hue.
 - **A semantic-token rename (`text-muted`, `bg-card`, …)** — the "correct"
   refactor, and still worth doing one day, but it is a 193-file rename landing
   in the same PR as a palette change. Rejected for this ticket: it makes the
@@ -73,8 +82,9 @@ re-declares the tokens for its descendants. The landing hero uses this.
 
 - Positive: a theme is ~35 variable re-assignments. No component knows a theme
   exists. Adding a third (high-contrast, print) is one more selector block.
-- Positive: subtree theming falls out for free, which is what let the additive-
-  blended WebGL hero keep its exact artwork on a light page.
+- Positive: subtree theming falls out for free — the escape hatch for any
+  surface that cannot follow the palette, and the hero's stopgap while its
+  scene was still dark-only.
 - Positive: the contrast contract became executable —
   [`scripts/check-contrast.mjs`](../../frontend/scripts/check-contrast.mjs)
   re-derives 168 text/surface pairs from the stylesheet in both palettes.
@@ -88,13 +98,18 @@ re-declares the tokens for its descendants. The landing hero uses this.
   `check:contrast` fails loudly on a token missing from a palette.
 - Neutral: `text-white` is no longer legal anywhere — it cannot follow a theme.
   Titles use `text-zinc-50`, ink on a brand fill uses `text-on-brand`.
+- Neutral: a `<canvas>` gets none of this for free. WebGL materials hold their
+  own colour and blend state, so `hero-scene.tsx` subscribes to the resolved
+  theme and reads the tokens back out of computed style. Any future canvas or
+  chart has to do the same.
 
 ## Compliance / verification
 
 - `npm run check:contrast` passes (gate; 168 pairs, both palettes).
 - No literal `#hex` / `rgb()` / `text-white` / stock Tailwind hue
   (`red-*`, `amber-*`, `emerald-*`, …) in `src/**/*.tsx` outside
-  `hero-scene.tsx` and `opengraph-image.tsx`, both of which are fixed art.
+  `opengraph-image.tsx` (a fixed social card) and the dark branch of
+  `hero-scene.tsx`'s palette, which pins the authored scene by design.
 - `@theme inline` contains only `var(--…)` values, never a literal colour.
 - A new colour token is added to `--dk-*` **and** `--lt-*` **and** all three
   active-token blocks.

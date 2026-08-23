@@ -23,9 +23,10 @@
 
    Because the selectors are plain attribute selectors (not `:root[…]`), a
    theme can also be pinned to a SUBTREE: `<section data-theme="dark">` keeps
-   its descendants dark on an otherwise light page. The landing hero uses this
-   — its WebGL scene is built on additive blending, which is invisible over a
-   light background (see `hero-scene.tsx`).
+   its descendants dark on an otherwise light page. Nothing does that today —
+   the landing hero did until its WebGL scene was re-authored to draw on light
+   (T-0191b) — but the capability is why the `[data-theme='dark']` block below
+   exists as more than a redundant copy of `:root`.
 
    Contrast is a contract, not a hope: `npm run check:contrast` re-derives every
    text/surface pair in BOTH palettes straight from this file and fails the
@@ -106,40 +107,49 @@
   --dk-shadow-elevated: rgba(0, 0, 0, 0.5);
 
   /* --- Light palette ------------------------------------------------------
-     A lightness mirror of the ramp above at the same ~197° hue, re-tuned
-     (not blindly inverted) so the contrast contract still holds: the
-     binding constraint is text on the `ink-800` hover fill, the darkest
-     surface any body text lands on in this theme. */
-  --lt-ink-50: #071013;
-  --lt-ink-100: #0e1c21;
-  --lt-ink-200: #17282e;
-  --lt-ink-300: #24373e;
-  --lt-ink-400: #354d55;
-  --lt-ink-500: #4d666f;
-  --lt-ink-600: #728d97;
-  --lt-ink-700: #c4d5da;
-  --lt-ink-800: #dde9ed;
-  --lt-ink-900: #e6eff2;
-  --lt-ink-950: #f4f9fa;
+     Not a lightness mirror of the dark ramp — that read as a flat cyan wash.
+     This is the apple.com model: an almost-neutral system, near-black ink on
+     true white, and the contrast carried by SURFACE STEPS rather than by hue.
+     Three of the values are Apple's own, because they are the anchors the
+     look depends on: #f5f5f7 (canvas), #1d1d1f (ink), #d2d2d7 (divider).
 
-  /* Elevation runs toward white, mirroring the dark theme's run toward
-     light. `ink-900` (the recessed control fill) stays DARKER than the
-     page so an input on the bare page is still visible — the same trap
-     that made fixed-surface chips disappear on `surface-primary`. */
-  --lt-surface-primary: #edf3f5;
-  --lt-surface-secondary: #f3f8f9;
-  --lt-surface-card: #fafcfd;
-  --lt-surface-elevated: #ffffff;
+     The greys keep only a whisper of cool cast so the neutrals still belong
+     next to the 173° teal primary. Saturating them further is what made the
+     first attempt muddy.
+
+     Surface order is INVERTED against the dark theme on purpose: elevation in
+     a light UI reads as *whiter*, so the card is the brightest thing on the
+     page and the page itself is the grey. `surface-elevated` therefore stops
+     meaning "one step lighter" and starts meaning "a filled block" — it backs
+     skeleton pulses and image placeholders, which have to show up ON a white
+     card, and white-on-white cannot. */
+  --lt-ink-50: #111114;
+  --lt-ink-100: #1d1d1f;
+  --lt-ink-200: #2c2c31;
+  --lt-ink-300: #38383f;
+  --lt-ink-400: #4a4a53;
+  --lt-ink-500: #64646c;
+  --lt-ink-600: #84848f;
+  --lt-ink-700: #d2d2d9;
+  --lt-ink-800: #e4e4ea;
+  --lt-ink-900: #eeeef3;
+  --lt-ink-950: #f9f9fb;
+
+  --lt-surface-primary: #f5f5f7;
+  --lt-surface-secondary: #fbfbfd;
+  --lt-surface-card: #ffffff;
+  --lt-surface-elevated: #ebebf0;
 
   /* Brand: the teal ramp mirrored, so `text-brand-200` stays the highest
-     contrast step and `text-brand-300/400` clear AA on every light
-     surface. 400 and 500 double as solid fills, so both must also clear
-     AA against `--on-brand` (white here). */
+     contrast step and `text-brand-300/400` clear AA on every light surface.
+     400 and 500 double as solid fills, so both must also clear AA against
+     `--on-brand` (white here). 500 is the ceiling — anything brighter drops
+     white-on-teal below 4.5:1 and takes the selected calendar day with it. */
   --lt-brand-50: #134e4a;
   --lt-brand-100: #115e59;
   --lt-brand-200: #0a4a45;
   --lt-brand-300: #0c6259;
-  --lt-brand-400: #0e6f66;
+  --lt-brand-400: #0d6b62;
   --lt-brand-500: #0f7d72;
   --lt-brand-600: #14b8a6;
   --lt-brand-700: #2dd4bf;
@@ -151,18 +161,22 @@
   --lt-accent-500: #b45309;
   --lt-accent-600: #92400e;
 
-  --lt-status-success: #106e34;
-  --lt-status-warning: #8a5a00;
-  --lt-status-error: #c0272f;
-  --lt-status-info: #0b64c4;
+  /* `info` is Apple's link blue (#0066cc) exactly; the other three are the
+     same family pulled down to clear AA on the darkest light surface. Apple's
+     #0066cc itself lands at 4.40:1 on the hover fill, just under AA, so it
+     is darkened by one notch rather than shipped as-is. */
+  --lt-status-success: #0e7233;
+  --lt-status-warning: #835500;
+  --lt-status-error: #c8102e;
+  --lt-status-info: #0063c6;
 
   --lt-on-brand: #ffffff;
   --lt-knob: #ffffff;
 
-  --lt-glass: rgba(237, 243, 245, 0.88);
+  --lt-glass: rgba(245, 245, 247, 0.88);
   --lt-selection-bg: rgba(20, 184, 166, 0.28);
-  --lt-selection-fg: #071013;
-  --lt-shadow-elevated: rgba(7, 16, 19, 0.16);
+  --lt-selection-fg: #111114;
+  --lt-shadow-elevated: rgba(17, 17, 20, 0.14);
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */
