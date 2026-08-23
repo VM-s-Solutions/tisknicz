@@ -132,6 +132,19 @@
   --dk-on-tint-error: var(--dk-status-error);
   --dk-on-tint-info: var(--dk-status-info);
 
+  /* Control boundary — the hairline that IS a button. Its own token because
+     the two themes need opposite treatment: on dark the shipped look is the
+     brand at 60 %, and on light a 60 % teal over white is the pale outline
+     the buttons were called washed out for. Light spends its accent here
+     instead, at the brightest teal that still clears 3:1 as a boundary
+     (WCAG 1.4.11). */
+  --dk-brand-line: color-mix(in oklab, var(--dk-brand-500) 60%, transparent);
+  /* Ink of a hairline control — the label inside that boundary. Pairs with
+     `--brand-line` and moves with it, which a ramp step cannot: dark wants
+     the bright end, light wants the brightest teal that still clears AA on
+     the white/near-white surfaces a control actually sits on. */
+  --dk-brand-ink: var(--dk-brand-300);
+
   /* --- Light palette ------------------------------------------------------
      Third cut; the two before it were both rejected. A lightness mirror of the
      dark cyan-slate ramp read as a flat wash ("takovy nudny"), and the
@@ -260,6 +273,9 @@
   --lt-on-tint-warning: #6b4600;
   --lt-on-tint-error: #a2001f;
   --lt-on-tint-info: #00489b;
+
+  --lt-brand-line: #0d9488;
+  --lt-brand-ink: #007f73;
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */
@@ -324,6 +340,8 @@
   --on-tint-warning: var(--dk-on-tint-warning);
   --on-tint-error: var(--dk-on-tint-error);
   --on-tint-info: var(--dk-on-tint-info);
+  --brand-line: var(--dk-brand-line);
+  --brand-ink: var(--dk-brand-ink);
 }
 
 /* --- Light -------------------------------------------------------------- */
@@ -391,6 +409,8 @@
   --on-tint-warning: var(--lt-on-tint-warning);
   --on-tint-error: var(--lt-on-tint-error);
   --on-tint-info: var(--lt-on-tint-info);
+  --brand-line: var(--lt-brand-line);
+  --brand-ink: var(--lt-brand-ink);
 }
 
 /* Re-assert dark for a subtree pinned inside a light page (the landing
@@ -456,6 +476,8 @@
   --on-tint-warning: var(--dk-on-tint-warning);
   --on-tint-error: var(--dk-on-tint-error);
   --on-tint-info: var(--dk-on-tint-info);
+  --brand-line: var(--dk-brand-line);
+  --brand-ink: var(--dk-brand-ink);
 }
 
 /* No-JS fallback. The inline bootstrap in `app/layout.tsx` stamps
@@ -524,6 +546,9 @@
     --on-tint-warning: var(--lt-on-tint-warning);
     --on-tint-error: var(--lt-on-tint-error);
     --on-tint-info: var(--lt-on-tint-info);
+    --brand-line: var(--lt-brand-line);
+    --brand-ink: var(--lt-brand-ink);
+  --brand-ink: var(--lt-brand-ink);
   }
 }
 
@@ -588,6 +613,10 @@
   --color-on-tint-warning: var(--on-tint-warning);
   --color-on-tint-error: var(--on-tint-error);
   --color-on-tint-info: var(--on-tint-info);
+
+  /* Control boundary; `border-brand-line`, never `border-brand-500/60`. */
+  --color-brand-line: var(--brand-line);
+  --color-brand-ink: var(--brand-ink);
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;

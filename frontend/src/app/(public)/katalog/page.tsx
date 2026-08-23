@@ -271,7 +271,7 @@ function CatalogResults({
         action={
           <Link
             href={baseQuery ? `/katalog?${baseQuery}` : '/katalog'}
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-line hover:text-brand-300"
           >
             {t('catalog.empty.out_of_range.first_page')}
           </Link>
@@ -289,7 +289,7 @@ function CatalogResults({
         action={
           <Link
             href="/katalog"
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-line hover:text-brand-300"
           >
             {t('catalog.empty.reset')}
           </Link>
@@ -307,7 +307,7 @@ function CatalogResults({
         action={
           <Link
             href="/pro-makery"
-            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
           >
             {t('catalog.empty.no_makers.cta')}
           </Link>

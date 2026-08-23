@@ -111,7 +111,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
       <div className="flex items-center justify-between gap-2 border-t border-zinc-800 px-4 py-3">
         <Link
           href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3.5 py-1.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
         >
           <Icon name="edit" size={14} />
           {t('dashboard.maker.products.actions.edit')}

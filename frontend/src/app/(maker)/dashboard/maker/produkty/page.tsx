@@ -79,7 +79,7 @@ export default async function MakerProductsPage({ searchParams }: PageProps) {
             actions={
               <Link
                 href="/dashboard/maker/produkty/novy"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
               >
                 <Icon name="plus" size={16} />
                 {t('dashboard.maker.products.cta.create')}
@@ -180,8 +180,8 @@ function ActivityFilterChips({
             aria-current={isActive ? 'page' : undefined}
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
               isActive
-                ? 'border-brand-500/60 text-brand-300'
-                : 'border-zinc-700 text-zinc-400 hover:border-brand-500/60 hover:text-brand-300'
+                ? 'border-brand-line text-brand-ink'
+                : 'border-zinc-700 text-zinc-400 hover:border-brand-line hover:text-brand-300'
             }`}
           >
             {t(option.labelKey)}
@@ -201,7 +201,7 @@ function MakerProductsEmpty() {
       action={
         <Link
           href="/dashboard/maker/produkty/novy"
-          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
         >
           <Icon name="plus" size={16} />
           {t('dashboard.maker.products.empty.cta')}

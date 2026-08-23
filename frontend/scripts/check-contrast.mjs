@@ -134,6 +134,18 @@ const LIGHT_ONLY_PAIRS = [
   { fg: 'on-tint-error', bg: 'tint-error', min: 4.5 },
   { fg: 'on-tint-error', bg: 'tint-error-strong', min: 4.5 },
   { fg: 'on-tint-info', bg: 'tint-info', min: 4.5 },
+  // WCAG 1.4.11 on the hairline that IS the button: the light theme spends
+  // its accent on this line, so it has to stay a boundary and not become
+  // decoration.
+  { fg: 'brand-line', bg: 'surface-card', min: 3 },
+  { fg: 'brand-line', bg: 'surface-primary', min: 3 },
+  { fg: 'brand-line', bg: 'surface-secondary', min: 3 },
+  // The label inside that boundary. Gated on the surfaces a control actually
+  // sits on — page, card, band — and deliberately not on `surface-elevated`,
+  // which is the image/skeleton fill and never hosts a button.
+  { fg: 'brand-ink', bg: 'surface-card', min: 4.5 },
+  { fg: 'brand-ink', bg: 'surface-primary', min: 4.5 },
+  { fg: 'brand-ink', bg: 'surface-secondary', min: 4.5 },
   // No ramp step may be used as ink on a light tint: the fills are solid and
   // saturated, so anything but `on-tint-*` (white) fails. A `bg-tint-*` in a
   // component must always be paired with `text-on-tint-*`.

@@ -36,7 +36,7 @@ export function ScrollToTop() {
       type="button"
       onClick={scrollToTop}
       aria-label={t('common.scroll_to_top')}
-      className="fixed bottom-6 right-6 z-40 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-700 bg-surface-elevated text-zinc-300 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+      className="fixed bottom-6 right-6 z-40 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-700 bg-surface-elevated text-zinc-300 transition-colors hover:border-brand-line hover:text-brand-300"
     >
       <Icon name="chevronUp" size={18} />
     </button>

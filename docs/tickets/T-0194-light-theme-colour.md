@@ -69,8 +69,10 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
 
 - **AC-4** — Contrast contract holds in both palettes, including the new
   fills.
-  *Proof:* `npm run check:contrast` — 175 pairs pass, up from 168; the seven
-  added pairs put every `on-tint-*` ink on its own tint at ≥ 4.5:1.
+  *Proof:* `npm run check:contrast` — 181 pairs pass, up from 168: every
+  `on-tint-*` ink on its own tint at ≥ 4.5:1, `brand-line` at ≥ 3:1 on the
+  three surfaces a control sits on (WCAG 1.4.11), `brand-ink` at ≥ 4.5:1 on
+  the same three.
 - **AC-5** — The dark theme is unchanged.
   *Proof:* the dark tints are the exact `color-mix(in oklab, …)` the `/10` and
   `/15` modifiers generated; `/katalog` dark capture matches the pre-change
@@ -82,6 +84,11 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
 - **AC-7** — The landing hero renders on the white page.
   *Proof:* Safari/WebKit capture of `/` at `data-theme=light`, canvas
   2148×933, knot / event horizon / stars visible.
+- **AC-9** — The hairline button reads as the primary, not as a grey outline
+  — without gaining a fill (solid brand buttons are a standing rejection).
+  *Proof:* operator note "tlacitka jsou furt vyblita"; the boundary moves from
+  a 60 % wash to `#0d9488` and the label from `#0c6259` to `#007f73`, across
+  the `Button` primitive and all 31 hand-rolled copies of it.
 - **AC-8** — Chrome and WebKit, 375 / 768 / 1280.
   *Proof:* captures at each width; Safari via safaridriver for the WebGL hero
   and the `color-mix()` tints.

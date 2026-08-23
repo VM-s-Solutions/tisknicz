@@ -89,14 +89,14 @@ export default async function HomePage() {
             <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link
                 href="/katalog"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-6 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
               >
                 Prohlédnout katalog
                 <Icon name="arrowRight" size={16} />
               </Link>
               <Link
                 href="/jak-to-funguje"
-                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+                className="inline-flex items-center gap-2 border-b border-brand-line pb-1 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-300 hover:text-brand-200"
               >
                 Jak to funguje
                 <Icon name="arrowRight" size={16} />
@@ -145,7 +145,7 @@ export default async function HomePage() {
           <div className="mt-8">
             <Link
               href="/jak-to-funguje"
-              className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+              className="inline-flex items-center gap-2 border-b border-brand-line pb-1 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-300 hover:text-brand-200"
             >
               Zobrazit celý postup
               <Icon name="arrowRight" size={16} />
@@ -190,7 +190,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/pro-makery"
-            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            className="mx-auto inline-flex items-center gap-2 border-b border-brand-line pb-1 text-base font-semibold text-brand-ink transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             Více informací pro makery
             <Icon name="arrowRight" size={18} />

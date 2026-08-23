@@ -32,11 +32,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'border border-brand-500/60 bg-transparent font-semibold text-brand-300 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand active:bg-tint-brand-strong',
+    'border border-brand-line bg-transparent font-semibold text-brand-ink hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand active:bg-tint-brand-strong',
   secondary:
     'border border-zinc-700 bg-transparent font-medium text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800/60 active:bg-zinc-800',
   outline:
-    'border border-zinc-700 bg-transparent font-medium text-zinc-300 hover:border-brand-500/60 hover:text-brand-300 active:border-brand-400',
+    'border border-zinc-700 bg-transparent font-medium text-zinc-300 hover:border-brand-line hover:text-brand-300 active:border-brand-400',
   ghost:
     'border border-transparent bg-transparent font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-50',
   danger:

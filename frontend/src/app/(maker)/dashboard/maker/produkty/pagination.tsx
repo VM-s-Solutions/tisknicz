@@ -56,7 +56,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, d
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.products.pagination.previous')}
@@ -78,7 +78,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious, pageSize, d
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
         >
           {t('dashboard.maker.products.pagination.next')}
           <Icon name="arrowRight" size={16} />

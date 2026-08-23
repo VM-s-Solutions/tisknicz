@@ -153,6 +153,22 @@ as everything else:
   and the vivid accent — which white ink cannot do, and which is why the ink is
   a hue rather than a neutral. A ramp step cannot mean both ends at once.
 
+Two more semantic tokens came out of the same problem, for the hairline
+button — the one place the primary has to carry a call to action without a
+fill:
+
+- `--brand-line` — the control boundary. Dark keeps the shipped
+  `color-mix(… 60%)`; light spends its accent here (`#0d9488`, the brightest
+  teal that still clears 3:1 as a boundary under WCAG 1.4.11), because a 60 %
+  teal over white is the pale outline the buttons were called washed out for.
+- `--brand-ink` — the label inside that boundary. Dark is `brand-300`
+  unchanged; light is `#007f73`, the AA ceiling on the surfaces a control
+  actually sits on (page, card, band — never `surface-elevated`, which is the
+  image/skeleton fill).
+
+`border-brand-500/60` and `/70` are therefore gone from `src/**/*.tsx`; a
+control boundary is `border-brand-line` and its label is `text-brand-ink`.
+
 Consequences:
 
 - `bg-brand-500/10`-style fills are banned in `src/**/*.tsx`; a fill is

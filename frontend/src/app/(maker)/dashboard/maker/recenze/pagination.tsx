@@ -33,7 +33,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
       {hasPrevious ? (
         <Link
           href={hrefFor(page - 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
         >
           <Icon name="arrowLeft" size={16} />
           {t('dashboard.maker.reviews.pagination.previous')}
@@ -55,7 +55,7 @@ export function Pagination({ page, totalPages, hasNext, hasPrevious }: Paginatio
       {hasNext ? (
         <Link
           href={hrefFor(page + 1)}
-          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
         >
           {t('dashboard.maker.reviews.pagination.next')}
           <Icon name="arrowRight" size={16} />
