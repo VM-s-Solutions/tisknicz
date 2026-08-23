@@ -44,10 +44,17 @@ export interface IAdminApi {
     adminInvoices(page: number | undefined, pageSize: number | undefined, type: InvoiceType | undefined, country: string | undefined, recipient: string | undefined, dateFrom: Date | undefined, dateTo: Date | undefined): Promise<GetAllInvoicesResponse>;
 
     /**
-     * @param window (optional) 
+     * @param year (optional) 
+     * @param month (optional) 
      * @return OK
      */
-    platformRevenue(window: RevenueWindow | undefined): Promise<GetPlatformRevenueResponse>;
+    platformRevenue(year: number | undefined, month: number | undefined): Promise<GetPlatformRevenueResponse>;
+
+    /**
+     * @param range (optional) 
+     * @return OK
+     */
+    series(range: RevenueRange | undefined): Promise<GetPlatformRevenueSeriesResponse>;
 
     /**
      * @param page (optional) 
@@ -667,15 +674,20 @@ export class AdminApi implements IAdminApi {
     }
 
     /**
-     * @param window (optional) 
+     * @param year (optional) 
+     * @param month (optional) 
      * @return OK
      */
-    platformRevenue(window: RevenueWindow | undefined): Promise<GetPlatformRevenueResponse> {
+    platformRevenue(year: number | undefined, month: number | undefined): Promise<GetPlatformRevenueResponse> {
         let url_ = this.baseUrl + "/api/v1/platform-revenue?";
-        if (window === null)
-            throw new globalThis.Error("The parameter 'window' cannot be null.");
-        else if (window !== undefined)
-            url_ += "window=" + encodeURIComponent("" + window) + "&";
+        if (year === null)
+            throw new globalThis.Error("The parameter 'year' cannot be null.");
+        else if (year !== undefined)
+            url_ += "year=" + encodeURIComponent("" + year) + "&";
+        if (month === null)
+            throw new globalThis.Error("The parameter 'month' cannot be null.");
+        else if (month !== undefined)
+            url_ += "month=" + encodeURIComponent("" + month) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -720,6 +732,62 @@ export class AdminApi implements IAdminApi {
             });
         }
         return Promise.resolve<GetPlatformRevenueResponse>(null as any);
+    }
+
+    /**
+     * @param range (optional) 
+     * @return OK
+     */
+    series(range: RevenueRange | undefined): Promise<GetPlatformRevenueSeriesResponse> {
+        let url_ = this.baseUrl + "/api/v1/platform-revenue/series?";
+        if (range === null)
+            throw new globalThis.Error("The parameter 'range' cannot be null.");
+        else if (range !== undefined)
+            url_ += "range=" + encodeURIComponent("" + range) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSeries(_response);
+        });
+    }
+
+    protected processSeries(response: Response): Promise<GetPlatformRevenueSeriesResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = GetPlatformRevenueSeriesResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorDto.fromJS(resultData400);
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorDto.fromJS(resultData401);
+            return throwException("Unauthorized", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<GetPlatformRevenueSeriesResponse>(null as any);
     }
 
     /**
@@ -6004,7 +6072,8 @@ export interface IGetPayoutBatchesResponse {
 }
 
 export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
-    window!: RevenueWindow;
+    year!: number;
+    month!: number;
     fromInclusive!: Date;
     toExclusive!: Date;
     paidOrderCount!: number;
@@ -6013,6 +6082,7 @@ export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
     makerPayoutMinor!: number;
     refundedMinor!: number;
     currency!: string;
+    isCurrentMonth!: boolean;
 
     [key: string]: any;
 
@@ -6031,7 +6101,8 @@ export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
                 if (_data.hasOwnProperty(property))
                     this[property] = _data[property];
             }
-            this.window = _data["window"];
+            this.year = _data["year"];
+            this.month = _data["month"];
             this.fromInclusive = _data["fromInclusive"] ? new Date(_data["fromInclusive"].toString()) : undefined as any;
             this.toExclusive = _data["toExclusive"] ? new Date(_data["toExclusive"].toString()) : undefined as any;
             this.paidOrderCount = _data["paidOrderCount"];
@@ -6040,6 +6111,7 @@ export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
             this.makerPayoutMinor = _data["makerPayoutMinor"];
             this.refundedMinor = _data["refundedMinor"];
             this.currency = _data["currency"];
+            this.isCurrentMonth = _data["isCurrentMonth"];
         }
     }
 
@@ -6056,7 +6128,8 @@ export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
             if (this.hasOwnProperty(property))
                 data[property] = this[property];
         }
-        data["window"] = this.window;
+        data["year"] = this.year;
+        data["month"] = this.month;
         data["fromInclusive"] = this.fromInclusive ? this.fromInclusive.toISOString() : undefined as any;
         data["toExclusive"] = this.toExclusive ? this.toExclusive.toISOString() : undefined as any;
         data["paidOrderCount"] = this.paidOrderCount;
@@ -6065,12 +6138,14 @@ export class GetPlatformRevenueResponse implements IGetPlatformRevenueResponse {
         data["makerPayoutMinor"] = this.makerPayoutMinor;
         data["refundedMinor"] = this.refundedMinor;
         data["currency"] = this.currency;
+        data["isCurrentMonth"] = this.isCurrentMonth;
         return data;
     }
 }
 
 export interface IGetPlatformRevenueResponse {
-    window: RevenueWindow;
+    year: number;
+    month: number;
     fromInclusive: Date;
     toExclusive: Date;
     paidOrderCount: number;
@@ -6079,6 +6154,90 @@ export interface IGetPlatformRevenueResponse {
     makerPayoutMinor: number;
     refundedMinor: number;
     currency: string;
+    isCurrentMonth: boolean;
+
+    [key: string]: any;
+}
+
+export class GetPlatformRevenueSeriesResponse implements IGetPlatformRevenueSeriesResponse {
+    range!: RevenueRange;
+    granularity!: RevenueBucketGranularity;
+    fromInclusive!: Date;
+    toExclusive!: Date;
+    currency!: string;
+    timeZoneId!: string;
+    points!: PlatformRevenuePointDto[];
+
+    [key: string]: any;
+
+    constructor(data?: IGetPlatformRevenueSeriesResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.points = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.range = _data["range"];
+            this.granularity = _data["granularity"];
+            this.fromInclusive = _data["fromInclusive"] ? new Date(_data["fromInclusive"].toString()) : undefined as any;
+            this.toExclusive = _data["toExclusive"] ? new Date(_data["toExclusive"].toString()) : undefined as any;
+            this.currency = _data["currency"];
+            this.timeZoneId = _data["timeZoneId"];
+            if (Array.isArray(_data["points"])) {
+                this.points = [] as any;
+                for (let item of _data["points"])
+                    this.points!.push(PlatformRevenuePointDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): GetPlatformRevenueSeriesResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new GetPlatformRevenueSeriesResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["range"] = this.range;
+        data["granularity"] = this.granularity;
+        data["fromInclusive"] = this.fromInclusive ? this.fromInclusive.toISOString() : undefined as any;
+        data["toExclusive"] = this.toExclusive ? this.toExclusive.toISOString() : undefined as any;
+        data["currency"] = this.currency;
+        data["timeZoneId"] = this.timeZoneId;
+        if (Array.isArray(this.points)) {
+            data["points"] = [];
+            for (let item of this.points)
+                data["points"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IGetPlatformRevenueSeriesResponse {
+    range: RevenueRange;
+    granularity: RevenueBucketGranularity;
+    fromInclusive: Date;
+    toExclusive: Date;
+    currency: string;
+    timeZoneId: string;
+    points: PlatformRevenuePointDto[];
 
     [key: string]: any;
 }
@@ -7348,6 +7507,74 @@ export enum PayoutBatchState {
     Completed = "Completed",
 }
 
+export class PlatformRevenuePointDto implements IPlatformRevenuePointDto {
+    bucketStart!: Date;
+    paidOrderCount!: number;
+    grossVolumeMinor!: number;
+    platformFeeMinor!: number;
+    makerPayoutMinor!: number;
+    refundedMinor!: number;
+
+    [key: string]: any;
+
+    constructor(data?: IPlatformRevenuePointDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.bucketStart = _data["bucketStart"] ? new Date(_data["bucketStart"].toString()) : undefined as any;
+            this.paidOrderCount = _data["paidOrderCount"];
+            this.grossVolumeMinor = _data["grossVolumeMinor"];
+            this.platformFeeMinor = _data["platformFeeMinor"];
+            this.makerPayoutMinor = _data["makerPayoutMinor"];
+            this.refundedMinor = _data["refundedMinor"];
+        }
+    }
+
+    static fromJS(data: any): PlatformRevenuePointDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PlatformRevenuePointDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["bucketStart"] = this.bucketStart ? this.bucketStart.toISOString() : undefined as any;
+        data["paidOrderCount"] = this.paidOrderCount;
+        data["grossVolumeMinor"] = this.grossVolumeMinor;
+        data["platformFeeMinor"] = this.platformFeeMinor;
+        data["makerPayoutMinor"] = this.makerPayoutMinor;
+        data["refundedMinor"] = this.refundedMinor;
+        return data;
+    }
+}
+
+export interface IPlatformRevenuePointDto {
+    bucketStart: Date;
+    paidOrderCount: number;
+    grossVolumeMinor: number;
+    platformFeeMinor: number;
+    makerPayoutMinor: number;
+    refundedMinor: number;
+
+    [key: string]: any;
+}
+
 export class RefreshMakerFromAresResponse implements IRefreshMakerFromAresResponse {
     snapshotIsStale!: boolean;
 
@@ -7888,10 +8115,20 @@ export interface IRetryOutboxEventResponse {
     [key: string]: any;
 }
 
-export enum RevenueWindow {
+export enum RevenueBucketGranularity {
+    Hour = "Hour",
     Day = "Day",
     Week = "Week",
     Month = "Month",
+}
+
+export enum RevenueRange {
+    Day = "Day",
+    Week = "Week",
+    Month = "Month",
+    Quarter = "Quarter",
+    HalfYear = "HalfYear",
+    Year = "Year",
 }
 
 export class SetMakerFeeOverrideRequest implements ISetMakerFeeOverrideRequest {

@@ -42,15 +42,18 @@ import {
   type IStalledOutboxEventDto,
   type IUpdateCountryConfigurationResponse,
   type IGetPlatformRevenueResponse,
+  type IGetPlatformRevenueSeriesResponse,
+  type IPlatformRevenuePointDto,
   InvoicingMode,
   PayoutBatchState,
-  RevenueWindow,
+  RevenueBucketGranularity,
+  RevenueRange,
 } from '../api-client/admin-api.v1';
 import { apiFetch } from '../runtime/api-fetch';
 import { type ApiError, type Result, ok } from '../runtime/result';
 
 // Re-export the enums so route code never imports `lib/api-client/` directly.
-export { InvoicingMode, PayoutBatchState, RevenueWindow };
+export { InvoicingMode, PayoutBatchState, RevenueBucketGranularity, RevenueRange };
 
 // Leading slash matters: apiFetch concatenates `${baseUrl}${path}` against
 // host URLs with no trailing slash (admin-client.ts precedent).
@@ -482,10 +485,10 @@ export async function eraseUser(
   });
 }
 
-// ---- Platform revenue (T-0186 GET /platform-revenue?window=) ----
+// ---- Platform revenue (T-0192 GET /platform-revenue?year=&month=) ----
 
 /**
- * Mirror of <c>GetPlatformRevenueResponse</c> (T-0186). The two instants
+ * Mirror of <c>GetPlatformRevenueResponse</c> (T-0192). The two instants
  * arrive as ISO 8601 strings on the wire; every amount is minor units
  * (<c>long</c> server-side) and is rendered with <c>formatCzk</c> — the
  * frontend does no money arithmetic of its own (CLAUDE.md §4).
@@ -498,21 +501,68 @@ export type PlatformRevenue = Readonly<
 };
 
 /**
- * Platform earnings over a rolling window (T-0186) — backs the admin
+ * Platform earnings for ONE CALENDAR MONTH (T-0192) — backs the admin
  * overview's earnings panel. `null` on failure so the panel degrades to
  * "—" like the KPI tiles rather than throwing the whole overview
  * (AC-4 precedent).
  *
- * The window enum is the ONLY input, and the backend Validator rejects
- * anything outside it — the caller cannot widen the reporting period by
- * hand-crafting a query string.
+ * Both params are sent together or not at all: the backend treats a
+ * half-supplied pair as "no month chosen" and answers for the month in
+ * progress, and the response echoes which month it actually summed, so the
+ * caller labels the number from the answer rather than from its own guess.
+ * The Validator clamps the year and rejects a month outside 1–12, so a
+ * hand-typed query string cannot reach the aggregate.
  */
 export async function getPlatformRevenue(
-  window: RevenueWindow,
+  year?: number,
+  month?: number,
 ): Promise<Result<PlatformRevenue, ApiError>> {
+  const params = new URLSearchParams();
+  if (year !== undefined && month !== undefined) {
+    params.set('year', String(year));
+    params.set('month', String(month));
+  }
+  const query = params.toString();
   return apiFetch<PlatformRevenue>(
     'admin',
-    `${RevenueBase}?window=${encodeURIComponent(window)}`,
+    query ? `${RevenueBase}?${query}` : RevenueBase,
+    { method: 'GET' },
+  );
+}
+
+// ---- Platform revenue series (T-0192 GET /platform-revenue/series?range=) ----
+
+/** Mirror of <c>PlatformRevenuePointDto</c>. <c>bucketStart</c> wire-shape <c>string</c> (ISO 8601). */
+export type PlatformRevenuePoint = Readonly<Omit<IPlatformRevenuePointDto, 'bucketStart'>> & {
+  readonly bucketStart: string;
+};
+
+/** Mirror of <c>GetPlatformRevenueSeriesResponse</c> (T-0192). */
+export type PlatformRevenueSeries = Readonly<
+  Omit<IGetPlatformRevenueSeriesResponse, 'fromInclusive' | 'toExclusive' | 'points'>
+> & {
+  readonly fromInclusive: string;
+  readonly toExclusive: string;
+  readonly points: readonly PlatformRevenuePoint[];
+};
+
+/**
+ * Platform earnings bucketed over time (T-0192) — backs the overview's
+ * revenue chart. `null` on failure so the chart degrades on its own without
+ * taking the month tiles down with it.
+ *
+ * The range enum is the ONLY input and the backend Validator rejects
+ * anything outside it, so the caller cannot widen the reporting period by
+ * hand-crafting a query string. Bucket width is chosen server-side and
+ * reported back on `granularity` — the chart labels its axis from that
+ * rather than inferring it from the point count.
+ */
+export async function getPlatformRevenueSeries(
+  range: RevenueRange,
+): Promise<Result<PlatformRevenueSeries, ApiError>> {
+  return apiFetch<PlatformRevenueSeries>(
+    'admin',
+    `${RevenueBase}/series?range=${encodeURIComponent(range)}`,
     { method: 'GET' },
   );
 }

@@ -10,4 +10,17 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      T-0192: `GetPlatformRevenueSeries.FillGaps` and
+      `RevenueReportingTimeZone` are pure helpers with no DI seam, kept
+      `internal` because nothing outside the Admin feature has any business
+      calling them. `Makables.Tests` needs both — the gap fill is the part
+      that decides whether an empty day is plotted as zero or silently
+      skipped, which is exactly what a unit test should pin. Narrowing the
+      surface with `InternalsVisibleTo` beats going public for testability.
+    -->
+    <InternalsVisibleTo Include="Makables.Tests" />
+  </ItemGroup>
+
 </Project>
