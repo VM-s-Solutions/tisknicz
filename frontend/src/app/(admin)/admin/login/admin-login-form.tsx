@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { login } from '@/lib/api-client-helpers/auth';
 import { safeRedirectTarget } from '@/lib/auth';
 import { t } from '@/lib/i18n';
@@ -68,8 +69,7 @@ export function AdminLoginForm() {
           required
           disabled={submitting}
         />
-        <Input
-          type="password"
+        <PasswordInput
           label={t('dashboard.admin.login.password')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}

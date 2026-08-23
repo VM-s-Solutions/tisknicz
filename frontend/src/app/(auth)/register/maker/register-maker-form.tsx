@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import {
   type CompanyPreview,
   lookupCompanyPreview,
@@ -44,6 +45,7 @@ export function RegisterMakerForm() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [ico, setIco] = useState('');
   const [icoChecksumFailed, setIcoChecksumFailed] = useState(false);
   const [preview, setPreview] = useState<PreviewState>({ kind: 'idle' });
@@ -97,6 +99,14 @@ export function RegisterMakerForm() {
     event.preventDefault();
     setServerError(null);
 
+    // Both password fields must agree before we spend a round trip. The
+    // form is `noValidate`, so `required` alone would not stop an empty
+    // confirm — this check is the gate.
+    if (password !== passwordConfirm) {
+      setServerError(t('auth.register.password_mismatch'));
+      return;
+    }
+
     // Local checksum gate mirrors the backend's CzechIcoValidator —
     // catches typos without a round trip.
     if (!isValidCzechIco(ico)) {
@@ -121,6 +131,8 @@ export function RegisterMakerForm() {
     }
     setServerError(mapRegisterMakerError(result.error.code, result.error.message));
   }
+
+  const passwordMismatch = passwordConfirm.length > 0 && passwordConfirm !== password;
 
   if (doneState) {
     return (
@@ -216,8 +228,7 @@ export function RegisterMakerForm() {
           required
           disabled={submitting}
         />
-        <Input
-          type="password"
+        <PasswordInput
           icon="lock"
           label={t('auth.register.password')}
           value={password}
@@ -227,7 +238,18 @@ export function RegisterMakerForm() {
           required
           disabled={submitting}
         />
-        <p className="text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
+        <p className="-mt-2 text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
+        <PasswordInput
+          icon="lock"
+          label={t('auth.register.password_confirm')}
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          autoComplete="new-password"
+          minLength={10}
+          error={passwordMismatch ? t('auth.register.password_mismatch') : undefined}
+          required
+          disabled={submitting}
+        />
         <Button type="submit" loading={submitting} className="mt-2">
           {submitting ? t('auth.register.submitting') : t('auth.register_maker.submit')}
           {!submitting ? (

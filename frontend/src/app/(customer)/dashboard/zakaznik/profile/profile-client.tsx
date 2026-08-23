@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { SaveButton, type SaveState } from '@/components/ui/save-button';
 import { DeleteAccountSection } from '@/components/shared/delete-account-section';
 import { ProfileImagePicker } from '@/components/shared/profile-image-picker';
@@ -227,8 +228,7 @@ function PasswordSection() {
       />
       <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            type="password"
+          <PasswordInput
             icon="lock"
             label={t('dashboard.customer.profile.current_password')}
             value={currentPassword}
@@ -237,8 +237,7 @@ function PasswordSection() {
             required
             disabled={saving}
           />
-          <Input
-            type="password"
+          <PasswordInput
             icon="key"
             label={t('dashboard.customer.profile.new_password')}
             value={newPassword}

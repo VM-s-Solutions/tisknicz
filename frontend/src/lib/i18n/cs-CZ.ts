@@ -140,6 +140,8 @@ export const messages = {
   'auth.register.email': 'E-mail',
   'auth.register.password': 'Heslo',
   'auth.register.password_hint': 'Alespoň 10 znaků.',
+  'auth.register.password_confirm': 'Heslo znovu',
+  'auth.register.password_mismatch': 'Hesla se neshodují.',
   'auth.register.submit': 'Vytvořit účet',
   'auth.register.submitting': 'Vytvářím…',
   'auth.register.already_have_account': 'Máte už účet?',
@@ -236,6 +238,8 @@ export const messages = {
   'auth.common.required_field': 'Toto pole je povinné.',
   'auth.common.invalid_email': 'Zadejte platný e-mail.',
   'auth.common.password_too_short': 'Heslo musí mít alespoň 10 znaků.',
+  'auth.password.show': 'Zobrazit heslo',
+  'auth.password.hide': 'Skrýt heslo',
 
   // Dashboard — customer profile
   'dashboard.customer.profile.title': 'Můj profil',

@@ -34,6 +34,9 @@ function fillBaseFields(): void {
   fireEvent.change(screen.getByLabelText('Heslo'), {
     target: { value: 'abcd1234567' },
   });
+  fireEvent.change(screen.getByLabelText('Heslo znovu'), {
+    target: { value: 'abcd1234567' },
+  });
 }
 
 const preview = {
