@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Makables.Core.AppServices.Common;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Orders;
@@ -44,6 +45,7 @@ public sealed class EmailSendService(
     IEmailProvider provider,
     IInvoiceRepository invoices,
     IBlobStorageClient blobStorage,
+    ICountryConfigurationRepository countries,
     IOptions<PublicAppUrlsOptions> urls,
     IOptions<EmailOptions> emailOptions,
     ILogger<EmailSendService> logger) : IEmailSendService
@@ -626,13 +628,24 @@ public sealed class EmailSendService(
 
         var u = urls.Value;
         var actionUrl = BuildActionUrl(u, templateType, payload.RawToken);
+
+        // The expiry the recipient reads is their own wall clock in their
+        // own date format. {{expires_at}} used to be ToString("u") with a
+        // literal " UTC" bolted on in the DB copy, which asked a Czech
+        // reader to convert "2026-08-24 18:30:00Z" in their head.
+        var format = await ResolveCountryFormattingAsync(template.CountryCode, cancellationToken);
         var data = new Dictionary<string, object>
         {
             ["action_url"] = actionUrl,
-            ["expires_at"] = payload.ExpiresAt.ToString("u"),
+            ["expires_at"] = EmailFormatting.FormatDateTime(
+                payload.ExpiresAt, format.Zone, EmailFormatting.CultureFor(translation.LanguageCode), format.DatePattern),
+            // Machine-readable companion, deliberately untouched: it is not
+            // rendered to a human and must stay zone-independent.
             ["expires_at_unix"] = payload.ExpiresAt.ToUnixTimeSeconds(),
             ["language_code"] = payload.LanguageCode,
         };
+
+        var plainTextBody = SubstitutePlainTextPlaceholders(translation.PlainTextBody, data);
 
         var message = new EmailMessage(
             ProviderTemplateId: template.ProviderTemplateId,
@@ -643,8 +656,15 @@ public sealed class EmailSendService(
             FromName: template.FromName,
             ReplyToAddress: template.ReplyToAddress,
             Subject: translation.Subject,
-            PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, data),
-            Data: data);
+            PlainTextBody: plainTextBody,
+            Data: data)
+        {
+            HtmlBody = EmailHtmlLayout.Render(
+                heading: translation.Subject,
+                plainTextBody: plainTextBody,
+                ctaLabel: EmailCallToAction.LabelFor(templateType, translation.LanguageCode),
+                languageCode: translation.LanguageCode),
+        };
 
         return await SendViaProviderAsync(message, cancellationToken);
     }
@@ -831,6 +851,9 @@ public sealed class EmailSendService(
         // rather than the raw template literal. SendGrid's Dynamic Template
         // does NOT substitute the subject header from dynamicTemplateData,
         // so the producer must inline the substitutions itself.
+        var subject = SubstitutePlainTextPlaceholders(translation.Subject, substitutions);
+        var plainTextBody = SubstitutePlainTextPlaceholders(translation.PlainTextBody, substitutions);
+
         var message = new EmailMessage(
             ProviderTemplateId: template.ProviderTemplateId,
             LanguageCode: translation.LanguageCode,
@@ -839,14 +862,24 @@ public sealed class EmailSendService(
             FromAddress: template.FromAddress ?? string.Empty,
             FromName: template.FromName,
             ReplyToAddress: template.ReplyToAddress,
-            Subject: SubstitutePlainTextPlaceholders(translation.Subject, substitutions),
-            PlainTextBody: SubstitutePlainTextPlaceholders(translation.PlainTextBody, substitutions),
+            Subject: subject,
+            PlainTextBody: plainTextBody,
             Data: substitutions.ToDictionary(kv => kv.Key, kv => kv.Value))
         {
             // T-0069: customer invoice PDF rides as an inline attachment;
             // maker email passes null explicitly. Provider skips its
             // attachment SDK call when null.
             Attachment = attachment,
+
+            // Every template type gets the same branded shell, derived from
+            // the plain-text translation rather than hand-authored per type
+            // — so the catalog stays one row of copy per language and no
+            // email is left looking like a 1997 mail-merge.
+            HtmlBody = EmailHtmlLayout.Render(
+                heading: subject,
+                plainTextBody: plainTextBody,
+                ctaLabel: EmailCallToAction.LabelFor(templateType, translation.LanguageCode),
+                languageCode: translation.LanguageCode),
         };
 
         return await SendViaProviderAsync(message, cancellationToken);
@@ -874,6 +907,27 @@ public sealed class EmailSendService(
                 Error.Permanent(BusinessErrorMessage.OrderEmailPayloadMalformed,
                     $"Outbox payload for '{outboxEventType}' could not be JSON-decoded: {ex.Message}"));
         }
+    }
+
+    /// <summary>
+    /// Per-country date presentation, read from configuration rather than
+    /// branched on a country code (CLAUDE.md §2.7). A missing row degrades
+    /// to UTC + the default pattern: a slightly worse timestamp is a far
+    /// better outcome than a parked outbox row on a password-reset email.
+    /// </summary>
+    private async Task<(TimeZoneInfo Zone, string DatePattern)> ResolveCountryFormattingAsync(
+        string countryCode, CancellationToken cancellationToken)
+    {
+        var country = await countries.GetByCodeAsync(countryCode, cancellationToken);
+        if (country is null)
+        {
+            logger.LogWarning(
+                "CountryConfiguration row missing for {CountryCode}; email timestamps fall back to UTC.",
+                countryCode);
+            return (TimeZoneInfo.Utc, EmailFormatting.DefaultDatePattern);
+        }
+
+        return (EmailFormatting.TimeZoneFor(country.TimeZoneId), country.DateFormat);
     }
 
     private async Task<EmailTemplateTranslation?> ResolveTranslationAsync(

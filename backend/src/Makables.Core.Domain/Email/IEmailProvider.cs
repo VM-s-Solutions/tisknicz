@@ -66,6 +66,16 @@ public sealed record EmailMessage(
     /// at most one file.
     /// </summary>
     public Attachment? Attachment { get; init; }
+
+    /// <summary>
+    /// Optional <c>text/html</c> alternative part. <c>null</c> means the
+    /// message ships plain-text only — which is what every send did before
+    /// <c>EmailHtmlLayout</c> existed, and what a provider must still cope
+    /// with. When set, <see cref="PlainTextBody"/> stays authoritative as
+    /// the <c>multipart/alternative</c> fallback: the two parts are the
+    /// same content, never different content.
+    /// </summary>
+    public string? HtmlBody { get; init; }
 }
 
 /// <summary>

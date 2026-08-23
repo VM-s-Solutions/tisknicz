@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { t } from '@/lib/i18n';
 import { buildAvatarUrl, type MakerReviewItem } from '@/lib/api-client-helpers/catalog';
 import { Stars } from '@/components/ui/stars';
+import { formatDate } from '@/lib/utils/dates';
 
 interface ReviewsSectionProps {
   readonly reviews: readonly MakerReviewItem[];
@@ -55,7 +56,7 @@ export function ReviewsSection({ reviews, totalCount }: ReviewsSectionProps) {
                 <div className="flex items-center justify-between gap-3">
                   <Stars value={review.ratingStars} />
                   <time className="text-xs text-zinc-500" dateTime={review.createdAt}>
-                    {new Date(review.createdAt).toLocaleDateString('cs-CZ')}
+                    {formatDate(review.createdAt)}
                   </time>
                 </div>
                 {review.comment ? (

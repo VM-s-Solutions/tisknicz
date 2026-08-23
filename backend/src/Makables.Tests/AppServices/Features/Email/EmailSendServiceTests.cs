@@ -3,6 +3,7 @@ using FluentAssertions;
 using Makables.Core.AppServices.Common;
 using Makables.Core.AppServices.Features.Email;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Email;
 using Makables.Core.Domain.Invoices;
 using Makables.Core.Domain.Orders;
@@ -31,6 +32,8 @@ public class EmailSendServiceTests
     private readonly IEmailProvider _provider = Substitute.For<IEmailProvider>();
     private readonly IInvoiceRepository _invoices = Substitute.For<IInvoiceRepository>();
     private readonly IBlobStorageClient _blobStorage = Substitute.For<IBlobStorageClient>();
+    private readonly ICountryConfigurationRepository _countries =
+        Substitute.For<ICountryConfigurationRepository>();
     private readonly EmailSendService _sut;
 
     public EmailSendServiceTests()
@@ -48,8 +51,20 @@ public class EmailSendServiceTests
         {
             AdminNotificationAddress = "ops@makables.test",
         });
+        // Czech-locale timestamps read the zone + date pattern off the
+        // country row rather than branching on "CZ" in code, so the fixture
+        // has to supply one.
+        _countries.GetByCodeAsync("CZ", Arg.Any<CancellationToken>())
+            .Returns(CountryConfiguration.Create(
+                "CZ", "CZK", "cs-CZ", "Europe/Prague", "+420", "d. M. yyyy",
+                2100, "DIČ", "DIČ DPH", "IČO",
+                "comgate", "packeta", "ares", "resend",
+                "JVM YORE s.r.o.", "00000000",
+                reducedVatRateBp: 1200, invoicingMode: InvoicingMode.None,
+                platformFeeRateBp: 1500, defaultShippingPriceMinor: 7900));
+
         _sut = new EmailSendService(_templates, _translations, _provider,
-            _invoices, _blobStorage,
+            _invoices, _blobStorage, _countries,
             urls, emailOptions, NullLogger<EmailSendService>.Instance);
     }
 
@@ -105,6 +120,118 @@ public class EmailSendServiceTests
             && m.PlainTextBody.Contains("https://makables.test/magic?token=")
             && !m.PlainTextBody.Contains("{{action_url}}")),
             Arg.Any<CancellationToken>());
+    }
+
+    // === Czech-locale expiry + HTML part ===
+
+    /// <summary>
+    /// Payload variant with a fixed expiry so the rendered timestamp is
+    /// assertable. 18:30Z in August is 20:30 in Prague (CEST).
+    /// </summary>
+    private static string EncodePayloadExpiring(DateTimeOffset expiresAt, string lang = LanguageCode.CsCZ) =>
+        JsonSerializer.Serialize(new OneTimeTokenOutboxPayload(
+            UserId: "user-1",
+            Email: "anna@example.cz",
+            RawToken: "rawtok123",
+            ExpiresAt: expiresAt,
+            LanguageCode: lang));
+
+    private void ArrangeAuth(EmailTemplateType type, string subject, string body)
+    {
+        var tpl = CreateTemplate(type);
+        var tr = CreateTranslation(tpl.Id, LanguageCode.CsCZ, subject, body);
+        _templates.GetByTypeAsync(type, Arg.Any<CancellationToken>()).Returns(tpl);
+        _translations.GetAsync(tpl.Id, LanguageCode.CsCZ, Arg.Any<CancellationToken>()).Returns(tr);
+        _provider.SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>())
+            .Returns(BusinessResult.Success(new EmailSentReceipt("msg-1", DateTimeOffset.UtcNow)));
+    }
+
+    private EmailMessage CapturedMessage() =>
+        (EmailMessage)_provider.ReceivedCalls().Single(c => c.GetMethodInfo().Name == nameof(IEmailProvider.SendAsync))
+            .GetArguments()[0]!;
+
+    [Fact]
+    public async Task Expires_at_renders_as_a_Czech_date_in_the_countrys_own_time_zone()
+    {
+        ArrangeAuth(EmailTemplateType.AuthPasswordReset, "Obnovení hesla",
+            "Odkaz je platný do {{expires_at}}.");
+
+        await _sut.SendAsync(
+            OutboxEventTypes.AuthPasswordResetSend,
+            EncodePayloadExpiring(new DateTimeOffset(2026, 8, 24, 18, 30, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        // Previously "2026-08-24 18:30:00Z"; the DB copy then bolted " UTC"
+        // onto it and left the reader to do the +2h themselves.
+        CapturedMessage().PlainTextBody.Should().Be("Odkaz je platný do 24. 8. 2026, 20:30.");
+    }
+
+    [Fact]
+    public async Task Expires_at_unix_stays_zone_independent()
+    {
+        var expiry = new DateTimeOffset(2026, 8, 24, 18, 30, 0, TimeSpan.Zero);
+        ArrangeAuth(EmailTemplateType.AuthPasswordReset, "S", "B");
+
+        await _sut.SendAsync(
+            OutboxEventTypes.AuthPasswordResetSend,
+            EncodePayloadExpiring(expiry),
+            CancellationToken.None);
+
+        // The machine-readable companion must not follow the display value.
+        CapturedMessage().Data["expires_at_unix"].Should().Be(expiry.ToUnixTimeSeconds());
+    }
+
+    [Fact]
+    public async Task A_missing_country_row_degrades_to_UTC_rather_than_failing_the_send()
+    {
+        _countries.GetByCodeAsync("CZ", Arg.Any<CancellationToken>())
+            .Returns((Makables.Core.Domain.Configuration.CountryConfiguration?)null);
+        ArrangeAuth(EmailTemplateType.AuthPasswordReset, "S", "Do {{expires_at}}.");
+
+        var result = await _sut.SendAsync(
+            OutboxEventTypes.AuthPasswordResetSend,
+            EncodePayloadExpiring(new DateTimeOffset(2026, 8, 24, 18, 30, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        CapturedMessage().PlainTextBody.Should().Be("Do 24. 8. 2026, 18:30.");
+    }
+
+    [Fact]
+    public async Task Auth_emails_ship_a_branded_html_part_alongside_the_plain_text()
+    {
+        ArrangeAuth(EmailTemplateType.AuthEmailConfirmation, "Potvrďte svůj e-mail",
+            "Vítejte v Makables.\n\n{{action_url}}\n\nOdkaz je platný do {{expires_at}}.\n\nMakables — makables.cz");
+
+        await _sut.SendAsync(
+            OutboxEventTypes.AuthEmailConfirmationSend,
+            EncodePayloadExpiring(new DateTimeOffset(2026, 8, 24, 18, 30, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        var message = CapturedMessage();
+        message.HtmlBody.Should().NotBeNullOrWhiteSpace();
+        message.HtmlBody.Should().StartWith("<!DOCTYPE html>");
+        message.HtmlBody.Should().Contain(">Potvrďte svůj e-mail</h1>");
+        message.HtmlBody.Should().Contain(">Potvrdit e-mail</a>");
+        message.HtmlBody.Should().Contain("https://makables.test/verify?token=rawtok123");
+        message.HtmlBody.Should().Contain("24. 8. 2026, 20:30");
+        // The plain-text alternative stays intact — same content, two parts.
+        message.PlainTextBody.Should().Contain("Vítejte v Makables.");
+        message.HtmlBody.Should().NotContain("{{");
+    }
+
+    [Fact]
+    public async Task Password_reset_html_carries_its_own_call_to_action()
+    {
+        ArrangeAuth(EmailTemplateType.AuthPasswordReset, "Obnovení hesla",
+            "Dostali jsme žádost.\n\n{{action_url}}\n\nOdkaz je platný do {{expires_at}}.");
+
+        await _sut.SendAsync(
+            OutboxEventTypes.AuthPasswordResetSend,
+            EncodePayloadExpiring(new DateTimeOffset(2026, 8, 24, 18, 30, 0, TimeSpan.Zero)),
+            CancellationToken.None);
+
+        CapturedMessage().HtmlBody.Should().Contain(">Nastavit nové heslo</a>");
     }
 
     [Fact]
