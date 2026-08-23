@@ -31,7 +31,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
     <section className="flex flex-col">
       <header className="text-center">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand-300">{t('auth.shared.eyebrow')}</p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl md:text-4xl">{title}</h1>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl md:text-4xl">{title}</h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-zinc-400">{subtitle}</p>
       </header>
 
@@ -52,7 +52,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
         {STATS.map((stat) => (
           <div key={stat.labelKey} className="px-2">
             <dt className="text-xs leading-tight text-zinc-500">{t(stat.labelKey)}</dt>
-            <dd className="mt-1 text-sm font-semibold text-white">{t(stat.valueKey)}</dd>
+            <dd className="mt-1 text-sm font-semibold text-zinc-50">{t(stat.valueKey)}</dd>
           </div>
         ))}
       </dl>

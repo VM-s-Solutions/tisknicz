@@ -129,7 +129,7 @@ function Consume({ token, redirect }: { readonly token: string; readonly redirec
   if (error) {
     return (
       <Card padding="lg" variant="elevated" className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">{t('auth.magic.failed_title')}</h2>
+        <h2 className="text-lg font-semibold text-zinc-50">{t('auth.magic.failed_title')}</h2>
         <p className="text-sm text-zinc-300">{error}</p>
         {/* Recovery paths (T-0168): the failure card used to dead-end. */}
         <div className="flex flex-wrap items-center gap-4 border-t border-zinc-800/80 pt-4 text-sm">

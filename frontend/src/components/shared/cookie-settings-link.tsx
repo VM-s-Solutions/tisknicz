@@ -17,7 +17,7 @@ export function CookieSettingsLink({ className = '' }: { readonly className?: st
     <button
       type="button"
       onClick={() => openConsentSettings()}
-      className={`text-sm text-zinc-300 transition-colors hover:text-white ${className}`}
+      className={`text-sm text-zinc-300 transition-colors hover:text-zinc-50 ${className}`}
     >
       {t('cookieConsent.settingsLinkLabel')}
     </button>

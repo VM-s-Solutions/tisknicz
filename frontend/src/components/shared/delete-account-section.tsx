@@ -41,8 +41,8 @@ export function DeleteAccountSection({ host }: { host: ApiHost }) {
   }
 
   return (
-    <Card variant="elevated" padding="lg" className="flex flex-col gap-5 border-red-900/50">
-      <h2 className="flex items-center gap-3 text-lg font-semibold text-red-400">
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5 border-error/40">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-error">
         <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
           <Icon name="trash" size={16} />
         </span>
@@ -50,7 +50,7 @@ export function DeleteAccountSection({ host }: { host: ApiHost }) {
       </h2>
       <p className="text-sm leading-relaxed text-zinc-300">
         {t('profile.delete_account.description')}{' '}
-        <Link href="/gdpr" className="underline hover:text-white">
+        <Link href="/gdpr" className="underline hover:text-zinc-50">
           {t('profile.delete_account.gdpr_link')}
         </Link>
       </p>

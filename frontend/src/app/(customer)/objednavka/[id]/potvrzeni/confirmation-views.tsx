@@ -46,9 +46,9 @@ export function SuccessView({
   readonly orderNumber: string;
 }) {
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col items-center gap-6 text-center">
+    <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-6 text-center">
       <span className="icon-tile h-16 w-16" aria-hidden="true">
-        <Icon name="checkCircle" size={30} className="text-emerald-400" />
+        <Icon name="checkCircle" size={30} className="text-success" />
       </span>
       <div className="flex flex-col gap-1.5">
         <h1 className="text-shine text-2xl font-semibold">
@@ -86,7 +86,7 @@ export function CapReachedView({ orderId }: { readonly orderId: string }) {
   return (
     <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-5 text-center">
       <span className="icon-tile h-16 w-16" aria-hidden="true">
-        <Icon name="clock" size={30} className="text-amber-400" />
+        <Icon name="clock" size={30} className="text-warning" />
       </span>
       <h1 className="text-shine text-2xl font-semibold">{t('checkout.confirm.pendingTitle')}</h1>
       <p className="max-w-md text-sm leading-relaxed text-zinc-400">
@@ -104,7 +104,7 @@ export function FailureView({ orderId }: { readonly orderId: string }) {
   return (
     <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-5 text-center">
       <span className="icon-tile h-16 w-16" aria-hidden="true">
-        <Icon name="xCircle" size={30} className="text-red-400" />
+        <Icon name="xCircle" size={30} className="text-error" />
       </span>
       <h1 className="text-shine text-2xl font-semibold">{t('checkout.confirm.failed.title')}</h1>
       <p className="max-w-md text-sm leading-relaxed text-zinc-400">

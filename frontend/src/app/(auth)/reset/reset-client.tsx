@@ -52,7 +52,7 @@ function RequestReset({ loginHref }: { readonly loginHref: string }) {
   if (done) {
     return (
       <>
-        <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.reset.request_done_title')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{t('auth.reset.request_done_title')}</h1>
         <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-3">
           <p className="text-sm text-zinc-300">{t('auth.reset.request_done_body')}</p>
           <p className="text-sm">
@@ -67,7 +67,7 @@ function RequestReset({ loginHref }: { readonly loginHref: string }) {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.reset.request_title')}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{t('auth.reset.request_title')}</h1>
       <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-5">
         <p className="text-sm text-zinc-400">{t('auth.reset.request_intro')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
@@ -123,7 +123,7 @@ function ConfirmReset({ token, loginHref }: { readonly token: string; readonly l
   if (done) {
     return (
       <>
-        <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.reset.confirm_done_title')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{t('auth.reset.confirm_done_title')}</h1>
         <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-3">
           <p className="text-sm text-zinc-300">{t('auth.reset.confirm_done_body')}</p>
           <p className="text-sm">
@@ -138,7 +138,7 @@ function ConfirmReset({ token, loginHref }: { readonly token: string; readonly l
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.reset.confirm_title')}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{t('auth.reset.confirm_title')}</h1>
       <Card padding="lg" variant="elevated" className="mt-6 flex flex-col gap-5">
         <p className="text-sm text-zinc-400">{t('auth.reset.confirm_intro')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>

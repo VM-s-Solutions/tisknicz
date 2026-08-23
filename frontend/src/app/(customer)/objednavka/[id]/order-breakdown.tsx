@@ -71,7 +71,7 @@ export function OrderPriceCards({ detail }: { readonly detail: CustomerOrderDeta
 
   return (
     <div className="flex flex-col gap-6">
-      <Card variant="accent" padding="md">
+      <Card variant="elevated" padding="md">
         {/* iOS grouped list — hairline-divided key-value rows, total as
             the emphasised last row. */}
         <dl className="divide-y divide-zinc-800">

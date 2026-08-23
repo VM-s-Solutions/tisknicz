@@ -28,7 +28,7 @@ export default function AdminInvoicesError({
           </Button>
           <Link
             href="/dashboard/admin/faktury"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.invoices.title')}
           </Link>

@@ -28,7 +28,7 @@ export default function AdminAuditError({
           </Button>
           <Link
             href="/dashboard/admin/audit"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.audit.title')}
           </Link>

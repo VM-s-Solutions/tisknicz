@@ -81,7 +81,7 @@ export default async function AdminCountryConfigPage({ params }: PageProps) {
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="globe" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.ops.country.title', { code: countryCode })}
             </h1>
           </div>

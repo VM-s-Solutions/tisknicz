@@ -60,7 +60,7 @@ export default function ContactPage() {
   return (
     <section className="py-16 lg:py-24">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{t('static.contact.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">{t('static.contact.title')}</h1>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">

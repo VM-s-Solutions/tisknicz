@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DashboardNav, type DashboardNavItem } from '@/components/shared/dashboard-nav';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { logout } from '@/lib/api-client-helpers/auth';
@@ -80,7 +81,7 @@ export function AdminShellNav({ identity }: { readonly identity: string }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/dashboard/admin"
-          className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
+          className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold tracking-tight text-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60"
         >
           {t('dashboard.admin.shell.brandName')}
           {/* The console badge, not part of the wordmark — it keeps
@@ -91,6 +92,7 @@ export function AdminShellNav({ identity }: { readonly identity: string }) {
         </Link>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           {/* Full identity, no truncation: row 1 no longer shares its width
               with the section links, so the operator can read their whole
               sign-in. `break-all` keeps even a long address complete rather

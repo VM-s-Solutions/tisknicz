@@ -36,7 +36,7 @@ export default function PrivacyPage() {
           <span className="icon-tile h-11 w-11" aria-hidden="true">
             <Icon name="shield" size={20} />
           </span>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
             {t('static.privacy.title')}
           </h1>
         </div>

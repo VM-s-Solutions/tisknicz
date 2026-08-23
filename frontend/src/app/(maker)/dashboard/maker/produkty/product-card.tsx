@@ -86,7 +86,7 @@ export function MakerProductCard({ item }: ProductCardProps) {
         <div className="flex flex-col gap-1">
           <Link
             href={`/dashboard/maker/produkty/${encodeURIComponent(item.productId)}`}
-            className="text-base font-semibold text-white transition-colors hover:text-brand-400 line-clamp-2"
+            className="text-base font-semibold text-zinc-50 transition-colors hover:text-brand-400 line-clamp-2"
           >
             {item.title}
           </Link>

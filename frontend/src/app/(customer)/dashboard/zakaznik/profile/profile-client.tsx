@@ -90,7 +90,7 @@ function IdentitySection({
   onUpdated: (next: MyProfile) => void;
 }) {
   return (
-    <Card variant="accent" padding="lg">
+    <Card variant="elevated" padding="lg">
       <ProfileImagePicker
         currentUrl={buildAvatarUrl(profile.avatarBlobPath)}
         name={profile.fullName}

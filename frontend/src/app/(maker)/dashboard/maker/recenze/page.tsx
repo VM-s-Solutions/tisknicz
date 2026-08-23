@@ -137,9 +137,9 @@ function AggregateHeader({
   }
   const average = ratingAverageBp / RATING_BP_PER_STAR;
   return (
-    <div className="panel panel-accent flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 px-5 py-4">
+    <div className="panel flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 px-5 py-4">
       <StarRating value={average} size="md" />
-      <span className="text-xl font-bold text-white">{average.toFixed(1)}</span>
+      <span className="text-xl font-bold text-zinc-50">{average.toFixed(1)}</span>
       <span className="text-sm text-zinc-400">
         {t('dashboard.maker.reviews.aggregate.count', { count: ratingCount })}
       </span>
@@ -169,7 +169,7 @@ function ReviewsError({ error }: { readonly error: ApiError }) {
         </div>
         <Link
           href={ROUTE_PATH}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/15"
         >
           {t('dashboard.maker.reviews.error.retry')}
         </Link>

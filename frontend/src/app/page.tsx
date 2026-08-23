@@ -80,7 +80,7 @@ export default async function HomePage() {
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl">
             <p className="reveal-up text-sm font-semibold text-brand-400">Makables</p>
-            <h1 className="reveal-up reveal-delay-1 mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="reveal-up reveal-delay-1 mt-5 text-4xl font-bold tracking-tight text-zinc-50 sm:text-5xl lg:text-6xl">
               Kde nápady dostávají tvar
             </h1>
             <p className="reveal-up reveal-delay-2 mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">
@@ -117,7 +117,7 @@ export default async function HomePage() {
           <div className="max-w-3xl">
             <div>
               <p className="text-sm font-semibold text-brand-400">Jak to funguje</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Od zadání po doručení</h2>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">Od zadání po doručení</h2>
             </div>
           </div>
 
@@ -157,7 +157,7 @@ export default async function HomePage() {
       <section className="bg-surface-primary py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <p className="text-sm font-semibold text-brand-400">Kategorie</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">Služby na jednom místě</h2>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">Služby na jednom místě</h2>
 
           <div className="mt-10 grid grid-cols-1 divide-y divide-zinc-800 border-y border-zinc-800 sm:grid-cols-2 sm:divide-y-0">
             {categories.map((cat) => (
@@ -184,7 +184,7 @@ export default async function HomePage() {
 
       <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Pro makery</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">Pro makery</h2>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-zinc-300">
             Máš vlastní výrobu a chceš získávat nové zakázky bez budování vlastního e-shopu? Přidej se na Makables.
           </p>
@@ -206,7 +206,7 @@ export default async function HomePage() {
 function Metric({ value, label }: { value: string; label: string }) {
   return (
     <div className="px-5 py-6 text-left sm:px-6 sm:py-7 [&:not(:first-child)]:sm:border-l [&:not(:first-child)]:sm:border-zinc-800">
-      <p className="text-2xl font-bold text-white sm:text-3xl">{value}</p>
+      <p className="text-2xl font-bold text-zinc-50 sm:text-3xl">{value}</p>
       <p className="mt-1 text-sm text-zinc-400">{label}</p>
     </div>
   );
@@ -234,7 +234,7 @@ function StepLine({
             <span className="flex h-7 w-7 items-center justify-center text-brand-400">
               <Icon name={icon} size={16} />
             </span>
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-lg font-semibold text-zinc-50">{title}</h3>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">{description}</p>
         </div>

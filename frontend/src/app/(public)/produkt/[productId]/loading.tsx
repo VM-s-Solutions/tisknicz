@@ -19,7 +19,7 @@ export default function Loading() {
           </div>
         </div>
 
-        <Card variant="accent" padding="md" className="flex h-fit flex-col gap-5">
+        <Card variant="elevated" padding="md" className="flex h-fit flex-col gap-5">
           <div className="h-9 w-3/4 animate-pulse rounded bg-surface-elevated" />
           <div className="h-8 w-1/2 animate-pulse rounded bg-surface-elevated" />
           <div className="h-4 w-2/3 animate-pulse rounded bg-surface-elevated" />

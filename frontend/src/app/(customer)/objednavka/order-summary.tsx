@@ -21,7 +21,7 @@ export function OrderSummary({ product }: { readonly product: ProductDetail }) {
   const imageUrl = buildProductImageUrl(product.images[0]?.blobPath);
 
   return (
-    <Card variant="accent" padding="md" className="flex flex-col gap-4 lg:sticky lg:top-24">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-4 lg:sticky lg:top-24">
       <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
         {t('checkout.summary.product')}
       </h2>

@@ -93,7 +93,7 @@ export function OrderFilters({ state, country, makerId, customerEmail }: OrderFi
         </Button>
         <Link
           href={ROUTE_PATH}
-          className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
         >
           {t('dashboard.admin.orders.filter.reset')}
         </Link>

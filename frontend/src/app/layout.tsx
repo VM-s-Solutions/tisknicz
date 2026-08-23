@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { CookieConsentBanner } from '@/components/shared/cookie-consent-banner';
 import { SITE_URL } from '@/lib/seo/site-url';
+import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme/theme';
 import './globals.css';
 
 function publicApiOrigin(): string | null {
@@ -44,8 +45,17 @@ export default function RootLayout({
   const apiOrigin = publicApiOrigin();
 
   return (
-    <html lang="cs" className={`${inter.variable} h-full antialiased`}>
+    // `suppressHydrationWarning` covers exactly one attribute: `data-theme`,
+    // written onto <html> by the bootstrap script below before React ever
+    // sees the document. Without it every page logs a hydration mismatch on
+    // the root element. It does NOT suppress warnings for the tree inside.
+    <html lang="cs" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        {/* Resolve the theme before first paint. A theme applied after
+            hydration paints one frame of the wrong palette first, which on
+            a dark default is a full-screen white flash on every load. The
+            script is ~200 bytes, inline and synchronous on purpose. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         {apiOrigin ? (
           <>
             {/* Warm the API origin before the first client-side fetch:

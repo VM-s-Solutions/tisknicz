@@ -158,12 +158,12 @@ export function MakerFeeOverrideForm({
             {t('dashboard.admin.ops.makers.feeOverride.percentHint')}
           </p>
           {percent.trim() !== '' && bp === null ? (
-            <p className="mt-1 text-xs text-amber-300">
+            <p className="mt-1 text-xs text-warning">
               {t('dashboard.admin.ops.makers.feeOverride.percentInvalid')}
             </p>
           ) : null}
           {exceedsCeiling ? (
-            <p className="mt-1 text-xs text-amber-300">
+            <p className="mt-1 text-xs text-warning">
               {t('dashboard.admin.ops.makers.feeOverride.exceedsDefault')}
             </p>
           ) : null}

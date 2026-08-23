@@ -248,14 +248,14 @@ export function DatePicker({
             onKeyDown={(event) => {
               if (event.key === 'Escape') setOpen(false);
             }}
-            className="absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-2xl shadow-black/50"
+            className="absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-zinc-700 bg-zinc-900 p-3 elevated-shadow"
           >
             <div className="mb-2 flex items-center justify-between gap-2">
               <button
                 type="button"
                 aria-label={t('ui.datePicker.prevMonth')}
                 onClick={() => moveMonth(-1)}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
               >
                 <Icon name="chevronLeft" size={16} />
               </button>
@@ -266,7 +266,7 @@ export function DatePicker({
                 type="button"
                 aria-label={t('ui.datePicker.nextMonth')}
                 onClick={() => moveMonth(1)}
-                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
+                className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
               >
                 <Icon name="chevronRight" size={16} />
               </button>
@@ -303,12 +303,12 @@ export function DatePicker({
                     onClick={() => selectDay(day)}
                     className={`flex h-8 w-full items-center justify-center rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40 ${
                       isSelected
-                        ? 'bg-brand-500 font-semibold text-zinc-950'
+                        ? 'bg-brand-500 font-semibold text-on-brand'
                         : outOfRange
                           ? 'cursor-not-allowed text-zinc-500'
                           : isToday
                             ? 'font-semibold text-brand-300 hover:bg-zinc-800'
-                            : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                            : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50'
                     }`}
                   >
                     {day}
@@ -352,7 +352,7 @@ export function DatePicker({
                   emit(null, '00:00');
                   setOpen(false);
                 }}
-                className="rounded-lg px-2 py-1 text-sm text-zinc-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
+                className="rounded-lg px-2 py-1 text-sm text-zinc-400 transition-colors hover:text-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40"
               >
                 {t('ui.datePicker.clear')}
               </button>

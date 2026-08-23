@@ -73,7 +73,7 @@ export default async function AdminMakersPage({ searchParams }: PageProps) {
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="building" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.ops.makers.lookup.title')}
             </h1>
           </div>
@@ -140,7 +140,7 @@ function MakerRow({ item }: { readonly item: AdminMakerListItem }) {
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-base font-semibold text-white">{item.companyName}</p>
+          <p className="truncate text-base font-semibold text-zinc-50">{item.companyName}</p>
           {item.isVerified ? (
             <Badge variant="success">{t('dashboard.admin.ops.makers.badge.verified')}</Badge>
           ) : (

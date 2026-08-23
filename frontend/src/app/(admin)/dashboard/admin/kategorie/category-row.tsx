@@ -85,7 +85,7 @@ export function CategoryRow({ item }: { readonly item: AdminCategoryItem }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="truncate text-base font-semibold text-white">{item.name}</p>
+            <p className="truncate text-base font-semibold text-zinc-50">{item.name}</p>
             <Badge variant={item.isActive ? 'success' : 'default'}>
               {item.isActive
                 ? t('dashboard.admin.categories.badge.active')

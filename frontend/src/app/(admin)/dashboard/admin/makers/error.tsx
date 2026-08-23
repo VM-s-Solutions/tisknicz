@@ -29,7 +29,7 @@ export default function AdminMakersLookupError({
           </Button>
           <Link
             href="/dashboard/admin"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.nav.overview')}
           </Link>

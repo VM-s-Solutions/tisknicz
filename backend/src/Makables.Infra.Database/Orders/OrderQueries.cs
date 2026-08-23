@@ -394,6 +394,17 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
         OrderState.Disputed,
     ];
 
+    /// <summary>
+    /// <see cref="EarnedStates"/> as the strings actually stored in
+    /// <c>orders.state</c> (the column is a <c>HasConversion&lt;string&gt;</c>
+    /// varchar, not an int). The raw T-0192 series query compares against
+    /// these; deriving them from the enum array keeps the recognition rule a
+    /// single source of truth across the LINQ aggregate and the SQL one — a
+    /// hand-written list here would be free to drift.
+    /// </summary>
+    private static readonly string[] EarnedStateNames =
+        Array.ConvertAll(EarnedStates, state => state.ToString());
+
     public async Task<PlatformRevenueDto> GetPlatformRevenueAsync(
         DateTimeOffset fromInclusive,
         DateTimeOffset toExclusive,
@@ -455,4 +466,89 @@ public sealed class OrderQueries(MakablesDbContext db) : IOrderQueries
     private static readonly PlatformRevenueDto EmptyRevenue =
         new(PaidOrderCount: 0, GrossVolumeMinor: 0, PlatformFeeMinor: 0, MakerPayoutMinor: 0,
             RefundedMinor: 0, Currency: LaunchCurrency);
+
+    /// <summary>
+    /// Postgres <c>date_trunc</c> field for a bucket width. The enum is the
+    /// only way to reach this, so the SQL never carries a caller-supplied
+    /// interval string. An unmapped member is a programmer error (a new enum
+    /// value shipped without its field), not a user error — hence the throw
+    /// rather than a silent fallback that would quietly mis-bucket money.
+    /// </summary>
+    private static string TruncField(RevenueBucketGranularity granularity) => granularity switch
+    {
+        RevenueBucketGranularity.Hour => "hour",
+        RevenueBucketGranularity.Day => "day",
+        RevenueBucketGranularity.Week => "week",
+        RevenueBucketGranularity.Month => "month",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(granularity), granularity, "Unmapped revenue bucket granularity."),
+    };
+
+    public async Task<IReadOnlyList<PlatformRevenueBucketDto>> GetPlatformRevenueSeriesAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        RevenueBucketGranularity granularity,
+        string timeZoneId,
+        CancellationToken ct)
+    {
+        if (toExclusive <= fromInclusive || string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            return [];
+        }
+
+        var field = TruncField(granularity);
+
+        // Raw SQL, not LINQ: bucketing needs
+        // date_trunc(field, timestamptz, zone) — the three-argument form
+        // added in PostgreSQL 16 — so that a "day" is a day in the
+        // operator's civil timezone rather than a 24h slice of UTC. The
+        // Npgsql provider has no translation for it. Every hole below is a
+        // real query parameter (FromSqlInterpolated), so the timezone id and
+        // the state list are values, never concatenated SQL; `field` is a
+        // parameter too, and can only be one of four literals TruncField
+        // returns.
+        //
+        // The inner select resolves `earned` ONCE per row so the recognition
+        // rule appears a single time and the four conditional aggregates
+        // cannot disagree about which orders they cover — the same guarantee
+        // the LINQ window aggregate gets from sharing one GroupBy.
+        //
+        // `o.is_active` is spelled out because the global soft-delete query
+        // filter does not reach a keyless type (see PlatformRevenueBucketRow).
+        // The scan is served by ix_orders_paid_at, whose partial WHERE is
+        // exactly `paid_at IS NOT NULL AND is_active`.
+        var rows = await db.Set<PlatformRevenueBucketRow>()
+            .FromSqlInterpolated($@"
+                SELECT date_trunc({field}, s.paid_at, {timeZoneId}) AS bucket_start,
+                       COUNT(*) FILTER (WHERE s.earned)::int AS paid_order_count,
+                       COALESCE(SUM(s.total_amount_minor) FILTER (WHERE s.earned), 0)::bigint AS gross_volume_minor,
+                       COALESCE(SUM(s.platform_fee_amount_minor) FILTER (WHERE s.earned), 0)::bigint AS platform_fee_minor,
+                       COALESCE(SUM(s.maker_payout_amount_minor) FILTER (WHERE s.earned), 0)::bigint AS maker_payout_minor,
+                       COALESCE(SUM(s.refunded_amount_minor), 0)::bigint AS refunded_minor
+                FROM (
+                    SELECT o.paid_at,
+                           o.state = ANY({EarnedStateNames}) AS earned,
+                           o.total_amount_minor,
+                           o.platform_fee_amount_minor,
+                           o.maker_payout_amount_minor,
+                           o.refunded_amount_minor
+                    FROM orders o
+                    WHERE o.is_active
+                      AND o.paid_at IS NOT NULL
+                      AND o.paid_at >= {fromInclusive}
+                      AND o.paid_at < {toExclusive}
+                ) s
+                GROUP BY 1
+                ORDER BY 1")
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return rows.ConvertAll(r => new PlatformRevenueBucketDto(
+            r.BucketStart,
+            r.PaidOrderCount,
+            r.GrossVolumeMinor,
+            r.PlatformFeeMinor,
+            r.MakerPayoutMinor,
+            r.RefundedMinor));
+    }
 }

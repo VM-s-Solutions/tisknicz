@@ -82,7 +82,7 @@ export default async function AdminPayoutsPage({ searchParams }: PageProps) {
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="wallet" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.ops.payouts.title')}
             </h1>
           </div>
@@ -100,7 +100,7 @@ export default async function AdminPayoutsPage({ searchParams }: PageProps) {
               {t('dashboard.admin.ops.payouts.processingCount.label')}
             </span>
           </div>
-          <span className="text-3xl font-bold text-white">{count === null ? '—' : count}</span>
+          <span className="text-3xl font-bold text-zinc-50">{count === null ? '—' : count}</span>
         </Card>
 
         {count === null ? (

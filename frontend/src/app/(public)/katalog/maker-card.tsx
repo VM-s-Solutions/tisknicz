@@ -66,7 +66,7 @@ export function MakerCard({ item }: MakerCardProps) {
 
         <div className="flex flex-1 flex-col gap-2 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="min-w-0 text-base font-semibold text-zinc-100 group-hover:text-white">
+            <h3 className="min-w-0 text-base font-semibold text-zinc-100 group-hover:text-zinc-50">
               {item.companyName}
             </h3>
             {item.isVerified && (
@@ -91,7 +91,7 @@ export function MakerCard({ item }: MakerCardProps) {
             <div className="flex items-center gap-1.5 text-sm whitespace-nowrap">
               {hasRating ? (
                 <>
-                  <Icon name="star" size={14} className="text-amber-400" />
+                  <Icon name="star" size={14} className="text-accent-400" />
                   <span className="font-semibold text-zinc-200">{ratingDisplay}</span>
                   <span className="text-zinc-500">
                     {t('catalog.card.rating_count', { count: item.ratingCount })}

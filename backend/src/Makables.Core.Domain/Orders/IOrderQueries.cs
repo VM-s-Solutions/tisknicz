@@ -133,4 +133,34 @@ public interface IOrderQueries
         DateTimeOffset fromInclusive,
         DateTimeOffset toExclusive,
         CancellationToken ct);
+
+    /// <summary>
+    /// The same earnings, bucketed over time — the admin overview's revenue
+    /// chart (T-0192). <b>Unscoped — admin host only</b>, exactly like
+    /// <see cref="GetPlatformRevenueAsync"/>, and recognised on the same
+    /// rule (<c>PaidAt</c>, the earned states) so a series summed over its
+    /// buckets equals the single-number read for the same span.
+    ///
+    /// <para>
+    /// <paramref name="granularity"/> selects the bucket width and
+    /// <paramref name="timeZoneId"/> the civil timezone the truncation
+    /// happens in — an IANA id off the country's
+    /// <c>CountryConfiguration.TimeZoneId</c>, never a hardcoded zone, so a
+    /// "day" is a day where the operator lives.
+    /// </para>
+    ///
+    /// <para>
+    /// Returns only the buckets that contain at least one paid order,
+    /// ascending by <see cref="PlatformRevenueBucketDto.BucketStart"/> —
+    /// the empty ones are the caller's to fill, because only the caller
+    /// knows the grid it asked for. One round-trip; an empty span returns
+    /// an empty list, never null.
+    /// </para>
+    /// </summary>
+    Task<IReadOnlyList<PlatformRevenueBucketDto>> GetPlatformRevenueSeriesAsync(
+        DateTimeOffset fromInclusive,
+        DateTimeOffset toExclusive,
+        RevenueBucketGranularity granularity,
+        string timeZoneId,
+        CancellationToken ct);
 }

@@ -92,7 +92,7 @@ export function InvoiceFilters({ type, country, recipient, dateFrom, dateTo }: I
         </Button>
         <Link
           href={ROUTE_PATH}
-          className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
         >
           {t('dashboard.admin.invoices.filter.reset')}
         </Link>

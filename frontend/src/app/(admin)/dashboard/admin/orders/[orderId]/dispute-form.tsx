@@ -206,7 +206,7 @@ function ResolveDisputeForm({ orderId }: { readonly orderId: string }) {
         onChange={(event) => setResolutionNotes(event.target.value)}
         disabled={busy}
       />
-      <p className="-mt-2 text-xs text-amber-300">
+      <p className="-mt-2 text-xs text-warning">
         {t('dashboard.admin.orderActions.dispute.resolutionNotesHint')}
       </p>
 

@@ -240,7 +240,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
   const bio = profile.bio?.trim();
 
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
       <div className="flex items-center gap-4">
         {/* Decorative: the <h1> beside it already names the maker. */}
         <Avatar src={buildMakerLogoUrl(profile.logoBlobPath)} name={profile.companyName} size="lg" />
@@ -289,7 +289,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
         <>
           <div aria-hidden="true" className="divider-glow" />
           <div className="flex flex-col gap-1">
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-white">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-50">
               <Icon name="mapPin" size={15} className="text-brand-400" />
               {t('catalog.maker.pickup.heading')}
             </p>

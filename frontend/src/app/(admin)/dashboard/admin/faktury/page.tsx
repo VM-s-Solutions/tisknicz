@@ -96,7 +96,7 @@ export default async function AdminInvoicesPage({ searchParams }: PageProps) {
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="receipt" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.invoices.title')}
             </h1>
           </div>
@@ -211,7 +211,7 @@ function InvoicesError({ error, retryHref }: { readonly error: ApiError; readonl
         </div>
         <Link
           href={retryHref}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-red-800/50 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/15"
         >
           {t('dashboard.admin.invoices.error.retry')}
         </Link>

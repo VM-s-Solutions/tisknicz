@@ -20,7 +20,7 @@ export function SectionHeading({ icon, title, hint }: SectionHeadingProps) {
         <Icon name={icon} size={16} />
       </span>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <h2 className="text-lg font-semibold text-zinc-50">{title}</h2>
         {hint && <p className="mt-0.5 text-xs text-zinc-500">{hint}</p>}
       </div>
     </div>

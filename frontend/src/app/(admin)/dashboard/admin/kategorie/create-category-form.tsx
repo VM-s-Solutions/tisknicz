@@ -60,7 +60,7 @@ export function CreateCategoryForm() {
 
   return (
     <Card className="flex flex-col gap-4">
-      <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-zinc-50">
         <span className="icon-tile h-9 w-9 shrink-0" aria-hidden="true">
           <Icon name="plus" size={16} />
         </span>

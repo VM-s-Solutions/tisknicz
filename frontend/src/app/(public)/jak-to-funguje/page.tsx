@@ -73,7 +73,7 @@ export default function HowItWorksPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="max-w-4xl">
             <p className="text-sm font-semibold text-brand-400">Makables</p>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 text-4xl font-bold tracking-tight text-zinc-50 sm:text-5xl lg:text-6xl">
               {t('static.how_it_works.title')}
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-zinc-300">{t('static.how_it_works.intro')}</p>
@@ -118,7 +118,7 @@ export default function HowItWorksPage() {
                         <span className="flex h-7 w-7 items-center justify-center text-brand-400">
                           <Icon name={step.icon} size={16} />
                         </span>
-                        <h3 className="text-lg font-semibold text-white">{t(step.titleKey)}</h3>
+                        <h3 className="text-lg font-semibold text-zinc-50">{t(step.titleKey)}</h3>
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t(step.bodyKey)}</p>
                       {'detailKeys' in step ? (
@@ -145,7 +145,7 @@ export default function HowItWorksPage() {
       <section className="border-t border-zinc-800 bg-surface-secondary py-16 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 text-center sm:px-6 lg:px-8">
           <p className="text-xs font-semibold text-brand-400/80">{t('static.how_it_works.steps_heading')}</p>
-          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{t('static.how_it_works.cta_heading')}</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">{t('static.how_it_works.cta_heading')}</h2>
           <Link
             href="/katalog"
             className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
