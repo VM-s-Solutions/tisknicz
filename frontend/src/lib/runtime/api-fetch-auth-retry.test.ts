@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch } from './api-fetch';
+import type { apiFetch as ApiFetch } from './api-fetch';
 
 /**
  * Pins the T-0154 browser-side 401 → refresh → retry-once contract:
  * an expired access cookie mid-session recovers through ONE refresh
  * round trip; auth endpoints and failed refreshes never loop.
+ *
+ * The module is re-imported per test (T-0190): api-fetch now remembers, at
+ * module scope, which hosts the backend has declared dead, so a shared import
+ * would make these tests order-dependent.
  */
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -16,10 +20,13 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('apiFetch 401 auth retry', () => {
   const fetchMock = vi.fn();
+  let apiFetch: typeof ApiFetch;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+    ({ apiFetch } = await import('./api-fetch'));
   });
 
   afterEach(() => {

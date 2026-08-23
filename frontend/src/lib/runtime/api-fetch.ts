@@ -195,27 +195,59 @@ export async function apiFetch<TValue>(
 }
 
 /**
+ * Outcome of one client-side refresh. Same three-way split as the edge
+ * middleware (T-0189): a token the backend has DEFINITIVELY rejected is dead
+ * forever, while an unreachable backend says nothing about the token.
+ */
+type ClientRefreshOutcome = 'rotated' | 'rejected' | 'unavailable';
+
+/**
  * In-flight client-side refresh de-dupe (T-0154). Refresh-token reuse
  * detection revokes the whole token family (ADR 0012), so several
  * concurrently-401ing calls (an order page fires multiple requests)
  * must collapse into ONE refresh round trip per host.
  */
-const clientRefreshInflight = new Map<ApiHost, Promise<boolean>>();
+const clientRefreshInflight = new Map<ApiHost, Promise<ClientRefreshOutcome>>();
 
-function refreshClientSession(host: ApiHost): Promise<boolean> {
+/**
+ * Hosts whose refresh token the backend has rejected outright, in THIS tab
+ * (T-0190). Without it every later call re-ran the same doomed
+ * `401 → refresh → 401` and paid two extra round trips for it — the
+ * client-side half of the stale-cookie tax fixed in the middleware by T-0189.
+ *
+ * The browser cannot expire the cookies itself (they are HttpOnly, by design),
+ * so the memo lives here instead. It is safe precisely because it is scoped to
+ * one tab: keyed on the four-value `ApiHost` union so it cannot grow, dropped
+ * on reload — where the middleware expires the cookies for real — and cleared
+ * the moment any call to that host succeeds, so logging in recovers it with no
+ * special case.
+ *
+ * SERVER SAFETY: this module is shared by every SSR request in the Node
+ * process (and, since T-0187, by each of its workers), so per-session state at
+ * module scope would leak ACROSS USERS. Every read and write below is inside a
+ * `typeof window !== 'undefined'` branch; keep it that way.
+ */
+const sessionKnownDead = new Set<ApiHost>();
+
+function refreshClientSession(host: ApiHost): Promise<ClientRefreshOutcome> {
   const existing = clientRefreshInflight.get(host);
   if (existing) return existing;
 
-  const attempt = (async () => {
+  const attempt = (async (): Promise<ClientRefreshOutcome> => {
     try {
       const response = await fetch(`${resolveBaseUrl(host)}/api/v1/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
         signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
       });
-      return response.ok;
+      if (response.ok) return 'rotated';
+      // 401/403 = spent, revoked, reused, or signed by a retired key. Nothing
+      // will ever make this token work again.
+      if (response.status === 401 || response.status === 403) return 'rejected';
+      // 5xx / 429 / anything else — the token may still be good.
+      return 'unavailable';
     } catch {
-      return false;
+      return 'unavailable';
     }
   })();
 
@@ -365,13 +397,32 @@ async function apiFetchCore<TValue>(
     host !== 'public' &&
     !isAuthPath(path)
   ) {
-    const refreshed = await refreshClientSession(host);
-    if (refreshed) {
-      return apiFetchCore<TValue>(host, path, options, /* allowAuthRetry */ false);
+    // Already told, in this tab, that this host's refresh token is dead? Then
+    // the refresh round trip can only 401 again (T-0190). Skip it and let the
+    // caller see the 401 immediately, rather than charging the visitor two
+    // extra round trips per call for the rest of the page's life.
+    if (!sessionKnownDead.has(host)) {
+      const outcome = await refreshClientSession(host);
+      if (outcome === 'rotated') {
+        sessionKnownDead.delete(host);
+        return apiFetchCore<TValue>(host, path, options, /* allowAuthRetry */ false);
+      }
+      // 'unavailable' is deliberately NOT remembered: a blip or a cold start
+      // says nothing about the token, and refusing to retry afterwards would
+      // strand a visitor whose session is actually fine.
+      if (outcome === 'rejected') {
+        sessionKnownDead.add(host);
+      }
     }
   }
 
   if (response.ok) {
+    // The session works again — a fresh login in this tab, or another tab
+    // rotating the shared cookies. Forget the memo so the next expiry is
+    // recovered normally instead of being treated as permanent.
+    if (typeof window !== 'undefined' && sessionKnownDead.has(host)) {
+      sessionKnownDead.delete(host);
+    }
     if (response.status === 204) {
       return ok(undefined as TValue);
     }
