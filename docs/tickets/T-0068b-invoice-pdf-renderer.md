@@ -11,7 +11,7 @@ blocks: [T-0069, T-0086, T-0102]
 user_stories: [US-customer-0010, US-customer-0017, US-admin-0012]
 adrs: [0003, 0009, 0011, 0013, 0014, 0019, 0020]
 phase: 4
-manual_steps: [questpdf-license-revisit-on-revenue-milestone, country-config-ico-replace-placeholder-pre-launch]
+manual_steps: [questpdf-license-revisit-on-revenue-milestone]
 security_touching: false
 layers: [domain, appservices, infra-pdfrendering, infra-storage, database]
 ---
@@ -196,7 +196,7 @@ T-0068b ships zero new controllers (decision 9 strict-OOS on customer endpoint).
 Neither item below is a PR-open blocker — both are tracked post-merge in PM sprint reports.
 
 1. **`questpdf-license-revisit-on-revenue-milestone`** — QuestPDF Community License is confirmed appropriate for JVM YORE's current posture (Czech s.r.o., revenue < $1M USD, < 10 employees, private company). The ADR 0025 records the dual-license criteria; **PM revisits this if JVM YORE's annual revenue crosses $1M USD OR employee count crosses 10**. At that point: purchase a Pro license, switch `QuestPDF.Settings.License` to `LicenseType.Professional`, add the license key as an Azure Key Vault secret + read via `IOptions<QuestPdfOptions>`, redeploy. Until then, Community license works at zero cost. **Owner:** PM (revisit trigger). **Blocker:** no — Community works today.
-2. **`country-config-ico-replace-placeholder-pre-launch`** — CZ seed ships with placeholder `issuer_ico = '00000000'`. Tests + builds pass with the placeholder (the `Invoice.Issue` factory validates the column length only, not the Czech mod-11 algorithm — the platform's own IČO is not subject to ARES validation). **Before the production cutover** (the launch deploy that lets real customers place real paid orders), a one-line data migration replaces `'00000000'` with JVM YORE's actual 8-digit IČO. **Owner:** user (provides actual IČO at deploy time). **Blocker:** no for T-0068b merge; yes for production launch (PM sprint checkpoint catches it).
+2. **`country-config-ico-replace-placeholder-pre-launch` — CLOSED 2026-08-23.** The CZ row now carries JVM Yore's real identity from the ARES record (IČO `29633443`, `JVM Yore, s.r.o.`, seat `Příčná 1892/4, Nové Město, 110 00 Praha 1`), applied by migration `20260823205941_InvoiceIssuerAddressAndSettlement` to both `country_configuration` and any invoice row still snapshotting the `'00000000'` placeholder. No pre-launch action remains.
 
 ## Files touched (expected)
 

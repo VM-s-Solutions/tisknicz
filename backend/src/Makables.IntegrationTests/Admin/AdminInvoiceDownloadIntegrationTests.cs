@@ -176,8 +176,9 @@ public sealed class AdminInvoiceDownloadIntegrationTests : IAsyncLifetime
 
         var invoice = Invoice.Issue(InvoiceId, InvoiceNumber, InvoiceType.Customer,
             orderId: "ord-1", payoutBatchId: null, makerId: "maker-1",
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "Anna", recipientEmail: "anna@example.cz",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "Anna", recipientEmail: "anna@example.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: new DateOnly(2026, 5, 6), taxableSupplyDate: new DateOnly(2026, 5, 5),
             dueDate: new DateOnly(2026, 5, 20), invoicingMode: InvoicingMode.None,

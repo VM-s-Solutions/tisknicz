@@ -88,6 +88,7 @@ internal sealed class CountryConfigurationEntityConfiguration : IEntityTypeConfi
         builder.Property(c => c.IssuerName).HasColumnName("issuer_name").HasMaxLength(200).IsRequired();
         builder.Property(c => c.IssuerIco).HasColumnName("issuer_ico").HasMaxLength(8).IsFixedLength().IsRequired();
         builder.Property(c => c.IssuerDic).HasColumnName("issuer_dic").HasMaxLength(15);
+        builder.Property(c => c.IssuerAddress).HasColumnName("issuer_address").HasMaxLength(200);
         builder.Property(c => c.PlatformIban).HasColumnName("platform_iban").HasMaxLength(34);
 
         ConfigureAuditable(builder);

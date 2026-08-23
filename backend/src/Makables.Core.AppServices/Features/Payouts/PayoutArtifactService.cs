@@ -141,12 +141,15 @@ public sealed class PayoutArtifactService(
                         invoiceNumber: invoiceNumber,
                         type: InvoiceType.Fee,
                         orderId: null,
+                        // Many orders — their numbers ride on the line items.
+                        orderNumber: null,
                         payoutBatchId: batch.Id,
                         makerId: maker.Id,
                         issuerName: config.IssuerName,
                         issuerIco: config.IssuerIco,
                         issuerDic: config.IssuerDic,
                         issuerBankAccount: null,
+                        issuerAddress: config.IssuerAddress,
                         recipientName: maker.CompanyName,
                         recipientEmail: makerUser.Email,
                         recipientTaxId: maker.RegistrationNumber,
@@ -160,7 +163,12 @@ public sealed class PayoutArtifactService(
                         vatAmountMinor: 0,
                         amountWithVatMinor: feeTotal,
                         currency: batch.Currency,
-                        countryCode: batch.CountryCode);
+                        countryCode: batch.CountryCode,
+                        // The maker never transfers this — the payout below
+                        // is already net of PlatformFeeAmountMinor. Settled
+                        // on the DUZP, by deduction.
+                        paidOn: duzp,
+                        paymentMethod: SettlementMethods.PayoutDeduction);
                     await invoices.AddAsync(feeInvoice, cancellationToken);
                     feeInvoiceByMaker[makerId] = feeInvoice;
                     feeInvoiceCount++;

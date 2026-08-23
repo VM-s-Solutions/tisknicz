@@ -3,6 +3,7 @@ using System;
 using Makables.Infra.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Makables.Infra.Database.Migrations
 {
     [DbContext(typeof(MakablesDbContext))]
-    partial class MakablesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823205941_InvoiceIssuerAddressAndSettlement")]
+    partial class InvoiceIssuerAddressAndSettlement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1149,11 +1152,6 @@ namespace Makables.Infra.Database.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("order_id");
-
-                    b.Property<string>("OrderNumber")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("order_number");
 
                     b.Property<DateOnly?>("PaidOn")
                         .HasColumnType("date")

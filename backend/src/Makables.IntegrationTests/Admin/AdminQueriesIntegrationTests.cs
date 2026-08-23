@@ -177,8 +177,8 @@ public sealed class AdminQueriesIntegrationTests : IAsyncLifetime
 
         Invoice NewInvoice(string id, string number, InvoiceType type, string recipient, string country, string? orderId, string? batchId)
         {
-            var inv = Invoice.Issue(id, number, type, orderId, batchId, "maker-x",
-                "JVM YORE s.r.o.", "12345678", null, null, recipient, "r@example.cz",
+            var inv = Invoice.Issue(id, number, type, orderId, orderId is null ? null : "OBJ-20260501-0001", batchId, "maker-x",
+                "JVM YORE s.r.o.", "12345678", null, null, null, recipient, "r@example.cz",
                 null, null, new DateOnly(2026, 5, 1), null, new DateOnly(2026, 5, 15),
                 InvoicingMode.None, 1000, 0, 0, 1000, Currency, country);
             inv.MarkCreated(actor, SeedAt);

@@ -36,18 +36,22 @@ public class InvoiceTests
         int vatRateBp = 0,
         long vatAmountMinor = 0,
         long amountWithVatMinor = 100_00,
-        string? pdfBlobPath = null) =>
+        string? pdfBlobPath = null,
+        string? issuerAddress = null,
+        DateOnly? paidOn = null,
+        string? paymentMethod = null) =>
         Invoice.Issue(
             id: ValidId,
             invoiceNumber: ValidNumber,
             type: InvoiceType.Customer,
             orderId: ValidOrderId,
+            orderNumber: "OBJ-20260819-0001",
             payoutBatchId: null,
             makerId: ValidMakerId,
             issuerName: "JVM YORE s.r.o.",
             issuerIco: "12345678",
             issuerDic: mode == InvoicingMode.StandardVat ? "CZ12345678" : null,
-            issuerBankAccount: "1234567890/0100",
+            issuerBankAccount: "1234567890/0100", issuerAddress: issuerAddress,
             recipientName: "Anna Nováková",
             recipientEmail: "anna@example.cz",
             recipientTaxId: null,
@@ -62,6 +66,8 @@ public class InvoiceTests
             amountWithVatMinor: amountWithVatMinor,
             currency: "CZK",
             countryCode: "CZ",
+            paidOn: paidOn,
+            paymentMethod: paymentMethod,
             pdfBlobPath: pdfBlobPath);
 
     // === Factory happy paths ===
@@ -136,7 +142,8 @@ public class InvoiceTests
         var act = () => Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: null, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -155,7 +162,8 @@ public class InvoiceTests
         var act = () => Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: "batch-1", makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -195,7 +203,8 @@ public class InvoiceTests
         var act = () => Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -218,7 +227,8 @@ public class InvoiceTests
         var act = () => Invoice.Issue(
             id: id, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -237,7 +247,8 @@ public class InvoiceTests
         var act = () => Invoice.Issue(
             id: ValidId, invoiceNumber: "  ", type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -256,7 +267,8 @@ public class InvoiceTests
         var actNoName = () => Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "", issuerIco: "1", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "", issuerIco: "1", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -270,7 +282,8 @@ public class InvoiceTests
         var actNoIco = () => Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Customer,
             orderId: ValidOrderId, payoutBatchId: null, makerId: ValidMakerId,
-            issuerName: "X", issuerIco: "", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "X", issuerIco: "", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Y", recipientEmail: "y@y.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -356,8 +369,9 @@ public class InvoiceTests
         var invoice = Invoice.Issue(
             id: ValidId, invoiceNumber: ValidNumber, type: InvoiceType.Fee,
             orderId: null, payoutBatchId: "batch-1", makerId: ValidMakerId,
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678",
-            issuerDic: null, issuerBankAccount: null,
+            issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Maker GmbH", recipientEmail: "maker@example.cz",
             recipientTaxId: "87654321", recipientVatId: null,
             issueDate: IssueDate, taxableSupplyDate: null, dueDate: DueDate,
@@ -369,5 +383,84 @@ public class InvoiceTests
         invoice.Type.Should().Be(InvoiceType.Fee);
         invoice.OrderId.Should().BeNull();
         invoice.PayoutBatchId.Should().Be("batch-1");
+    }
+
+    // === Settlement + issuer-address snapshot ===
+
+    [Fact]
+    public void Issue_leaves_the_invoice_outstanding_when_no_settlement_is_supplied()
+    {
+        var invoice = ValidCustomerInvoice();
+
+        invoice.PaidOn.Should().BeNull();
+        invoice.PaymentMethod.Should().BeNull();
+    }
+
+    [Fact]
+    public void Issue_snapshots_the_settlement_date_and_channel()
+    {
+        var paidOn = new DateOnly(2026, 6, 1);
+
+        var invoice = ValidCustomerInvoice(paidOn: paidOn, paymentMethod: "CARD_CZ_CSOB_2");
+
+        invoice.PaidOn.Should().Be(paidOn);
+        invoice.PaymentMethod.Should().Be("CARD_CZ_CSOB_2");
+    }
+
+    [Fact]
+    public void Issue_rejects_a_payment_method_without_a_settlement_date()
+    {
+        // Half a settlement fact renders as neither a receipt nor a payment
+        // request — the document would silently lose both.
+        var act = () => ValidCustomerInvoice(paidOn: null, paymentMethod: "CARD_CZ_CSOB_2");
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("paymentMethod");
+    }
+
+    [Fact]
+    public void Issue_accepts_a_settlement_date_without_a_channel()
+    {
+        // Backfilled rows know WHEN but not HOW; that is a whole fact.
+        var invoice = ValidCustomerInvoice(paidOn: new DateOnly(2026, 6, 1));
+
+        invoice.PaidOn.Should().Be(new DateOnly(2026, 6, 1));
+        invoice.PaymentMethod.Should().BeNull();
+    }
+
+    [Fact]
+    public void Issue_trims_the_settlement_channel_and_normalises_blank_to_null()
+    {
+        ValidCustomerInvoice(paidOn: new DateOnly(2026, 6, 1), paymentMethod: "  CARD  ")
+            .PaymentMethod.Should().Be("CARD");
+        ValidCustomerInvoice(paidOn: new DateOnly(2026, 6, 1), paymentMethod: "   ")
+            .PaymentMethod.Should().BeNull();
+    }
+
+    [Fact]
+    public void Issue_snapshots_and_trims_the_issuer_address()
+    {
+        ValidCustomerInvoice(issuerAddress: "  Příčná 1892/4, Nové Město, 110 00 Praha 1  ")
+            .IssuerAddress.Should().Be("Příčná 1892/4, Nové Město, 110 00 Praha 1");
+        ValidCustomerInvoice(issuerAddress: "  ").IssuerAddress.Should().BeNull();
+    }
+
+    [Fact]
+    public void Issue_rejects_an_oversized_issuer_address()
+    {
+        var act = () => ValidCustomerInvoice(
+            issuerAddress: new string('x', Invoice.MaxIssuerAddressLength + 1));
+
+        act.Should().Throw<ArgumentException>().WithParameterName("issuerAddress");
+    }
+
+    [Fact]
+    public void Issue_rejects_an_oversized_payment_method()
+    {
+        var act = () => ValidCustomerInvoice(
+            paidOn: new DateOnly(2026, 6, 1),
+            paymentMethod: new string('x', Invoice.MaxPaymentMethodLength + 1));
+
+        act.Should().Throw<ArgumentException>().WithParameterName("paymentMethod");
     }
 }

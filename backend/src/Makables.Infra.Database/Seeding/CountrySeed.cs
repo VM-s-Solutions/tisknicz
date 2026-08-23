@@ -50,14 +50,16 @@ public static class CountrySeed
                 defaultShippingCarrier: "packeta",
                 defaultRegistry: "ares",
                 defaultEmailProvider: "resend",  // T-0157: ADR 0019 re-amended to Resend
-                // T-0068b locked decision 8: CZ seed issuer = JVM YORE s.r.o.
-                // IČO ships with placeholder '00000000' per user direction;
-                // a one-line data migration replaces it pre-production-launch
-                // (tracked by manual_step "country-config-ico-replace-placeholder-pre-launch").
-                // Invoice.Issue validates length only (8 chars), not mod-11,
-                // so the placeholder is build-safe.
-                issuerName: "JVM YORE s.r.o.",
-                issuerIco: "00000000",
+                // T-0068b locked decision 8: CZ seed issuer = JVM Yore.
+                // Name / IČO / seat are the ARES record (verified 2026-08-23,
+                // ekonomicke-subjekty/29633443), which closes the
+                // "country-config-ico-replace-placeholder-pre-launch"
+                // manual_step — the '00000000' placeholder is gone. The name
+                // is spelled as the registry spells it, because that is the
+                // string that has to match on a legal document.
+                issuerName: "JVM Yore, s.r.o.",
+                issuerIco: "29633443",
+                issuerAddress: "Příčná 1892/4, Nové Město, 110 00 Praha 1",
                 // T-0068a locked decision 2: JVM YORE not VAT-registered at
                 // MVP launch — DIČ null until cross 2M CZK threshold.
                 // T-0068b locked decision 4: platform IBAN null at MVP —

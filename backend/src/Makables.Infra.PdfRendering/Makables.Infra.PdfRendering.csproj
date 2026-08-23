@@ -5,6 +5,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The document templates and their formatting helpers stay internal —
+         nothing outside this assembly composes a page. The Czech formatting
+         and the payment-method label mapping are pure logic that must be
+         unit-tested, so the test project gets the same access the rest of
+         the solution grants it (Core.Domain / Core.AppServices / Config). -->
+    <InternalsVisibleTo Include="Makables.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- T-0068b locked decision 1: QuestPDF Community license — JVM YORE
          s.r.o. meets all three criteria (revenue < $1M USD, < 10 employees,
          not state-funded) so Community is the correct posture at MVP.

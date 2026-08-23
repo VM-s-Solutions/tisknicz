@@ -180,12 +180,14 @@ public static class IssueInvoice
                 invoiceNumber: invoiceNumber,
                 type: InvoiceType.Customer,
                 orderId: order.Id,
+                orderNumber: order.OrderNumber,
                 payoutBatchId: null,
                 makerId: order.MakerId,
                 issuerName: country.IssuerName,
                 issuerIco: country.IssuerIco,
                 issuerDic: country.IssuerDic,
                 issuerBankAccount: null,
+                issuerAddress: country.IssuerAddress,
                 recipientName: order.ContactName,
                 recipientEmail: order.ContactEmail,
                 recipientTaxId: null,
@@ -199,7 +201,12 @@ public static class IssueInvoice
                 vatAmountMinor: vatMinor,
                 amountWithVatMinor: grossMinor,
                 currency: order.Currency,
-                countryCode: order.CountryCode);
+                countryCode: order.CountryCode,
+                // The order is already paid — this handler only runs off the
+                // outbox row MarkOrderPaid enqueues. Snapshotting that makes
+                // the PDF a receipt instead of a payment request.
+                paidOn: ComputePaidOn(order, country),
+                paymentMethod: order.PaidAt is null ? null : order.PaymentMethod);
 
             // Step 7: Persist. UoW pipeline commits at end of handler.
             await invoices.AddAsync(invoice, cancellationToken);
@@ -313,6 +320,15 @@ public static class IssueInvoice
             var instant = order.PaidAt ?? clock.UtcNow;
             return ToCountryLocalDate(instant, country.TimeZoneId);
         }
+
+        /// <summary>
+        /// Settlement date = <c>Order.PaidAt</c> in country-local terms.
+        /// Null only on the defensive path where <c>PaidAt</c> is unset —
+        /// the invoice then renders as outstanding rather than claiming a
+        /// payment date it does not have.
+        /// </summary>
+        private static DateOnly? ComputePaidOn(Order order, CountryConfiguration country) =>
+            order.PaidAt is { } paid ? ToCountryLocalDate(paid, country.TimeZoneId) : null;
 
         /// <summary>
         /// DUZP — datum uskutečnění zdanitelného plnění. Per T-0068a
