@@ -51,25 +51,31 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
   Safari (safaridriver).
 - **AC-2** — Chips, badges, icon tiles and status fills read as colour on the
   white page rather than as off-white.
-  *Proof:* `.icon-tile` computed background `rgb(159, 227, 216)` in Safari;
+  *Proof:* `.icon-tile` computed background `rgb(20, 184, 166)` in Safari;
   captures of `/katalog` (mint avatar tiles + "Ověřený výrobce" badge),
   `/dashboard/admin/orders` (mint "Přijato" / "Zaplaceno", amber "Čeká na
   platbu"), the maker dashboard (mint active tab and account chip).
 - **AC-3** — The brand and status steps are at the chroma ceiling their
-  contrast floor allows.
-  *Proof:* brand text `#006e63` (was `#0c6259`), fills `#007a6f` / `#00847a`,
-  status `#0a7a34` / `#8a5a00` / `#cc0d2f` / `#0067d0`; all gated below.
+  contrast floor allows, and the fills are vivid rather than AA-dark.
+  *Proof:* brand text `#006f64` / `#00786c` (was `#0c6259`), fills
+  `#14b8a6` / `#2dd4bf`, status text `#097a32` / `#925f00` / `#d20a2b` /
+  `#0067d0`, status fills `#1fc25c` / `#f5a524` / `#ff4d5e` / `#2b95ff`,
+  each under near-black ink of its own hue. Operator asked twice for more
+  saturation ("furt vyblity jak kdybych byl barvoslepy", then "barvy jak jsou
+  ted i styly, jen sytejsi barvy") — the layout and the component styles are
+  unchanged, only the palette moved.
 - **AC-4** — Contrast contract holds in both palettes, including the new
   fills.
-  *Proof:* `npm run check:contrast` — 176 pairs pass, up from 168; the seven
+  *Proof:* `npm run check:contrast` — 175 pairs pass, up from 168; the seven
   added pairs put every `on-tint-*` ink on its own tint at ≥ 4.5:1.
 - **AC-5** — The dark theme is unchanged.
   *Proof:* the dark tints are the exact `color-mix(in oklab, …)` the `/10` and
   `/15` modifiers generated; `/katalog` dark capture matches the pre-change
   one; `--surface-primary` still `#0b1417`.
-- **AC-6** — No hover state paints a tint under ink that then fails AA.
-  *Proof:* every `hover:bg-tint-*` in `src/**/*.tsx` carries a matching
-  `hover:text-*` (audited by grep; 10 call sites gained one).
+- **AC-6** — No `bg-tint-*` anywhere sits under ink that is not
+  `text-on-tint-*`, at rest or on hover.
+  *Proof:* `grep -rn "bg-tint-" --include="*.tsx" | grep -v text-on-tint`
+  returns nothing; 29 call sites (10 of them hover-only) gained the ink class.
 - **AC-7** — The landing hero renders on the white page.
   *Proof:* Safari/WebKit capture of `/` at `data-theme=light`, canvas
   2148×933, knot / event horizon / stars visible.

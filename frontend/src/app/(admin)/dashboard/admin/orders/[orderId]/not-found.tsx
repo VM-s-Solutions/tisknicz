@@ -21,7 +21,7 @@ export default function AdminOrderDetailNotFound() {
         </p>
         <Link
           href="/dashboard/admin/orders"
-          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
         >
           {t('dashboard.admin.orderActions.backToList')}
           <Icon name="arrowRight" size={16} />

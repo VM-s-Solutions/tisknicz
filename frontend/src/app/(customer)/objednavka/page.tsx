@@ -147,7 +147,7 @@ function InvalidLinkState() {
         action={
           <Link
             href="/katalog"
-            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
           >
             {t('checkout.invalidLink.cta')}
             <Icon name="arrowRight" size={16} />
@@ -188,7 +188,7 @@ function MakerAccountState({
             </Link>
             <Link
               href="/register?type=customer"
-              className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
             >
               {t('checkout.makerAccount.register')}
               <Icon name="arrowRight" size={16} />

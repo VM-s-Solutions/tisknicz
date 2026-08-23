@@ -163,18 +163,18 @@
   --lt-ink-100: #0e2429;
   --lt-ink-200: #183238;
   --lt-ink-300: #234146;
-  --lt-ink-400: #385459;
-  --lt-ink-500: #526f77;
-  --lt-ink-600: #7a959c;
-  --lt-ink-700: #ccdfe3;
-  --lt-ink-800: #e5f1f3;
-  --lt-ink-900: #f0f7f8;
-  --lt-ink-950: #f8fbfc;
+  --lt-ink-400: #2f4a4f;
+  --lt-ink-500: #4b666e;
+  --lt-ink-600: #72909a;
+  --lt-ink-700: #b5e5d8;
+  --lt-ink-800: #dbf4ea;
+  --lt-ink-900: #edfcf7;
+  --lt-ink-950: #f6fefb;
 
   --lt-surface-primary: #ffffff;
-  --lt-surface-secondary: #f2f8f9;
+  --lt-surface-secondary: #e9fcf6;
   --lt-surface-card: #ffffff;
-  --lt-surface-elevated: #eaf4f5;
+  --lt-surface-elevated: #e4f8f2;
 
   /* Brand: the teal ramp mirrored, so `text-brand-200` stays the highest
      contrast step and `text-brand-300/400` clear AA on every light surface —
@@ -186,10 +186,10 @@
      end: tints, dots, hover borders, anything with no text on it. */
   --lt-brand-50: #04302c;
   --lt-brand-100: #05413b;
-  --lt-brand-200: #00544b;
-  --lt-brand-300: #006e63;
-  --lt-brand-400: #007a6f;
-  --lt-brand-500: #00847a;
+  --lt-brand-200: #005a51;
+  --lt-brand-300: #006f64;
+  --lt-brand-400: #00786c;
+  --lt-brand-500: #00857a;
   --lt-brand-600: #0d9488;
   --lt-brand-700: #14b8a6;
   --lt-brand-800: #2dd4bf;
@@ -203,9 +203,9 @@
   /* `info` is Apple's link blue pulled one notch darker (#0066cc itself lands
      at 4.40:1 on the hover fill, just under AA); the other three are the same
      family taken to the darkest light surface. */
-  --lt-status-success: #0a7a34;
-  --lt-status-warning: #8a5a00;
-  --lt-status-error: #cc0d2f;
+  --lt-status-success: #097a32;
+  --lt-status-warning: #925f00;
+  --lt-status-error: #d20a2b;
   --lt-status-info: #0067d0;
 
   --lt-on-brand: #ffffff;
@@ -218,28 +218,30 @@
      as grime. */
   --lt-shadow-elevated: rgba(8, 47, 51, 0.14);
 
-  /* Light tints are flat, saturated hexes rather than a percentage of the
-     text colour: mixing 10 % of a WCAG-AA teal (which is necessarily dark)
-     into white gives an off-white, which is exactly the "no colour anywhere"
-     the first two cuts were rejected for. These are mixed from the vivid end
-     of each hue instead, and `check:contrast` gates the text that lands on
-     them like any other surface. */
-  --lt-tint-brand: #9fe3d8;
-  --lt-tint-brand-strong: #7fd9cb;
-  --lt-tint-success: #a8e6bd;
-  --lt-tint-warning: #f7d79a;
-  --lt-tint-error: #f8bfc6;
-  --lt-tint-error-strong: #f5b4bc;
-  --lt-tint-info: #b3d7fa;
+  /* Light tints are SOLID, VIVID fills (T-0194b). Two dead ends got here:
+     a pastel chip on a white page still reads white-ish, and a solid chip in
+     the AA-on-white ink colour reads as dark green, not as teal — on a light
+     background the eye takes colour from saturation, and both of those spend
+     all of it. So the fill takes the vivid end of the ramp and the INK on it
+     goes near-black in the same hue, which is the only pairing that is both
+     saturated and AA. Every fill/ink pair below is gated. */
+  --lt-tint-brand: #14b8a6;
+  --lt-tint-brand-strong: #2dd4bf;
+  --lt-tint-success: #1fc25c;
+  --lt-tint-warning: #f5a524;
+  --lt-tint-error: #ff4d5e;
+  --lt-tint-error-strong: #ff6b78;
+  --lt-tint-info: #2b95ff;
 
-  /* The dark end of each hue — deep enough to clear AA on its own tint,
-     which a 4.5:1-on-white text colour does not once the fill is saturated
-     enough to actually read as colour. */
-  --lt-on-tint-brand: #00443d;
-  --lt-on-tint-success: #075c26;
-  --lt-on-tint-warning: #6b4600;
-  --lt-on-tint-error: #a2001f;
-  --lt-on-tint-info: #00489b;
+  /* Near-black in the fill's own hue — white ink would force the fill back
+     down to a 4.5:1 dark teal and undo the saturation. Mirror image of the
+     dark theme, where the tint is a wash over a near-black page and the ink
+     has to be the BRIGHT end of the hue. */
+  --lt-on-tint-brand: #00332e;
+  --lt-on-tint-success: #032d10;
+  --lt-on-tint-warning: #3d2500;
+  --lt-on-tint-error: #4a0010;
+  --lt-on-tint-info: #00204a;
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */

@@ -32,7 +32,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'border border-brand-500/60 bg-transparent font-semibold text-brand-300 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200 active:bg-tint-brand-strong',
+    'border border-brand-500/60 bg-transparent font-semibold text-brand-300 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand active:bg-tint-brand-strong',
   secondary:
     'border border-zinc-700 bg-transparent font-medium text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800/60 active:bg-zinc-800',
   outline:

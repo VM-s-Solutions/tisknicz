@@ -134,12 +134,9 @@ const LIGHT_ONLY_PAIRS = [
   { fg: 'on-tint-error', bg: 'tint-error', min: 4.5 },
   { fg: 'on-tint-error', bg: 'tint-error-strong', min: 4.5 },
   { fg: 'on-tint-info', bg: 'tint-info', min: 4.5 },
-  // The tints are saturated enough that a 4.5:1-on-white text colour does
-  // NOT clear AA on them — which is the whole reason `on-tint-*` exists.
-  // Pinning brand-200 here keeps the one legitimate exception honest: the
-  // hairline button's hover state paints a tint under text that is still a
-  // ramp step.
-  { fg: 'brand-200', bg: 'tint-brand', min: 4.5 },
+  // No ramp step may be used as ink on a light tint: the fills are solid and
+  // saturated, so anything but `on-tint-*` (white) fails. A `bg-tint-*` in a
+  // component must always be paired with `text-on-tint-*`.
 ];
 
 function run() {

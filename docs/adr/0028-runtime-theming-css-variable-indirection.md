@@ -135,13 +135,19 @@ as everything else:
   / `--tint-error` / `--tint-error-strong` / `--tint-info` — the fill. Dark
   spells them as the exact `color-mix(in oklab, var(--dk-…) 10%, transparent)`
   the opacity modifiers used to generate, so nothing dark moved; light spells
-  them as flat, saturated hexes mixed from the *vivid* end of each hue.
+  them as **solid, vivid** hexes (`#14b8a6`, `#1fc25c`, `#f5a524`, `#ff4d5e`,
+  `#2b95ff`). Two weaker versions were tried and rejected on the way: a pastel
+  wash still reads white-ish on a white page, and a solid fill in the
+  AA-on-white ink colour reads as dark green rather than as teal.
 - `--on-tint-brand` / `--on-tint-success` / `--on-tint-warning` /
   `--on-tint-error` / `--on-tint-info` — the ink that sits on a tint. Its own
   token for the same reason `--on-brand` is: on dark the chip is a wash over a
-  near-black page and the text must be the bright end of the hue, on light the
-  chip is a saturated pastel and the text must be the dark end. A ramp step
-  cannot mean both.
+  near-black page and the text must be the bright end of the hue; on light the
+  chip is a vivid fill and the text must be **near-black in that same hue**
+  (`#00332e` on the teal, `#4a0010` on the red, …). White ink would work only
+  by dragging the fill back down to a 4.5:1 dark teal — which is precisely the
+  saturation the light theme was rejected for lacking. A ramp step cannot mean
+  both ends at once.
 
 Consequences:
 

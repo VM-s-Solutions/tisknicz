@@ -222,7 +222,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
               >
                 {t('nav.start_selling')}
                 <span aria-hidden="true">→</span>
@@ -324,7 +324,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
                 onClick={closeMobileMenu}
               >
                 {t('nav.start_selling')}
