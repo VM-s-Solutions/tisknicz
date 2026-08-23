@@ -32,6 +32,8 @@ key fails function indexing at host startup. The defaults below are the canonica
 | `CancelExpiredPendingPaymentOrders:Schedule` | `0 0 2 * * *` | Daily 02:00 UTC — cancel `PendingPayment` orders older than 24 h (`CancellationSource = AutoExpiry`). T-0083. |
 | `RunWeeklyPayoutBatch:Schedule` | `0 0 2 * * 1` | Monday 02:00 UTC — weekly maker payout batch (`CreatePayoutBatch`). Also reachable via `POST /api/payouts/run-batch` (function key). T-0104. |
 | `DisputeAutoEscalation:Schedule` | `0 0 9 * * *` | Daily 09:00 UTC — escalate customer-sourced disputes past the 7-day maker-response window with no maker reply (`EscalateDispute`, notification-only). T-0145. |
+| `EvictExpiredRegistryCache:Schedule` | `0 30 2 * * *` | Daily 02:30 UTC — evict expired ARES registry-cache rows. Offset from the 02:00 sweep per the load-spreading convention. T-0136. |
+| `DataRetentionCleanup:Schedule` | `0 0 3 * * 0` | Weekly Sunday 03:00 UTC — auth/identity data-retention cleanup. T-0140. |
 
 ## Operator-set: outbox queues + dispatcher
 
