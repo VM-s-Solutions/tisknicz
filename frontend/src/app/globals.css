@@ -145,6 +145,17 @@
      the white/near-white surfaces a control actually sits on. */
   --dk-brand-ink: var(--dk-brand-300);
 
+  /* Fills a CONTROL paints under its own label — the hairline button's hover
+     and pressed states, and the danger button at rest. Deliberately not the
+     chip tints: a chip is read at a glance and carries near-black ink, while
+     a button keeps its BRAND label through every state, so its fill has to
+     stay light enough for that label to survive. Dark reuses the exact 10 %
+     and 15 % mixes the opacity modifiers produced, so no button moves there. */
+  --dk-brand-fill-soft: color-mix(in oklab, var(--dk-brand-500) 10%, transparent);
+  --dk-brand-fill-soft-strong: color-mix(in oklab, var(--dk-brand-500) 15%, transparent);
+  --dk-error-fill-soft: color-mix(in oklab, var(--dk-status-error) 10%, transparent);
+  --dk-error-fill-soft-strong: color-mix(in oklab, var(--dk-status-error) 15%, transparent);
+
   /* --- Light palette ------------------------------------------------------
      Third cut; the two before it were both rejected. A lightness mirror of the
      dark cyan-slate ramp read as a flat wash ("takovy nudny"), and the
@@ -276,6 +287,11 @@
 
   --lt-brand-line: #0d9488;
   --lt-brand-ink: #007f73;
+
+  --lt-brand-fill-soft: #edf9f7;
+  --lt-brand-fill-soft-strong: #d8f1ec;
+  --lt-error-fill-soft: #fdeaed;
+  --lt-error-fill-soft-strong: #fbdde1;
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */
@@ -342,6 +358,10 @@
   --on-tint-info: var(--dk-on-tint-info);
   --brand-line: var(--dk-brand-line);
   --brand-ink: var(--dk-brand-ink);
+  --brand-fill-soft: var(--dk-brand-fill-soft);
+  --brand-fill-soft-strong: var(--dk-brand-fill-soft-strong);
+  --error-fill-soft: var(--dk-error-fill-soft);
+  --error-fill-soft-strong: var(--dk-error-fill-soft-strong);
 }
 
 /* --- Light -------------------------------------------------------------- */
@@ -411,6 +431,10 @@
   --on-tint-info: var(--lt-on-tint-info);
   --brand-line: var(--lt-brand-line);
   --brand-ink: var(--lt-brand-ink);
+  --brand-fill-soft: var(--lt-brand-fill-soft);
+  --brand-fill-soft-strong: var(--lt-brand-fill-soft-strong);
+  --error-fill-soft: var(--lt-error-fill-soft);
+  --error-fill-soft-strong: var(--lt-error-fill-soft-strong);
 }
 
 /* Re-assert dark for a subtree pinned inside a light page (the landing
@@ -478,6 +502,10 @@
   --on-tint-info: var(--dk-on-tint-info);
   --brand-line: var(--dk-brand-line);
   --brand-ink: var(--dk-brand-ink);
+  --brand-fill-soft: var(--dk-brand-fill-soft);
+  --brand-fill-soft-strong: var(--dk-brand-fill-soft-strong);
+  --error-fill-soft: var(--dk-error-fill-soft);
+  --error-fill-soft-strong: var(--dk-error-fill-soft-strong);
 }
 
 /* No-JS fallback. The inline bootstrap in `app/layout.tsx` stamps
@@ -548,7 +576,10 @@
     --on-tint-info: var(--lt-on-tint-info);
     --brand-line: var(--lt-brand-line);
     --brand-ink: var(--lt-brand-ink);
-  --brand-ink: var(--lt-brand-ink);
+    --brand-fill-soft: var(--lt-brand-fill-soft);
+    --brand-fill-soft-strong: var(--lt-brand-fill-soft-strong);
+    --error-fill-soft: var(--lt-error-fill-soft);
+    --error-fill-soft-strong: var(--lt-error-fill-soft-strong);
   }
 }
 
@@ -617,6 +648,10 @@
   /* Control boundary; `border-brand-line`, never `border-brand-500/60`. */
   --color-brand-line: var(--brand-line);
   --color-brand-ink: var(--brand-ink);
+  --color-brand-fill-soft: var(--brand-fill-soft);
+  --color-brand-fill-soft-strong: var(--brand-fill-soft-strong);
+  --color-error-fill-soft: var(--error-fill-soft);
+  --color-error-fill-soft-strong: var(--error-fill-soft-strong);
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;

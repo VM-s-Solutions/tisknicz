@@ -80,7 +80,7 @@ export default function HowItWorksPage() {
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/katalog"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
               >
                 {t('static.how_it_works.cta')}
                 <Icon name="arrowRight" size={16} />

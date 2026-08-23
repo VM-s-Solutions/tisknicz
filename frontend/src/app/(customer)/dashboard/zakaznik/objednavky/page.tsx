@@ -183,7 +183,7 @@ function OrdersEmpty() {
       action={
         <Link
           href="/katalog"
-          className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+          className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
         >
           {t('customer.orders.empty.cta')}
           <Icon name="arrowRight" size={16} />

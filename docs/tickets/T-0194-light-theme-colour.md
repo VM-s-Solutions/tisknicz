@@ -69,7 +69,7 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
 
 - **AC-4** — Contrast contract holds in both palettes, including the new
   fills.
-  *Proof:* `npm run check:contrast` — 181 pairs pass, up from 168: every
+  *Proof:* `npm run check:contrast` — 185 pairs pass, up from 168: every
   `on-tint-*` ink on its own tint at ≥ 4.5:1, `brand-line` at ≥ 3:1 on the
   three surfaces a control sits on (WCAG 1.4.11), `brand-ink` at ≥ 4.5:1 on
   the same three.
@@ -89,6 +89,12 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
   *Proof:* operator note "tlacitka jsou furt vyblita"; the boundary moves from
   a 60 % wash to `#0d9488` and the label from `#0c6259` to `#007f73`, across
   the `Button` primitive and all 31 hand-rolled copies of it.
+- **AC-10** — A control's fill stays light enough that the button keeps its
+  brand label in every state ("u tlacitek se mi nelibi ratio fill a text
+  color, udelal bych svetlejsi ten fill").
+  *Proof:* hover `#edf9f7` / pressed `#d8f1ec` under `brand-ink`, danger
+  `#fdeaed` / `#fbdde1` under `text-error`, all four gated; CDP capture of
+  the CTA at rest, hover and pressed.
 - **AC-8** — Chrome and WebKit, 375 / 768 / 1280.
   *Proof:* captures at each width; Safari via safaridriver for the WebGL hero
   and the `color-mix()` tints.

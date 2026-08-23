@@ -89,7 +89,7 @@ export default async function HomePage() {
             <div className="reveal-up reveal-delay-3 mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link
                 href="/katalog"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
               >
                 Prohlédnout katalog
                 <Icon name="arrowRight" size={16} />

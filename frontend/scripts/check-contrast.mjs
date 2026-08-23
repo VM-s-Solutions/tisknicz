@@ -146,6 +146,14 @@ const LIGHT_ONLY_PAIRS = [
   { fg: 'brand-ink', bg: 'surface-card', min: 4.5 },
   { fg: 'brand-ink', bg: 'surface-primary', min: 4.5 },
   { fg: 'brand-ink', bg: 'surface-secondary', min: 4.5 },
+  // A control keeps its brand label through hover and press, so its own fill
+  // is gated against that label rather than against a near-black chip ink.
+  // The pressed state darkens the label one ramp step (`active:text-brand-300`),
+  // which is a no-op on dark where `brand-ink` already IS `brand-300`.
+  { fg: 'brand-ink', bg: 'brand-fill-soft', min: 4.5 },
+  { fg: 'brand-300', bg: 'brand-fill-soft-strong', min: 4.5 },
+  { fg: 'status-error', bg: 'error-fill-soft', min: 4.5 },
+  { fg: 'status-error', bg: 'error-fill-soft-strong', min: 4.5 },
   // No ramp step may be used as ink on a light tint: the fills are solid and
   // saturated, so anything but `on-tint-*` (white) fails. A `bg-tint-*` in a
   // component must always be paired with `text-on-tint-*`.

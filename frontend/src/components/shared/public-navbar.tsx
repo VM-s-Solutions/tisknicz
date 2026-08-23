@@ -160,7 +160,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-error transition-colors hover:bg-tint-error hover:text-on-tint-error disabled:opacity-60"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-error transition-colors hover:bg-error-fill-soft disabled:opacity-60"
                 disabled={loggingOut}
                 onClick={handleLogout}
               >
@@ -222,7 +222,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-line px-4 py-1.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-line px-4 py-1.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
               >
                 {t('nav.start_selling')}
                 <span aria-hidden="true">→</span>
@@ -324,7 +324,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-line px-4 py-1.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-line px-4 py-1.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
                 onClick={closeMobileMenu}
               >
                 {t('nav.start_selling')}

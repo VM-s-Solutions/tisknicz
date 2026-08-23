@@ -306,7 +306,7 @@ function OrdersError({
         </div>
         <Link
           href={isValidation ? ROUTE_PATH : retryHref}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-tint-error-strong hover:text-on-tint-error"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error-fill-soft"
         >
           {isValidation ? t('dashboard.orders.retry_clear_filters') : t('dashboard.maker.orders.error.retry')}
         </Link>

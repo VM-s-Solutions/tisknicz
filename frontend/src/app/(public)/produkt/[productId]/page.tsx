@@ -260,7 +260,7 @@ export function ProductInfo({
         ) : (
           <Link
             href={`/objednavka?productId=${encodeURIComponent(product.productId)}`}
-            className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-500 hover:bg-brand-fill-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
           >
             {t('catalog.product_detail.cta.order')}
             <Icon name="arrowRight" size={16} />

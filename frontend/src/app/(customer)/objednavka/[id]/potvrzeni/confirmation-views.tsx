@@ -12,7 +12,7 @@ import { t } from '@/lib/i18n';
  */
 
 const PRIMARY_CTA_CLASSES =
-  'inline-flex items-center justify-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand';
+  'inline-flex items-center justify-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft';
 const SECONDARY_CTA_CLASSES =
   'inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors duration-150 hover:border-brand-line hover:text-brand-300';
 

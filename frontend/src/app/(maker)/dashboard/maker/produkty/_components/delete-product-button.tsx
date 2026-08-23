@@ -89,7 +89,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-error/40 bg-tint-error px-3.5 py-1.5 text-sm font-semibold text-error transition-colors hover:bg-tint-error-strong hover:text-on-tint-error focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-error/40 bg-error-fill-soft px-3.5 py-1.5 text-sm font-semibold text-error transition-colors hover:bg-error-fill-soft-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
         >
           <Icon name="trash" size={14} />
           {t('dashboard.maker.products.actions.delete')}

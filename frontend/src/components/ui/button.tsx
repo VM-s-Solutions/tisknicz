@@ -32,7 +32,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'border border-brand-line bg-transparent font-semibold text-brand-ink hover:border-brand-500 hover:bg-tint-brand hover:text-on-tint-brand active:bg-tint-brand-strong',
+    'border border-brand-line bg-transparent font-semibold text-brand-ink hover:border-brand-500 hover:bg-brand-fill-soft active:bg-brand-fill-soft-strong active:text-brand-300',
   secondary:
     'border border-zinc-700 bg-transparent font-medium text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800/60 active:bg-zinc-800',
   outline:
@@ -40,9 +40,9 @@ const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   ghost:
     'border border-transparent bg-transparent font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-50',
   danger:
-    'border border-error/50 bg-tint-error font-semibold text-on-tint-error hover:border-error/70 hover:bg-tint-error-strong',
+    'border border-error/50 bg-error-fill-soft font-semibold text-error hover:border-error/70 hover:bg-error-fill-soft-strong',
   dangerGhost:
-    'border border-error/30 bg-transparent font-medium text-error hover:border-error/50 hover:bg-tint-error hover:text-on-tint-error',
+    'border border-error/30 bg-transparent font-medium text-error hover:border-error/50 hover:bg-error-fill-soft',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {

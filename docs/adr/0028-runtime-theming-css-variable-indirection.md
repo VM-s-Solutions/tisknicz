@@ -166,8 +166,21 @@ fill:
   actually sits on (page, card, band — never `surface-elevated`, which is the
   image/skeleton fill).
 
+A control's own fill is a third case, and it is NOT the chip tint:
+`--brand-fill-soft` / `--brand-fill-soft-strong` (hover, pressed) and
+`--error-fill-soft` / `--error-fill-soft-strong` (the danger button at rest
+and on hover). A chip is read at a glance and carries near-black ink; a button
+keeps its brand label through every state, so its fill has to stay light
+enough for that label to survive — light `#edf9f7` / `#d8f1ec`, gated against
+`brand-ink` rather than against `on-tint-brand`. The pressed state darkens the
+label one ramp step (`active:text-brand-300`), which is a no-op on dark, where
+`brand-ink` already *is* `brand-300`.
+
 `border-brand-500/60` and `/70` are therefore gone from `src/**/*.tsx`; a
-control boundary is `border-brand-line` and its label is `text-brand-ink`.
+control boundary is `border-brand-line`, its label is `text-brand-ink`, and
+its fill is `bg-*-fill-soft`. Dark is provably unmoved: all four soft fills
+are the same 10 % / 15 % `color-mix()` the modifiers emitted, and both ink
+overrides resolve to the colour that was already there.
 
 Consequences:
 
