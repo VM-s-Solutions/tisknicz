@@ -1630,12 +1630,14 @@ export const messages = {
   'dashboard.admin.overview.countFollowUp':
     'Souhrnné počty zatím nejsou k dispozici. Otevřete seznam pro aktuální data.',
   'dashboard.admin.overview.earnings.heading': 'Výdělky platformy',
-  'dashboard.admin.overview.earnings.window.day': 'Posledních 24 hodin',
-  'dashboard.admin.overview.earnings.window.week': 'Posledních 7 dní',
-  'dashboard.admin.overview.earnings.window.month': 'Posledních 30 dní',
-  'dashboard.admin.overview.earnings.windowAria': 'Období výdělků',
+  'dashboard.admin.overview.earnings.monthAria': 'Vybraný měsíc',
+  'dashboard.admin.overview.earnings.previousMonth': 'Předchozí měsíc',
+  'dashboard.admin.overview.earnings.nextMonth': 'Následující měsíc',
+  'dashboard.admin.overview.earnings.nextMonthUnavailable':
+    'Novější měsíc zatím nezačal',
+  'dashboard.admin.overview.earnings.monthInProgress': 'probíhá',
   'dashboard.admin.overview.earnings.fee': 'Naše provize',
-  'dashboard.admin.overview.earnings.feeNote': 'Co platformě zůstalo z prodejů za zvolené období.',
+  'dashboard.admin.overview.earnings.feeNote': 'Co platformě zůstalo z prodejů za tento měsíc.',
   'dashboard.admin.overview.earnings.gross': 'Obrat',
   'dashboard.admin.overview.earnings.grossNote': 'Celkem zaplaceno zákazníky.',
   'dashboard.admin.overview.earnings.payout': 'K výplatě makerům',
@@ -1648,6 +1650,37 @@ export const messages = {
   'dashboard.admin.overview.earnings.basis':
     'Počítáno z okamžiku zaplacení. Zrušené a refundované objednávky se do provize nezapočítávají.',
   'dashboard.admin.overview.earnings.unavailable': 'Výdělky se nepodařilo načíst.',
+
+  // Vývoj tržeb v čase (T-0192) — graf nad stejnými daty jako dlaždice výše.
+  'dashboard.admin.overview.chart.heading': 'Vývoj tržeb',
+  'dashboard.admin.overview.chart.rangeAria': 'Rozsah grafu',
+  'dashboard.admin.overview.chart.metricAria': 'Zobrazená veličina',
+  'dashboard.admin.overview.chart.canvasAria':
+    'Graf vývoje tržeb v čase. Hodnoty najdete i v tabulce pod grafem.',
+  'dashboard.admin.overview.chart.range.day': '1 den',
+  'dashboard.admin.overview.chart.range.week': '7 dní',
+  'dashboard.admin.overview.chart.range.month': '30 dní',
+  'dashboard.admin.overview.chart.range.quarter': '3 měsíce',
+  'dashboard.admin.overview.chart.range.halfYear': '6 měsíců',
+  'dashboard.admin.overview.chart.range.year': '1 rok',
+  'dashboard.admin.overview.chart.metric.fee': 'Provize',
+  'dashboard.admin.overview.chart.metric.gross': 'Obrat',
+  'dashboard.admin.overview.chart.metric.payout': 'K výplatě',
+  'dashboard.admin.overview.chart.metric.refunded': 'Vráceno',
+  'dashboard.admin.overview.chart.metric.orders': 'Objednávky',
+  'dashboard.admin.overview.chart.caption.fee':
+    'Kolik si platforma nechala z prodejů, po jednotlivých obdobích.',
+  'dashboard.admin.overview.chart.caption.gross':
+    'Kolik celkem zaplatili zákazníci, po jednotlivých obdobích.',
+  'dashboard.admin.overview.chart.caption.payout':
+    'Kolik z téhož obratu připadlo makerům, po jednotlivých obdobích.',
+  'dashboard.admin.overview.chart.caption.refunded':
+    'Kolik se vrátilo zákazníkům. Nesnižuje provizi — vrací se hrubá částka.',
+  'dashboard.admin.overview.chart.caption.orders':
+    'Počet zaplacených objednávek, po jednotlivých obdobích.',
+  'dashboard.admin.overview.chart.tableCaption': 'Hodnoty z grafu vývoje tržeb',
+  'dashboard.admin.overview.chart.tablePeriod': 'Období',
+  'dashboard.admin.overview.chart.unavailable': 'Graf se nepodařilo načíst.',
   'dashboard.admin.overview.error.title': 'Přehled se nepodařilo načíst',
   'dashboard.admin.overview.error.retry': 'Zkusit znovu',
 

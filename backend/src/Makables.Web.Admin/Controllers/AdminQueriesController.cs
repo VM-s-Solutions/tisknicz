@@ -106,12 +106,18 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
             new GetAllInvoices.Query(page, pageSize, type, country, recipient, dateFrom, dateTo), ct));
 
     /// <summary>
-    /// Platform earnings over a rolling window (T-0186) — what the platform
-    /// made on sales, for the overview's earnings panel. Unscoped
-    /// (cross-tenant money aggregate), admin audience only. Read-only and
-    /// non-failing: a window with no sales returns zeros, never 404. No
-    /// audit row — the aggregate discloses no personal data (ADR 0014
-    /// read-side carve-out covers PII reads only).
+    /// Platform earnings for ONE CALENDAR MONTH (T-0192, replacing T-0186's
+    /// rolling window) — what the platform made on sales, for the overview's
+    /// earnings panel. Unscoped (cross-tenant money aggregate), admin
+    /// audience only. Read-only and non-failing: a month with no sales
+    /// returns zeros, never 404. No audit row — the aggregate discloses no
+    /// personal data (ADR 0014 read-side carve-out covers PII reads only).
+    ///
+    /// <para>
+    /// Both params omitted (the default) reports the month in progress in
+    /// the country's civil timezone. Supplying only one is treated as
+    /// neither; the response echoes the month actually reported.
+    /// </para>
     /// </summary>
     [HttpGet]
     [Route("api/v{version:apiVersion}/platform-revenue")]
@@ -119,9 +125,28 @@ public sealed class AdminQueriesController(IAdminReadAuditWriter readAudit) : Ma
     [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPlatformRevenueAsync(
-        [FromQuery] GetPlatformRevenue.RevenueWindow window = GetPlatformRevenue.RevenueWindow.Day,
+        [FromQuery] int? year = null,
+        [FromQuery] int? month = null,
         CancellationToken ct = default) =>
-        HandleResult(await Mediator.Send(new GetPlatformRevenue.Query(window), ct));
+        HandleResult(await Mediator.Send(new GetPlatformRevenue.Query(year, month), ct));
+
+    /// <summary>
+    /// The same earnings bucketed over time (T-0192) — backs the overview's
+    /// revenue chart. Same unscoped admin-only boundary, same recognition
+    /// rule and same no-audit read as the month aggregate above; a series
+    /// summed over its buckets equals that endpoint's total for the same
+    /// span. Trailing from now, 24 hours to 12 months, bounded at 92 points
+    /// whatever the range.
+    /// </summary>
+    [HttpGet]
+    [Route("api/v{version:apiVersion}/platform-revenue/series")]
+    [ProducesResponseType(typeof(GetPlatformRevenueSeries.GetPlatformRevenueSeriesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(Error), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetPlatformRevenueSeriesAsync(
+        [FromQuery] GetPlatformRevenueSeries.RevenueRange range = GetPlatformRevenueSeries.RevenueRange.Month,
+        CancellationToken ct = default) =>
+        HandleResult(await Mediator.Send(new GetPlatformRevenueSeries.Query(range), ct));
 
     /// <summary>Admin audit log (US-admin-0015). List omits before/after JSONB.</summary>
     [HttpGet]

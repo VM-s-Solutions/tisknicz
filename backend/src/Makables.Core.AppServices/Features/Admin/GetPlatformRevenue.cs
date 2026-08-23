@@ -1,61 +1,83 @@
 using FluentValidation;
 using Makables.Core.AppServices.Abstractions;
+using Makables.Core.AppServices.Features.Auth;
 using Makables.Core.Domain.Common;
+using Makables.Core.Domain.Configuration;
 using Makables.Core.Domain.Orders;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Makables.Core.AppServices.Features.Admin;
 
 /// <summary>
-/// Admin overview earnings panel (T-0186): what the platform earned on
-/// sales over a rolling <see cref="RevenueWindow"/>. Read-only, admin-host
-/// only — the aggregate spans every maker and customer, and ADR 0013 puts
-/// that boundary on the host audience (a customer/maker JWT 401s here).
+/// Admin overview earnings panel: what the platform earned on sales in ONE
+/// CALENDAR MONTH. Read-only, admin-host only — the aggregate spans every
+/// maker and customer, and ADR 0013 puts that boundary on the host audience
+/// (a customer/maker JWT 401s here).
 ///
 /// <para>
-/// The handler decides nothing about money: it converts the window enum
-/// into a half-open <c>[from, to)</c> instant pair off <see cref="IClock"/>
-/// and hands it to the read side, which owns the recognition rule (see
-/// <see cref="IOrderQueries.GetPlatformRevenueAsync"/>). No audit row
-/// (reads are not audited, ADR 0014); no failure mode — a window with no
-/// sales returns zeros, never 404.
+/// T-0192 replaced T-0186's rolling day/week/month windows with a real
+/// month. The rolling version was chosen to avoid needing a civil timezone;
+/// what it actually produced was a number nobody could reconcile — "the last
+/// 30 days" never matches an invoice run, a VAT period or the question the
+/// operator was asked, and it silently changes every time the page is
+/// refreshed. A month is the unit the business already accounts in, so the
+/// panel now answers for a month and the caller navigates between them. The
+/// timezone that a rolling window dodged is read from
+/// <c>CountryConfiguration.TimeZoneId</c> (see
+/// <see cref="RevenueReportingTimeZone"/>); "August" means August where the
+/// operator lives, which in Prague starts at 22:00 UTC on 31 July.
+/// </para>
+///
+/// <para>
+/// The handler decides nothing about money: it turns a year/month pair into
+/// a half-open <c>[from, to)</c> instant pair and hands it to the read side,
+/// which owns the recognition rule (see
+/// <see cref="IOrderQueries.GetPlatformRevenueAsync"/>). No audit row (reads
+/// are not audited, ADR 0014); no failure mode — a month with no sales
+/// returns zeros, never 404. The month in progress reports what has cleared
+/// so far, because <c>ToExclusive</c> is the month's end and no order can be
+/// paid in the future.
 /// </para>
 /// </summary>
 public static class GetPlatformRevenue
 {
     /// <summary>
-    /// Rolling reporting window. Rolling (last N × 24 h back from "now")
-    /// rather than calendar-aligned: a calendar month would need a
-    /// per-country civil timezone to know where the day starts, and this is
-    /// a live operational readout, not a bookkeeping period. The invoice +
-    /// payout surfaces remain the record for accounting periods.
+    /// Accepted year bounds. Not a business rule — a sanity clamp so a
+    /// hand-typed <c>?year=999999999</c> is a 400 rather than a
+    /// <see cref="DateTime"/> overflow inside the calendar helper. The
+    /// platform has no orders before 2020 and this code will not outlive 2100.
     /// </summary>
-    public enum RevenueWindow
-    {
-        /// <summary>Last 24 hours.</summary>
-        Day = 0,
+    public const int MinYear = 2020;
 
-        /// <summary>Last 7 days.</summary>
-        Week = 1,
+    /// <inheritdoc cref="MinYear"/>
+    public const int MaxYear = 2100;
 
-        /// <summary>Last 30 days.</summary>
-        Month = 2,
-    }
-
-    public sealed record Query(RevenueWindow Window) : IQuery<GetPlatformRevenueResponse>;
+    /// <param name="Year">Calendar year. Omit (with <paramref name="Month"/>) for the month in progress.</param>
+    /// <param name="Month">Calendar month, 1–12. Omit (with <paramref name="Year"/>) for the month in progress.</param>
+    public sealed record Query(int? Year, int? Month) : IQuery<GetPlatformRevenueResponse>;
 
     /// <summary>Globally-unique name (NSwag PR #38 convention).</summary>
-    /// <param name="Window">Echoed back so the caller can confirm which window it is reading.</param>
-    /// <param name="FromInclusive">Start of the window (inclusive).</param>
-    /// <param name="ToExclusive">End of the window (exclusive) — "now" at read time.</param>
-    /// <param name="PaidOrderCount">Orders whose payment cleared inside the window and was not reversed.</param>
+    /// <param name="Year">The month actually reported — echoed so the caller can label the number it got.</param>
+    /// <param name="Month">The month actually reported, 1–12.</param>
+    /// <param name="FromInclusive">Start of the month (inclusive), as an instant.</param>
+    /// <param name="ToExclusive">Start of the following month (exclusive), as an instant.</param>
+    /// <param name="PaidOrderCount">Orders whose payment cleared inside the month and was not reversed.</param>
     /// <param name="GrossVolumeMinor">What customers were charged, minor units.</param>
     /// <param name="PlatformFeeMinor">What the platform earned, minor units — the headline number.</param>
     /// <param name="MakerPayoutMinor">What the makers are owed, minor units.</param>
-    /// <param name="RefundedMinor">Gross refunded on orders paid in the window, minor units.</param>
+    /// <param name="RefundedMinor">Gross refunded on orders paid in the month, minor units.</param>
     /// <param name="Currency">ISO 4217 code. CZK at launch.</param>
+    /// <param name="IsCurrentMonth">
+    /// True when this is the month in progress in the country's timezone.
+    /// The caller uses it to stop the operator paging into the future — the
+    /// alternative is the frontend deciding what "this month" means, which
+    /// needs the civil timezone it deliberately does not carry.
+    /// </param>
     public sealed record GetPlatformRevenueResponse(
-        RevenueWindow Window,
+        int Year,
+        int Month,
         DateTimeOffset FromInclusive,
         DateTimeOffset ToExclusive,
         int PaidOrderCount,
@@ -63,41 +85,59 @@ public static class GetPlatformRevenue
         long PlatformFeeMinor,
         long MakerPayoutMinor,
         long RefundedMinor,
-        string Currency);
+        string Currency,
+        bool IsCurrentMonth);
 
     public sealed class Validator : AbstractValidator<Query>
     {
         public Validator()
         {
-            RuleFor(q => q.Window)
-                .Cascade(CascadeMode.Stop)
-                .IsInEnum()
-                .WithErrorCode(BusinessErrorMessage.InvalidEnumValue);
+            // Nullable on purpose: absent means "the month in progress", which
+            // is a legitimate request, not a missing field. Only a value that
+            // IS supplied has to be in range.
+            RuleFor(q => q.Year)
+                .InclusiveBetween(MinYear, MaxYear)
+                .WithErrorCode(BusinessErrorMessage.MinValue)
+                .When(q => q.Year.HasValue);
+
+            RuleFor(q => q.Month)
+                .InclusiveBetween(1, 12)
+                .WithErrorCode(BusinessErrorMessage.MinValue)
+                .When(q => q.Month.HasValue);
         }
     }
 
-    /// <summary>Window length in days. The single place the enum becomes a duration.</summary>
-    private static int DaysFor(RevenueWindow window) => window switch
-    {
-        RevenueWindow.Day => 1,
-        RevenueWindow.Week => 7,
-        RevenueWindow.Month => 30,
-        _ => 1,
-    };
-
-    public sealed class Handler(IOrderQueries orders, IClock clock)
+    public sealed class Handler(
+        IOrderQueries orders,
+        IClock clock,
+        ICountryConfigurationRepository countries,
+        IOptions<AuthDefaultCountryOptions> defaultCountry,
+        ILogger<Handler> logger)
         : IRequestHandler<Query, BusinessResult<GetPlatformRevenueResponse>>
     {
         public async Task<BusinessResult<GetPlatformRevenueResponse>> Handle(
             Query query, CancellationToken cancellationToken)
         {
-            var to = clock.UtcNow;
-            var from = to.AddDays(-DaysFor(query.Window));
+            ArgumentNullException.ThrowIfNull(query);
+
+            var countryCode = defaultCountry.Value.CountryCodePrimary;
+            var config = await countries.GetByCodeAsync(countryCode, cancellationToken);
+            var (_, zone) = RevenueReportingTimeZone.Resolve(config, countryCode, logger);
+
+            // Both or neither. A half-supplied pair ("?month=3" with no year)
+            // is treated as "no month chosen" rather than guessed against the
+            // current year — the response echoes what was actually reported,
+            // so the caller can never mislabel the number.
+            var current = RevenueReportingCalendar.CurrentMonth(clock.UtcNow, zone);
+            var (year, month) = query is { Year: { } y, Month: { } m } ? (y, m) : current;
+
+            var (from, to) = RevenueReportingCalendar.MonthWindow(year, month, zone);
 
             var revenue = await orders.GetPlatformRevenueAsync(from, to, cancellationToken);
 
             return BusinessResult.Success(new GetPlatformRevenueResponse(
-                query.Window,
+                year,
+                month,
                 from,
                 to,
                 revenue.PaidOrderCount,
@@ -105,7 +145,8 @@ public static class GetPlatformRevenue
                 revenue.PlatformFeeMinor,
                 revenue.MakerPayoutMinor,
                 revenue.RefundedMinor,
-                revenue.Currency));
+                revenue.Currency,
+                (year, month) == current));
         }
     }
 }

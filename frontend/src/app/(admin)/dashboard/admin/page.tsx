@@ -6,14 +6,25 @@ import { Icon } from '@/components/ui/icon';
 import { getAdminOrders, OrderState } from '@/lib/api-client-helpers/admin-client';
 import {
   getPlatformRevenue,
+  getPlatformRevenueSeries,
   getProcessingPayoutsCount,
   getStalledOutboxCount,
   type PlatformRevenue,
-  type RevenueWindow,
+  type PlatformRevenueSeries,
+  type RevenueRange,
 } from '@/lib/api-client-helpers/admin-ops-client';
+import { parseMonthParam, toMonthParam } from '@/lib/format/reporting-period';
 import { t } from '@/lib/i18n';
 import type { MessageKey } from '@/lib/i18n';
-import { EARNINGS_PARAM, EarningsPanel, parseRevenueWindow } from './earnings-panel';
+import { MONTH_PARAM, EarningsPanel } from './earnings-panel';
+import { readParam } from './_components/list-params';
+import { RevenueChartPanel } from './revenue-chart-panel';
+import {
+  METRIC_PARAM,
+  RANGE_PARAM,
+  parseRevenueMetric,
+  parseRevenueRange,
+} from './revenue-metrics';
 
 /**
  * Admin overview (T-0118a, US-admin-0002 + T-0118c re-wire). Server
@@ -29,11 +40,16 @@ import { EARNINGS_PARAM, EarningsPanel, parseRevenueWindow } from './earnings-pa
  * contracts existed) and deep-link to their ops surfaces. Any count whose
  * read fails renders "—" gracefully (AC-4 — never throws).
  *
- * T-0186 adds the earnings panel — what the platform actually made on
- * sales — over a rolling day/week/month window taken from `?earnings=`.
- * It joins the same Promise.all fan-out, so the added money read costs no
- * extra round-trip on the page's critical path, and it degrades on its own
- * (a failed revenue read leaves the KPI tiles intact and vice versa).
+ * T-0186 added the earnings panel — what the platform actually made on
+ * sales. T-0192 re-cut it to a CALENDAR MONTH (`?month=YYYY-MM`) and added
+ * the revenue chart beside it (`?range=`, `?metric=`), because a rolling
+ * "last 30 days" total reconciles against nothing the business accounts in.
+ * The month answers "how much", the chart answers "which way is it going".
+ *
+ * Both money reads join the same Promise.all fan-out, so neither costs an
+ * extra round-trip on the page's critical path, and each degrades on its own
+ * — a failed revenue read leaves the KPI tiles and the chart intact, and
+ * vice versa.
  */
 
 export function generateMetadata(): Metadata {
@@ -73,9 +89,21 @@ async function readCount(
   return result.value;
 }
 
-/** T-0186 revenue read → `null` on failure (the panel says so, rather than showing a fake zero). */
-async function readRevenue(window: RevenueWindow): Promise<PlatformRevenue | null> {
-  const result = await getPlatformRevenue(window);
+/** T-0192 month read → `null` on failure (the panel says so, rather than showing a fake zero). */
+async function readRevenue(year?: number, month?: number): Promise<PlatformRevenue | null> {
+  const result = await getPlatformRevenue(year, month);
+  if (!result.success) {
+    if (result.error.type === 'Unauthorized') {
+      redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
+    }
+    return null;
+  }
+  return result.value;
+}
+
+/** T-0192 series read → `null` on failure (the chart says so, rather than drawing a flat zero line). */
+async function readRevenueSeries(range: RevenueRange): Promise<PlatformRevenueSeries | null> {
+  const result = await getPlatformRevenueSeries(range);
   if (!result.success) {
     if (result.error.type === 'Unauthorized') {
       redirect(`/admin/login?redirect=${encodeURIComponent(ROUTE_PATH)}`);
@@ -90,19 +118,30 @@ interface AdminOverviewPageProps {
 }
 
 export default async function AdminOverviewPage({ searchParams }: AdminOverviewPageProps) {
-  const earningsWindow = parseRevenueWindow((await searchParams)[EARNINGS_PARAM]);
+  const params = await searchParams;
+  // A hand-typed month falls back to "the month in progress" (an absent pair)
+  // rather than reaching the API, which would 400 and blank the panel.
+  const chosenMonth = parseMonthParam(readParam(params[MONTH_PARAM]));
+  const range = parseRevenueRange(readParam(params[RANGE_PARAM]));
+  const metric = parseRevenueMetric(readParam(params[METRIC_PARAM]));
+
   // Parallel count probes — one round-trip each off the existing reads + the
   // T-0126 ops count endpoints. The probes are independent, so Promise.all
   // collapses the waterfall to ~1 RTT (Gate 8 fold).
-  const [paid, accepted, shipped, disputed, processingPayouts, stalledOutbox, revenue] = await Promise.all([
-    countOrdersInState(OrderState.Paid),
-    countOrdersInState(OrderState.Accepted),
-    countOrdersInState(OrderState.Shipped),
-    countOrdersInState(OrderState.Disputed),
-    readCount(getProcessingPayoutsCount),
-    readCount(getStalledOutboxCount),
-    readRevenue(earningsWindow),
-  ]);
+  const [paid, accepted, shipped, disputed, processingPayouts, stalledOutbox, revenue, series] =
+    await Promise.all([
+      countOrdersInState(OrderState.Paid),
+      countOrdersInState(OrderState.Accepted),
+      countOrdersInState(OrderState.Shipped),
+      countOrdersInState(OrderState.Disputed),
+      readCount(getProcessingPayoutsCount),
+      readCount(getStalledOutboxCount),
+      readRevenue(chosenMonth?.year, chosenMonth?.month),
+      readRevenueSeries(range),
+    ]);
+
+  // Each panel's links carry the OTHER panel's state, so changing the range
+  // never resets the month the operator was reading and vice versa.
 
   return (
     <section className="py-12 lg:py-16">
@@ -122,7 +161,23 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         </header>
 
         <div className="mb-10">
-          <EarningsPanel window={earningsWindow} revenue={revenue} />
+          <EarningsPanel
+            revenue={revenue}
+            extraParams={{ [RANGE_PARAM]: range, [METRIC_PARAM]: metric.key }}
+          />
+        </div>
+
+        <div className="mb-10">
+          <RevenueChartPanel
+            series={series}
+            range={range}
+            metric={metric}
+            extraParams={
+              chosenMonth
+                ? { [MONTH_PARAM]: toMonthParam(chosenMonth.year, chosenMonth.month) }
+                : {}
+            }
+          />
         </div>
 
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">

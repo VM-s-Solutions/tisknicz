@@ -2,7 +2,7 @@
   "name": "makables-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "Makables \u2014 Next.js 16 frontend. Pure presentation layer; calls the .NET backend via the NSwag-generated client.",
+  "description": "Makables — Next.js 16 frontend. Pure presentation layer; calls the .NET backend via the NSwag-generated client.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
+    "chart.js": "^4.5.1",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
