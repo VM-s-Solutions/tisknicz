@@ -112,7 +112,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="barChart" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.overview.title')}
             </h1>
           </div>
@@ -196,16 +196,16 @@ function KpiTile({ labelKey, count, href, icon, emphasis = false }: KpiTileProps
     <Link href={href} className="block">
       <Card
         hover
-        className={`flex h-full flex-col gap-4 ${emphasis ? 'border-red-900/50' : ''}`}
+        className={`flex h-full flex-col gap-4 ${emphasis ? 'border-error/40' : ''}`}
       >
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-zinc-400">{t(labelKey)}</span>
-          <span className={emphasis ? 'text-red-400' : 'text-zinc-500'}>
+          <span className={emphasis ? 'text-error' : 'text-zinc-500'}>
             <Icon name={icon} size={20} />
           </span>
         </div>
         <span
-          className={`text-3xl font-bold ${emphasis ? 'text-red-400' : 'text-white'}`}
+          className={`text-3xl font-bold ${emphasis ? 'text-error' : 'text-zinc-50'}`}
           aria-label={unavailable ? t('dashboard.admin.overview.tile.unavailableAria') : undefined}
         >
           {unavailable ? '—' : count}

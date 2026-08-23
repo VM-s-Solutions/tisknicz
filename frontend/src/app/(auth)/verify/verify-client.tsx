@@ -61,7 +61,7 @@ export function VerifyClient() {
   if (state === 'success') {
     return (
       <Card padding="lg" variant="elevated" className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-white">{t('auth.verify.success_title')}</h2>
+        <h2 className="text-lg font-semibold text-zinc-50">{t('auth.verify.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.verify.success_body')}</p>
         <p className="text-sm">
           <Link href={loginHref} className="text-brand-400 hover:underline">
@@ -74,7 +74,7 @@ export function VerifyClient() {
 
   return (
     <Card padding="lg" variant="elevated" className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">{t('auth.verify.failed_title')}</h2>
+      <h2 className="text-lg font-semibold text-zinc-50">{t('auth.verify.failed_title')}</h2>
       <p className="text-sm text-zinc-300">{t('auth.verify.failed_body')}</p>
       {/* Recovery paths (T-0168): the failed card used to dead-end with
           zero actions. Already-confirmed users just need to log in;

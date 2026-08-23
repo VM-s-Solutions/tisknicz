@@ -15,7 +15,7 @@ export default function MakerProductNotFound() {
       <p aria-hidden="true" className="text-7xl font-bold tracking-tight text-zinc-700">
         404
       </p>
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+      <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
         {t('dashboard.maker.products.edit.not_found.title')}
       </h1>
       <p className="mt-3 text-base text-zinc-500">

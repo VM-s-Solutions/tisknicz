@@ -108,7 +108,7 @@ export function EarningsPanel({ window, revenue }: EarningsPanelProps) {
                 <Icon name="wallet" size={20} />
               </span>
             </div>
-            <span className="text-4xl font-bold tracking-tight text-white">
+            <span className="text-4xl font-bold tracking-tight text-zinc-50">
               {formatCzk(revenue.platformFeeMinor, revenue.currency)}
             </span>
             <span className="text-sm text-zinc-500">
@@ -168,7 +168,7 @@ function AmountTile({ labelKey, noteKey, value, icon }: AmountTileProps) {
           <Icon name={icon} size={18} />
         </span>
       </div>
-      <span className="text-2xl font-bold text-white">{value}</span>
+      <span className="text-2xl font-bold text-zinc-50">{value}</span>
       <span className="text-xs text-zinc-500">{t(noteKey)}</span>
     </Card>
   );

@@ -334,6 +334,13 @@ export const messages = {
   'nav.maker.reviews': 'Recenze',
   'nav.maker.profile': 'Profil',
 
+  // Theme switcher (T-0191)
+  'theme.system': 'Podle systému',
+  'theme.light': 'Světlý',
+  'theme.dark': 'Tmavý',
+  'theme.toggle_title': 'Přepnout na motiv: {next}',
+  'theme.toggle_aria': 'Motiv: {current}. Přepnout na: {next}.',
+
   // Footer
   'footer.customers': 'Pro zákazníky',
   'footer.makers': 'Pro makery',

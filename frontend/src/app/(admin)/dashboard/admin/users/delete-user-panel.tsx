@@ -306,7 +306,7 @@ function EraseConfirmation({
           spellCheck={false}
         />
         {confirmEmail !== '' && !emailMatches ? (
-          <p className="mt-1 text-xs text-amber-300">
+          <p className="mt-1 text-xs text-warning">
             {t('dashboard.admin.ops.users.confirmEmailMismatch')}
           </p>
         ) : null}
@@ -359,7 +359,7 @@ function DeletedConfirmation({
   return (
     <Card className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-950/50 text-emerald-400">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 text-success">
           <Icon name="checkCircle" size={20} />
         </span>
         <h2 className="text-lg font-semibold text-zinc-100">

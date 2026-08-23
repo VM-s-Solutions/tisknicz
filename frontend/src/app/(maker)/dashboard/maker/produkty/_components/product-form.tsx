@@ -321,7 +321,7 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
             <span className="icon-tile h-9 w-9">
               <Icon name="edit" size={16} />
             </span>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-zinc-50">
               {t('dashboard.maker.products.form.section_basic')}
             </h2>
           </div>
@@ -378,7 +378,7 @@ export function ProductForm({ mode, initial, categoryOptions }: ProductFormProps
             <span className="icon-tile h-9 w-9">
               <Icon name="creditCard" size={16} />
             </span>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-zinc-50">
               {t('dashboard.maker.products.form.section_pricing')}
             </h2>
           </div>

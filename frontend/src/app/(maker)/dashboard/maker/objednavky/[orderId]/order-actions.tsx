@@ -331,7 +331,7 @@ function ShipConfirmDialog({
       {/* Start sentinel: Shift+Tab off Cancel lands here → Confirm. */}
       <div tabIndex={0} onFocus={() => lastFocusableRef.current?.focus()} />
       <div className="relative z-10 w-full max-w-md rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
-        <h2 id={`ship-${orderId}-title`} className="text-lg font-semibold text-white">
+        <h2 id={`ship-${orderId}-title`} className="text-lg font-semibold text-zinc-50">
           {t('dashboard.maker.orderDetail.shipConfirm.title')}
         </h2>
         <p id={`ship-${orderId}-description`} className="mt-2 text-sm text-zinc-400">

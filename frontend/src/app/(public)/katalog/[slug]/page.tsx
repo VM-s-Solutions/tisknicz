@@ -289,7 +289,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
         <>
           <div aria-hidden="true" className="divider-glow" />
           <div className="flex flex-col gap-1">
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-white">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-50">
               <Icon name="mapPin" size={15} className="text-brand-400" />
               {t('catalog.maker.pickup.heading')}
             </p>

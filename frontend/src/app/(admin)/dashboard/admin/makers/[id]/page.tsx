@@ -89,7 +89,7 @@ export default async function AdminMakerDetailPage({ params, searchParams }: Pag
 
         <header>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {maker.companyName}
             </h1>
             {maker.isVerified ? (

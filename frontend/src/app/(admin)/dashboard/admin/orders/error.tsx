@@ -31,7 +31,7 @@ export default function AdminOrdersError({
           </Button>
           <Link
             href="/dashboard/admin/orders"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.orders.title')}
           </Link>

@@ -54,7 +54,7 @@ export function ProductCard({ item }: ProductCardProps) {
           )}
         </div>
         <div className="flex flex-1 flex-col gap-2 p-4">
-          <h3 className="text-base font-semibold text-white line-clamp-2">{item.title}</h3>
+          <h3 className="text-base font-semibold text-zinc-50 line-clamp-2">{item.title}</h3>
           <p className="flex items-center gap-1.5 text-xs text-zinc-400">
             {item.ratingCount > 0 ? (
               <>

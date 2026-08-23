@@ -49,7 +49,7 @@ export function Checkbox({
           />
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 flex items-center justify-center text-zinc-950 opacity-0 peer-checked:opacity-100"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-on-brand opacity-0 peer-checked:opacity-100"
           >
             <Icon name="check" size={13} strokeWidth={3} />
           </span>

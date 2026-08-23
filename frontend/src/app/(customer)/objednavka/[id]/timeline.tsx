@@ -95,9 +95,9 @@ function TimelineNode({
   const filled = hasTimestamp(step.timestamp);
 
   const dotClass = step.cancelled
-    ? 'border-red-900/60 bg-red-950 text-red-400'
+    ? 'border-error/40 bg-error/10 text-error'
     : isActive
-      ? 'border-brand-400 bg-brand-400 text-zinc-950'
+      ? 'border-brand-400 bg-brand-400 text-on-brand'
       : filled
         ? 'border-brand-400/40 bg-brand-400/10 text-brand-400'
         : 'border-zinc-800 bg-zinc-900 text-zinc-500';
@@ -125,7 +125,7 @@ function TimelineNode({
       <div className={`flex flex-col gap-0.5 pt-0.5 ${isLast ? 'pb-0' : 'pb-6'}`}>
         <span
           className={`text-sm font-semibold ${
-            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-500'
+            step.cancelled ? 'text-error' : filled ? 'text-zinc-100' : 'text-zinc-500'
           }`}
         >
           {step.label}

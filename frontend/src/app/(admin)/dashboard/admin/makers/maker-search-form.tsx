@@ -38,7 +38,7 @@ export function MakerSearchForm({ initialSearch }: { readonly initialSearch: str
         {initialSearch !== '' ? (
           <Link
             href={ROUTE_PATH}
-            className="whitespace-nowrap text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="whitespace-nowrap text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.makers.search.reset')}
           </Link>

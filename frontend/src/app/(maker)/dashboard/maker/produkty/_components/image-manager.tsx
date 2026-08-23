@@ -117,7 +117,7 @@ export function ImageManager({ productId, images }: ImageManagerProps) {
             <Icon name="image" size={16} />
           </span>
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-zinc-50">
               {t('dashboard.maker.products.images.title')}
             </h2>
             <p className="text-sm text-zinc-400">

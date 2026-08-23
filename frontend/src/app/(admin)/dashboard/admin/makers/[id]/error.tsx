@@ -29,7 +29,7 @@ export default function AdminMakerFeeOverrideError({
           </Button>
           <Link
             href="/dashboard/admin/makers"
-            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-50"
           >
             {t('dashboard.admin.ops.makers.lookup.title')}
           </Link>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { MakablesLogo } from '@/components/shared/makables-logo';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { Icon, type IconName } from '@/components/ui/icon';
 import type { DisplaySession } from '@/lib/auth/display-session';
 import { logout } from '@/lib/api-client-helpers/auth';
@@ -98,7 +99,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
     <div className="relative">
       <button
         type="button"
-        className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 py-1.5 pl-2 pr-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
+        className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 py-1.5 pl-2 pr-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-50"
         aria-expanded={isAccountMenuOpen}
         aria-haspopup="menu"
         onClick={() => setIsAccountMenuOpen((current) => !current)}
@@ -124,7 +125,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           />
           <div
             role="menu"
-            className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-zinc-700 bg-surface-card shadow-xl shadow-black/50"
+            className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-zinc-700 bg-surface-card elevated-shadow"
           >
             <div className="flex items-center gap-2.5 border-b border-zinc-800 bg-surface-elevated px-3 py-2.5">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
@@ -140,8 +141,8 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
                   role="menuitem"
                   className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
                     isActive(link.href)
-                      ? 'bg-zinc-800 text-white'
-                      : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                      ? 'bg-zinc-800 text-zinc-50'
+                      : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50'
                   }`}
                   onClick={() => setIsAccountMenuOpen(false)}
                 >
@@ -198,7 +199,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               key={link.href}
               href={link.href}
               className={`link-underline py-1 text-sm font-medium transition-colors ${
-                isActive(link.href) ? 'text-white' : 'text-zinc-400 hover:text-white'
+                isActive(link.href) ? 'text-zinc-50' : 'text-zinc-400 hover:text-zinc-50'
               }`}
               aria-current={isActive(link.href) ? 'page' : undefined}
             >
@@ -208,13 +209,14 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
+          <ThemeToggle />
           {session ? (
             accountMenu
           ) : (
             <>
               <Link
                 href="/login"
-                className="link-underline py-1 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
+                className="link-underline py-1 text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-50"
               >
                 {t('nav.login')}
               </Link>
@@ -229,9 +231,11 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           )}
         </div>
 
-        <button
+        <div className="flex items-center gap-1 lg:hidden">
+          <ThemeToggle />
+          <button
           type="button"
-          className="inline-flex items-center justify-center px-2 py-2 text-zinc-300 transition-colors hover:text-white lg:hidden"
+          className="inline-flex items-center justify-center px-2 py-2 text-zinc-300 transition-colors hover:text-zinc-50"
           aria-expanded={isMobileMenuOpen}
           aria-controls="public-mobile-menu"
           aria-label={isMobileMenuOpen ? t('nav.close_menu') : t('nav.open_menu')}
@@ -249,7 +253,8 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               className={`absolute left-0 top-4 block h-0.5 w-5 bg-current transition-transform duration-200 ${isMobileMenuOpen ? '-translate-y-2 -rotate-45' : ''}`}
             />
           </span>
-        </button>
+          </button>
+        </div>
       </div>
 
       <div
@@ -263,7 +268,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
                 key={link.href}
                 href={link.href}
                 className={`border-b border-zinc-800/60 px-1 py-3 text-sm font-medium transition-colors ${
-                  isActive(link.href) ? 'text-white' : 'text-zinc-400 hover:text-white'
+                  isActive(link.href) ? 'text-zinc-50' : 'text-zinc-400 hover:text-zinc-50'
                 }`}
                 aria-current={isActive(link.href) ? 'page' : undefined}
                 onClick={closeMobileMenu}
@@ -286,7 +291,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
                   key={link.href}
                   href={link.href}
                   className={`flex items-center gap-3 border-t border-zinc-800/60 px-1 py-3 text-sm font-medium transition-colors ${
-                    isActive(link.href) ? 'text-white' : 'text-zinc-300 hover:text-white'
+                    isActive(link.href) ? 'text-zinc-50' : 'text-zinc-300 hover:text-zinc-50'
                   }`}
                   onClick={closeMobileMenu}
                 >
@@ -312,7 +317,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
             <div className="mt-4 flex items-center gap-6 px-1">
               <Link
                 href="/login"
-                className="link-underline py-1 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
+                className="link-underline py-1 text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-50"
                 onClick={closeMobileMenu}
               >
                 {t('nav.login')}

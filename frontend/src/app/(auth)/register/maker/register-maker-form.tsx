@@ -125,7 +125,7 @@ export function RegisterMakerForm() {
   if (doneState) {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <h2 className="text-lg font-semibold text-white">{t('auth.register.success_title')}</h2>
+        <h2 className="text-lg font-semibold text-zinc-50">{t('auth.register.success_title')}</h2>
         <p className="text-sm text-zinc-300">{t('auth.register.success_body')}</p>
         {doneState.stale && (
           <Alert variant="warning">{t('auth.register_maker.snapshot_stale_notice')}</Alert>

@@ -171,7 +171,7 @@ function OrderHeader({
   if (!order) {
     return (
       <header className="flex flex-col gap-2">
-        <h1 className="font-mono text-xl font-bold tracking-tight text-white sm:text-2xl">
+        <h1 className="font-mono text-xl font-bold tracking-tight text-zinc-50 sm:text-2xl">
           {orderId}
         </h1>
         <p className="text-sm text-zinc-400">
@@ -184,7 +184,7 @@ function OrderHeader({
   return (
     <header className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
           {order.orderNumber}
         </h1>
         <Badge variant={orderStateBadgeVariant(order.state)}>

@@ -224,7 +224,7 @@ export function OrderMessageThread({
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-white">{t('orderMessages.heading')}</h2>
+      <h2 className="text-lg font-semibold text-zinc-50">{t('orderMessages.heading')}</h2>
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 

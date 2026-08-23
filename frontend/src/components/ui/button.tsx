@@ -38,7 +38,7 @@ const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
   outline:
     'border border-zinc-700 bg-transparent font-medium text-zinc-300 hover:border-brand-500/60 hover:text-brand-300 active:border-brand-400',
   ghost:
-    'border border-transparent bg-transparent font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white',
+    'border border-transparent bg-transparent font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-50',
   danger:
     'border border-error/50 bg-error/10 font-semibold text-error hover:border-error/70 hover:bg-error/20',
   dangerGhost:

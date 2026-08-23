@@ -36,7 +36,7 @@ function FooterColumn({
           <li key={link.href}>
             <Link
               href={link.href}
-              className="inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
+              className="inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-zinc-50"
             >
               <span aria-hidden="true" className="text-zinc-500">
                 <Icon name={link.icon} size={14} />

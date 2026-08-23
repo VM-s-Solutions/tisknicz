@@ -2,7 +2,7 @@
   "name": "makables-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "Makables — Next.js 16 frontend. Pure presentation layer; calls the .NET backend via the NSwag-generated client.",
+  "description": "Makables \u2014 Next.js 16 frontend. Pure presentation layer; calls the .NET backend via the NSwag-generated client.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "generate:api": "node scripts/generate-api.mjs",
     "check:api": "node scripts/check-api-parity.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "check:api-client": "node scripts/check-api-client-manual-edits.mjs",
     "prepare": "node scripts/install-husky.mjs"
   },

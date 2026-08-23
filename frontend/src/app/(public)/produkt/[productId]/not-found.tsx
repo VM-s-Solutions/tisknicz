@@ -16,7 +16,7 @@ export default function ProductNotFound() {
       <p aria-hidden="true" className="text-6xl font-bold tracking-tight text-zinc-700 sm:text-7xl">
         404
       </p>
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+      <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
         {t('catalog.product_detail.not_found.title')}
       </h1>
       <p className="mt-3 text-base text-zinc-400">{t('catalog.product_detail.not_found.body')}</p>

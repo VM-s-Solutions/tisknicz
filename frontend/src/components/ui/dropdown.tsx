@@ -181,7 +181,7 @@ export function Dropdown({
             id={listboxId}
             role="listbox"
             aria-labelledby={triggerId}
-            className="absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1.5 shadow-2xl shadow-black/50"
+            className="absolute inset-x-0 top-full z-30 mt-2 max-h-64 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1.5 elevated-shadow"
           >
             {allOptions.map((option, index) => {
               const isSelected = index === selectedIndex;
@@ -195,7 +195,7 @@ export function Dropdown({
                   onPointerMove={() => setActiveIndex(index)}
                   onClick={() => selectAt(index)}
                   className={`flex cursor-pointer items-center justify-between gap-2 px-4 py-2 text-sm transition-colors ${
-                    isActive ? 'bg-zinc-800 text-white' : 'text-zinc-400'
+                    isActive ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400'
                   } ${isSelected ? 'text-brand-300' : ''}`}
                 >
                   <span className="truncate">{option.label}</span>

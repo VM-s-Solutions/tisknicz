@@ -13,7 +13,7 @@ export default function MakerOrderNotFound() {
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-16 sm:px-6 lg:px-8">
       <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-2xl font-semibold text-white">
+        <h1 className="text-2xl font-semibold text-zinc-50">
           {t('dashboard.maker.orderDetail.notFound.title')}
         </h1>
         <p className="text-sm text-zinc-400">{t('dashboard.maker.orderDetail.notFound.body')}</p>

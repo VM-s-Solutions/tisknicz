@@ -156,7 +156,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
       {description ? (
         <Card padding="md" className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="text-xl font-semibold text-zinc-50">
             {t('catalog.product_detail.description.heading')}
           </h2>
           <div aria-hidden="true" className="divider-glow" />
@@ -217,7 +217,7 @@ export function ProductInfo({
       <div className="flex flex-col gap-3">
         <Link
           href={`/katalog/${encodeURIComponent(product.makerSlug)}`}
-          className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+          className="inline-flex flex-wrap items-center gap-2 rounded-md text-sm text-zinc-300 transition-colors hover:text-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
         >
           {/* Decorative: the adjacent "by {maker}" text names them. */}
           <Avatar

@@ -160,12 +160,12 @@ export function CookieConsentBanner() {
         {mode === 'summary' ? (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="text-sm font-semibold text-white">
+              <h2 id={titleId} className="text-sm font-semibold text-zinc-50">
                 {t('cookieConsent.title')}
               </h2>
               <p id={descriptionId} className="mt-1 text-xs leading-relaxed text-zinc-400">
                 {t('cookieConsent.description')}{' '}
-                <Link href="/gdpr" className="underline hover:text-white">
+                <Link href="/gdpr" className="underline hover:text-zinc-50">
                   {t('cookieConsent.privacyLinkText')}
                 </Link>
                 .
@@ -187,7 +187,7 @@ export function CookieConsentBanner() {
         ) : (
           <div className="flex flex-col gap-4">
             <div>
-              <h2 id={titleId} className="text-sm font-semibold text-white">
+              <h2 id={titleId} className="text-sm font-semibold text-zinc-50">
                 {t('cookieConsent.customizeTitle')}
               </h2>
               <p id={descriptionId} className="mt-1 text-xs leading-relaxed text-zinc-400">
@@ -247,7 +247,7 @@ function ConsentCategoryRow({
   return (
     <div className="flex items-start justify-between gap-4 border-b border-zinc-800/60 pb-2 last:border-b-0 last:pb-0">
       <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-semibold text-white">{label}</span>
+        <span className="text-xs font-semibold text-zinc-50">{label}</span>
         <span className="text-xs leading-relaxed text-zinc-500">{description}</span>
       </div>
       {alwaysOn ? (

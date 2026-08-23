@@ -11,7 +11,7 @@ export const metadata = {
 export default function VerifyPage() {
   return (
     <div className="mx-auto w-full max-w-md">
-      <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t('auth.verify.title')}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">{t('auth.verify.title')}</h1>
       <div className="mt-6">
         <Suspense fallback={<ConfirmingSkeleton />}>
           <VerifyClient />

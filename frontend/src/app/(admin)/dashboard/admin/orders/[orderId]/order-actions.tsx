@@ -208,13 +208,13 @@ function RefundModal({
       />
 
       {requiresAck ? (
-        <div className="rounded-xl border border-amber-900/50 bg-amber-950/30 p-3">
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-3">
           <Checkbox
             checked={acknowledge}
             onChange={(event) => setAcknowledge(event.target.checked)}
             disabled={busy}
             label={
-              <span className="text-amber-200">
+              <span className="text-warning">
                 {t('dashboard.admin.orderActions.refund.postPayoutAck')}
               </span>
             }

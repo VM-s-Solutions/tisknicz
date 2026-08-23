@@ -91,7 +91,7 @@ function TimelineNode({
 }) {
   const filled = hasTimestamp(step.timestamp);
   const circleClass = step.cancelled
-    ? 'border-red-900/50 bg-red-950 text-red-400'
+    ? 'border-error/40 bg-error/10 text-error'
     : filled
       ? isCurrent
         ? 'border-brand-400/60 bg-brand-400/15 text-brand-300 ring-4 ring-brand-400/10'
@@ -121,7 +121,7 @@ function TimelineNode({
       <div className={`flex flex-col gap-0.5 pt-1 ${isLast ? 'pb-0' : 'pb-6'}`}>
         <span
           className={`text-sm font-semibold ${
-            step.cancelled ? 'text-red-400' : filled ? 'text-zinc-100' : 'text-zinc-500'
+            step.cancelled ? 'text-error' : filled ? 'text-zinc-100' : 'text-zinc-500'
           }`}
         >
           {step.label}

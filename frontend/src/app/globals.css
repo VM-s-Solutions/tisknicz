@@ -1,63 +1,428 @@
 @import "tailwindcss";
 
-@theme inline {
-  /* Brand teal — the primary. Unchanged. */
-  --color-brand-50: #f0fdfa;
-  --color-brand-100: #ccfbf1;
-  --color-brand-200: #99f6e4;
-  --color-brand-300: #5eead4;
-  --color-brand-400: #2dd4bf;
-  --color-brand-500: #14b8a6;
-  --color-brand-600: #0d9488;
-  --color-brand-700: #0f766e;
-  --color-brand-800: #115e59;
-  --color-brand-900: #134e4a;
+/* ===========================================================================
+   THEME ARCHITECTURE (T-0191)
+   ---------------------------------------------------------------------------
+   Every colour utility in the app resolves through a CSS custom property, so
+   a theme is swapped by re-declaring ~35 variables — no component knows which
+   theme is active. Three layers:
 
-  /* Amber accent (stars, warnings) */
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
+     1. `--dk-*` / `--lt-*`  — the two raw palettes. Each hex appears EXACTLY
+                               once in the codebase, here.
+     2. `--ink-* / --brand-* / --surface-* / …`
+                             — the *active* tokens. `:root` points them at the
+                               dark palette; `[data-theme='light']` re-points
+                               them at the light one.
+     3. `@theme inline`      — hands the active tokens to Tailwind, so
+                               `text-zinc-400`, `bg-surface-card`,
+                               `border-brand-500/60` … all follow the theme.
 
-  /* Ink neutrals — a cyan-slate override of Tailwind's zinc ramp so every
+   `@theme inline` is required (not plain `@theme`): it makes the generated
+   utility emit `var(--ink-400)` rather than inlining a literal hex, which is
+   the whole point — a literal cannot be re-pointed at runtime.
+
+   Because the selectors are plain attribute selectors (not `:root[…]`), a
+   theme can also be pinned to a SUBTREE: `<section data-theme="dark">` keeps
+   its descendants dark on an otherwise light page. The landing hero uses this
+   — its WebGL scene is built on additive blending, which is invisible over a
+   light background (see `hero-scene.tsx`).
+
+   Contrast is a contract, not a hope: `npm run check:contrast` re-derives every
+   text/surface pair in BOTH palettes straight from this file and fails the
+   build on a violation. Muted floor is `zinc-500` ≥ 4.5:1 and `zinc-400` ≥ 7:1
+   on every surface *and* on the `zinc-800` hover fill.
+   =========================================================================== */
+
+:root {
+  /* --- Dark palette -------------------------------------------------------
+     Ink neutrals: a cyan-slate override of Tailwind's zinc ramp so every
      zinc-* utility in the app picks up the palette. Every step sits at
      hue ~197°, roughly halfway between a neutral blue-gray and the 173°
      brand teal: related enough that the primary reads as part of the same
      family, cool enough that it never drifts back toward green.
 
-     Mid steps are tuned for WCAG on the dark surfaces: 400 ≥ 7:1 (AAA)
-     and 500 ≥ 4.5:1 (AA) on every surface token *and* on the zinc-800
-     hover fill; 600 and below are reserved for icons, borders and
-     decoration — not body text. */
-  --color-zinc-50: #f0f7f9;
-  --color-zinc-100: #e2eef1;
-  --color-zinc-200: #cfdfe4;
-  --color-zinc-300: #b6cad1;
-  --color-zinc-400: #9db4bd;
-  --color-zinc-500: #85a0aa;
-  --color-zinc-600: #627880;
-  --color-zinc-700: #2b3a40;
-  --color-zinc-800: #212e33;
-  --color-zinc-900: #0b1417;
-  --color-zinc-950: #071013;
+     Step *roles* (the light palette mirrors these, which is why a blind
+     lightness flip works): 50 titles · 100 body · 200/300 secondary ·
+     400 muted AAA · 500 muted floor AA · 600 icons+decoration ·
+     700 border · 800 hairline+hover fill · 900 recessed control fill ·
+     950 deepest. */
+  --dk-ink-50: #f0f7f9;
+  --dk-ink-100: #e2eef1;
+  --dk-ink-200: #cfdfe4;
+  --dk-ink-300: #b6cad1;
+  --dk-ink-400: #9db4bd;
+  --dk-ink-500: #85a0aa;
+  --dk-ink-600: #627880;
+  --dk-ink-700: #2b3a40;
+  --dk-ink-800: #212e33;
+  --dk-ink-900: #0b1417;
+  --dk-ink-950: #071013;
 
   /* Surfaces — flat cyan-slate ink. Elevation reads through surface
      lightness plus a hairline border, never through a gradient or glow. */
-  --color-surface-primary: #0b1417;
-  --color-surface-secondary: #0f191d;
-  --color-surface-card: #121d21;
-  --color-surface-elevated: #18262b;
+  --dk-surface-primary: #0b1417;
+  --dk-surface-secondary: #0f191d;
+  --dk-surface-card: #121d21;
+  --dk-surface-elevated: #18262b;
+
+  /* Brand teal — the primary. */
+  --dk-brand-50: #f0fdfa;
+  --dk-brand-100: #ccfbf1;
+  --dk-brand-200: #99f6e4;
+  --dk-brand-300: #5eead4;
+  --dk-brand-400: #2dd4bf;
+  --dk-brand-500: #14b8a6;
+  --dk-brand-600: #0d9488;
+  --dk-brand-700: #0f766e;
+  --dk-brand-800: #115e59;
+  --dk-brand-900: #134e4a;
+
+  /* Amber accent (stars) */
+  --dk-accent-300: #fcd34d;
+  --dk-accent-400: #fbbf24;
+  --dk-accent-500: #f59e0b;
+  --dk-accent-600: #d97706;
 
   /* Semantic — the single source for status colour. Every badge, alert
      and inline message must draw from these; reaching for a stock
      Tailwind ramp (sky-400, emerald-300, …) puts an off-hue next to the
      197° neutrals and reads as a mistake. `info` sits at ~209°, just
-     outside the neutral band, so it stays distinct from the 173° brand.
-     All four clear AA on every surface and on a 10% tint of themselves. */
-  --color-success: #3fb950;
-  --color-warning: #d29922;
-  --color-error: #ff7b72;
-  --color-info: #79c0ff;
+     outside the neutral band, so it stays distinct from the 173° brand. */
+  --dk-status-success: #3fb950;
+  --dk-status-warning: #d29922;
+  --dk-status-error: #ff7b72;
+  --dk-status-info: #79c0ff;
+
+  /* Ink that sits ON a solid brand fill (checkbox tick, selected day,
+     completed timeline step). Inverts between themes: the dark theme's
+     teal fills are bright, the light theme's are deep. */
+  --dk-on-brand: #071013;
+  /* Solid form-control knob (switch thumb) — always the light end. */
+  --dk-knob: #e2eef1;
+
+  --dk-glass: rgba(11, 20, 23, 0.88);
+  --dk-selection-bg: rgba(20, 184, 166, 0.32);
+  --dk-selection-fg: #f0f7f9;
+  --dk-shadow-elevated: rgba(0, 0, 0, 0.5);
+
+  /* --- Light palette ------------------------------------------------------
+     A lightness mirror of the ramp above at the same ~197° hue, re-tuned
+     (not blindly inverted) so the contrast contract still holds: the
+     binding constraint is text on the `ink-800` hover fill, the darkest
+     surface any body text lands on in this theme. */
+  --lt-ink-50: #071013;
+  --lt-ink-100: #0e1c21;
+  --lt-ink-200: #17282e;
+  --lt-ink-300: #24373e;
+  --lt-ink-400: #354d55;
+  --lt-ink-500: #4d666f;
+  --lt-ink-600: #728d97;
+  --lt-ink-700: #c4d5da;
+  --lt-ink-800: #dde9ed;
+  --lt-ink-900: #e6eff2;
+  --lt-ink-950: #f4f9fa;
+
+  /* Elevation runs toward white, mirroring the dark theme's run toward
+     light. `ink-900` (the recessed control fill) stays DARKER than the
+     page so an input on the bare page is still visible — the same trap
+     that made fixed-surface chips disappear on `surface-primary`. */
+  --lt-surface-primary: #edf3f5;
+  --lt-surface-secondary: #f3f8f9;
+  --lt-surface-card: #fafcfd;
+  --lt-surface-elevated: #ffffff;
+
+  /* Brand: the teal ramp mirrored, so `text-brand-200` stays the highest
+     contrast step and `text-brand-300/400` clear AA on every light
+     surface. 400 and 500 double as solid fills, so both must also clear
+     AA against `--on-brand` (white here). */
+  --lt-brand-50: #134e4a;
+  --lt-brand-100: #115e59;
+  --lt-brand-200: #0a4a45;
+  --lt-brand-300: #0c6259;
+  --lt-brand-400: #0e6f66;
+  --lt-brand-500: #0f7d72;
+  --lt-brand-600: #14b8a6;
+  --lt-brand-700: #2dd4bf;
+  --lt-brand-800: #5eead4;
+  --lt-brand-900: #99f6e4;
+
+  --lt-accent-300: #f59e0b;
+  --lt-accent-400: #d97706;
+  --lt-accent-500: #b45309;
+  --lt-accent-600: #92400e;
+
+  --lt-status-success: #106e34;
+  --lt-status-warning: #8a5a00;
+  --lt-status-error: #c0272f;
+  --lt-status-info: #0b64c4;
+
+  --lt-on-brand: #ffffff;
+  --lt-knob: #ffffff;
+
+  --lt-glass: rgba(237, 243, 245, 0.88);
+  --lt-selection-bg: rgba(20, 184, 166, 0.28);
+  --lt-selection-fg: #071013;
+  --lt-shadow-elevated: rgba(7, 16, 19, 0.16);
+}
+
+/* --- Active tokens: dark is the default ---------------------------------- */
+:root {
+  color-scheme: dark;
+
+  --ink-50: var(--dk-ink-50);
+  --ink-100: var(--dk-ink-100);
+  --ink-200: var(--dk-ink-200);
+  --ink-300: var(--dk-ink-300);
+  --ink-400: var(--dk-ink-400);
+  --ink-500: var(--dk-ink-500);
+  --ink-600: var(--dk-ink-600);
+  --ink-700: var(--dk-ink-700);
+  --ink-800: var(--dk-ink-800);
+  --ink-900: var(--dk-ink-900);
+  --ink-950: var(--dk-ink-950);
+
+  --surface-primary: var(--dk-surface-primary);
+  --surface-secondary: var(--dk-surface-secondary);
+  --surface-card: var(--dk-surface-card);
+  --surface-elevated: var(--dk-surface-elevated);
+
+  --brand-50: var(--dk-brand-50);
+  --brand-100: var(--dk-brand-100);
+  --brand-200: var(--dk-brand-200);
+  --brand-300: var(--dk-brand-300);
+  --brand-400: var(--dk-brand-400);
+  --brand-500: var(--dk-brand-500);
+  --brand-600: var(--dk-brand-600);
+  --brand-700: var(--dk-brand-700);
+  --brand-800: var(--dk-brand-800);
+  --brand-900: var(--dk-brand-900);
+
+  --accent-300: var(--dk-accent-300);
+  --accent-400: var(--dk-accent-400);
+  --accent-500: var(--dk-accent-500);
+  --accent-600: var(--dk-accent-600);
+
+  --status-success: var(--dk-status-success);
+  --status-warning: var(--dk-status-warning);
+  --status-error: var(--dk-status-error);
+  --status-info: var(--dk-status-info);
+
+  --on-brand: var(--dk-on-brand);
+  --knob: var(--dk-knob);
+
+  --glass: var(--dk-glass);
+  --selection-bg: var(--dk-selection-bg);
+  --selection-fg: var(--dk-selection-fg);
+  --shadow-elevated: var(--dk-shadow-elevated);
+}
+
+/* --- Light -------------------------------------------------------------- */
+/* Plain attribute selectors (not `:root[…]`) so a nested element can pin a
+   theme for its own subtree. Equal specificity to `:root` above, so source
+   order decides — light must come after. */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ink-50: var(--lt-ink-50);
+  --ink-100: var(--lt-ink-100);
+  --ink-200: var(--lt-ink-200);
+  --ink-300: var(--lt-ink-300);
+  --ink-400: var(--lt-ink-400);
+  --ink-500: var(--lt-ink-500);
+  --ink-600: var(--lt-ink-600);
+  --ink-700: var(--lt-ink-700);
+  --ink-800: var(--lt-ink-800);
+  --ink-900: var(--lt-ink-900);
+  --ink-950: var(--lt-ink-950);
+
+  --surface-primary: var(--lt-surface-primary);
+  --surface-secondary: var(--lt-surface-secondary);
+  --surface-card: var(--lt-surface-card);
+  --surface-elevated: var(--lt-surface-elevated);
+
+  --brand-50: var(--lt-brand-50);
+  --brand-100: var(--lt-brand-100);
+  --brand-200: var(--lt-brand-200);
+  --brand-300: var(--lt-brand-300);
+  --brand-400: var(--lt-brand-400);
+  --brand-500: var(--lt-brand-500);
+  --brand-600: var(--lt-brand-600);
+  --brand-700: var(--lt-brand-700);
+  --brand-800: var(--lt-brand-800);
+  --brand-900: var(--lt-brand-900);
+
+  --accent-300: var(--lt-accent-300);
+  --accent-400: var(--lt-accent-400);
+  --accent-500: var(--lt-accent-500);
+  --accent-600: var(--lt-accent-600);
+
+  --status-success: var(--lt-status-success);
+  --status-warning: var(--lt-status-warning);
+  --status-error: var(--lt-status-error);
+  --status-info: var(--lt-status-info);
+
+  --on-brand: var(--lt-on-brand);
+  --knob: var(--lt-knob);
+
+  --glass: var(--lt-glass);
+  --selection-bg: var(--lt-selection-bg);
+  --selection-fg: var(--lt-selection-fg);
+  --shadow-elevated: var(--lt-shadow-elevated);
+}
+
+/* Re-assert dark for a subtree pinned inside a light page (the landing
+   hero). Listed last so it wins over the light block at equal specificity. */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ink-50: var(--dk-ink-50);
+  --ink-100: var(--dk-ink-100);
+  --ink-200: var(--dk-ink-200);
+  --ink-300: var(--dk-ink-300);
+  --ink-400: var(--dk-ink-400);
+  --ink-500: var(--dk-ink-500);
+  --ink-600: var(--dk-ink-600);
+  --ink-700: var(--dk-ink-700);
+  --ink-800: var(--dk-ink-800);
+  --ink-900: var(--dk-ink-900);
+  --ink-950: var(--dk-ink-950);
+
+  --surface-primary: var(--dk-surface-primary);
+  --surface-secondary: var(--dk-surface-secondary);
+  --surface-card: var(--dk-surface-card);
+  --surface-elevated: var(--dk-surface-elevated);
+
+  --brand-50: var(--dk-brand-50);
+  --brand-100: var(--dk-brand-100);
+  --brand-200: var(--dk-brand-200);
+  --brand-300: var(--dk-brand-300);
+  --brand-400: var(--dk-brand-400);
+  --brand-500: var(--dk-brand-500);
+  --brand-600: var(--dk-brand-600);
+  --brand-700: var(--dk-brand-700);
+  --brand-800: var(--dk-brand-800);
+  --brand-900: var(--dk-brand-900);
+
+  --accent-300: var(--dk-accent-300);
+  --accent-400: var(--dk-accent-400);
+  --accent-500: var(--dk-accent-500);
+  --accent-600: var(--dk-accent-600);
+
+  --status-success: var(--dk-status-success);
+  --status-warning: var(--dk-status-warning);
+  --status-error: var(--dk-status-error);
+  --status-info: var(--dk-status-info);
+
+  --on-brand: var(--dk-on-brand);
+  --knob: var(--dk-knob);
+
+  --glass: var(--dk-glass);
+  --selection-bg: var(--dk-selection-bg);
+  --selection-fg: var(--dk-selection-fg);
+  --shadow-elevated: var(--dk-shadow-elevated);
+}
+
+/* No-JS fallback. The inline bootstrap in `app/layout.tsx` stamps
+   `data-theme` before first paint, so this only ever applies when scripting
+   is off — in which case a system-light visitor still gets the light theme
+   instead of being pinned to the `:root` default. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+
+    --ink-50: var(--lt-ink-50);
+    --ink-100: var(--lt-ink-100);
+    --ink-200: var(--lt-ink-200);
+    --ink-300: var(--lt-ink-300);
+    --ink-400: var(--lt-ink-400);
+    --ink-500: var(--lt-ink-500);
+    --ink-600: var(--lt-ink-600);
+    --ink-700: var(--lt-ink-700);
+    --ink-800: var(--lt-ink-800);
+    --ink-900: var(--lt-ink-900);
+    --ink-950: var(--lt-ink-950);
+
+    --surface-primary: var(--lt-surface-primary);
+    --surface-secondary: var(--lt-surface-secondary);
+    --surface-card: var(--lt-surface-card);
+    --surface-elevated: var(--lt-surface-elevated);
+
+    --brand-50: var(--lt-brand-50);
+    --brand-100: var(--lt-brand-100);
+    --brand-200: var(--lt-brand-200);
+    --brand-300: var(--lt-brand-300);
+    --brand-400: var(--lt-brand-400);
+    --brand-500: var(--lt-brand-500);
+    --brand-600: var(--lt-brand-600);
+    --brand-700: var(--lt-brand-700);
+    --brand-800: var(--lt-brand-800);
+    --brand-900: var(--lt-brand-900);
+
+    --accent-300: var(--lt-accent-300);
+    --accent-400: var(--lt-accent-400);
+    --accent-500: var(--lt-accent-500);
+    --accent-600: var(--lt-accent-600);
+
+    --status-success: var(--lt-status-success);
+    --status-warning: var(--lt-status-warning);
+    --status-error: var(--lt-status-error);
+    --status-info: var(--lt-status-info);
+
+    --on-brand: var(--lt-on-brand);
+    --knob: var(--lt-knob);
+
+    --glass: var(--lt-glass);
+    --selection-bg: var(--lt-selection-bg);
+    --selection-fg: var(--lt-selection-fg);
+    --shadow-elevated: var(--lt-shadow-elevated);
+  }
+}
+
+/* --- Tailwind theme ------------------------------------------------------ */
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  --color-accent-300: var(--accent-300);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+
+  --color-zinc-50: var(--ink-50);
+  --color-zinc-100: var(--ink-100);
+  --color-zinc-200: var(--ink-200);
+  --color-zinc-300: var(--ink-300);
+  --color-zinc-400: var(--ink-400);
+  --color-zinc-500: var(--ink-500);
+  --color-zinc-600: var(--ink-600);
+  --color-zinc-700: var(--ink-700);
+  --color-zinc-800: var(--ink-800);
+  --color-zinc-900: var(--ink-900);
+  --color-zinc-950: var(--ink-950);
+
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-card: var(--surface-card);
+  --color-surface-elevated: var(--surface-elevated);
+
+  --color-success: var(--status-success);
+  --color-warning: var(--status-warning);
+  --color-error: var(--status-error);
+  --color-info: var(--status-info);
+
+  /* Ink on a solid brand fill, and the switch knob. Both are "always the
+     opposite end of the ramp" colours, so they cannot be spelled with a
+     zinc step — that step flips with the theme and the contrast inverts. */
+  --color-on-brand: var(--on-brand);
+  --color-knob: var(--knob);
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -65,15 +430,15 @@
 
 body {
   font-family: var(--font-sans);
-  color: var(--color-zinc-100);
-  background: var(--color-surface-primary);
+  color: var(--ink-100);
+  background: var(--surface-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.32);
-  color: var(--color-zinc-50);
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 /* Hero entrance — transform-only so the text is painted (and countable
@@ -98,7 +463,7 @@ body {
    Elevation reads through surface lightness and the hairline border
    (pair with border-zinc-800), not gradients or shadows. */
 .panel {
-  background: var(--color-surface-card);
+  background: var(--surface-card);
 }
 
 /* Panel with a teal hairline along the top edge — for the one primary
@@ -112,7 +477,7 @@ body {
   position: absolute;
   inset: 0 0 auto 0;
   height: 2px;
-  background: var(--color-brand-500);
+  background: var(--brand-500);
   pointer-events: none;
 }
 
@@ -122,19 +487,19 @@ body {
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .card-lift:hover {
-  border-color: rgba(20, 184, 166, 0.45);
+  border-color: color-mix(in srgb, var(--brand-500) 45%, transparent);
 }
 
-/* Page titles — flat near-white. */
+/* Page titles — the highest-contrast ink step. */
 .text-shine {
-  color: var(--color-zinc-50);
+  color: var(--ink-50);
 }
 
 /* Hairline divider — plain rule. */
 .divider-glow {
   height: 1px;
   border: 0;
-  background: var(--color-zinc-800);
+  background: var(--ink-800);
 }
 
 /* Icon tile — solid teal-tinted rounded square, used by empty states
@@ -144,8 +509,8 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 0.875rem;
-  background: rgba(20, 184, 166, 0.12);
-  color: var(--color-brand-300);
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-300);
 }
 
 /* Nav links + text buttons: hairline underline shown on hover/focus and
@@ -160,7 +525,7 @@ body {
   right: 0;
   bottom: -3px;
   height: 1px;
-  background: var(--color-brand-400);
+  background: var(--brand-400);
   opacity: 0;
 }
 .link-underline:hover::after,
@@ -172,9 +537,16 @@ body {
 /* Sticky overlay surface (navbar, cookie banner) — near-opaque ink with
    a light blur so scrolled content doesn't bleed through. */
 .glass {
-  background: rgba(11, 20, 23, 0.88);
+  background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* Detached overlay surface (dropdown menu, date-picker calendar, tooltip).
+   The shadow has to be a token: a fixed black drop-shadow that reads as
+   depth on the dark theme reads as dirt on the light one. */
+.elevated-shadow {
+  box-shadow: 0 16px 32px -12px var(--shadow-elevated);
 }
 
 /* Custom scrollbar */
@@ -186,12 +558,12 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-surface-primary);
+  background: var(--surface-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-zinc-700);
+  background: var(--ink-700);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-zinc-600);
+  background: var(--ink-600);
 }

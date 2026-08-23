@@ -32,7 +32,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               href="/register?type=customer"
               className={`-mb-px border-b pb-2.5 transition-colors ${
                 selectedType === 'customer'
-                  ? 'border-brand-400 font-semibold text-white'
+                  ? 'border-brand-400 font-semibold text-zinc-50'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
               aria-current={selectedType === 'customer' ? 'page' : undefined}
@@ -43,7 +43,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
               href="/register?type=maker"
               className={`-mb-px border-b pb-2.5 transition-colors ${
                 selectedType === 'maker'
-                  ? 'border-brand-400 font-semibold text-white'
+                  ? 'border-brand-400 font-semibold text-zinc-50'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
               aria-current={selectedType === 'maker' ? 'page' : undefined}

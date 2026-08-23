@@ -89,7 +89,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-red-900/50 bg-red-950/40 px-3.5 py-1.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-error/40 bg-error/10 px-3.5 py-1.5 text-sm font-semibold text-error transition-colors hover:bg-error/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
         >
           <Icon name="trash" size={14} />
           {t('dashboard.maker.products.actions.delete')}
@@ -124,7 +124,7 @@ export function DeleteProductButton({ productId, variant = 'card' }: DeleteProdu
           <div className="relative z-10 w-full max-w-md rounded-xl border border-zinc-800 bg-surface-card p-6 shadow-2xl">
             <h2
               id={`delete-${productId}-title`}
-              className="text-lg font-semibold text-white"
+              className="text-lg font-semibold text-zinc-50"
             >
               {t('dashboard.maker.products.delete.confirm.title')}
             </h2>

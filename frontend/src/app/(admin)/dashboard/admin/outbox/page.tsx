@@ -85,7 +85,7 @@ export default async function AdminOutboxPage({ searchParams }: PageProps) {
             <span className="icon-tile h-10 w-10 shrink-0" aria-hidden="true">
               <Icon name="send" size={18} />
             </span>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl">
               {t('dashboard.admin.ops.outbox.title')}
             </h1>
           </div>
@@ -103,7 +103,7 @@ export default async function AdminOutboxPage({ searchParams }: PageProps) {
               {t('dashboard.admin.ops.outbox.stalledCount.label')}
             </span>
           </div>
-          <span className="text-3xl font-bold text-white">{count === null ? '—' : count}</span>
+          <span className="text-3xl font-bold text-zinc-50">{count === null ? '—' : count}</span>
         </Card>
 
         {count === null ? (
@@ -135,7 +135,7 @@ function OutboxList({
   if (list.totalCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-950/50 text-emerald-400">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-success/10 text-success">
           <Icon name="checkCircle" size={28} />
         </div>
         <div>
@@ -199,7 +199,7 @@ function OutboxList({
                       <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
                         {t('dashboard.admin.ops.outbox.list.lastErrorCode')}
                       </dt>
-                      <dd className="break-all font-mono text-sm text-amber-300">
+                      <dd className="break-all font-mono text-sm text-warning">
                         {event.lastErrorCode}
                       </dd>
                     </div>
