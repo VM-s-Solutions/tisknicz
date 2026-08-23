@@ -21,9 +21,11 @@ namespace Makables.Infra.Clients.Resend;
 /// <see cref="EmailMessage.Subject"/> + <see cref="EmailMessage.PlainTextBody"/>
 /// arrive fully rendered. Unlike SendGrid there is no remote
 /// dynamic-template rendering: <see cref="EmailMessage.ProviderTemplateId"/>
-/// and <see cref="EmailMessage.Data"/> are ignored and the email ships as
-/// the rendered plain text (an HTML layout is a future ticket — the DB
-/// carries no HTML body today).
+/// and <see cref="EmailMessage.Data"/> are ignored. The email ships as
+/// <c>multipart/alternative</c> — the rendered plain text plus, when the
+/// caller composed one, the <see cref="EmailMessage.HtmlBody"/> produced
+/// by <c>EmailHtmlLayout</c>. The DB still stores no HTML; the layout is
+/// derived from the plain-text translation at send time.
 ///
 /// Failure taxonomy mirrors the SendGrid adapter: 5xx / 429 / 408 /
 /// transport errors → Transient (the outbox retry policy re-delivers);
@@ -67,6 +69,11 @@ public sealed class ResendEmailProvider(
             To: [message.ToAddress],
             Subject: message.Subject,
             Text: message.PlainTextBody,
+            // Sending both parts makes this a multipart/alternative: the
+            // client picks the HTML, and a text-only reader still gets the
+            // full message. Null when the caller composed no HTML — the
+            // WhenWritingNull policy then omits the field entirely.
+            Html: string.IsNullOrWhiteSpace(message.HtmlBody) ? null : message.HtmlBody,
             ReplyTo: string.IsNullOrWhiteSpace(message.ReplyToAddress) ? null : message.ReplyToAddress,
             Attachments: message.Attachment is null
                 ? null
@@ -161,6 +168,7 @@ public sealed class ResendEmailProvider(
         [property: JsonPropertyName("to")] IReadOnlyList<string> To,
         [property: JsonPropertyName("subject")] string Subject,
         [property: JsonPropertyName("text")] string Text,
+        [property: JsonPropertyName("html")] string? Html,
         [property: JsonPropertyName("reply_to")] string? ReplyTo,
         [property: JsonPropertyName("attachments")] IReadOnlyList<ResendAttachment>? Attachments);
 

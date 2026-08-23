@@ -73,6 +73,16 @@ public sealed class SendGridEmailProvider(
         sgMessage.SetSubject(message.Subject);
         sgMessage.PlainTextContent = message.PlainTextBody;
 
+        // NOTE: <see cref="EmailMessage.HtmlBody"/> is deliberately NOT
+        // forwarded. In SendGrid's model the dynamic template owns the HTML
+        // and renders it remotely from Data; sending a locally-composed
+        // `content` alongside a `template_id` asks the API to honour two
+        // competing bodies. The locally-composed part exists for providers
+        // that render nothing remotely (Resend, the active adapter per
+        // T-0157). Flipping the CZ seed back to SendGrid therefore means
+        // authoring the templates in SendGrid's editor — which the
+        // `d-placeholder-*` ids in `email_templates` say has never happened.
+
         if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
             sgMessage.ReplyTo = new EmailAddress(message.ReplyToAddress);
 

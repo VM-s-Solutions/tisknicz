@@ -106,6 +106,40 @@ public class ResendEmailProviderTests
         root.GetProperty("text").GetString().Should().Be("Dobrý den, vaše objednávka byla přijata.");
         root.GetProperty("reply_to").GetString().Should().Be("podpora@makables.cz");
         root.TryGetProperty("attachments", out _).Should().BeFalse("no attachment was supplied");
+        root.TryGetProperty("html", out _).Should().BeFalse("no HTML part was composed");
+    }
+
+    [Fact]
+    public async Task Sends_the_html_part_alongside_the_text_when_one_was_composed()
+    {
+        var handler = new StubHandler(_ => Json(HttpStatusCode.OK, """{"id":"re_html"}"""));
+        var sut = BuildSut(handler);
+
+        var message = Message() with { HtmlBody = "<!DOCTYPE html><html><body>Ahoj</body></html>" };
+        var result = await sut.SendAsync(message, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+
+        // Both parts on the wire = multipart/alternative: the client renders
+        // the HTML, a text-only reader still gets the whole message.
+        using var json = JsonDocument.Parse(handler.Requests.Single().Body);
+        json.RootElement.GetProperty("html").GetString()
+            .Should().Be("<!DOCTYPE html><html><body>Ahoj</body></html>");
+        json.RootElement.GetProperty("text").GetString()
+            .Should().Be("Dobrý den, vaše objednávka byla přijata.");
+    }
+
+    [Fact]
+    public async Task Omits_the_html_field_entirely_for_a_blank_html_body()
+    {
+        var handler = new StubHandler(_ => Json(HttpStatusCode.OK, """{"id":"re_blank"}"""));
+        var sut = BuildSut(handler);
+
+        var result = await sut.SendAsync(Message() with { HtmlBody = "   " }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        using var json = JsonDocument.Parse(handler.Requests.Single().Body);
+        json.RootElement.TryGetProperty("html", out _).Should().BeFalse();
     }
 
     [Fact]
