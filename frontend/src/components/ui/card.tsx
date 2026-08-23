@@ -4,12 +4,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   hover?: boolean;
   /**
-   * Surface treatment. `default` and `elevated` are both flat fills of
-   * `--color-surface-card` (elevation reads through the hairline border,
-   * not a gradient); `accent` adds the solid teal top hairline for the
-   * one primary surface on a page.
+   * Surface treatment. Both are flat fills of `--color-surface-card` —
+   * elevation reads through the hairline border, never a gradient, a
+   * shadow or an accent bar.
    */
-  variant?: 'default' | 'elevated' | 'accent';
+  variant?: 'default' | 'elevated';
 }
 
 const paddingStyles = {
@@ -22,7 +21,6 @@ const paddingStyles = {
 const variantStyles: Record<NonNullable<CardProps['variant']>, string> = {
   default: 'bg-surface-card',
   elevated: 'panel',
-  accent: 'panel panel-accent',
 };
 
 export function Card({

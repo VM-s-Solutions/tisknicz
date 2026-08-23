@@ -240,7 +240,7 @@ function SellerPanel({ profile }: { readonly profile: MakerProfile }) {
   const bio = profile.bio?.trim();
 
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
       <div className="flex items-center gap-4">
         {/* Decorative: the <h1> beside it already names the maker. */}
         <Avatar src={buildMakerLogoUrl(profile.logoBlobPath)} name={profile.companyName} size="lg" />

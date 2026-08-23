@@ -168,7 +168,7 @@ export function OrderActions({
   }
 
   return (
-    <Card variant="accent" padding="md" className="flex flex-col gap-4">
+    <Card variant="elevated" padding="md" className="flex flex-col gap-4">
       {error ? <Alert variant="error">{error}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">

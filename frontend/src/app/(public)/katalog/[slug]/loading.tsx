@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 export default function Loading() {
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
-      <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+      <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
           <div className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-surface-elevated" />
           <div className="flex min-w-0 flex-1 flex-col gap-3">

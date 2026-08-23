@@ -62,7 +62,7 @@ function CompanySection({
   onUpdated: (next: MyMakerProfile) => void;
 }) {
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <SectionHeading icon="verified" title={t('dashboard.maker.profile.section_company')} />
         {profile.isVerified ? (

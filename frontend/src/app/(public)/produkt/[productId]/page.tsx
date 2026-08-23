@@ -184,7 +184,7 @@ export function ProductInfo({
   readonly isOtherAudience?: boolean;
 }) {
   return (
-    <Card variant="accent" padding="md" className="flex h-fit flex-col gap-5">
+    <Card variant="elevated" padding="md" className="flex h-fit flex-col gap-5">
       <div className="flex flex-col gap-3">
         <h1 className="text-shine text-3xl font-bold tracking-tight sm:text-4xl">
           {product.title}

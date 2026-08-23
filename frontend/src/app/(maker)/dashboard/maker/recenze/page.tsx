@@ -137,7 +137,7 @@ function AggregateHeader({
   }
   const average = ratingAverageBp / RATING_BP_PER_STAR;
   return (
-    <div className="panel panel-accent flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 px-5 py-4">
+    <div className="panel flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 px-5 py-4">
       <StarRating value={average} size="md" />
       <span className="text-xl font-bold text-zinc-50">{average.toFixed(1)}</span>
       <span className="text-sm text-zinc-400">

@@ -46,7 +46,7 @@ export function SuccessView({
   readonly orderNumber: string;
 }) {
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col items-center gap-6 text-center">
+    <Card variant="elevated" padding="lg" className="flex flex-col items-center gap-6 text-center">
       <span className="icon-tile h-16 w-16" aria-hidden="true">
         <Icon name="checkCircle" size={30} className="text-success" />
       </span>

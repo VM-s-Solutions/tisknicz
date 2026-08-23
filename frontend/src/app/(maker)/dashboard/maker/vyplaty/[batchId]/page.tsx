@@ -88,7 +88,7 @@ function PayoutSummary({ detail }: { readonly detail: MakerPayoutDetail }) {
     : t('dashboard.maker.payouts.datePlaceholder');
 
   return (
-    <Card variant="accent" padding="lg" className="flex flex-col gap-5">
+    <Card variant="elevated" padding="lg" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="icon-tile h-10 w-10" aria-hidden="true">

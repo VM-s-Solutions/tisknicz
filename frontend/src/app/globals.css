@@ -466,21 +466,6 @@ body {
   background: var(--surface-card);
 }
 
-/* Panel with a teal hairline along the top edge — for the one primary
-   surface on a page (summary, featured card, active state). */
-.panel-accent {
-  position: relative;
-  overflow: hidden;
-}
-.panel-accent::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  background: var(--brand-500);
-  pointer-events: none;
-}
-
 /* Interactive card emphasis — border + surface shift on hover, no
    movement. Used by list cards that link somewhere; sits on .panel. */
 .card-lift {
