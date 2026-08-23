@@ -42,10 +42,11 @@ public class AdminInvoiceDownloadTests
         var invoice = Invoice.Issue(
             id: InvoiceId, invoiceNumber: InvoiceNumber, type: type,
             orderId: type == InvoiceType.Customer ? "ord-1" : null,
+            orderNumber: "OBJ-20260819-0001",
             payoutBatchId: type == InvoiceType.Fee ? "pb-1" : null,
             makerId: "maker-1",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "Anna", recipientEmail: "a@b.cz",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "Anna", recipientEmail: "a@b.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: new DateOnly(2026, 5, 6), taxableSupplyDate: new DateOnly(2026, 5, 5),
             dueDate: new DateOnly(2026, 5, 20), invoicingMode: InvoicingMode.None,

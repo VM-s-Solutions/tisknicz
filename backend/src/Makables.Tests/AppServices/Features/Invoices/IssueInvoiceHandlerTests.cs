@@ -107,10 +107,11 @@ public class IssueInvoiceHandlerTests
             defaultShippingCarrier: "packeta",
             defaultRegistry: "ares",
             defaultEmailProvider: "sendgrid",
-            issuerName: "JVM YORE s.r.o.",
-            issuerIco: "00000000",
+            issuerName: "JVM Yore, s.r.o.",
+            issuerIco: "29633443",
             invoicingMode: mode,
-            platformIban: platformIban);
+            platformIban: platformIban,
+            issuerAddress: "Příčná 1892/4, Nové Město, 110 00 Praha 1");
 
     private void ArrangeDefaults(InvoicingMode mode = InvoicingMode.None)
     {
@@ -214,12 +215,14 @@ public class IssueInvoiceHandlerTests
             invoiceNumber: "FV-CZ-20260001",
             type: InvoiceType.Customer,
             orderId: OrderId,
+            orderNumber: "OBJ-20260819-0001",
             payoutBatchId: null,
             makerId: MakerId,
             issuerName: "JVM YORE s.r.o.",
             issuerIco: "00000000",
             issuerDic: null,
             issuerBankAccount: null,
+            issuerAddress: null,
             recipientName: "Anna Nováková",
             recipientEmail: "anna@example.cz",
             recipientTaxId: null,
@@ -388,5 +391,79 @@ public class IssueInvoiceHandlerTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.ErrorCode == BusinessErrorMessage.MaxLength);
+    }
+
+    // === Settlement + issuer snapshot ===
+
+    [Fact]
+    public async Task Invoice_snapshots_the_orders_settlement_so_the_PDF_reads_as_a_receipt()
+    {
+        // The handler only ever runs off the outbox row MarkOrderPaid
+        // enqueues, so the order IS paid. Recording that is what stops the
+        // PDF printing "Celkem k úhradě" at a customer who already paid.
+        ArrangeDefaults(InvoicingMode.None);
+
+        await _sut.Handle(new IssueInvoice.Command(OrderId), CancellationToken.None);
+
+        await _invoices.Received(1).AddAsync(
+            Arg.Is<Invoice>(i =>
+                i.PaidOn == new DateOnly(2026, 6, 7)
+                && i.PaymentMethod == "CARD_CZ"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Settlement_date_is_the_country_local_date_of_PaidAt_not_the_UTC_one()
+    {
+        // 2026-06-07T23:30Z is already 2026-06-08 in Prague (CEST, UTC+2).
+        // A receipt dated a day before the customer's bank statement is a
+        // support ticket.
+        var order = BuildPaidOrder();
+        var clock = Substitute.For<IClock>();
+        clock.UtcNow.Returns(Now);
+        order.MarkAsPaid(clock, "comgate-tx", "CARD_CZ",
+            paidAtOverride: DateTimeOffset.Parse("2026-06-07T23:30:00Z"));
+
+        _orders.GetByIdUnscopedAsync(OrderId, Arg.Any<CancellationToken>()).Returns(order);
+        _countries.GetByCodeAsync("CZ", Arg.Any<CancellationToken>())
+            .Returns(BuildCzConfig(InvoicingMode.None));
+        _invoices.GetByOrderIdAsync(OrderId, Arg.Any<CancellationToken>()).Returns((Invoice?)null);
+
+        await _sut.Handle(new IssueInvoice.Command(OrderId), CancellationToken.None);
+
+        await _invoices.Received(1).AddAsync(
+            Arg.Is<Invoice>(i => i.PaidOn == new DateOnly(2026, 6, 8)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Invoice_snapshots_the_issuer_address_from_the_country_configuration()
+    {
+        // Snapshot, not lookup: if JVM Yore relocates, historical documents
+        // must keep the seat they were issued from.
+        ArrangeDefaults(InvoicingMode.None);
+
+        await _sut.Handle(new IssueInvoice.Command(OrderId), CancellationToken.None);
+
+        await _invoices.Received(1).AddAsync(
+            Arg.Is<Invoice>(i =>
+                i.IssuerAddress == "Příčná 1892/4, Nové Město, 110 00 Praha 1"
+                && i.IssuerIco == "29633443"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Invoice_snapshots_the_order_number_so_the_line_item_names_the_customers_order()
+    {
+        // Without this the templates fall back to the invoice number's own
+        // numeric tail, and the document points at an order the customer
+        // cannot find anywhere in their account.
+        ArrangeDefaults(InvoicingMode.None);
+
+        await _sut.Handle(new IssueInvoice.Command(OrderId), CancellationToken.None);
+
+        await _invoices.Received(1).AddAsync(
+            Arg.Is<Invoice>(i => i.OrderNumber == "M-CZ-20260042"),
+            Arg.Any<CancellationToken>());
     }
 }

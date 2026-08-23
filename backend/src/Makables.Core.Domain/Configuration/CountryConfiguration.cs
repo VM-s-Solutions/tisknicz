@@ -90,14 +90,23 @@ public sealed class CountryConfiguration : Auditable
     public string IssuerName { get; private set; } = default!;
 
     /// <summary>
+    /// Registered seat of the platform's invoicing entity, one line, as
+    /// it appears in the public registry (ARES for CZ). Snapshotted onto
+    /// every <see cref="Invoices.Invoice"/> at issuance so a later
+    /// relocation never rewrites a historical document. Nullable so a new
+    /// country row can be created before its legal address is known — the
+    /// renderer simply omits the line. CZ carries the ARES value.
+    /// </summary>
+    public string? IssuerAddress { get; private set; }
+
+    /// <summary>
     /// Platform issuer's IČO (Czech business registration number — 8
-    /// chars). CZ seed ships with the placeholder <c>"00000000"</c> per
-    /// T-0068b user direction; replaced pre-production-launch via a
-    /// one-line data migration tracked by the
-    /// <c>country-config-ico-replace-placeholder-pre-launch</c>
-    /// manual_step. <see cref="Invoices.Invoice.Issue"/> validates length
-    /// only (NOT mod-11) — the platform's own IČO is not subject to ARES
-    /// validation. Required; not nullable in DB.
+    /// chars). CZ carries JVM Yore's real IČO <c>29633443</c> (ARES,
+    /// verified 2026-08-23); the T-0068b <c>'00000000'</c> placeholder
+    /// and its <c>country-config-ico-replace-placeholder-pre-launch</c>
+    /// manual_step are closed. <see cref="Invoices.Invoice.Issue"/>
+    /// validates length only (NOT mod-11) — the platform's own IČO is not
+    /// subject to ARES validation. Required; not nullable in DB.
     /// </summary>
     public string IssuerIco { get; private set; } = default!;
 
@@ -155,7 +164,8 @@ public sealed class CountryConfiguration : Auditable
         long defaultShippingPriceMinor = 0,
         string? legalRequirementsJson = null,
         string? issuerDic = null,
-        string? platformIban = null)
+        string? platformIban = null,
+        string? issuerAddress = null)
     {
         if (string.IsNullOrWhiteSpace(countryId) || countryId.Length != 2)
             throw new ArgumentException("CountryId must be 2 chars (ISO 3166-1 alpha-2).", nameof(countryId));
@@ -210,6 +220,7 @@ public sealed class CountryConfiguration : Auditable
             IssuerName = issuerName.Trim(),
             IssuerIco = issuerIco.Trim(),
             IssuerDic = string.IsNullOrWhiteSpace(issuerDic) ? null : issuerDic.Trim(),
+            IssuerAddress = string.IsNullOrWhiteSpace(issuerAddress) ? null : issuerAddress.Trim(),
             PlatformIban = string.IsNullOrWhiteSpace(platformIban) ? null : platformIban.Trim(),
         };
     }

@@ -43,11 +43,14 @@ public sealed class Invoice : Auditable
 {
     /// <summary>Wire-shape ceilings — bounded so admin queries stay sub-ms.</summary>
     public const int MaxInvoiceNumberLength = 40;
+    public const int MaxOrderNumberLength = 40;
 
     public const int MaxIssuerNameLength = 200;
     public const int MaxIssuerIcoLength = 40;
     public const int MaxIssuerDicLength = 40;
     public const int MaxIssuerBankAccountLength = 60;
+    public const int MaxIssuerAddressLength = 200;
+    public const int MaxPaymentMethodLength = 60;
 
     public const int MaxRecipientNameLength = 200;
     public const int MaxRecipientEmailLength = 200;
@@ -74,6 +77,21 @@ public sealed class Invoice : Auditable
     /// order. Non-null XOR <see cref="PayoutBatchId"/>.
     /// </summary>
     public string? OrderId { get; private set; }
+
+    /// <summary>
+    /// The customer-facing order number (<c>Order.OrderNumber</c>),
+    /// snapshotted so the document can name the order the way the
+    /// customer knows it. Null on <see cref="InvoiceType.Fee"/> invoices,
+    /// which cover many orders and carry their numbers per line instead.
+    ///
+    /// <para>
+    /// Before this column existed the templates printed the invoice
+    /// number's own numeric tail as "Objednávka {tail}" — a reference
+    /// that matches no order the customer can look up. The renderer falls
+    /// back to that tail only for rows issued before the snapshot.
+    /// </para>
+    /// </summary>
+    public string? OrderNumber { get; private set; }
 
     /// <summary>
     /// For <see cref="InvoiceType.Fee"/> invoices: FK to the maker's
@@ -112,6 +130,14 @@ public sealed class Invoice : Auditable
 
     public string? IssuerBankAccount { get; private set; }
 
+    /// <summary>
+    /// Registered seat of the issuer, snapshotted from
+    /// <see cref="CountryConfiguration.IssuerAddress"/>. Nullable for the
+    /// same reason the config column is, and because rows issued before
+    /// the column existed carry no address.
+    /// </summary>
+    public string? IssuerAddress { get; private set; }
+
     // === Recipient snapshot ===
 
     public string RecipientName { get; private set; } = default!;
@@ -135,6 +161,39 @@ public sealed class Invoice : Auditable
     public DateOnly? TaxableSupplyDate { get; private set; }
 
     public DateOnly DueDate { get; private set; }
+
+    // === Settlement snapshot ===
+
+    /// <summary>
+    /// Country-local date the invoice was settled, or null if it is still
+    /// outstanding. Both invoice families the platform issues today are
+    /// settled BEFORE the document exists — a
+    /// <see cref="InvoiceType.Customer"/> invoice is issued off
+    /// <c>Order.PaidAt</c>, and a <see cref="InvoiceType.Fee"/> invoice is
+    /// netted out of the payout in the same batch — so this is populated
+    /// on every row the current code paths produce.
+    ///
+    /// <para>
+    /// The renderer reads it as the switch between "here is how to pay
+    /// me" (due date, variable symbol, SPAYD QR) and "this is a receipt"
+    /// (UHRAZENO stamp, settlement date, no payment instructions).
+    /// Printing "Celkem k úhradě 739 Kč" on a document the customer had
+    /// already paid was the reported defect; the field is what makes the
+    /// distinction data rather than an assumption about
+    /// <see cref="Type"/>.
+    /// </para>
+    /// </summary>
+    public DateOnly? PaidOn { get; private set; }
+
+    /// <summary>
+    /// How the invoice was settled, snapshotted at issuance. Free-form
+    /// because the payment provider owns the vocabulary — Comgate returns
+    /// codes like <c>CARD_CZ_CSOB_2</c>; the platform's own fee invoices
+    /// carry <see cref="SettlementMethods.PayoutDeduction"/>. Null when
+    /// <see cref="PaidOn"/> is null, or when the channel is unknown.
+    /// Presentation maps it to a human label — the domain does not.
+    /// </summary>
+    public string? PaymentMethod { get; private set; }
 
     // === Invoicing mode (per-row snapshot, not config lookup) ===
 
@@ -195,12 +254,14 @@ public sealed class Invoice : Auditable
         string invoiceNumber,
         InvoiceType type,
         string? orderId,
+        string? orderNumber,
         string? payoutBatchId,
         string makerId,
         string issuerName,
         string issuerIco,
         string? issuerDic,
         string? issuerBankAccount,
+        string? issuerAddress,
         string recipientName,
         string recipientEmail,
         string? recipientTaxId,
@@ -215,6 +276,8 @@ public sealed class Invoice : Auditable
         long amountWithVatMinor,
         string currency,
         string countryCode,
+        DateOnly? paidOn = null,
+        string? paymentMethod = null,
         string? pdfBlobPath = null)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -295,6 +358,19 @@ public sealed class Invoice : Auditable
         if (recipientEmail.Trim().Length > MaxRecipientEmailLength)
             throw new ArgumentException($"RecipientEmail must be at most {MaxRecipientEmailLength} chars.", nameof(recipientEmail));
 
+        if (orderNumber?.Trim().Length > MaxOrderNumberLength)
+            throw new ArgumentException($"OrderNumber must be at most {MaxOrderNumberLength} chars.", nameof(orderNumber));
+        if (issuerAddress?.Trim().Length > MaxIssuerAddressLength)
+            throw new ArgumentException($"IssuerAddress must be at most {MaxIssuerAddressLength} chars.", nameof(issuerAddress));
+        if (paymentMethod?.Trim().Length > MaxPaymentMethodLength)
+            throw new ArgumentException($"PaymentMethod must be at most {MaxPaymentMethodLength} chars.", nameof(paymentMethod));
+
+        // A settlement channel without a settlement date is a half-written
+        // fact — the renderer would stamp neither UHRAZENO nor payment
+        // instructions and the document would silently lose both.
+        if (paidOn is null && !string.IsNullOrWhiteSpace(paymentMethod))
+            throw new ArgumentException("PaymentMethod requires PaidOn.", nameof(paymentMethod));
+
         var trimmedBlobPath = string.IsNullOrWhiteSpace(pdfBlobPath) ? null : pdfBlobPath.Trim();
         if (trimmedBlobPath is not null && trimmedBlobPath.Length > MaxPdfBlobPathLength)
             throw new ArgumentException($"PdfBlobPath must be at most {MaxPdfBlobPathLength} chars.", nameof(pdfBlobPath));
@@ -305,12 +381,14 @@ public sealed class Invoice : Auditable
             InvoiceNumber = trimmedNumber,
             Type = type,
             OrderId = hasOrder ? orderId!.Trim() : null,
+            OrderNumber = string.IsNullOrWhiteSpace(orderNumber) ? null : orderNumber.Trim(),
             PayoutBatchId = hasPayout ? payoutBatchId!.Trim() : null,
             MakerId = makerId.Trim(),
             IssuerName = issuerName.Trim(),
             IssuerIco = issuerIco.Trim(),
             IssuerDic = string.IsNullOrWhiteSpace(issuerDic) ? null : issuerDic.Trim(),
             IssuerBankAccount = string.IsNullOrWhiteSpace(issuerBankAccount) ? null : issuerBankAccount.Trim(),
+            IssuerAddress = string.IsNullOrWhiteSpace(issuerAddress) ? null : issuerAddress.Trim(),
             RecipientName = recipientName.Trim(),
             RecipientEmail = recipientEmail.Trim(),
             RecipientTaxId = string.IsNullOrWhiteSpace(recipientTaxId) ? null : recipientTaxId.Trim(),
@@ -318,6 +396,8 @@ public sealed class Invoice : Auditable
             IssueDate = issueDate,
             TaxableSupplyDate = taxableSupplyDate,
             DueDate = dueDate,
+            PaidOn = paidOn,
+            PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? null : paymentMethod.Trim(),
             InvoicingMode = invoicingMode,
             AmountWithoutVatMinor = amountWithoutVatMinor,
             VatRateBp = vatRateBp,

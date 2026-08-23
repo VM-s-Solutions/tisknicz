@@ -72,10 +72,10 @@ public class OrdersControllerInvoiceDownloadTests
     {
         var invoice = Invoice.Issue(
             id: "inv-1", invoiceNumber: InvoiceNumber,
-            type: InvoiceType.Customer, orderId: OrderId, payoutBatchId: null,
+            type: InvoiceType.Customer, orderId: OrderId, orderNumber: "OBJ-20260819-0001", payoutBatchId: null,
             makerId: MakerId,
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678",
-            issuerDic: null, issuerBankAccount: null,
+            issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Anna", recipientEmail: "a@b.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: new DateOnly(2026, 5, 6),

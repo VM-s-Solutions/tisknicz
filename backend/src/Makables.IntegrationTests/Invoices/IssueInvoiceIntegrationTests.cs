@@ -86,9 +86,15 @@ public sealed class IssueInvoiceIntegrationTests
         persisted.Should().NotBeNull();
         persisted!.InvoiceNumber.Should().Be(result.Value.InvoiceNumber);
         persisted.PdfBlobPath.Should().Be(result.Value.PdfBlobPath);
-        persisted.IssuerName.Should().Be("JVM YORE s.r.o.");
-        persisted.IssuerIco.Should().Be("00000000");
+        // The CZ seed's ARES identity, snapshotted onto the row.
+        persisted.IssuerName.Should().Be("JVM Yore, s.r.o.");
+        persisted.IssuerIco.Should().Be("29633443");
+        persisted.IssuerAddress.Should().Be("Příčná 1892/4, Nové Město, 110 00 Praha 1");
         persisted.InvoicingMode.Should().Be(InvoicingMode.None);
+        // Settled at issuance — the outbox row this handler runs off is only
+        // enqueued by MarkOrderPaid, so the document is a receipt.
+        persisted.PaidOn.Should().NotBeNull();
+        persisted.PaymentMethod.Should().NotBeNullOrWhiteSpace();
         persisted.AmountWithVatMinor.Should().Be(57_900);
         persisted.Currency.Should().Be("CZK");
 

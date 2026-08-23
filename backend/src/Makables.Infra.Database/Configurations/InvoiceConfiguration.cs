@@ -89,6 +89,11 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .IsRequired();
 
         // === Aggregate link (XOR enforced by Invoice.Issue factory) ===
+        // order_number is the snapshot of Order.OrderNumber, so the
+        // document names the order the way the customer knows it.
+        builder.Property(i => i.OrderNumber)
+            .HasColumnName("order_number").HasMaxLength(Invoice.MaxOrderNumberLength);
+
         builder.Property(i => i.OrderId).HasColumnName("order_id").HasMaxLength(40);
         builder.Property(i => i.PayoutBatchId).HasColumnName("payout_batch_id").HasMaxLength(40);
         builder.Property(i => i.MakerId).HasColumnName("maker_id").HasMaxLength(40).IsRequired();
@@ -103,6 +108,8 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasColumnName("issuer_dic").HasMaxLength(Invoice.MaxIssuerDicLength);
         builder.Property(i => i.IssuerBankAccount)
             .HasColumnName("issuer_bank_account").HasMaxLength(Invoice.MaxIssuerBankAccountLength);
+        builder.Property(i => i.IssuerAddress)
+            .HasColumnName("issuer_address").HasMaxLength(Invoice.MaxIssuerAddressLength);
 
         // === Recipient snapshot ===
         builder.Property(i => i.RecipientName)
@@ -120,6 +127,13 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         // does not require DUZP on non-tax receipts).
         builder.Property(i => i.TaxableSupplyDate).HasColumnName("taxable_supply_date");
         builder.Property(i => i.DueDate).HasColumnName("due_date").IsRequired();
+
+        // === Settlement snapshot ===
+        // Nullable: the column models "outstanding" as an absence. Every
+        // row the current issuance paths write carries a value.
+        builder.Property(i => i.PaidOn).HasColumnName("paid_on");
+        builder.Property(i => i.PaymentMethod)
+            .HasColumnName("payment_method").HasMaxLength(Invoice.MaxPaymentMethodLength);
 
         // === Invoicing mode snapshot ===
         builder.Property(i => i.InvoicingMode)

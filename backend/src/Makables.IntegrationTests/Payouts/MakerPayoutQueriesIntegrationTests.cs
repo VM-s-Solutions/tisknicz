@@ -211,8 +211,9 @@ public sealed class MakerPayoutQueriesIntegrationTests : IAsyncLifetime
         {
             var inv = Invoice.Issue(invId, $"FV-CZ-2026{invId}", InvoiceType.Fee,
                 orderId: null, payoutBatchId: BatchId, makerId: makerId,
+                orderNumber: "OBJ-20260819-0001",
                 issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-                issuerBankAccount: null, recipientName: $"{makerId} s.r.o.",
+                issuerBankAccount: null, issuerAddress: null, recipientName: $"{makerId} s.r.o.",
                 recipientEmail: $"{makerId}@example.cz", recipientTaxId: "27074358", recipientVatId: null,
                 issueDate: new DateOnly(2026, 6, 11), taxableSupplyDate: null,
                 dueDate: new DateOnly(2026, 6, 25), invoicingMode: InvoicingMode.None,

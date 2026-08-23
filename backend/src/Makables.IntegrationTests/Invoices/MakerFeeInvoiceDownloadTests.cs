@@ -187,8 +187,9 @@ public sealed class MakerFeeInvoiceDownloadTests : IAsyncLifetime
         // makerA's Fee invoice (the target of this route).
         var fee = Invoice.Issue("inv-fee-a", FeeInvoiceNumber, InvoiceType.Fee,
             orderId: null, payoutBatchId: BatchId, makerId: "maker-a",
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "maker-a s.r.o.",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "maker-a s.r.o.",
             recipientEmail: "maker-a@example.cz", recipientTaxId: "27074358", recipientVatId: null,
             issueDate: new DateOnly(2026, 6, 11), taxableSupplyDate: null,
             dueDate: new DateOnly(2026, 6, 25), invoicingMode: InvoicingMode.None,
@@ -209,8 +210,9 @@ public sealed class MakerFeeInvoiceDownloadTests : IAsyncLifetime
 
         var customerInv = Invoice.Issue("inv-cust-a", "FV-CZ-20260001", InvoiceType.Customer,
             orderId: "ord-9", payoutBatchId: null, makerId: "maker-a",
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "Anna", recipientEmail: "anna@example.cz",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "Anna", recipientEmail: "anna@example.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: new DateOnly(2026, 5, 6), taxableSupplyDate: new DateOnly(2026, 5, 5),
             dueDate: new DateOnly(2026, 5, 20), invoicingMode: InvoicingMode.None,

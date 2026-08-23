@@ -71,7 +71,8 @@ public class PayoutArtifactServiceTests
         standardVatRateBp: 2100, taxIdLabel: "DIČ", vatIdLabel: "DIČ", registrationNumberLabel: "IČO",
         defaultPaymentProvider: "comgate", defaultShippingCarrier: "packeta",
         defaultRegistry: "ares", defaultEmailProvider: "sendgrid",
-        issuerName: "JVM YORE s.r.o.", issuerIco: "00000000",
+        issuerName: "JVM Yore, s.r.o.", issuerIco: "29633443",
+        issuerAddress: "Příčná 1892/4, Nové Město, 110 00 Praha 1",
         invoicingMode: InvoicingMode.None);
 
     private static PayoutBatch BuildBatch(string id = "pb-1")
@@ -160,6 +161,17 @@ public class PayoutArtifactServiceTests
         // DUZP = batch creation date in Prague local (2026-06-15).
         issued.First().IssueDate.Should().Be(new DateOnly(2026, 6, 15));
 
+        // The maker never transfers this fee — the payout they receive is
+        // already net of it — so the invoice is settled the moment it is
+        // issued, and its PDF must render as a receipt rather than ask a
+        // maker to pay a second time.
+        issued.Should().AllSatisfy(i =>
+        {
+            i.PaidOn.Should().Be(new DateOnly(2026, 6, 15));
+            i.PaymentMethod.Should().Be(SettlementMethods.PayoutDeduction);
+            i.IssuerAddress.Should().Be("Příčná 1892/4, Nové Město, 110 00 Praha 1");
+        });
+
         // One CSV upload + two PDF uploads + two maker emails.
         await _blobs.Received(1).UploadAsync(BlobContainer.Payouts, Arg.Any<string>(),
             Arg.Any<Stream>(), "text/csv", Arg.Any<CancellationToken>());
@@ -182,7 +194,8 @@ public class PayoutArtifactServiceTests
         var existing = Invoice.Issue(
             id: "inv-A", invoiceNumber: "FV-CZ-20260001", type: InvoiceType.Fee,
             orderId: null, payoutBatchId: batch.Id, makerId: "maker-A",
-            issuerName: "JVM YORE s.r.o.", issuerIco: "00000000", issuerDic: null, issuerBankAccount: null,
+            orderNumber: "OBJ-20260819-0001",
+            issuerName: "JVM YORE s.r.o.", issuerIco: "00000000", issuerDic: null, issuerBankAccount: null, issuerAddress: null,
             recipientName: "Alpha s.r.o.", recipientEmail: "a@x.cz", recipientTaxId: "12345678", recipientVatId: null,
             issueDate: new DateOnly(2026, 6, 15), taxableSupplyDate: null, dueDate: new DateOnly(2026, 6, 29),
             invoicingMode: InvoicingMode.None, amountWithoutVatMinor: 10000, vatRateBp: 0, vatAmountMinor: 0,

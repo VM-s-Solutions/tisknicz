@@ -58,8 +58,9 @@ public class FilesControllerInvoiceDownloadTests
         var invoice = Invoice.Issue(
             id: InvoiceId, invoiceNumber: InvoiceNumber, type: InvoiceType.Fee,
             orderId: null, payoutBatchId: "pb-1", makerId: MakerId,
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "Avast s.r.o.",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "Avast s.r.o.",
             recipientEmail: "m@b.cz", recipientTaxId: "27074358", recipientVatId: null,
             issueDate: new DateOnly(2026, 6, 11), taxableSupplyDate: null,
             dueDate: new DateOnly(2026, 6, 25), invoicingMode: InvoicingMode.None,
@@ -74,8 +75,9 @@ public class FilesControllerInvoiceDownloadTests
         var invoice = Invoice.Issue(
             id: InvoiceId, invoiceNumber: "FV-CZ-20260001", type: InvoiceType.Customer,
             orderId: "ord-9", payoutBatchId: null, makerId: MakerId,
+            orderNumber: "OBJ-20260819-0001",
             issuerName: "JVM YORE s.r.o.", issuerIco: "12345678", issuerDic: null,
-            issuerBankAccount: null, recipientName: "Anna", recipientEmail: "a@b.cz",
+            issuerBankAccount: null, issuerAddress: null, recipientName: "Anna", recipientEmail: "a@b.cz",
             recipientTaxId: null, recipientVatId: null,
             issueDate: new DateOnly(2026, 5, 6), taxableSupplyDate: new DateOnly(2026, 5, 5),
             dueDate: new DateOnly(2026, 5, 20), invoicingMode: InvoicingMode.None,
