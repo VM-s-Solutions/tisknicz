@@ -146,7 +146,7 @@ function Pill({ href, active, label }: PillProps) {
       aria-current={active ? 'true' : undefined}
       className={`rounded-lg border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
         active
-          ? 'border-brand-500/40 bg-tint-brand text-on-tint-brand'
+          ? 'border-brand-500/40 bg-tint-brand-strong text-on-tint-brand'
           : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-100'
       }`}
     >

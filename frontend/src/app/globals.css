@@ -163,18 +163,18 @@
   --lt-ink-100: #0e2429;
   --lt-ink-200: #183238;
   --lt-ink-300: #234146;
-  --lt-ink-400: #2f4a4f;
-  --lt-ink-500: #4b666e;
-  --lt-ink-600: #72909a;
-  --lt-ink-700: #b5e5d8;
-  --lt-ink-800: #dbf4ea;
-  --lt-ink-900: #edfcf7;
-  --lt-ink-950: #f6fefb;
+  --lt-ink-400: #395459;
+  --lt-ink-500: #526f77;
+  --lt-ink-600: #7a959c;
+  --lt-ink-700: #ccd8dc;
+  --lt-ink-800: #e7edef;
+  --lt-ink-900: #f0f4f6;
+  --lt-ink-950: #f8fafb;
 
   --lt-surface-primary: #ffffff;
-  --lt-surface-secondary: #e9fcf6;
+  --lt-surface-secondary: #f7f9fa;
   --lt-surface-card: #ffffff;
-  --lt-surface-elevated: #e4f8f2;
+  --lt-surface-elevated: #eef2f4;
 
   /* Brand: the teal ramp mirrored, so `text-brand-200` stays the highest
      contrast step and `text-brand-300/400` clear AA on every light surface —
@@ -203,9 +203,9 @@
   /* `info` is Apple's link blue pulled one notch darker (#0066cc itself lands
      at 4.40:1 on the hover fill, just under AA); the other three are the same
      family taken to the darkest light surface. */
-  --lt-status-success: #097a32;
-  --lt-status-warning: #925f00;
-  --lt-status-error: #d20a2b;
+  --lt-status-success: #0a7a34;
+  --lt-status-warning: #8a5a00;
+  --lt-status-error: #cc0d2f;
   --lt-status-info: #0067d0;
 
   --lt-on-brand: #ffffff;
@@ -218,30 +218,48 @@
      as grime. */
   --lt-shadow-elevated: rgba(8, 47, 51, 0.14);
 
-  /* Light tints are SOLID, VIVID fills (T-0194b). Two dead ends got here:
-     a pastel chip on a white page still reads white-ish, and a solid chip in
-     the AA-on-white ink colour reads as dark green, not as teal — on a light
-     background the eye takes colour from saturation, and both of those spend
-     all of it. So the fill takes the vivid end of the ramp and the INK on it
-     goes near-black in the same hue, which is the only pairing that is both
-     saturated and AA. Every fill/ink pair below is gated. */
-  --lt-tint-brand: #14b8a6;
-  --lt-tint-brand-strong: #2dd4bf;
-  --lt-tint-success: #1fc25c;
-  --lt-tint-warning: #f5a524;
-  --lt-tint-error: #ff4d5e;
-  --lt-tint-error-strong: #ff6b78;
-  --lt-tint-info: #2b95ff;
+  /* Tints, and the RATIO they are allowed to occupy (T-0194c).
 
-  /* Near-black in the fill's own hue — white ink would force the fill back
-     down to a 4.5:1 dark teal and undo the saturation. Mirror image of the
-     dark theme, where the tint is a wash over a near-black page and the ink
-     has to be the BRIGHT end of the hue. */
+     Making every fill vivid was the other failure mode: "ted je to jak
+     omalovanky". The page is budgeted roughly 60 / 30 / 10 —
+
+       60 %  white: page and cards.
+       30 %  neutral: near-black ink, muted grey-teal, hairlines, the
+             recessed input fill, image placeholders. Barely-there cool cast,
+             never a hue you would name.
+       10 %  the PRIMARY, and only the primary, at full saturation.
+
+     So there are two brand fills, not one, and they are not
+     interchangeable:
+
+       `tint-brand`         quiet pale teal — chips and badges, which repeat
+                            many times per screen and must not shout.
+       `tint-brand-strong`  the vivid teal `#14b8a6` — reserved for the few
+                            elements that ARE the accent: identity tiles, the
+                            selected nav item, the current timeline step.
+
+     Status tints stay quiet on purpose. A status is a semantic annotation,
+     not decoration, and four saturated hues next to each other is what made
+     the page read as a colouring book. Their ink is near-black in their own
+     hue, which is what keeps a pale fill legible. */
+  --lt-tint-brand: #cfeee9;
+  --lt-tint-brand-strong: #14b8a6;
+  --lt-tint-success: #d7f2e0;
+  --lt-tint-warning: #fbeacd;
+  --lt-tint-error: #fbdde1;
+  --lt-tint-error-strong: #f7cad0;
+  --lt-tint-info: #dbe9fb;
+
+  /* Near-black in the fill's own hue. It has to clear AA on BOTH brand
+     fills — the pale chip and the vivid accent — which white ink cannot do,
+     and which is why the ink is a hue rather than a neutral. Mirror image of
+     the dark theme, where the tint is a wash over a near-black page and the
+     ink has to be the BRIGHT end of the hue. */
   --lt-on-tint-brand: #00332e;
-  --lt-on-tint-success: #032d10;
-  --lt-on-tint-warning: #3d2500;
-  --lt-on-tint-error: #4a0010;
-  --lt-on-tint-info: #00204a;
+  --lt-on-tint-success: #075c26;
+  --lt-on-tint-warning: #6b4600;
+  --lt-on-tint-error: #a2001f;
+  --lt-on-tint-info: #00489b;
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */
@@ -634,14 +652,17 @@ body {
   background: var(--ink-800);
 }
 
-/* Icon tile — solid teal-tinted rounded square, used by empty states
-   and page-header eyebrows. */
+/* Identity tile — the primary at full saturation. This is where the light
+   theme spends its 10 % accent budget: maker logos and avatars, page-header
+   eyebrows, empty states. Everything around it is white or neutral, which is
+   the only reason one vivid square per card reads as brand and not as a
+   colouring book. */
 .icon-tile {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 0.875rem;
-  background: var(--tint-brand);
+  background: var(--tint-brand-strong);
   color: var(--on-tint-brand);
 }
 

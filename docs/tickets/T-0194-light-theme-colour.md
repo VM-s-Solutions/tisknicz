@@ -51,19 +51,22 @@ Two new token families carry that, per [ADR 0028](../adr/0028-runtime-theming-cs
   Safari (safaridriver).
 - **AC-2** — Chips, badges, icon tiles and status fills read as colour on the
   white page rather than as off-white.
-  *Proof:* `.icon-tile` computed background `rgb(20, 184, 166)` in Safari;
+  *Proof:* `.icon-tile` (the accent tile) computed background
+  `rgb(20, 184, 166)` in Safari;
   captures of `/katalog` (mint avatar tiles + "Ověřený výrobce" badge),
   `/dashboard/admin/orders` (mint "Přijato" / "Zaplaceno", amber "Čeká na
   platbu"), the maker dashboard (mint active tab and account chip).
-- **AC-3** — The brand and status steps are at the chroma ceiling their
-  contrast floor allows, and the fills are vivid rather than AA-dark.
-  *Proof:* brand text `#006f64` / `#00786c` (was `#0c6259`), fills
-  `#14b8a6` / `#2dd4bf`, status text `#097a32` / `#925f00` / `#d20a2b` /
-  `#0067d0`, status fills `#1fc25c` / `#f5a524` / `#ff4d5e` / `#2b95ff`,
-  each under near-black ink of its own hue. Operator asked twice for more
-  saturation ("furt vyblity jak kdybych byl barvoslepy", then "barvy jak jsou
-  ted i styly, jen sytejsi barvy") — the layout and the component styles are
-  unchanged, only the palette moved.
+- **AC-3** — The primary is saturated; nothing else is.
+  *Proof:* the accent fill is `#14b8a6` (identity tiles, selected nav item,
+  current timeline step) and brand text `#006f64` / `#00786c` (was `#0c6259`);
+  chips and every status tint stay quiet pastels (`#cfeee9`, `#d7f2e0`,
+  `#fbeacd`, `#fbdde1`, `#dbe9fb`) under near-black ink of their own hue.
+  Three rounds of operator feedback pinned this: "hrozne bez barev" →
+  "vyblity jak kdybych byl barvoslepy" → "ted je to jak omalovanky, popremysli
+  nad spravnymi pomery barev". The budget the palette now holds is ~60 % white
+  / 30 % neutral / 10 % primary, and the component styles are unchanged
+  throughout — only the palette moved.
+
 - **AC-4** — Contrast contract holds in both palettes, including the new
   fills.
   *Proof:* `npm run check:contrast` — 175 pairs pass, up from 168; the seven

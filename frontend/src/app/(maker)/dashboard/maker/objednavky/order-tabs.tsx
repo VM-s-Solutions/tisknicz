@@ -62,7 +62,7 @@ export function OrderTabs({ activeTab, baseParams }: OrderTabsProps) {
             aria-current={isActive ? 'page' : undefined}
             className={`rounded-md border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors ${
               isActive
-                ? 'border-brand-500/40 bg-tint-brand text-on-tint-brand'
+                ? 'border-brand-500/40 bg-tint-brand-strong text-on-tint-brand'
                 : 'border-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
             }`}
           >
