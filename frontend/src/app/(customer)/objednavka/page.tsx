@@ -147,7 +147,7 @@ function InvalidLinkState() {
         action={
           <Link
             href="/katalog"
-            className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
           >
             {t('checkout.invalidLink.cta')}
             <Icon name="arrowRight" size={16} />
@@ -181,14 +181,14 @@ function MakerAccountState({
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href={`/produkt/${encodeURIComponent(productId)}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition-colors duration-150 hover:border-brand-line hover:text-brand-300"
             >
               <Icon name="arrowLeft" size={16} />
               {t('checkout.makerAccount.backToProduct')}
             </Link>
             <Link
               href="/register?type=customer"
-              className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-5 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
             >
               {t('checkout.makerAccount.register')}
               <Icon name="arrowRight" size={16} />

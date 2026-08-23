@@ -64,7 +64,7 @@ export function DashboardNav({
                 href={item.href}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   active
-                    ? 'border-brand-500/40 bg-brand-400/10 text-brand-200'
+                    ? 'border-brand-500/40 bg-tint-brand-strong text-on-tint-brand'
                     : 'border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-100'
                 }`}
                 aria-current={active ? 'page' : undefined}

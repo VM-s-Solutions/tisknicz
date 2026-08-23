@@ -50,14 +50,14 @@ export default function ForMakersPage() {
             <div className="mt-10 flex flex-wrap items-center gap-6">
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-500/60 px-6 py-2.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-line px-6 py-2.5 text-sm font-semibold text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft"
               >
                 {t('static.for_makers.cta')}
                 <Icon name="arrowRight" size={16} />
               </Link>
               <Link
                 href="/jak-to-funguje"
-                className="inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-sm font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+                className="inline-flex items-center gap-2 border-b border-brand-line pb-1 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-300 hover:text-brand-200"
               >
                 {t('nav.how_it_works')}
                 <Icon name="arrowRight" size={16} />
@@ -130,7 +130,7 @@ export default function ForMakersPage() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">{t('static.for_makers.cta_heading')}</h2>
           <Link
             href="/register?type=maker"
-            className="mx-auto inline-flex items-center gap-2 border-b border-brand-500/70 pb-1 text-base font-semibold text-brand-300 transition-colors hover:border-brand-300 hover:text-brand-200"
+            className="mx-auto inline-flex items-center gap-2 border-b border-brand-line pb-1 text-base font-semibold text-brand-ink transition-colors hover:border-brand-300 hover:text-brand-200"
           >
             {t('static.for_makers.cta')}
             <Icon name="arrowRight" size={18} />

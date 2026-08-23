@@ -95,11 +95,11 @@ function TimelineNode({
   const filled = hasTimestamp(step.timestamp);
 
   const dotClass = step.cancelled
-    ? 'border-error/40 bg-error/10 text-error'
+    ? 'border-error/40 bg-tint-error text-on-tint-error'
     : isActive
       ? 'border-brand-400 bg-brand-400 text-on-brand'
       : filled
-        ? 'border-brand-400/40 bg-brand-400/10 text-brand-400'
+        ? 'border-brand-400/40 bg-tint-brand text-on-tint-brand'
         : 'border-zinc-800 bg-zinc-900 text-zinc-500';
 
   return (

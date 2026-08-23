@@ -224,7 +224,7 @@ function OrdersResults({ data, tab, baseParams }: OrdersResultsProps) {
         action={
           <Link
             href={query ? `${ROUTE_PATH}?${query}` : ROUTE_PATH}
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-500/60 hover:text-brand-300"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:border-brand-line hover:text-brand-300"
           >
             {t('dashboard.maker.orders.outOfRange.lastPage')}
           </Link>
@@ -306,7 +306,7 @@ function OrdersError({
         </div>
         <Link
           href={isValidation ? ROUTE_PATH : retryHref}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/15"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error-fill-soft"
         >
           {isValidation ? t('dashboard.orders.retry_clear_filters') : t('dashboard.maker.orders.error.retry')}
         </Link>

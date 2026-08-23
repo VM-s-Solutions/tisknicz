@@ -23,11 +23,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
  */
 const variantStyles: Record<NonNullable<BadgeProps['variant']>, { chip: string; dot: string }> = {
   default: { chip: 'border-zinc-700 bg-zinc-800/60 text-zinc-300', dot: 'bg-zinc-500' },
-  info: { chip: 'border-info/30 bg-info/10 text-info', dot: 'bg-info' },
-  success: { chip: 'border-success/30 bg-success/10 text-success', dot: 'bg-success' },
-  warning: { chip: 'border-warning/30 bg-warning/10 text-warning', dot: 'bg-warning' },
-  error: { chip: 'border-error/30 bg-error/10 text-error', dot: 'bg-error' },
-  brand: { chip: 'border-brand-500/40 bg-brand-500/10 text-brand-300', dot: 'bg-brand-400' },
+  info: { chip: 'border-info/30 bg-tint-info text-on-tint-info', dot: 'bg-on-tint-info' },
+  success: { chip: 'border-success/30 bg-tint-success text-on-tint-success', dot: 'bg-on-tint-success' },
+  warning: { chip: 'border-warning/30 bg-tint-warning text-on-tint-warning', dot: 'bg-on-tint-warning' },
+  error: { chip: 'border-error/30 bg-tint-error text-on-tint-error', dot: 'bg-on-tint-error' },
+  brand: { chip: 'border-brand-500/40 bg-tint-brand text-on-tint-brand', dot: 'bg-on-tint-brand' },
 };
 
 export function Badge({ variant = 'default', dot = true, className = '', children, ...props }: BadgeProps) {

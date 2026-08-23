@@ -115,6 +115,50 @@ const PAIRS = [
   { fg: 'ink-700', bg: 'surface-card', min: 1.35 },
 ];
 
+/**
+ * Pairs that exist in ONE palette only.
+ *
+ * The tint fills are the case: the dark theme spells them as a `color-mix()`
+ * of a palette colour (so the chip stays translucent over whatever surface it
+ * lands on, exactly as the `/10` utility did), while the light theme spells
+ * them as flat hexes, because a 10 % mix of an AA-dark teal into white is
+ * white. Only the flat side can be measured here, and only the flat side
+ * needs measuring — the dark tints sit on dark surfaces under bright text
+ * that already clears its floor on `ink-800`, a darker fill than any tint.
+ */
+const LIGHT_ONLY_PAIRS = [
+  { fg: 'on-tint-brand', bg: 'tint-brand', min: 4.5 },
+  { fg: 'on-tint-brand', bg: 'tint-brand-strong', min: 4.5 },
+  { fg: 'on-tint-success', bg: 'tint-success', min: 4.5 },
+  { fg: 'on-tint-warning', bg: 'tint-warning', min: 4.5 },
+  { fg: 'on-tint-error', bg: 'tint-error', min: 4.5 },
+  { fg: 'on-tint-error', bg: 'tint-error-strong', min: 4.5 },
+  { fg: 'on-tint-info', bg: 'tint-info', min: 4.5 },
+  // WCAG 1.4.11 on the hairline that IS the button: the light theme spends
+  // its accent on this line, so it has to stay a boundary and not become
+  // decoration.
+  { fg: 'brand-line', bg: 'surface-card', min: 3 },
+  { fg: 'brand-line', bg: 'surface-primary', min: 3 },
+  { fg: 'brand-line', bg: 'surface-secondary', min: 3 },
+  // The label inside that boundary. Gated on the surfaces a control actually
+  // sits on — page, card, band — and deliberately not on `surface-elevated`,
+  // which is the image/skeleton fill and never hosts a button.
+  { fg: 'brand-ink', bg: 'surface-card', min: 4.5 },
+  { fg: 'brand-ink', bg: 'surface-primary', min: 4.5 },
+  { fg: 'brand-ink', bg: 'surface-secondary', min: 4.5 },
+  // A control keeps its brand label through hover and press, so its own fill
+  // is gated against that label rather than against a near-black chip ink.
+  // The pressed state darkens the label one ramp step (`active:text-brand-300`),
+  // which is a no-op on dark where `brand-ink` already IS `brand-300`.
+  { fg: 'brand-ink', bg: 'brand-fill-soft', min: 4.5 },
+  { fg: 'brand-300', bg: 'brand-fill-soft-strong', min: 4.5 },
+  { fg: 'status-error', bg: 'error-fill-soft', min: 4.5 },
+  { fg: 'status-error', bg: 'error-fill-soft-strong', min: 4.5 },
+  // No ramp step may be used as ink on a light tint: the fills are solid and
+  // saturated, so anything but `on-tint-*` (white) fails. A `bg-tint-*` in a
+  // component must always be paired with `text-on-tint-*`.
+];
+
 function run() {
   const css = readFileSync(CSS_PATH, 'utf8');
   const palettes = parsePalettes(css);
@@ -152,6 +196,9 @@ function run() {
       for (const bg of STATE_BACKGROUNDS) check(fg, bg, minimums.state);
     }
     for (const pair of PAIRS) check(pair.fg, pair.bg, pair.min);
+    if (themeName === 'light') {
+      for (const pair of LIGHT_ONLY_PAIRS) check(pair.fg, pair.bg, pair.min);
+    }
 
     if (report) {
       console.log(`\n=== ${themeName} ===`);

@@ -14,6 +14,11 @@ using Microsoft.Extensions.Hosting;
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.Services.AddMakablesInfrastructure(builder.Configuration);
+// The Functions host has no inbound authenticated request, so it gets the
+// "system" session identity instead of the HttpContext one from
+// AddMakablesAuth. Without it the container fails ValidateOnBuild for every
+// handler taking IUserSessionProvider and the worker exits before indexing.
+builder.Services.AddMakablesSystemSession();
 builder.Services.AddMakablesMediator();
 builder.Services.AddMakablesClients(builder.Configuration);
 builder.Services.AddMakablesBlobStorage(builder.Configuration);

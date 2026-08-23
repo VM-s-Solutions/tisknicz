@@ -98,7 +98,7 @@ export function AdminShellNav({ identity }: { readonly identity: string }) {
               sign-in. `break-all` keeps even a long address complete rather
               than clipping it. */}
           <span className="hidden min-w-0 items-center gap-2 rounded-lg border border-zinc-800 bg-surface-secondary/60 px-3 py-1.5 text-sm text-zinc-300 sm:flex">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-brand-500/15 text-brand-300">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-tint-brand-strong text-on-tint-brand">
               <Icon name="user" size={13} strokeWidth={1.75} />
             </span>
             <span className="break-all">{identity}</span>

@@ -230,7 +230,7 @@ export function CatalogFilters({
             {t('catalog.filter.heading')}
           </h2>
           {activeCount > 0 ? (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-brand-400/15 px-1.5 text-xs font-semibold text-brand-300">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-tint-brand px-1.5 text-xs font-semibold text-on-tint-brand">
               {activeCount}
             </span>
           ) : null}

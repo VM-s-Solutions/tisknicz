@@ -38,7 +38,7 @@ export default function PublicError({
           </Button>
           <Link
             href="/katalog"
-            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-500/60 hover:text-brand-300"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors duration-150 hover:border-brand-line hover:text-brand-300"
           >
             {t('notFound.browse_catalog')}
           </Link>

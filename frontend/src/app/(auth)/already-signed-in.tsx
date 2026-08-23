@@ -55,7 +55,7 @@ export function AlreadySignedIn({ session, redirect, switchAccount }: AlreadySig
 
       <Link
         href={target}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand-500/60 px-4 py-2 text-sm font-semibold tracking-wide text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
+        className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand-line px-4 py-2 text-sm font-semibold tracking-wide text-brand-ink transition-colors duration-150 hover:border-brand-500 hover:bg-brand-fill-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary"
       >
         {t('auth.signedIn.continue')}
         <span aria-hidden="true">

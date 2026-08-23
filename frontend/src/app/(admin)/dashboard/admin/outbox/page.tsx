@@ -135,7 +135,7 @@ function OutboxList({
   if (list.totalCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-800 bg-surface-card px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-success/10 text-success">
+        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-tint-success text-on-tint-success">
           <Icon name="checkCircle" size={28} />
         </div>
         <div>

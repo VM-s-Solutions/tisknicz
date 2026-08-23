@@ -211,7 +211,7 @@ function OrdersError({ error, retryHref }: { readonly error: ApiError; readonly 
         </div>
         <Link
           href={retryHref}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/15"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error-fill-soft"
         >
           {t('dashboard.admin.orders.error.retry')}
         </Link>

@@ -208,7 +208,7 @@ function RefundModal({
       />
 
       {requiresAck ? (
-        <div className="rounded-xl border border-warning/40 bg-warning/10 p-3">
+        <div className="rounded-xl border border-warning/60 bg-surface-secondary p-3">
           <Checkbox
             checked={acknowledge}
             onChange={(event) => setAcknowledge(event.target.checked)}
