@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import {
   confirmPasswordReset,
   requestPasswordReset,
@@ -150,8 +151,7 @@ function ConfirmReset({ token, loginHref }: { readonly token: string; readonly l
               </Link>
             </p>
           ) : null}
-          <Input
-            type="password"
+          <PasswordInput
             icon="lock"
             label={t('auth.register.password')}
             value={newPassword}

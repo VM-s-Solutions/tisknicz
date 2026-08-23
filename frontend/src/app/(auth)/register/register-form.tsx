@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { ResendConfirmationForm } from '@/components/shared/resend-confirmation-form';
 import {
@@ -52,6 +53,7 @@ export function RegisterForm() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [isCompany, setIsCompany] = useState(false);
   const [ico, setIco] = useState('');
   const [icoChecksumFailed, setIcoChecksumFailed] = useState(false);
@@ -121,6 +123,14 @@ export function RegisterForm() {
     event.preventDefault();
     setServerError(null);
 
+    // Both password fields must agree before we spend a round trip. The
+    // form is `noValidate`, so `required` alone would not stop an empty
+    // confirm — this check is the gate.
+    if (password !== passwordConfirm) {
+      setServerError(t('auth.register.password_mismatch'));
+      return;
+    }
+
     // Local checksum gate mirrors the backend's CzechIcoValidator —
     // catches typos without a round trip (T-0159 pattern).
     if (isCompany && !isValidCzechIco(ico)) {
@@ -145,6 +155,8 @@ export function RegisterForm() {
     }
     setServerError(mapRegisterError(result.error.code, result.error.message));
   }
+
+  const passwordMismatch = passwordConfirm.length > 0 && passwordConfirm !== password;
 
   if (done) {
     return (
@@ -191,8 +203,7 @@ export function RegisterForm() {
           required
           disabled={submitting}
         />
-        <Input
-          type="password"
+        <PasswordInput
           icon="lock"
           label={t('auth.register.password')}
           value={password}
@@ -202,7 +213,18 @@ export function RegisterForm() {
           required
           disabled={submitting}
         />
-        <p className="text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
+        <p className="-mt-2 text-xs text-zinc-500">{t('auth.register.password_hint')}</p>
+        <PasswordInput
+          icon="lock"
+          label={t('auth.register.password_confirm')}
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          autoComplete="new-password"
+          minLength={10}
+          error={passwordMismatch ? t('auth.register.password_mismatch') : undefined}
+          required
+          disabled={submitting}
+        />
 
         <Checkbox
           checked={isCompany}

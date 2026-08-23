@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { GoogleSignInButton } from '@/components/shared/google-sign-in-button';
 import { ResendConfirmationForm } from '@/components/shared/resend-confirmation-form';
 import { login } from '@/lib/api-client-helpers/auth';
@@ -128,8 +129,7 @@ export function LoginForm() {
           required
           disabled={submitting}
         />
-        <Input
-          type="password"
+        <PasswordInput
           icon="lock"
           label={t('auth.login.password')}
           value={password}
