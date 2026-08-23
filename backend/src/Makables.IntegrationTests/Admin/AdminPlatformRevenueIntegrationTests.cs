@@ -242,6 +242,36 @@ public sealed class AdminPlatformRevenueIntegrationTests : IAsyncLifetime
 
     private static DateTime LocalToday() => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Prague).Date;
 
+    /// <summary>
+    /// An instant inside <paramref name="localDate"/>'s local day that is
+    /// guaranteed to be in the PAST.
+    ///
+    /// <para>
+    /// The series window is <c>[now - N days, now]</c>, so seeding an order
+    /// at a fixed "today 03:00" makes it a FUTURE order — silently outside
+    /// the window — on every run that happens before 03:00 Prague time. The
+    /// suite was green for months because nobody ran it between local
+    /// midnight and dawn; a CI run at 22:40 UTC is 00:40 in Prague and three
+    /// tests went red on orders they had seeded into tomorrow.
+    /// </para>
+    ///
+    /// <para>
+    /// Clamps the requested hour to just before now, and never earlier than
+    /// the day's own midnight — so the order still lands in the intended
+    /// local-day bucket even when "now" is a minute past it. For any past
+    /// day the requested hour is returned untouched.
+    /// </para>
+    /// </summary>
+    private static DateTimeOffset LocalHourInThePast(DateTime localDate, int hour)
+    {
+        var midnight = LocalMidnight(localDate);
+        var requested = midnight.AddHours(hour);
+        var ceiling = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        if (requested <= ceiling) return requested;
+        return ceiling > midnight ? ceiling : midnight;
+    }
+
     private async Task<GetPlatformRevenue.GetPlatformRevenueResponse> ReadMonthAsync(int? year, int? month)
     {
         var query = year.HasValue && month.HasValue ? $"?year={year}&month={month}" : string.Empty;
@@ -485,9 +515,9 @@ public sealed class AdminPlatformRevenueIntegrationTests : IAsyncLifetime
         // same orders, so the buckets have to sum to the total.
         var localToday = LocalToday();
         await PersistAsync(
-            SeedOrder("ord-s1", "M-CZ-20260601", OrderState.Paid, LocalMidnight(localToday).AddHours(3)),
-            SeedOrder("ord-s2", "M-CZ-20260602", OrderState.Delivered, LocalMidnight(localToday.AddDays(-1)).AddHours(9)),
-            SeedOrder("ord-s3", "M-CZ-20260603", OrderState.Accepted, LocalMidnight(localToday.AddDays(-3)).AddHours(14)));
+            SeedOrder("ord-s1", "M-CZ-20260601", OrderState.Paid, LocalHourInThePast(localToday, 3)),
+            SeedOrder("ord-s2", "M-CZ-20260602", OrderState.Delivered, LocalHourInThePast(localToday.AddDays(-1), 9)),
+            SeedOrder("ord-s3", "M-CZ-20260603", OrderState.Accepted, LocalHourInThePast(localToday.AddDays(-3), 14)));
 
         var series = await ReadSeriesAsync(RevenueRange.Week);
 
@@ -502,7 +532,7 @@ public sealed class AdminPlatformRevenueIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Series_recognition_matches_the_aggregate_state_for_state()
     {
-        var paidAt = LocalMidnight(LocalToday()).AddHours(2);
+        var paidAt = LocalHourInThePast(LocalToday(), 2);
         await PersistAsync(
             SeedOrder("ord-earned", "M-CZ-20260701", OrderState.Paid, paidAt),
             SeedOrder("ord-never-paid", "M-CZ-20260702", OrderState.PendingPayment, paidAt: null),
@@ -527,7 +557,7 @@ public sealed class AdminPlatformRevenueIntegrationTests : IAsyncLifetime
     {
         await PersistAsync(
             SeedOrder("ord-s-partial", "M-CZ-20260801", OrderState.Delivered,
-                LocalMidnight(LocalToday()).AddHours(4), partialRefundMinor: 10_000));
+                LocalHourInThePast(LocalToday(), 4), partialRefundMinor: 10_000));
 
         var series = await ReadSeriesAsync(RevenueRange.Week);
 
@@ -543,7 +573,7 @@ public sealed class AdminPlatformRevenueIntegrationTests : IAsyncLifetime
         // week with no sales at all.
         await PersistAsync(
             SeedOrder("ord-gap", "M-CZ-20260901", OrderState.Paid,
-                LocalMidnight(LocalToday().AddDays(-4)).AddHours(11)));
+                LocalHourInThePast(LocalToday().AddDays(-4), 11)));
 
         var series = await ReadSeriesAsync(RevenueRange.Week);
 
