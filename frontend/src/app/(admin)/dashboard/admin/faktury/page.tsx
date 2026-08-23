@@ -211,7 +211,7 @@ function InvoicesError({ error, retryHref }: { readonly error: ApiError; readonl
         </div>
         <Link
           href={retryHref}
-          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/15"
+          className="inline-flex w-fit items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-tint-error-strong hover:text-on-tint-error"
         >
           {t('dashboard.admin.invoices.error.retry')}
         </Link>

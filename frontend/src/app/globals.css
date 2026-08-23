@@ -106,77 +106,140 @@
   --dk-selection-fg: #f0f7f9;
   --dk-shadow-elevated: rgba(0, 0, 0, 0.5);
 
-  /* --- Light palette ------------------------------------------------------
-     Not a lightness mirror of the dark ramp — that read as a flat cyan wash.
-     This is the apple.com model: an almost-neutral system, near-black ink on
-     true white, and the contrast carried by SURFACE STEPS rather than by hue.
-     Three of the values are Apple's own, because they are the anchors the
-     look depends on: #f5f5f7 (canvas), #1d1d1f (ink), #d2d2d7 (divider).
+  /* Tint fills — chips, badges, icon tiles, alert bodies, selected rows.
+     Tint STRENGTH is a property of the theme, not of the component: 10 % of
+     the teal over a near-black page is a clearly visible wash, and 10 % of
+     the same teal over a white card is white. Spelling it as a token is what
+     lets the light theme carry a real chip colour without touching the dark
+     one — these dark values are the exact `color-mix()` that Tailwind's `/10`
+     and `/15` modifiers generated before the sweep, so nothing dark moves. */
+  --dk-tint-brand: color-mix(in oklab, var(--dk-brand-500) 10%, transparent);
+  --dk-tint-brand-strong: color-mix(in oklab, var(--dk-brand-500) 15%, transparent);
+  --dk-tint-success: color-mix(in oklab, var(--dk-status-success) 10%, transparent);
+  --dk-tint-warning: color-mix(in oklab, var(--dk-status-warning) 10%, transparent);
+  --dk-tint-error: color-mix(in oklab, var(--dk-status-error) 10%, transparent);
+  --dk-tint-error-strong: color-mix(in oklab, var(--dk-status-error) 15%, transparent);
+  --dk-tint-info: color-mix(in oklab, var(--dk-status-info) 10%, transparent);
 
-     The greys keep only a whisper of cool cast so the neutrals still belong
-     next to the 173° teal primary. Saturating them further is what made the
-     first attempt muddy.
+  /* Ink that sits ON a tint fill. Its own token for the same reason
+     `--on-brand` is: on dark the chip is a wash over a near-black page and
+     the text has to be the BRIGHT end of the hue, on light the chip is a
+     saturated pastel and the text has to be the DARK end. One Tailwind class
+     cannot mean both, and a ramp step flips meaning between the themes. */
+  --dk-on-tint-brand: var(--dk-brand-300);
+  --dk-on-tint-success: var(--dk-status-success);
+  --dk-on-tint-warning: var(--dk-status-warning);
+  --dk-on-tint-error: var(--dk-status-error);
+  --dk-on-tint-info: var(--dk-status-info);
+
+  /* --- Light palette ------------------------------------------------------
+     Third cut; the two before it were both rejected. A lightness mirror of the
+     dark cyan-slate ramp read as a flat wash ("takovy nudny"), and the
+     near-neutral apple.com rebuild that replaced it read as no colour at all
+     ("hrozne bez barev"). What satisfies both notes at once:
+
+       · the CARD stays pure white — white is what makes a light UI feel
+         bright, and it is the reference every tint is judged against;
+       · everything that is NOT the card carries a real teal cast — canvas,
+         hairlines, hover fills, recessed input fills, image placeholders —
+         so the chrome is coloured while the content stays clean;
+       · the brand steps sit at the chroma ceiling the contrast gate allows
+         (hue ~174°, saturation maxed at each fixed lightness), so a brand
+         border or a brand label reads TEAL rather than dark grey-green.
+
+     The muddiness trap of cut one was tinting the MID greys: a 50 % grey with
+     a hue in it is dirt. Here the cast lives only at the two ends — near-black
+     ink and near-white surfaces — and the middle of the ramp is skipped,
+     because nothing in the UI uses it as a large field.
 
      Surface order is INVERTED against the dark theme on purpose: elevation in
      a light UI reads as *whiter*, so the card is the brightest thing on the
-     page and the page itself is the grey. `surface-elevated` therefore stops
+     page and the page itself is the tint. `surface-elevated` therefore stops
      meaning "one step lighter" and starts meaning "a filled block" — it backs
      skeleton pulses and image placeholders, which have to show up ON a white
-     card, and white-on-white cannot. */
-  --lt-ink-50: #111114;
-  --lt-ink-100: #1d1d1f;
-  --lt-ink-200: #2c2c31;
-  --lt-ink-300: #38383f;
-  --lt-ink-400: #4a4a53;
-  --lt-ink-500: #64646c;
-  --lt-ink-600: #84848f;
-  --lt-ink-700: #d2d2d9;
-  --lt-ink-800: #e4e4ea;
-  --lt-ink-900: #eeeef3;
-  --lt-ink-950: #f9f9fb;
+     card, and white-on-white cannot. It is also the darkest surface text can
+     land on, so it is what pins the AAA muted floor (`ink-400`). */
+  --lt-ink-50: #08191c;
+  --lt-ink-100: #0e2429;
+  --lt-ink-200: #183238;
+  --lt-ink-300: #234146;
+  --lt-ink-400: #385459;
+  --lt-ink-500: #526f77;
+  --lt-ink-600: #7a959c;
+  --lt-ink-700: #ccdfe3;
+  --lt-ink-800: #e5f1f3;
+  --lt-ink-900: #f0f7f8;
+  --lt-ink-950: #f8fbfc;
 
-  --lt-surface-primary: #f5f5f7;
-  --lt-surface-secondary: #fbfbfd;
+  --lt-surface-primary: #ffffff;
+  --lt-surface-secondary: #f2f8f9;
   --lt-surface-card: #ffffff;
-  --lt-surface-elevated: #ebebf0;
+  --lt-surface-elevated: #eaf4f5;
 
   /* Brand: the teal ramp mirrored, so `text-brand-200` stays the highest
-     contrast step and `text-brand-300/400` clear AA on every light surface.
-     400 and 500 double as solid fills, so both must also clear AA against
-     `--on-brand` (white here). 500 is the ceiling — anything brighter drops
-     white-on-teal below 4.5:1 and takes the selected calendar day with it. */
-  --lt-brand-50: #134e4a;
-  --lt-brand-100: #115e59;
-  --lt-brand-200: #0a4a45;
-  --lt-brand-300: #0c6259;
-  --lt-brand-400: #0d6b62;
-  --lt-brand-500: #0f7d72;
-  --lt-brand-600: #14b8a6;
-  --lt-brand-700: #2dd4bf;
-  --lt-brand-800: #5eead4;
-  --lt-brand-900: #99f6e4;
+     contrast step and `text-brand-300/400` clear AA on every light surface —
+     all three now at maximum chroma for their lightness, which is the whole
+     difference between "teal" and "dark green". 400 and 500 double as solid
+     fills, so both must also clear AA against `--on-brand` (white here); 500
+     is the ceiling — anything brighter drops white-on-teal below 4.5:1 and
+     takes the selected calendar day with it. 600–900 are the vivid decorative
+     end: tints, dots, hover borders, anything with no text on it. */
+  --lt-brand-50: #04302c;
+  --lt-brand-100: #05413b;
+  --lt-brand-200: #00544b;
+  --lt-brand-300: #006e63;
+  --lt-brand-400: #007a6f;
+  --lt-brand-500: #00847a;
+  --lt-brand-600: #0d9488;
+  --lt-brand-700: #14b8a6;
+  --lt-brand-800: #2dd4bf;
+  --lt-brand-900: #5eead4;
 
   --lt-accent-300: #f59e0b;
   --lt-accent-400: #d97706;
   --lt-accent-500: #b45309;
   --lt-accent-600: #92400e;
 
-  /* `info` is Apple's link blue (#0066cc) exactly; the other three are the
-     same family pulled down to clear AA on the darkest light surface. Apple's
-     #0066cc itself lands at 4.40:1 on the hover fill, just under AA, so it
-     is darkened by one notch rather than shipped as-is. */
-  --lt-status-success: #0e7233;
-  --lt-status-warning: #835500;
-  --lt-status-error: #c8102e;
-  --lt-status-info: #0063c6;
+  /* `info` is Apple's link blue pulled one notch darker (#0066cc itself lands
+     at 4.40:1 on the hover fill, just under AA); the other three are the same
+     family taken to the darkest light surface. */
+  --lt-status-success: #0a7a34;
+  --lt-status-warning: #8a5a00;
+  --lt-status-error: #cc0d2f;
+  --lt-status-info: #0067d0;
 
   --lt-on-brand: #ffffff;
   --lt-knob: #ffffff;
 
-  --lt-glass: rgba(245, 245, 247, 0.88);
-  --lt-selection-bg: rgba(20, 184, 166, 0.28);
-  --lt-selection-fg: #111114;
-  --lt-shadow-elevated: rgba(17, 17, 20, 0.14);
+  --lt-glass: rgba(255, 255, 255, 0.9);
+  --lt-selection-bg: rgba(13, 148, 136, 0.26);
+  --lt-selection-fg: #08191c;
+  /* Tinted, not black: a neutral drop shadow over a teal-cast canvas reads
+     as grime. */
+  --lt-shadow-elevated: rgba(8, 47, 51, 0.14);
+
+  /* Light tints are flat, saturated hexes rather than a percentage of the
+     text colour: mixing 10 % of a WCAG-AA teal (which is necessarily dark)
+     into white gives an off-white, which is exactly the "no colour anywhere"
+     the first two cuts were rejected for. These are mixed from the vivid end
+     of each hue instead, and `check:contrast` gates the text that lands on
+     them like any other surface. */
+  --lt-tint-brand: #9fe3d8;
+  --lt-tint-brand-strong: #7fd9cb;
+  --lt-tint-success: #a8e6bd;
+  --lt-tint-warning: #f7d79a;
+  --lt-tint-error: #f8bfc6;
+  --lt-tint-error-strong: #f5b4bc;
+  --lt-tint-info: #b3d7fa;
+
+  /* The dark end of each hue — deep enough to clear AA on its own tint,
+     which a 4.5:1-on-white text colour does not once the fill is saturated
+     enough to actually read as colour. */
+  --lt-on-tint-brand: #00443d;
+  --lt-on-tint-success: #075c26;
+  --lt-on-tint-warning: #6b4600;
+  --lt-on-tint-error: #a2001f;
+  --lt-on-tint-info: #00489b;
 }
 
 /* --- Active tokens: dark is the default ---------------------------------- */
@@ -228,6 +291,19 @@
   --selection-bg: var(--dk-selection-bg);
   --selection-fg: var(--dk-selection-fg);
   --shadow-elevated: var(--dk-shadow-elevated);
+
+  --tint-brand: var(--dk-tint-brand);
+  --tint-brand-strong: var(--dk-tint-brand-strong);
+  --tint-success: var(--dk-tint-success);
+  --tint-warning: var(--dk-tint-warning);
+  --tint-error: var(--dk-tint-error);
+  --tint-error-strong: var(--dk-tint-error-strong);
+  --tint-info: var(--dk-tint-info);
+  --on-tint-brand: var(--dk-on-tint-brand);
+  --on-tint-success: var(--dk-on-tint-success);
+  --on-tint-warning: var(--dk-on-tint-warning);
+  --on-tint-error: var(--dk-on-tint-error);
+  --on-tint-info: var(--dk-on-tint-info);
 }
 
 /* --- Light -------------------------------------------------------------- */
@@ -282,6 +358,19 @@
   --selection-bg: var(--lt-selection-bg);
   --selection-fg: var(--lt-selection-fg);
   --shadow-elevated: var(--lt-shadow-elevated);
+
+  --tint-brand: var(--lt-tint-brand);
+  --tint-brand-strong: var(--lt-tint-brand-strong);
+  --tint-success: var(--lt-tint-success);
+  --tint-warning: var(--lt-tint-warning);
+  --tint-error: var(--lt-tint-error);
+  --tint-error-strong: var(--lt-tint-error-strong);
+  --tint-info: var(--lt-tint-info);
+  --on-tint-brand: var(--lt-on-tint-brand);
+  --on-tint-success: var(--lt-on-tint-success);
+  --on-tint-warning: var(--lt-on-tint-warning);
+  --on-tint-error: var(--lt-on-tint-error);
+  --on-tint-info: var(--lt-on-tint-info);
 }
 
 /* Re-assert dark for a subtree pinned inside a light page (the landing
@@ -334,6 +423,19 @@
   --selection-bg: var(--dk-selection-bg);
   --selection-fg: var(--dk-selection-fg);
   --shadow-elevated: var(--dk-shadow-elevated);
+
+  --tint-brand: var(--dk-tint-brand);
+  --tint-brand-strong: var(--dk-tint-brand-strong);
+  --tint-success: var(--dk-tint-success);
+  --tint-warning: var(--dk-tint-warning);
+  --tint-error: var(--dk-tint-error);
+  --tint-error-strong: var(--dk-tint-error-strong);
+  --tint-info: var(--dk-tint-info);
+  --on-tint-brand: var(--dk-on-tint-brand);
+  --on-tint-success: var(--dk-on-tint-success);
+  --on-tint-warning: var(--dk-on-tint-warning);
+  --on-tint-error: var(--dk-on-tint-error);
+  --on-tint-info: var(--dk-on-tint-info);
 }
 
 /* No-JS fallback. The inline bootstrap in `app/layout.tsx` stamps
@@ -389,6 +491,19 @@
     --selection-bg: var(--lt-selection-bg);
     --selection-fg: var(--lt-selection-fg);
     --shadow-elevated: var(--lt-shadow-elevated);
+
+    --tint-brand: var(--lt-tint-brand);
+    --tint-brand-strong: var(--lt-tint-brand-strong);
+    --tint-success: var(--lt-tint-success);
+    --tint-warning: var(--lt-tint-warning);
+    --tint-error: var(--lt-tint-error);
+    --tint-error-strong: var(--lt-tint-error-strong);
+    --tint-info: var(--lt-tint-info);
+    --on-tint-brand: var(--lt-on-tint-brand);
+    --on-tint-success: var(--lt-on-tint-success);
+    --on-tint-warning: var(--lt-on-tint-warning);
+    --on-tint-error: var(--lt-on-tint-error);
+    --on-tint-info: var(--lt-on-tint-info);
   }
 }
 
@@ -437,6 +552,22 @@
      zinc step — that step flips with the theme and the contrast inverts. */
   --color-on-brand: var(--on-brand);
   --color-knob: var(--knob);
+
+  /* Tint fills. A component asks for `bg-tint-brand`, never `bg-brand-500/10`:
+     the second spelling hard-codes a strength that only works on one of the
+     two themes. */
+  --color-tint-brand: var(--tint-brand);
+  --color-tint-brand-strong: var(--tint-brand-strong);
+  --color-tint-success: var(--tint-success);
+  --color-tint-warning: var(--tint-warning);
+  --color-tint-error: var(--tint-error);
+  --color-tint-error-strong: var(--tint-error-strong);
+  --color-tint-info: var(--tint-info);
+  --color-on-tint-brand: var(--on-tint-brand);
+  --color-on-tint-success: var(--on-tint-success);
+  --color-on-tint-warning: var(--on-tint-warning);
+  --color-on-tint-error: var(--on-tint-error);
+  --color-on-tint-info: var(--on-tint-info);
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -508,8 +639,8 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 0.875rem;
-  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
-  color: var(--brand-300);
+  background: var(--tint-brand);
+  color: var(--on-tint-brand);
 }
 
 /* Nav links + text buttons: hairline underline shown on hover/focus and

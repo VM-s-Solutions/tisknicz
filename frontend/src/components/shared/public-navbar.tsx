@@ -104,7 +104,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
         aria-haspopup="menu"
         onClick={() => setIsAccountMenuOpen((current) => !current)}
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand-500/15 text-brand-300">
+        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-tint-brand-strong text-on-tint-brand">
           <Icon name="user" size={13} strokeWidth={1.75} />
         </span>
         {t('nav.account')}
@@ -128,7 +128,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
             className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-zinc-700 bg-surface-card elevated-shadow"
           >
             <div className="flex items-center gap-2.5 border-b border-zinc-800 bg-surface-elevated px-3 py-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-tint-brand-strong text-on-tint-brand">
                 <Icon name="user" size={15} strokeWidth={1.75} />
               </span>
               <p className="min-w-0 truncate text-xs text-zinc-400">{session.email}</p>
@@ -160,7 +160,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-60"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-error transition-colors hover:bg-tint-error hover:text-on-tint-error disabled:opacity-60"
                 disabled={loggingOut}
                 onClick={handleLogout}
               >
@@ -222,7 +222,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
               >
                 {t('nav.start_selling')}
                 <span aria-hidden="true">→</span>
@@ -281,7 +281,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
           {session ? (
             <div className="mt-4 flex flex-col px-1">
               <div className="flex items-center gap-2.5 pb-3 pt-1">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-brand-300">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-tint-brand-strong text-on-tint-brand">
                   <Icon name="user" size={15} strokeWidth={1.75} />
                 </span>
                 <p className="min-w-0 truncate text-xs text-zinc-400">{session.email}</p>
@@ -324,7 +324,7 @@ export function PublicNavbar({ session = null }: PublicNavbarProps) {
               </Link>
               <Link
                 href="/register?type=maker"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-brand-500/10 hover:text-brand-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/60 px-4 py-1.5 text-sm font-semibold text-brand-300 transition-colors duration-150 hover:border-brand-400 hover:bg-tint-brand hover:text-brand-200"
                 onClick={closeMobileMenu}
               >
                 {t('nav.start_selling')}

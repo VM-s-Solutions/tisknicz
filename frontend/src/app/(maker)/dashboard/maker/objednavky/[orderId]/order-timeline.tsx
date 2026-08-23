@@ -91,11 +91,11 @@ function TimelineNode({
 }) {
   const filled = hasTimestamp(step.timestamp);
   const circleClass = step.cancelled
-    ? 'border-error/40 bg-error/10 text-error'
+    ? 'border-error/40 bg-tint-error text-on-tint-error'
     : filled
       ? isCurrent
-        ? 'border-brand-400/60 bg-brand-400/15 text-brand-300 ring-4 ring-brand-400/10'
-        : 'border-brand-400/40 bg-brand-400/10 text-brand-400'
+        ? 'border-brand-400/60 bg-tint-brand-strong text-on-tint-brand ring-4 ring-brand-400/10'
+        : 'border-brand-400/40 bg-tint-brand text-on-tint-brand'
       : 'border-zinc-800 bg-zinc-900 text-zinc-500';
 
   return (

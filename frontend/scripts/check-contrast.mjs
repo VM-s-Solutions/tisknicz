@@ -115,6 +115,33 @@ const PAIRS = [
   { fg: 'ink-700', bg: 'surface-card', min: 1.35 },
 ];
 
+/**
+ * Pairs that exist in ONE palette only.
+ *
+ * The tint fills are the case: the dark theme spells them as a `color-mix()`
+ * of a palette colour (so the chip stays translucent over whatever surface it
+ * lands on, exactly as the `/10` utility did), while the light theme spells
+ * them as flat hexes, because a 10 % mix of an AA-dark teal into white is
+ * white. Only the flat side can be measured here, and only the flat side
+ * needs measuring — the dark tints sit on dark surfaces under bright text
+ * that already clears its floor on `ink-800`, a darker fill than any tint.
+ */
+const LIGHT_ONLY_PAIRS = [
+  { fg: 'on-tint-brand', bg: 'tint-brand', min: 4.5 },
+  { fg: 'on-tint-brand', bg: 'tint-brand-strong', min: 4.5 },
+  { fg: 'on-tint-success', bg: 'tint-success', min: 4.5 },
+  { fg: 'on-tint-warning', bg: 'tint-warning', min: 4.5 },
+  { fg: 'on-tint-error', bg: 'tint-error', min: 4.5 },
+  { fg: 'on-tint-error', bg: 'tint-error-strong', min: 4.5 },
+  { fg: 'on-tint-info', bg: 'tint-info', min: 4.5 },
+  // The tints are saturated enough that a 4.5:1-on-white text colour does
+  // NOT clear AA on them — which is the whole reason `on-tint-*` exists.
+  // Pinning brand-200 here keeps the one legitimate exception honest: the
+  // hairline button's hover state paints a tint under text that is still a
+  // ramp step.
+  { fg: 'brand-200', bg: 'tint-brand', min: 4.5 },
+];
+
 function run() {
   const css = readFileSync(CSS_PATH, 'utf8');
   const palettes = parsePalettes(css);
@@ -152,6 +179,9 @@ function run() {
       for (const bg of STATE_BACKGROUNDS) check(fg, bg, minimums.state);
     }
     for (const pair of PAIRS) check(pair.fg, pair.bg, pair.min);
+    if (themeName === 'light') {
+      for (const pair of LIGHT_ONLY_PAIRS) check(pair.fg, pair.bg, pair.min);
+    }
 
     if (report) {
       console.log(`\n=== ${themeName} ===`);

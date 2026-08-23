@@ -359,7 +359,7 @@ function DeletedConfirmation({
   return (
     <Card className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 text-success">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-tint-success text-on-tint-success">
           <Icon name="checkCircle" size={20} />
         </span>
         <h2 className="text-lg font-semibold text-zinc-100">

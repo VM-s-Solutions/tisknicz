@@ -51,7 +51,7 @@ export function SaveButton({ state, dirty, label, savedLabel, className = '' }: 
         disabled={!dirty}
         title={!dirty && !showSaved ? t('common.no_changes') : undefined}
         className={
-          showSaved ? 'border-success/50 text-success hover:border-success/60 hover:bg-success/10' : ''
+          showSaved ? 'border-success/50 text-success hover:border-success/60 hover:bg-tint-success hover:text-on-tint-success' : ''
         }
       >
         {!saving && (

@@ -105,7 +105,7 @@ re-authored for light and the pin removed.
 
 ## Compliance / verification
 
-- `npm run check:contrast` passes (gate; 168 pairs, both palettes).
+- `npm run check:contrast` passes (gate; 176 pairs, both palettes).
 - No literal `#hex` / `rgb()` / `text-white` / stock Tailwind hue
   (`red-*`, `amber-*`, `emerald-*`, …) in `src/**/*.tsx` outside
   `opengraph-image.tsx` (a fixed social card) and the dark branch of
@@ -113,3 +113,50 @@ re-authored for light and the pin removed.
 - `@theme inline` contains only `var(--…)` values, never a literal colour.
 - A new colour token is added to `--dk-*` **and** `--lt-*` **and** all three
   active-token blocks.
+
+## Amendment (T-0194) — tint fills and their ink
+
+The indirection above covers *colours*. It did not cover **fill strength**,
+and that turned out to be the thing that made the light theme read as
+colourless.
+
+A chip, badge, icon tile or selected row was spelled `bg-brand-500/10`. That
+utility bakes one strength into the component, and a strength is not portable
+between palettes: 10 % of the teal over the near-black page is a clearly
+visible wash, while 10 % of the (necessarily dark, because it must clear AA on
+white) light-theme teal over a white card is white. The same applies to the
+ink: a text colour picked to clear 4.5:1 on white does not clear 4.5:1 on a
+fill saturated enough to actually read as colour.
+
+Two token families close that gap, and they follow the same three-layer shape
+as everything else:
+
+- `--tint-brand` / `--tint-brand-strong` / `--tint-success` / `--tint-warning`
+  / `--tint-error` / `--tint-error-strong` / `--tint-info` — the fill. Dark
+  spells them as the exact `color-mix(in oklab, var(--dk-…) 10%, transparent)`
+  the opacity modifiers used to generate, so nothing dark moved; light spells
+  them as flat, saturated hexes mixed from the *vivid* end of each hue.
+- `--on-tint-brand` / `--on-tint-success` / `--on-tint-warning` /
+  `--on-tint-error` / `--on-tint-info` — the ink that sits on a tint. Its own
+  token for the same reason `--on-brand` is: on dark the chip is a wash over a
+  near-black page and the text must be the bright end of the hue, on light the
+  chip is a saturated pastel and the text must be the dark end. A ramp step
+  cannot mean both.
+
+Consequences:
+
+- `bg-brand-500/10`-style fills are banned in `src/**/*.tsx`; a fill is
+  `bg-tint-*` and its text is `text-on-tint-*`. Opacity modifiers remain
+  legal for *borders* and *rings*, which carry no text.
+- A `hover:bg-tint-*` must come with a `hover:text-on-tint-*` whenever the
+  resting ink is a plain status/brand step — the tint is strong enough to
+  break AA under it.
+- `check-contrast.mjs` grew a `LIGHT_ONLY_PAIRS` list: the dark tints are
+  `color-mix()` expressions and cannot be measured from the stylesheet, while
+  the light ones are flat hexes and are gated like any other surface.
+- The light palette itself is on its third cut. Mirroring the dark cyan-slate
+  ramp read as a flat wash; the near-neutral apple.com rebuild read as no
+  colour at all. What ships now is a **white** canvas and white cards (the
+  operator's explicit ask) with the colour carried entirely by saturated
+  fills, chips and accents rather than by a background tint.
+
