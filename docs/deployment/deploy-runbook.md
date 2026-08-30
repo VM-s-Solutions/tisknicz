@@ -130,6 +130,21 @@ Deployment Center) and `az webapp restart` the site before re-running the job.
 5. **CORS:** the frontend can call the API (no CORS error in the browser
    console) — confirms the `Cors__AllowedOrigins__*` settings bound.
 
+## Known deploy failures
+
+**`AADSTS700024: Client assertion is not within its valid time range`** — the
+GitHub OIDC token `azure/login` exchanges is a client assertion that lives
+**5 minutes**. The Azure CLI replays that stored assertion whenever it needs a
+token for an audience it has not used yet (Microsoft Graph, `vault.azure.net`),
+so a Bicep deploy longer than 5 minutes leaves the session working for ARM and
+dead for everything else. Fix is structural, already in both workflows: a fresh
+`azure/login@v2` immediately before the Key Vault steps. **If you add a step
+that touches a new Azure service after a long step, re-login first.**
+
+**`ReadOnlyDisabledSubscription: The subscription is disabled and therefore
+marked as read only`** — billing/subscription state, not a pipeline bug. Nothing
+in the repo fixes it; re-enable the subscription in the Azure portal and re-run.
+
 ## Rollback
 
 App code: redeploy the previous commit (the workflows are idempotent). Infra:
