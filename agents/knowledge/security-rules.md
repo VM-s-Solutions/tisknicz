@@ -120,8 +120,21 @@ The public **ARES proxy is per-IP throttled (10/min)** — it is the one anonymo
 global bucket shared by all callers — that is an S5 *violation*, not compliance (one client can DoS-lock
 every other caller, and it does not throttle brute-force per attacker). The shared policies partition
 **per real client IP** for anonymous requests and **per JWT `sub`** for authenticated ones, with
-`UseForwardedHeaders` (narrow trusted-proxy `KnownNetworks` only) at the top of the pipeline and
-`UseRateLimiter` **after** `UseAuthentication`. Anonymous per-IP partitions sit **behind a global
+`UseForwardedHeaders` at the top of the pipeline and `UseRateLimiter` **after** `UseAuthentication`.
+
+> **App Service carve-out.** This rule used to demand a narrow trusted-proxy
+> `KnownNetworks`. That is not implementable on Azure App Service: the platform
+> front end's addresses are neither stable nor published, so they cannot be
+> enumerated. `UseMakablesForwardedHeaders` therefore **clears**
+> `KnownIPNetworks` and `KnownProxies` — Microsoft's own documented posture —
+> and the substitute control is **`ForwardLimit = 1`**: the middleware consumes
+> `X-Forwarded-For` right-to-left and the front end appends the real peer last,
+> so a client-forged leftmost entry is never honoured. Raising `ForwardLimit`
+> without adding a real proxy hop re-opens spoofing; that is pinned by
+> `ForwardedHeadersTests.Leftmost_Forged_Entry_Is_Not_Honoured`. The middleware
+> is also opt-in (`ForwardedHeaders:Enabled`, set only by
+> `infra/bicep/modules/app-service.bicep`) so an un-proxied deployment cannot be
+> spoofed at all. Anonymous per-IP partitions sit **behind a global
 cardinality cap** so a botnet of distinct real IPs cannot trade the rate-DoS for a memory-DoS. Reuse this
 shape for any new per-caller side-effect window — do not hand-roll an un-partitioned
 `AddFixedWindowLimiter`, and do not ship an unbounded per-IP partition.

@@ -66,3 +66,20 @@ param jwtIssuer = 'https://dev.makables.cz'
 // Ops alert email — optional (empty skips the alerts module). Set the
 // ALERT_EMAIL GitHub secret to enable metric alerts in dev.
 param alertEmail = readEnvironmentVariable('ALERT_EMAIL', '')
+
+// --- Comgate -----------------------------------------------------------
+// Dev does NOT normally reach Comgate: envSlug 'dev' turns on the
+// DevPaymentProvider bypass, which mints a synthetic session and marks the
+// order paid through MarkOrderPaid without any gateway call or webhook.
+// These two only matter if you deliberately point dev at the real gateway.
+//
+// COMGATE_BASE_URL: leave unset to keep the code default, which is the LIVE
+// gateway. Set it to Comgate's sandbox host BEFORE disabling the dev bypass,
+// or the first successful checkout transacts for real.
+param comgateBaseUrl = readEnvironmentVariable('COMGATE_BASE_URL', '')
+
+// COMGATE_WEBHOOK_ALLOWED_IPS: comma-separated IPs / CIDR ranges from
+// Comgate's published list. Empty = the allowlist rejects every callback
+// (fail-closed by design). Not hardcoded — a guessed range would silently
+// break the only route an order has to Paid.
+param comgateWebhookAllowedIps = empty(readEnvironmentVariable('COMGATE_WEBHOOK_ALLOWED_IPS', '')) ? [] : split(readEnvironmentVariable('COMGATE_WEBHOOK_ALLOWED_IPS', ''), ',')

@@ -51,3 +51,17 @@ param jwtIssuer = 'https://makables.cz'
 // Ops alert email — production should set the ALERT_EMAIL GitHub secret so
 // Http5xx / latency / exceptions / Postgres alerts actually notify someone.
 param alertEmail = readEnvironmentVariable('ALERT_EMAIL', '')
+
+// --- Comgate -----------------------------------------------------------
+// Production has NO dev payment bypass — the keyed 'dev' provider is not
+// registered at all — so both of these are load-bearing here.
+//
+// COMGATE_BASE_URL: empty keeps the code default (the live gateway), which
+// is correct for production. Set it only to pin the value explicitly.
+param comgateBaseUrl = readEnvironmentVariable('COMGATE_BASE_URL', '')
+
+// COMGATE_WEBHOOK_ALLOWED_IPS: comma-separated IPs / CIDR ranges from
+// Comgate's published list. REQUIRED before go-live — the allowlist is
+// fail-closed, so while this is empty every payment callback is rejected
+// with 401 and no order can ever reach Paid.
+param comgateWebhookAllowedIps = empty(readEnvironmentVariable('COMGATE_WEBHOOK_ALLOWED_IPS', '')) ? [] : split(readEnvironmentVariable('COMGATE_WEBHOOK_ALLOWED_IPS', ''), ',')

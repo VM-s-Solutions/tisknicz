@@ -36,10 +36,29 @@ namespace Makables.Web.Public.Filters;
 ///
 /// <para>
 /// <b>Source of the remote IP.</b> Only <c>HttpContext.Connection.RemoteIpAddress</c>
-/// is consulted — <c>X-Forwarded-For</c> is NEVER trusted. The public
-/// host doesn't run <c>UseForwardedHeaders</c> today; if it ever lands
-/// behind Azure Front Door or a WAF, this filter and the host's pipeline
-/// will need to be updated together.
+/// is consulted; this filter never reads <c>X-Forwarded-For</c> itself. It
+/// does not have to: <c>UseMakablesForwardedHeaders</c> runs first in
+/// <c>UseMakablesPipeline</c> and rewrites <c>RemoteIpAddress</c> from the
+/// forwarded header wherever <c>ForwardedHeaders:Enabled</c> is set — which
+/// the deployed environments do via
+/// <c>infra/bicep/modules/app-service.bicep</c>, and local development does
+/// not. So the value read here is the real client behind the App Service
+/// front end, and the raw peer everywhere else. That coupling is deliberate
+/// and load-bearing: without the middleware this filter compares Comgate's
+/// ranges against the platform front end and, being fail-closed, rejects
+/// every callback. If a SECOND proxy is ever introduced (Front Door, a WAF),
+/// <c>MakablesForwardedHeadersOptions.ForwardLimit</c> must grow with it or
+/// the recorded address will be the wrong hop. Pinned by
+/// <c>ForwardedHeadersTests</c>.
+/// </para>
+///
+/// <para>
+/// <b>Route the callback at this host directly.</b> The frontend's
+/// <c>/api-proxy</c> rewrite would add its own hop, making the last forwarded
+/// entry the frontend egress IP — a permanent 401. The remedy is to fix the
+/// notification URL in the Comgate portal, NEVER to add the frontend egress
+/// IP to the allowlist: that would admit anyone who can reach the public
+/// site, collapsing this layer entirely.
 /// </para>
 ///
 /// <para>
