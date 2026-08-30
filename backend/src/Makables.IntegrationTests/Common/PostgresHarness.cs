@@ -49,8 +49,10 @@ namespace Makables.IntegrationTests.Common;
 /// </summary>
 public sealed class PostgresHarness : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    // Testcontainers 4.14 obsoleted the parameterless builder; the image
+    // moves into the constructor. Same pinned image as before — Postgres 16
+    // matches infra/bicep/modules/postgres.bicep `version: '16'`.
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
     /// <summary>

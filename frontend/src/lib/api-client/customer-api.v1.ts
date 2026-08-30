@@ -185,11 +185,6 @@ export interface ICustomerApi {
      * @return OK
      */
     autocomplete(q: string | undefined, country: string | undefined): Promise<void>;
-
-    /**
-     * @return OK
-     */
-    anonymous(): Promise<string>;
 }
 
 export class CustomerApi implements ICustomerApi {
@@ -1927,44 +1922,58 @@ export class CustomerApi implements ICustomerApi {
         }
         return Promise.resolve<void>(null as any);
     }
+}
 
-    /**
-     * @return OK
-     */
-    anonymous(): Promise<string> {
-        let url_ = this.baseUrl + "/";
-        url_ = url_.replace(/[?&]$/, "");
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
 
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "text/plain"
+    [key: string]: any;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
             }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAnonymous(_response);
-        });
-    }
-
-    protected processAnonymous(response: Response): Promise<string> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
         }
-        return Promise.resolve<string>(null as any);
     }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+
+    [key: string]: any;
 }
 
 export class ConfirmEmailRequest implements IConfirmEmailRequest {
@@ -2886,58 +2895,6 @@ export class GetCustomerSubmittedReviewsResponse implements IGetCustomerSubmitte
 
 export interface IGetCustomerSubmittedReviewsResponse {
     reviews: SubmittedReviewDto[];
-
-    [key: string]: any;
-}
-
-export class ChangePasswordRequest implements IChangePasswordRequest {
-    currentPassword!: string;
-    newPassword!: string;
-
-    [key: string]: any;
-
-    constructor(data?: IChangePasswordRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.currentPassword = _data["currentPassword"];
-            this.newPassword = _data["newPassword"];
-        }
-    }
-
-    static fromJS(data: any): ChangePasswordRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new ChangePasswordRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["currentPassword"] = this.currentPassword;
-        data["newPassword"] = this.newPassword;
-        return data;
-    }
-}
-
-export interface IChangePasswordRequest {
-    currentPassword: string;
-    newPassword: string;
 
     [key: string]: any;
 }

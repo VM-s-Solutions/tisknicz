@@ -32,12 +32,16 @@ var app = builder.Build();
 
 app.UseMakablesPipeline();
 
-app.MapGet("/", () => "Makables Maker API — alive.");
+// Ops endpoints are excluded from the OpenAPI document (ADR 0022): they are
+// not part of the client contract, and leaving them described made every ops
+// change invalidate all four committed NSwag spec hashes and red-light the
+// api-parity gate. Pinned by OpsEndpointsExcludedFromContractTests.
+app.MapGet("/", () => "Makables Maker API — alive.").ExcludeFromDescription();
 // Liveness probe for the App Service health check (healthCheckPath in
 // infra/bicep/modules/app-service.bicep). Deliberately dependency-free: a
 // probe that touched the DB would turn a transient outage into instance
 // restarts. Any 2xx counts as healthy.
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" })).ExcludeFromDescription();
 app.MapControllers();
 app.MapOpenApi();
 

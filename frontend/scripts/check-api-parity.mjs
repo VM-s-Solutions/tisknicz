@@ -54,7 +54,12 @@ for (const doc of documents) {
 
   if (actual !== expected) {
     console.error(`[drift] ${specName}: committed ${expected.slice(0, 12)}… but live spec is ${actual.slice(0, 12)}…`);
-    console.error(`        Run \`npm run generate:api -- --host ${doc.host}\` and commit the regenerated files.`);
+    console.error(`        If the API contract genuinely changed, run \`npm run generate:api -- --host ${doc.host}\``);
+    console.error(`        and commit the regenerated files.`);
+    console.error(`        If you added an ops/liveness endpoint (health, readiness, a root probe),`);
+    console.error(`        do NOT regenerate — that bakes it into the client contract. Add`);
+    console.error(`        .ExcludeFromDescription() to the MapGet/MapPost call instead, so only`);
+    console.error(`        /api/ routes are described. OpsEndpointsExcludedFromContractTests pins this.`);
     drift++;
   } else {
     console.log(`[ok] ${specName}: ${actual.slice(0, 12)}…`);
