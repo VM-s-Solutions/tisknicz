@@ -19,7 +19,7 @@ public class CatalogDetailQueriesTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-05-28T10:00:00Z");
 
-    private static void SeedListableMaker(TestDbHarness h, string suffix, string slug, bool emailConfirmed = true)
+    private static void SeedListableMaker(TestDbHarness h, string suffix, string slug, bool emailConfirmed = true, bool verified = true)
     {
         var user = User.Create(
             id: $"user-{suffix}", email: $"{suffix}@example.cz", role: UserRole.Maker,
@@ -38,6 +38,9 @@ public class CatalogDetailQueriesTests
             isActiveInRegistry: true, sourceRegistry: "ares", snapshotFetchedAt: Now,
             snapshotIsStale: false, countryCode: "CZ", slug: slug);
         maker.SetCatalogStats(45000, 12, 30);
+        // See CatalogQueriesTests.SeedMaker — verification is opt-in for
+        // fixtures because the public catalog gates on it.
+        if (verified) maker.MarkVerified();
         h.Db.Set<Maker>().Add(maker);
     }
 
@@ -185,6 +188,37 @@ public class CatalogDetailQueriesTests
 
         var sut = new CatalogQueries(h.Db);
         (await sut.GetMakerBySlugAsync("hidden", default)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetMakerBySlug_returns_null_for_unverified_maker()
+    {
+        using var h = TestDbHarness.Create();
+        SeedListableMaker(h, "1", "unverified", verified: false);
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new CatalogQueries(h.Db);
+        (await sut.GetMakerBySlugAsync("unverified", default)).Should().BeNull(
+            "an admin has not vetted this maker, so their storefront must not be public");
+    }
+
+    /// <summary>
+    /// The profile gate alone is not enough: a product is addressable by id
+    /// without going through its maker's page, so the gate has to be on the
+    /// product read too or an unverified maker's catalogue stays reachable to
+    /// anyone holding (or enumerating) a product id.
+    /// </summary>
+    [Fact]
+    public async Task GetProductById_returns_null_for_unverified_maker()
+    {
+        using var h = TestDbHarness.Create();
+        SeedListableMaker(h, "1", "unverified", verified: false);
+        SeedProduct(h, "prod-1", "maker-1", "Hidden product");
+        await h.Db.SaveChangesAsync(default);
+
+        var sut = new CatalogQueries(h.Db);
+        (await sut.GetProductByIdAsync("prod-1", default)).Should().BeNull(
+            "product detail must not be a side door around the maker verification gate");
     }
 
     [Fact]

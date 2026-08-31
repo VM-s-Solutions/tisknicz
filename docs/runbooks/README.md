@@ -14,6 +14,7 @@ written now; the dry-run that proves it is the SecOps pre-launch gate (the ticke
 |---|---|
 | [secret-rotation.md](./secret-rotation.md) | Rotating any secret (routine 90-day cycle or on suspected compromise): JWT signing key, Comgate / Packeta / SendGrid / Mapbox keys, the Postgres + Blob connection strings, and the Functions key. Covers provider rotation, the Key Vault update, host-pickup behavior (restart vs. auto-refresh), and blast radius. |
 | [monitoring.md](./monitoring.md) | An alert fires (or you're on-call): the ADR 0023 §4 alert table — 5xx rate, webhook 5xx, outbox lag / stalled count, DB CPU, failed logins, auto-deliver crash — with the KQL to confirm, the likely cause, and the first-response action. |
+| [go-live-bootstrap.md](./go-live-bootstrap.md) | Bringing a fresh environment (production especially) from "deployed and migrated" to "a customer can place an order": creating the first admin with `Makables.Tools.AdminBootstrap`, then the maker-registers → admin-verifies → product-created chain, then the first real Comgate walk. Contains an external party, so it is scheduled ahead of launch, not run on the day. |
 | [backup-restore.md](./backup-restore.md) | Recovering data: Postgres PITR restore, Blob soft-delete / GRS recovery, plus the audit-log-append-only and invoice-immutability / numbering-sequence hazards a naive rewind triggers. Also the ADR 0023 §7 quarterly restore test. |
 
 ## Related security docs
