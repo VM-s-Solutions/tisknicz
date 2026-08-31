@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Makables.Core.Domain.Auditing;
 using Makables.Core.Domain.Common;
 using Makables.Core.Domain.Identity;
@@ -194,7 +195,15 @@ internal sealed class AdminBootstrapper(
             targetEntity: "user",
             targetId: admin.Id,
             beforeJson: null,
-            afterJson: $$"""{"role":"Admin","emailNormalized":"{{normalisedEmail}}"}""",
+            // Serialised, not interpolated: the column is jsonb and
+            // NormalizeEmail does not escape, so a quote or backslash in an
+            // operator-chosen address would produce invalid JSON and a 22P02
+            // that IsUniqueViolation does not catch — an unhandled throw outside
+            // the documented exit codes. Same lesson as the EmailNormalized
+            // comparison: make the bad state unrepresentable rather than
+            // unlikely.
+            afterJson: JsonSerializer.Serialize(
+                new { role = nameof(UserRole.Admin), emailNormalized = normalisedEmail }),
             now: now,
             notes: "First admin created by Makables.Tools.AdminBootstrap."));
 

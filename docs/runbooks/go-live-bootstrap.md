@@ -89,7 +89,8 @@ from a developer laptop.
 |---|---|
 | `0` | Admin created. An `admin.bootstrap` entry is in the admin audit log. |
 | `1` | Refused for a safety reason — an active admin already exists, the email is taken (including a different casing, or one held by a soft-deleted account), `--confirm-database` is missing or does not match, or the database rejected the insert as a duplicate. **Nothing was written.** |
-| `2` | Bad input — missing/malformed email or name, or a password under 12 characters. |
+| `2` | Bad input — missing/malformed email or name, a password under 12 characters, or no `ConnectionStrings__Postgres` set. |
+| _stack trace_ | A connection string that is present but unusable (wrong host, refused, bad credentials) surfaces as an unhandled exception rather than an exit code. That is deliberate — the failure is environmental and the operator needs the detail — and it is pinned by `AdminBootstrapCompositionRootTests`. |
 
 The tool echoes the resolved host and database before writing, so a wrong
 connection string is visible rather than discovered afterwards.

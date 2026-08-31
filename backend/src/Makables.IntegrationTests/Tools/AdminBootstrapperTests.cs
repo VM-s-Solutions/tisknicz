@@ -280,6 +280,32 @@ public class AdminBootstrapperTests(PostgresHarness harness)
         exit.Should().Be(AdminBootstrapper.ExitRefused);
     }
 
+    /// <summary>
+    /// The audit snapshot goes into a <c>jsonb</c> column. Hand-rolled JSON
+    /// would break on a quote or backslash in the address and raise 22P02 —
+    /// which the unique-violation handler does not catch, so it would escape as
+    /// an unhandled throw outside the documented exit codes.
+    /// </summary>
+    [Fact]
+    public async Task Audit_snapshot_survives_an_address_containing_a_quote()
+    {
+        await harness.ResetMutableTablesAsync();
+        var (sut, db) = Build();
+        await using var _ = db;
+
+        var exit = await RunAsync(sut, email: "ops\"x@makables.cz");
+
+        exit.Should().Be(AdminBootstrapper.ExitSuccess);
+
+        await using var verify = harness.CreateDbContext();
+        var entry = await verify.Set<AdminAuditLogEntry>().SingleAsync();
+        entry.AfterJson.Should().NotBeNullOrWhiteSpace();
+        // Round-trips as real JSON rather than a corrupted literal.
+        var parsed = System.Text.Json.JsonDocument.Parse(entry.AfterJson!);
+        parsed.RootElement.GetProperty("emailNormalized").GetString()
+            .Should().Contain("\"", "the quote must survive escaping, not break the document");
+    }
+
     [Fact]
     public async Task Records_an_audit_entry_for_the_bootstrap()
     {
