@@ -73,6 +73,19 @@ var baseAppSettings = [
     value: audience
   }
   {
+    // Every App Service sits behind the platform front end, so the container
+    // never sees the client's address on the connection — it arrives in
+    // X-Forwarded-For. Two shipped surfaces read Connection.RemoteIpAddress
+    // directly and are wrong without this: the Comgate webhook IP allowlist
+    // (fail-closed, so it rejects every callback) and the anonymous
+    // rate-limit partitions (which otherwise collapse into one bucket).
+    // Off by default in code — trusting a forwarded header where nothing
+    // strips it is a spoofing hole — and turned on here, where the proxy
+    // is known to exist. See MakablesForwardedHeadersOptions.
+    name: 'ForwardedHeaders__Enabled'
+    value: 'true'
+  }
+  {
     name: 'WEBSITES_PORT'
     value: '8080'
   }

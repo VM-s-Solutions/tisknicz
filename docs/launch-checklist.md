@@ -92,21 +92,35 @@ ADR 0023 §7 target, and the runbook that covers it.
 
 ## Security hardening (T-0136 / secops)
 
-- [ ] **Forwarded-headers prerequisite for rate limiting (BLOCKING IF a reverse
-  proxy is introduced):** the T-0136 rate limiter partitions anonymous traffic
-  by the **raw connection IP** (`AddMakablesRateLimiting.DefaultPartition` /
-  `PartitionAuth`). The current deploy is direct Azure App Service (no Front
-  Door / App Gateway / WAF in `infra/bicep/`), so the connection IP IS the real
-  client and the limiter works correctly. **The moment any reverse proxy / WAF /
-  CDN is placed in front of the hosts, `UseForwardedHeaders` (with a restricted
-  `KnownProxies` / `KnownNetworks` limited to the proxy's ranges) MUST be wired
-  into `UseMakablesPipeline` in the same change, plus a regression test** —
-  otherwise every request collapses to the single proxy IP (one shared
-  bucket = self-DoS of all legitimate anonymous users) or an un-validated
-  `X-Forwarded-For` becomes a trivial bypass. The code intentionally does NOT
-  trust `X-Forwarded-For` today. Same prerequisite already noted in
-  `docs/security/function-key-rotation.md` for the Mapbox anonymous path —
-  this extends it to the global + `auth` limiters.
+- [x] **Forwarded-headers wiring (DONE).** `UseMakablesForwardedHeaders` is the
+  first stage of `UseMakablesPipeline`, enabled in deployed environments by
+  `ForwardedHeaders__Enabled=true` from `infra/bicep/modules/app-service.bicep`,
+  with `ForwardLimit = 1` as the anti-spoofing control and
+  `ForwardedHeadersTests` pinning it. This unblocks the Comgate webhook IP
+  allowlist and the Mapbox anonymous IP buckets noted in
+  `docs/security/function-key-rotation.md`.
+  Two residual rules, both BLOCKING if broken:
+    - **Never set `ASPNETCORE_FORWARDEDHEADERS_ENABLED`.** The app wires this
+      itself; the platform switch would register a *second* forwarded-headers
+      middleware, and because the first truncates the entries it consumed the
+      second would read an attacker-controlled one.
+    - **Any Front Door / App Gateway / WAF must raise `ForwardLimit` in the same
+      change**, or the recorded address becomes the wrong hop.
+- [ ] **Anonymous rate limiting is still one shared bucket for browser traffic
+  (Q-0039, NOT fixed by the above):** the frontend routes API calls through its
+  own `/api-proxy` rewrite, so the last forwarded hop the API host sees is the
+  frontend App Service egress IP. Forwarded headers fixed the partition for
+  callers that reach a host directly (the Comgate webhook, direct API clients)
+  but Next's `rewrites()` cannot inject the client address. See Q-0039 in
+  `docs/questions/open.md`.
+- [ ] **`COMGATE_WEBHOOK_ALLOWED_IPS` must be set before go-live (BLOCKING):**
+  Comgate's published source ranges, comma-separated, as a GitHub environment
+  secret. The allowlist is fail-closed — while it is empty every payment
+  callback is rejected with 401 and no order can reach `Paid`. Also confirm the
+  notification URL in the Comgate portal targets the **public API host
+  directly**, never `makables.cz/api-proxy/...`; routing it through the frontend
+  adds a hop whose egress IP must NEVER be added to the allowlist (that would
+  admit anyone who can reach the public site).
 
 ## SEO (T-0131)
 

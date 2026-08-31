@@ -92,6 +92,24 @@ committed. The full secret list + the operator setup is in
 `docs/deployment/deploy-runbook.md`. (KV-reference relocation is a later
 hardening step — launch-checklist.)
 
+### Comgate deploy-time switches (non-secret, forwarded to Bicep)
+
+Two **non-secret** Comgate values are read by the `.bicepparam` files via
+`readEnvironmentVariable()` and must therefore be forwarded by the `Deploy
+Bicep` step's `env:` block in *both* deploy workflows. They are GitHub
+environment variables/secrets, not Key Vault entries.
+
+| Name | App setting | Effect when unset |
+|---|---|---|
+| `COMGATE_WEBHOOK_ALLOWED_IPS` | `Comgate__WebhookAllowedIps__N` (comma-separated input, expanded to indexed keys) | Setting omitted → allowlist empty → **every payment callback is rejected with 401**. Fail-closed and silent; nothing else surfaces it. |
+| `COMGATE_BASE_URL` | `Comgate__BaseUrl` | Setting omitted → the code default applies, which is the **live** gateway. Must be an absolute `https` URI; an empty value would fail `ValidateOnStart` and the host would not boot, which is why the setting is omitted rather than emitted empty. |
+
+Neither value is hardcoded in the repo: Comgate's published source ranges are
+operator-supplied, and a guessed range silently breaks the only route an order
+has to `Paid`. `scripts/check-consistency.mjs` rule **T10** asserts that every
+`readEnvironmentVariable()` name in `infra/bicep/envs/*.bicepparam` is actually
+forwarded by both workflows, so a parameter can no longer be dead on arrival.
+
 ## Maintenance rule
 
 Any PR that adds a `%key%` binding expression, a `ValidateOnStart` options class, a new

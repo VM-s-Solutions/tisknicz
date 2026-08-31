@@ -64,6 +64,13 @@ jobs:
           POSTGRES_ADMIN_USER: ${{ secrets.POSTGRES_ADMIN_USER }}
           POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          # Comgate non-secret switches. Unset => the param defaults to empty
+          # and the setting is omitted, which for the allowlist means
+          # fail-closed: every payment callback is rejected with 401. These
+          # MUST be forwarded here or the .bicepparam readEnvironmentVariable()
+          # silently resolves to '' on the runner and the secret does nothing.
+          COMGATE_BASE_URL: ${{ secrets.COMGATE_BASE_URL }}
+          COMGATE_WEBHOOK_ALLOWED_IPS: ${{ secrets.COMGATE_WEBHOOK_ALLOWED_IPS }}
         with:
           azcliversion: latest
           inlineScript: |

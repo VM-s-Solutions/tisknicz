@@ -597,7 +597,72 @@ async function ruleT9(allFiles) {
     return out;
 }
 
-const AGGREGATE_RULES = [ruleT8, ruleT9];
+// ---------------------------------------------------------------------------
+// T10: .bicepparam readEnvironmentVariable() ↔ deploy-workflow env parity
+//
+// A `.bicepparam` reads deploy-time values with readEnvironmentVariable('X'),
+// which is evaluated ON THE RUNNER. If the deploy workflow's "Deploy Bicep"
+// step does not forward X in its `env:` block, the call silently resolves to
+// the default and the parameter is dead — setting the GitHub secret changes
+// nothing, with no error anywhere.
+//
+// That is not hypothetical: Comgate__WebhookAllowedIps shipped exactly this
+// way, and because an empty allowlist is fail-closed the symptom would have
+// been every payment callback rejected in production, discovered by a real
+// customer. Flagged hard — a dead deploy parameter cannot be baselined.
+// ---------------------------------------------------------------------------
+const DEPLOY_WORKFLOWS = [
+    '.github/workflows/deploy-production.yml',
+    '.github/workflows/deploy-staging.yml',
+];
+
+async function ruleT10(allFiles) {
+    const paramFiles = allFiles.filter(f =>
+        matchGlob(toPosix(relative(REPO_ROOT, f)), 'infra/bicep/envs/*.bicepparam'));
+    if (paramFiles.length === 0) return [];
+
+    // Collect the env names each deploy workflow forwards anywhere in the file.
+    // Deliberately whole-file rather than per-step: a name forwarded in some
+    // other step is at worst a false negative here, whereas parsing YAML steps
+    // with a regex would produce false positives, which cost more.
+    const forwarded = new Map();
+    for (const wf of DEPLOY_WORKFLOWS) {
+        const abs = resolve(REPO_ROOT, wf);
+        if (!existsSync(abs)) continue;
+        const src = await readFile(abs, 'utf8');
+        const names = new Set();
+        for (const m of src.matchAll(/^\s*([A-Z][A-Z0-9_]*)\s*:\s*\$\{\{/gm)) {
+            names.add(m[1]);
+        }
+        forwarded.set(wf, names);
+    }
+    if (forwarded.size === 0) return [];
+
+    const out = [];
+    for (const file of paramFiles) {
+        const src = await readFile(file, 'utf8');
+        const seen = new Set();
+        for (const m of src.matchAll(/readEnvironmentVariable\(\s*'([A-Z0-9_]+)'/g)) {
+            const name = m[1];
+            if (seen.has(name)) continue;
+            seen.add(name);
+
+            const missing = [...forwarded.entries()]
+                .filter(([, names]) => !names.has(name))
+                .map(([wf]) => wf.replace('.github/workflows/', ''));
+            if (missing.length === 0) continue;
+
+            out.push(finding(file, lineOf(src, m.index), 'T10',
+                `readEnvironmentVariable('${name}') is never forwarded by ${missing.join(' / ')} ` +
+                `— the parameter resolves to its default on the runner, so the value can never ` +
+                `be supplied. Add it to the "Deploy Bicep" step's env: block`,
+                true));
+        }
+    }
+    return out;
+}
+
+const AGGREGATE_RULES = [ruleT8, ruleT9, ruleT10];
 
 // ---------------------------------------------------------------------------
 // baseline I/O

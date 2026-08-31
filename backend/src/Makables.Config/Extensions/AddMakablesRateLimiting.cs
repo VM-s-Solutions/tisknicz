@@ -224,15 +224,29 @@ public static class MakablesRateLimitingExtensions
     /// envelope computed in <see cref="AddMakablesRateLimiting"/>.
     ///
     /// <para>
-    /// <b>Reverse-proxy prerequisite (secops):</b> the IP partition is the RAW
-    /// connection IP. In the current deploy (direct Azure App Service, no Front
-    /// Door / App Gateway / WAF) that IS the real client. If a reverse proxy is
-    /// EVER placed in front, <c>UseForwardedHeaders</c> with a restricted
-    /// <c>KnownProxies</c>/<c>KnownNetworks</c> MUST be wired into
-    /// <c>UseMakablesPipeline</c> in the same change (plus a regression test) —
-    /// otherwise every request collapses to the proxy IP (one shared bucket =
-    /// self-DoS) or an un-validated <c>X-Forwarded-For</c> becomes a trivial
-    /// bypass. Tracked in the launch checklist; this code does NOT trust XFF.
+    /// <b>Reverse-proxy handling (secops):</b> the IP partition is whatever
+    /// <see cref="ConnectionInfo.RemoteIpAddress"/> holds when this runs.
+    /// <c>UseMakablesForwardedHeaders</c> is the FIRST stage of
+    /// <c>UseMakablesPipeline</c> and rewrites that address from
+    /// <c>X-Forwarded-For</c> wherever <c>ForwardedHeaders:Enabled</c> is set.
+    ///
+    /// <para>
+    /// That fixes the partition for callers which reach a host DIRECTLY — the
+    /// Comgate webhook, direct API clients. It does NOT fix browser traffic:
+    /// the frontend routes every call through its own <c>/api-proxy</c>
+    /// rewrite (T-0153), so the last forwarded hop the API host sees is the
+    /// frontend App Service egress IP and all anonymous browser callers still
+    /// share one bucket. That is <b>Q-0039</b> in
+    /// <c>docs/questions/open.md</c> and it remains open — Next's
+    /// <c>rewrites()</c> cannot inject the client address.
+    /// </para>
+    ///
+    /// <para>
+    /// This code still never reads <c>X-Forwarded-For</c> itself, and the
+    /// middleware is off by default, so an un-proxied deployment cannot be
+    /// spoofed by forging the header. Adding a SECOND proxy means raising
+    /// <c>MakablesForwardedHeadersOptions.ForwardLimit</c> in the same change.
+    /// </para>
     /// </para>
     /// </summary>
     internal static RateLimitPartition<string> DefaultPartition(
@@ -423,12 +437,13 @@ public static class MakablesRateLimitingExtensions
                 });
         }
 
-        // Unauthenticated. Use the X-Forwarded-For-aware remote IP. The
-        // ingress proxy in prod terminates TLS and sets X-Forwarded-For;
-        // when ForwardedHeaders middleware is configured (a Phase-1
-        // concern) RemoteIpAddress reflects the real client. If missing,
-        // we fall back to a fixed bucket so an attacker can't bypass by
-        // dropping the header.
+        // Unauthenticated. RemoteIpAddress is X-Forwarded-For-aware wherever
+        // ForwardedHeaders:Enabled is set (UseMakablesForwardedHeaders, first
+        // stage of UseMakablesPipeline), so this is the real client for direct
+        // callers — but still the frontend egress IP for browser traffic that
+        // came via the /api-proxy rewrite. See the reverse-proxy note on
+        // DefaultPartition and Q-0039. If the address is missing we fall back
+        // to a fixed bucket so an attacker can't bypass by dropping it.
         var ip = http.Connection.RemoteIpAddress?.ToString();
         var partitionKey = string.IsNullOrWhiteSpace(ip) ? "ip:unknown" : $"ip:{ip}";
         return RateLimitPartition.GetFixedWindowLimiter(

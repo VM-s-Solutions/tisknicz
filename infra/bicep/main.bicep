@@ -87,6 +87,12 @@ param jwtIssuer string
 @description('Ops email for metric alerts. Empty skips the alerts module entirely.')
 param alertEmail string = ''
 
+@description('Comgate API base URL (Comgate:BaseUrl). Empty keeps the code default, which is the LIVE gateway (https://payments.comgate.cz) — so a non-production environment that will actually transact against Comgate must set this to the sandbox host. Dev normally never reaches Comgate at all: envSlug dev enables the DevPaymentProvider bypass below, which mints a synthetic session and never calls the gateway.')
+param comgateBaseUrl string = ''
+
+@description('Source IPs / CIDR ranges Comgate sends webhook callbacks from (Comgate:WebhookAllowedIps). The allowlist is FAIL-CLOSED: empty rejects every callback with 401, which is the current state of every deployed environment. Values are operator-supplied from Comgate\'s published ranges — they are deliberately not hardcoded here, because a guessed range silently breaks the only route an order has to Paid.')
+param comgateWebhookAllowedIps string[] = []
+
 // ---------------------------------------------------------------------------
 // Names (Cleansia/CAF convention).
 // ---------------------------------------------------------------------------
@@ -318,6 +324,30 @@ var devPaymentAppSettings = envSlug == 'dev' ? [
   }
 ] : []
 
+// ---------------------------------------------------------------------------
+// Comgate — non-secret settings. The merchant id and secret are Key Vault
+// references in apiSecretSettings; these two are the switches that decide
+// WHICH gateway is called and WHOSE callbacks are accepted.
+//
+// Both are omitted when unset rather than emitted empty: an empty
+// Comgate__BaseUrl would fail the host's absolute-https validation at boot,
+// and an absent allowlist leaves the filter's fail-closed default intact.
+// ---------------------------------------------------------------------------
+var comgateBaseUrlSetting = empty(comgateBaseUrl) ? [] : [
+  {
+    name: 'Comgate__BaseUrl'
+    value: comgateBaseUrl
+  }
+]
+
+// Flat key/value app settings cannot hold arrays, so the list expands to the
+// indexed keys the options binder reads — same shape as Cors__AllowedOrigins.
+var comgateAllowlistSettings = [for (ip, i) in comgateWebhookAllowedIps: {
+  name: 'Comgate__WebhookAllowedIps__${i}'
+  value: ip
+}]
+
+
 module customerApp 'modules/app-service.bicep' = {
   name: 'customer-app'
   params: {
@@ -331,7 +361,7 @@ module customerApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
-    extraAppSettings: devPaymentAppSettings
+    extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
   }
 }
 
@@ -348,7 +378,7 @@ module makerApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
-    extraAppSettings: devPaymentAppSettings
+    extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
   }
 }
 
@@ -365,7 +395,7 @@ module adminApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
-    extraAppSettings: devPaymentAppSettings
+    extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
   }
 }
 
@@ -382,7 +412,7 @@ module publicApp 'modules/app-service.bicep' = {
     jwtIssuer: jwtIssuer
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
-    extraAppSettings: devPaymentAppSettings
+    extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
   }
 }
 
