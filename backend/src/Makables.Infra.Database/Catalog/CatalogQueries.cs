@@ -14,8 +14,21 @@ namespace Makables.Infra.Database.Catalog;
 /// EF Core read-side projection for the catalog (T-0043). All queries
 /// are <c>AsNoTracking</c> and project straight into DTOs — no aggregate
 /// is materialised. The global soft-delete query filter already excludes
-/// inactive makers / users / addresses, so the publicly-listable gate
-/// only needs the extra <c>EmailConfirmedAt is not null</c> check.
+/// inactive makers / users / addresses, so the publicly-listable gate adds
+/// two checks: the owning user's email is confirmed, AND the maker has been
+/// verified by an admin (<c>Maker.IsVerified</c>).
+///
+/// <para>
+/// <b>The verification gate is load-bearing, not cosmetic.</b> Until it
+/// landed, <c>IsVerified</c> appeared in these queries only as a projected
+/// badge and never in a predicate, so any self-registered maker was publicly
+/// listed and their products reachable the moment they confirmed an email —
+/// while <c>CreateOrder</c> rejected them at the last step
+/// (<c>maker.notVerified</c>). The trust model and the storefront disagreed;
+/// the storefront was wrong. Every publicly-reachable read in this file must
+/// carry the gate — pinned by <c>CatalogQueriesTests</c> and
+/// <c>CatalogDetailQueriesTests</c>.
+/// </para>
 /// </summary>
 public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
 {
@@ -39,6 +52,7 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
             join a in db.Set<Address>().AsNoTracking() on m.RegisteredAddressId equals a.Id
             where m.CountryCode == countryCode
                 && u.EmailConfirmedAt != null
+                && m.IsVerified
             select new { m, a };
 
         // Category filter via the maker_categories join table. The table
@@ -138,13 +152,14 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
         var normalised = slug.Trim();
 
         // Same publicly-listable gate as the list: active maker + active
-        // user + confirmed email. The slug is unique across active makers
-        // (partial index), so FirstOrDefault is the single row or null.
+        // user + confirmed email + admin-verified. The slug is unique across
+        // active makers (partial index), so FirstOrDefault is the single row
+        // or null.
         var header = await (
             from m in db.Set<Maker>().AsNoTracking()
             join u in db.Set<User>().AsNoTracking() on m.UserId equals u.Id
             join a in db.Set<Address>().AsNoTracking() on m.RegisteredAddressId equals a.Id
-            where m.Slug == normalised && u.EmailConfirmedAt != null
+            where m.Slug == normalised && u.EmailConfirmedAt != null && m.IsVerified
             select new
             {
                 m.Id, m.Slug, m.CompanyName, m.Bio, m.LegalForm,
@@ -234,15 +249,16 @@ public sealed class CatalogQueries(MakablesDbContext db) : ICatalogQueries
         if (string.IsNullOrWhiteSpace(productId)) return null;
 
         // Active product whose owning maker is publicly-listable (active
-        // maker + active user + confirmed email). The global soft-delete
-        // filter handles the active checks; we add the email gate. A
-        // product hidden behind an unconfirmed/inactive maker returns
-        // null so it isn't probeable by id.
+        // maker + active user + confirmed email + admin-verified). The global
+        // soft-delete filter handles the active checks; we add the email and
+        // verification gates. A product behind an unconfirmed, inactive or
+        // unverified maker returns null so it isn't probeable by id — the
+        // profile gate alone would not cover this route.
         var detail = await (
             from p in db.Set<Product>().AsNoTracking()
             join m in db.Set<Maker>().AsNoTracking() on p.MakerId equals m.Id
             join u in db.Set<User>().AsNoTracking() on m.UserId equals u.Id
-            where p.Id == productId && u.EmailConfirmedAt != null
+            where p.Id == productId && u.EmailConfirmedAt != null && m.IsVerified
             select new ProductDetail(
                 p.Id,
                 p.Title,

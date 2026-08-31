@@ -1,4 +1,6 @@
+using Makables.Core.Domain.Common;
 using Makables.Infra.Database;
+using Makables.Infra.Database.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -178,6 +180,38 @@ public sealed class PostgresHarness : IAsyncLifetime
             .UseNpgsql(ConnectionString)
             .Options;
         return new MakablesDbContext(options);
+    }
+
+    /// <summary>
+    /// Like <see cref="CreateDbContext"/> but with the audit interceptor wired,
+    /// so <c>created_by</c> / <c>created_at</c> are stamped the way a real host
+    /// or tool stamps them. Needed by any test whose subject inserts an
+    /// <c>Auditable</c> row without calling <c>MarkCreated</c> itself.
+    /// </summary>
+    public MakablesDbContext CreateAuditingDbContext(string actor)
+    {
+        var interceptor = new AuditableSaveChangesInterceptor(
+            new StubUserSessionProvider(actor), new StubClock());
+
+        var options = new DbContextOptionsBuilder<MakablesDbContext>()
+            .UseNpgsql(ConnectionString)
+            .AddInterceptors(interceptor)
+            .Options;
+        return new MakablesDbContext(options);
+    }
+
+    private sealed class StubUserSessionProvider(string actor) : IUserSessionProvider
+    {
+        public string? GetUserId() => actor;
+
+        public string? GetUserEmail() => null;
+
+        public string? GetUserCountryCode() => "CZ";
+    }
+
+    private sealed class StubClock : IClock
+    {
+        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
     }
 
     /// <summary>
