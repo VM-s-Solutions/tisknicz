@@ -171,10 +171,17 @@ handoff queues, and (via `AzureBlobStorageOptions.ConnectionString` in non-prod)
    is lost — processing pauses until restart, then drains. **Downtime:** background only; no
    customer-facing impact. **Two-key trick:** renew `key1` while `key2` is live (or vice-versa) to
    avoid a window where no key is valid.
-5. ⚠ **confirm against the live environment:** the `TODO(T-0134)` in `functions.bicep` is to move
-   `AzureWebJobsStorage` to an **identity-based** connection (`AzureWebJobsStorage__accountName` +
-   managed-identity role) so there is no account key to rotate at all. After that cut-over, this row
-   becomes "grant/rotate the role assignment", not "renew the key" (see §C).
+5. **The host connection is already identity-based — there is no host key to rotate.**
+   `functions.bicep` ships `AzureWebJobsStorage__accountName` + `AzureWebJobsStorage__credential =
+   managedidentity`, and `role-assignments.bicep` grants the Functions MI Storage Blob Data Owner,
+   Blob Data Contributor and Queue Data Contributor. So this row is "grant/revoke the role
+   assignment", not "renew the key".
+   - **A shared account key does still exist on that account**, because
+     `derived-secrets.bicep` composes `OutboxQueues--ConnectionString` from `listKeys()` for the
+     *publisher* side (the four Web hosts enqueue outbox messages). That key is what §7 rotates.
+     Rotating it does not stop the Functions host: its queue triggers bind
+     `Connection = "AzureWebJobsStorage"` (identity) and read `OutboxQueues:*QueueName*` only for the
+     queue **names**, never for credentials. A stale key breaks publishing, not consumption.
 
 ## 8. Functions key — `x-functions-key`
 
@@ -196,8 +203,10 @@ private Postgres path. The shipped Bicep diverges; these are pre-launch cut-over
 1. **Plain App Setting → Key Vault reference** for the Postgres conn string and the rest
    (`TODO(T-0134)` in `main.bicep`). Closes via `docs/launch-checklist.md` → "Secrets to Key Vault
    references".
-2. **`AzureWebJobsStorage` → identity-based connection** (`TODO(T-0134)` in `functions.bicep`).
-   Closes via `docs/launch-checklist.md` → "AzureWebJobsStorage identity-based".
+2. **`AzureWebJobsStorage` → identity-based connection** — CLOSED. Shipped in `functions.bicep`
+   (`__accountName` + `__credential=managedidentity`) with the matching grants in
+   `role-assignments.bicep`. The remaining shared-key user on that account is the outbox *publisher*
+   connection string, not the Functions host.
 3. **Postgres Private Endpoint** replacing the staging "allow all Azure services" firewall rule
    (`postgres.bicep`, `allowAllAzureServices`). Closes via `docs/launch-checklist.md` → "Postgres
    Private Endpoint (prod)".

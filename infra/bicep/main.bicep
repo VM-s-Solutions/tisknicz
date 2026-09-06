@@ -65,6 +65,15 @@ param postgresStorageGb int = 32
 ])
 param appServicePlanSku string = 'B1'
 
+@description('Replication SKU for the BLOB storage account (product images, invoices, maker documents). Dev keeps Standard_LRS; production sets Standard_GZRS per ADR 0023 §7 — see the param doc in modules/blob.bicep for why GZRS rather than the GRS the ADR originally named. This does NOT apply to the Functions host storage account, which stays LRS deliberately (see modules/functions.bicep).')
+@allowed([
+  'Standard_LRS'
+  'Standard_ZRS'
+  'Standard_GRS'
+  'Standard_GZRS'
+])
+param blobStorageSku string = 'Standard_LRS'
+
 @description('Postgres admin username (GitHub Actions secret at deploy time).')
 param postgresAdminUser string
 
@@ -185,6 +194,7 @@ module blob 'modules/blob.bicep' = {
   params: {
     storageAccountName: blobStorageName
     location: location
+    skuName: blobStorageSku
   }
 }
 

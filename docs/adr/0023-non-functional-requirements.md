@@ -173,8 +173,20 @@ Azure resources defined in `deploy/bicep/` (Bicep over Terraform because Cleansi
 #### Backup and recovery
 
 - **Postgres backups:** Azure-managed automatic backups, 7-day point-in-time-recovery window in production, 1-day in staging.
-- **Blob storage:** soft-delete retention 30 days; geo-redundant storage (GRS) in production.
+- **Blob storage:** blob **and container** soft-delete retention 30 days in every environment; **zone-and-geo-redundant storage (GZRS) in production** (amended 2026-09-06 — see below), Standard_LRS in dev. Blob **versioning is deliberately not enabled** (see below).
 - **Manual restore test:** once per quarter; admin runs through the restore playbook in a scratch environment. Findings logged.
+
+##### Amendment 2026-09-06 — GRS → GZRS, and why versioning is excluded
+
+This bullet originally read *"soft-delete retention 30 days; geo-redundant storage (GRS) in production."* Two corrections, both made while implementing it in `infra/bicep/modules/blob.bicep`, before production was ever deployed.
+
+**GRS → GZRS.** Under GRS the copy in the *primary* region is LRS — Microsoft: *"Geo-redundant storage (GRS) copies your data synchronously within one or more Azure availability zones in the primary region by using LRS."* West Europe has availability zones, so under GRS the loss of a single datacenter takes the blob account offline, and the documented recovery is a customer-initiated **unplanned** failover, which *"usually involves some amount of data loss"*, converts the account to LRS and deletes the original primary. GZRS survives that event with no failover and no loss. The cost delta is single-digit EUR/month at MVP blob volume against the §8 ceiling.
+
+Timing forced the decision now rather than later: the geo axis (LRS↔GRS) is a live SKU update, but the **zone** axis is not. Going LRS → GZRS afterwards is a two-step migration (LRS → GRS, then a separate zone conversion) with a 72-hour wait between steps and no completion SLA. Production had never been deployed, so this was the only moment the choice was free.
+
+**Soft delete covers two things, not one.** Blob soft delete alone does not cover a dropped container — Microsoft's operation table for Delete Container reads *"No change. You can't recover blobs in the deleted container."* Losing `product-images` is the worst accident available here, so `containerDeleteRetentionPolicy` is enabled alongside `deleteRetentionPolicy`. Containers are created once per environment and never deleted in normal operation, so this is free.
+
+**Versioning is excluded on purpose.** It reads like strictly more protection and is the opposite for this account. With versioning on, deleting a blob produces *no* soft-deleted object — *"the current version becomes a previous version, and the current version is deleted… No new version is created and no soft-deleted snapshots are created"* — so `az storage blob undelete` silently restores nothing and recovery becomes "promote a previous version by copying it". That is a different procedure from the one `docs/runbooks/backup-restore.md` documents, and this app's dominant loss vector is exactly Delete Blob (replacing a profile image, removing a product image). Enabling it would have closed a blocking launch item with a setting that breaks the recovery command the item exists to deliver.
 
 ### 8. Cost ceiling (target, not hard)
 
