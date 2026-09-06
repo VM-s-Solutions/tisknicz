@@ -87,7 +87,7 @@ param jwtIssuer string
 @description('Ops email for metric alerts. Empty skips the alerts module entirely.')
 param alertEmail string = ''
 
-@description('Give the App Services a PRIVATE path to Postgres: a VNet, a private endpoint on the server, and the privatelink DNS zone. Production only. Dev keeps the "allow all Azure services" firewall rule instead — its plan is Basic and, more importantly, dev is live and there is no reason to re-plumb a working environment. This never touches the server's own network block: Flexible Server networking mode is fixed at creation, and a private endpoint attaches alongside public access rather than replacing it.')
+@description('Give the App Services a PRIVATE path to Postgres: a VNet, a private endpoint on the server, and the privatelink DNS zone. Production only. Dev keeps the "allow all Azure services" firewall rule instead — its plan is Basic and, more importantly, dev is live and there is no reason to re-plumb a working environment. This never touches the server\'s own network block: Flexible Server networking mode is fixed at creation, and a private endpoint attaches alongside public access rather than replacing it.')
 param enablePrivateNetworking bool = false
 
 @description('Comgate API base URL (Comgate:BaseUrl). Empty keeps the code default, which is the LIVE gateway (https://payments.comgate.cz) — so a non-production environment that will actually transact against Comgate must set this to the sandbox host. Dev normally never reaches Comgate at all: envSlug dev enables the DevPaymentProvider bypass below, which mints a synthetic session and never calls the gateway.')
