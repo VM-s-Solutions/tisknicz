@@ -69,6 +69,31 @@ param jwtIssuer = 'https://makables.cz'
 // Http5xx / latency / exceptions / Postgres alerts actually notify someone.
 param alertEmail = readEnvironmentVariable('ALERT_EMAIL', '')
 
+// --- Private network path -----------------------------------------------
+// Production reaches Postgres over a private endpoint, never the public
+// internet. There is deliberately NO "allow all Azure services" firewall rule
+// here (main.bicep gates that to dev): with zero firewall rules the server is
+// unreachable publicly, and with a private endpoint the apps still get in.
+//
+// publicNetworkAccess stays Enabled on the server. That is not a loophole —
+// it is what lets the CI migrate job open a temporary runner-IP rule and
+// delete it again. Disabling it would break migrations and discard the
+// firewall rules anyway.
+//
+// AFTER THE FIRST PROD DEPLOY, confirm the private path actually took:
+//   1. From a host's Kudu console, `nslookup
+//      pg-makables-weu-prod.postgres.database.azure.com` must return a
+//      10.20.2.x address. A public address means the endpoint or the DNS zone
+//      link did not attach.
+//   2. `az network private-endpoint-connection list` must show the connection
+//      Approved. A Pending connection is the one failure mode ARM reports as
+//      success — auto-approval needs the deploy principal to hold
+//      .../privateEndpointConnectionsApproval/action, which Owner covers.
+// The smoke job's DB-backed probe also fails closed if the path is broken
+// (with zero firewall rules there is no public fallback), so this is a
+// belt-and-braces check rather than the only detector.
+param enablePrivateNetworking = true
+
 // --- Comgate -----------------------------------------------------------
 // Production has NO dev payment bypass — the keyed 'dev' provider is not
 // registered at all — so both of these are load-bearing here.

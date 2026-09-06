@@ -38,7 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     needs: [guard]
-    timeout-minutes: 30
+    # 60, not 30: the private-endpoint work makes the graph serial —
+    # apps now wait on the VNet, which waits on Postgres. A fresh
+    # GeneralPurpose server takes 4-10 minutes to provision before the
+    # network even starts. This only bites on a first-ever deploy, which
+    # is precisely the run that must not time out half-built.
+    timeout-minutes: 60
     permissions:
       id-token: write
       contents: read
@@ -262,7 +267,7 @@ jobs:
           inlineScript: |
             az postgres flexible-server firewall-rule delete --yes \
               --resource-group $RG --server-name $PG_SERVER \
-              --name ci-migrate-${{ github.run_id }} --output none || true
+              --name ci-migrate-${{ github.run_id }} --output none || { echo "::error::Failed to delete the temporary firewall rule — production Postgres may still be open to a runner IP. Delete it by hand NOW."; exit 1; }
 
   functions:
     name: Functions (.NET isolated) → Functions App

@@ -51,10 +51,14 @@ yields a *working* app — once the operator does these. Full procedure:
   `dev.makables.cz` / `makables.cz`, map the custom domain on the web App
   Service + set `NEXT_PUBLIC_SITE_URL` to it. Until then the
   `*.azurewebsites.net` hostname works.
-- [ ] **Prod migration connectivity:** the prod `migrate` job needs a path to
-  the private Postgres — a self-hosted runner inside the VNet or a break-glass
-  temp firewall rule for the migration window (deploy-runbook §"Migration
-  connectivity"). Pairs with the Private Endpoint item below.
+- [x] **Prod migration connectivity (RESOLVED — by design, not by exception):**
+  the prod `migrate` job runs on a GitHub-hosted runner and opens a temporary
+  runner-IP firewall rule for the migration window, then deletes it. That is
+  the intended design: `publicNetworkAccess` stays `Enabled` on the server so
+  the rule can exist at all, while a private endpoint carries the apps' traffic
+  — the two coexist by design. No self-hosted runner is needed. The delete step
+  now fails the job loudly rather than swallowing the error, because with zero
+  standing rules it is the only thing keeping the server closed.
 
 ## Infra hardening — Bicep ↔ ADR 0023 §7 cut-overs (T-0134)
 
@@ -76,10 +80,18 @@ ADR 0023 §7 target, and the runbook that covers it.
   an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
   Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:
   `docs/runbooks/secret-rotation.md` §7 + §C.
-- [ ] **Postgres Private Endpoint (prod, BLOCKING):** production runs WITHOUT the staging
-  "allow all Azure services" firewall rule (`postgres.bicep` `allowAllAzureServices`); wire a Private
-  Endpoint / VNet rule so the Web + Functions hosts can reach Postgres. A restored server needs this
-  re-wired too. Procedure: `docs/runbooks/backup-restore.md` §1.
+- [x] **Postgres Private Endpoint (prod) — SHIPPED in `infra/bicep/modules/network.bicep`.**
+  Production gets a VNet, a private endpoint on the server, the
+  `privatelink.postgres.database.azure.com` zone and a vnet link; the four API hosts and Functions
+  integrate into a delegated subnet. Production still runs WITHOUT the "allow all Azure services"
+  rule — with zero standing firewall rules the server has no public path in. Two things remain
+  **operator checks after the first prod deploy**, because ARM reports success either way:
+  - `nslookup pg-makables-weu-prod.postgres.database.azure.com` from a host's Kudu console must
+    return a `10.20.2.x` address, not a public one.
+  - `az network private-endpoint-connection list` must show the connection **Approved**, not Pending.
+  A restored server needs the endpoint re-attached — see `docs/runbooks/backup-restore.md` §1.
+  Note the deploy principal needs `Microsoft.Network/virtualNetworks/subnets/join/action` and
+  `.../privateEndpointConnectionsApproval/action`; Owner covers both.
 - [ ] **Blob GRS (prod, BLOCKING):** `blob.bicep` ships `Standard_LRS`; ADR 0023 §7 wants
   `Standard_GRS` in production. Until then, blob data has no geo-failover. Procedure:
   `docs/runbooks/backup-restore.md` §2b + §C.
