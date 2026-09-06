@@ -658,3 +658,91 @@ same edit.
 - **NOT granted:** a customer-facing cancellation of a PAID order. Neither answer asks for one, and
   for made-to-order goods it would hand back money after production may have started. If that is
   ever wanted it is a separate decision with a separate refund policy.
+
+---
+
+## Q-0040 — the anonymous image proxy has no visibility gate
+
+- **blocking:** no (nothing is broken today; this is an exposure, not an outage)
+- **Raised:** 2026-09-06, while investigating why `blob.bicep` shipped two anonymously-readable
+  containers against CLAUDE.md PART 6.
+- **Owner:** architect + secops
+- **Resolve by:** before the first real maker onboards in production
+
+**What was found.** Closing the container ACLs (done — every container is now `publicAccess: 'None'`
+and the account sets `allowBlobPublicAccess: false`) removes an unmetered, unlogged bypass. It does
+**not** reduce who can see the images, because the backend's own image routes are `[AllowAnonymous]`
+and stream by path alone:
+
+- [`ProductImageController`](../../backend/src/Makables.Web.Public/Controllers/ProductImageController.cs)
+  concatenates `{country}/products/{productId}/{filename}` and streams it. No product lookup, no
+  soft-delete check, no maker-verification check.
+- [`ProfileImageController`](../../backend/src/Makables.Web.Public/Controllers/ProfileImageController.cs)
+  is the same shape for avatars and maker logos.
+
+Two consequences follow, and both survive the ACL close:
+
+1. **The `Maker.IsVerified` catalog gate is bypassable for image bytes.** `CatalogQueries` gates
+   every public read on `m.IsVerified`, so an unverified maker's products are invisible in the
+   catalog — but their image URLs still stream 200 to anyone who has one. The gate protects the
+   listing, not the asset.
+2. **Deleted products keep serving images, by design.** `DeleteProduct` states the blobs are
+   "intentionally NOT deleted … soft-delete keeps the images addressable". Reasonable for undelete;
+   it does mean a withdrawn product's photos remain fetchable indefinitely.
+
+**The tension.** A visibility check means a database lookup on every image request — the hottest
+read path on the site, on a page whose slowness has already drawn real user complaints (CLAUDE.md
+PART 5), currently served with `Cache-Control: public, max-age=86400` and an ETag/304 path that a
+per-request lookup would undercut. So this is a genuine trade, not an oversight to sweep up.
+
+**Options, for the decision:**
+
+- **(a) Leave it.** Product images of an unverified maker are photographs the maker themselves
+  uploaded and intended to publish; the URL is unguessable (ULID filename) and not enumerable. Cost:
+  zero. Risk: "unverified" stops meaning anything at the asset layer.
+- **(b) Gate on a cached visibility projection.** A small `productId → visible` lookup behind
+  `IMemoryCache` with explicit invalidation on verify/unverify/delete, the pattern CLAUDE.md PART 5
+  already prescribes for hot, stable data. Cost: one cache and its invalidation seam. Keeps the
+  `max-age`/ETag path intact for the hit case.
+- **(c) Move revocation to the path.** Rotate the blob path on unverify/delete so old URLs 404 with
+  no per-request lookup. Cost: a rename/copy on a rare event. No hot-path cost at all.
+
+Recommendation: **(c) for products, (a) for profile images**, on the grounds that revocation should
+cost something at write time rather than on every read — but this is an architecture call, not a
+default to be invented.
+
+---
+
+## Q-0041 — self-service "Smazat účet" leaves the avatar blob in place
+
+- **blocking:** no
+- **Raised:** 2026-09-06, same investigation.
+- **Owner:** user (JVM YORE) — this is a policy question before it is a code question
+- **Resolve by:** before launch, because it determines what the privacy policy may promise
+
+`DeleteMyAccount` is deliberately a **deactivation**: it calls `MarkDeactivated` on the user and
+maker and revokes refresh tokens, and its own doc comment says the erasure matrix is reserved for
+the admin-only `DeleteUserPermanently`. Only that admin path runs `UserDataDeletionService`, which
+is the only code that deletes the avatar and maker-logo blobs.
+
+So a user who clicks "Smazat účet" keeps their photograph in storage indefinitely. That is a
+defensible two-tier design — Art. 17 erasure handled as an operator-serviced request — but it is
+only defensible if the UI and the privacy policy say so. A button labelled "delete account" that
+leaves the user's photo behind is the kind of gap that reads badly in a complaint.
+
+Three things to settle:
+
+1. Is self-service deletion **intended** to satisfy an Art. 17 request, or is erasure explicitly an
+   out-of-band request? If the former, `DeleteMyAccount` must run the erasure matrix.
+2. The admin erasure path **discards the blob-delete result**. `AzureBlobStorageClient.DeleteAsync`
+   never throws — it returns `BusinessResult.Failure` — and the caller does not check `.IsSuccess`.
+   Because the pointer is nulled in the same transaction, a transient failure orphans the blob with
+   nothing left recording where it is. This should at minimum log the path at warning level.
+3. That branch is **untested**: no case in `DeleteUserPermanentlyIntegrationTests` seeds a user with
+   an `AvatarBlobPath`, so the delete loop never executes in CI. The one action that makes the
+   design GDPR-defensible has zero coverage.
+
+Related, and now documented in ADR 0023 §7's amendment: 30-day blob soft delete means an erased
+avatar is *recoverable* for 30 days by a holder of the account key. It is **not** readable in that
+window (Microsoft: "You can't read data in a soft-deleted blob or snapshot until the object is
+restored"), so it is a retention-lag question, not an exposure — but a documented one now.

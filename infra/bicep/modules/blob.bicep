@@ -46,7 +46,32 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   }
   kind: 'StorageV2'
   properties: {
-    allowBlobPublicAccess: true
+    // Closed. Nothing in the codebase has ever emitted a direct
+    // *.blob.core.windows.net URL — every image reaches the browser as
+    // {publicApiBase}/api/v1/files/{folder}/{path}, streamed by the two
+    // public-host image controllers through the credentialed SDK. The
+    // anonymous container ACL was therefore a second door onto the same
+    // room, used by nobody: unmetered, unlogged, and reachable from any IP
+    // on an account whose name is fully derivable (stmakables<region><env>).
+    //
+    // It also contradicted CLAUDE.md PART 6 ("All file access proxied by the
+    // backend — no direct browser → blob URLs") and ADR 0011, whose own title
+    // is "all access through the backend; no direct browser links" and which
+    // never sanctioned a public ACL for profile-images at all.
+    //
+    // The sibling Functions storage account already ships
+    // allowBlobPublicAccess: false (modules/functions.bicep), deployed by the
+    // same job — so the two accounts in one resource group were configured
+    // inconsistently, and the false path is already proven in this pipeline.
+    //
+    // Setting this false is what actually closes the door: with an
+    // Authorization header present, "anonymous access on the storage account
+    // is ignored, and the request is authorized based on the provided
+    // credentials" — so every backend read is unaffected. The per-container
+    // 'None' below is Microsoft's documented companion ("Make all containers
+    // private to mitigate this issue"), because an account-level block alone
+    // makes a still-public container answer 403 rather than 404.
+    allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
   }
@@ -104,13 +129,21 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
 // NOT auto-create containers, so a name in code but not here is a runtime 404
 // on the first blob op. (payouts added: the weekly payout CSV upload, T-0102b.
 // profile-images added: maker logos + user avatars.)
+// Every container is private. product-images and profile-images were 'Blob'
+// (anonymous read); see the allowBlobPublicAccess note above for why that was
+// closed. Their CONTENT is still served anonymously — by the backend's
+// [AllowAnonymous] image controllers — so nothing user-visible changes. What
+// changes is that there is now exactly one way in, which can be rate-limited,
+// cached, logged and revoked. Revocation is currently only POSSIBLE, not
+// implemented: neither image controller checks whether the product is still
+// visible or its maker still verified (see docs/questions/open.md Q-0040).
 var containers = [
-  { name: 'product-images', publicAccess: 'Blob' }
+  { name: 'product-images', publicAccess: 'None' }
   { name: 'order-attachments', publicAccess: 'None' }
   { name: 'invoices', publicAccess: 'None' }
   { name: 'maker-documents', publicAccess: 'None' }
   { name: 'payouts', publicAccess: 'None' }
-  { name: 'profile-images', publicAccess: 'Blob' }
+  { name: 'profile-images', publicAccess: 'None' }
 ]
 
 resource containerResources 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = [for c in containers: {
