@@ -100,10 +100,12 @@ ADR 0023 §7 target, and the runbook that covers it.
   host storage account (required for identity-based host storage) plus Blob Data Contributor and Queue
   Data Contributor. The app is on a Dedicated plan with `alwaysOn`, so there is no Azure Files
   dependency and therefore no `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` key to remove.
-  - Residual, NOT blocking: RBAC propagation can lag the site by up to ~10 minutes, so the Functions
-    host may 403 on host storage during the first prod deploy and recover on its own. The smoke job
-    probes the four API hosts and the frontend but **never the Functions app**, so a host that never
-    starts still deploys green — tracked as a follow-up, not fixed here.
+  - **Both residuals are now closed in-pipeline.** The Functions app has an anonymous, dependency-free
+    `GET /api/health` (`HealthFunction`), and the smoke job in both deploy workflows probes it and fails
+    the deploy if it never answers. That also absorbs the RBAC-propagation window: identity-based host
+    storage means the host 403s until its role assignments propagate (~10 min), so the probe retries for
+    ~10 minutes before failing. What used to be an invisible race the deploy silently won is now a
+    condition the gate waits on and reports.
 - [x] **Postgres Private Endpoint (prod) — SHIPPED in `infra/bicep/modules/network.bicep`.**
   Production gets a VNet, a private endpoint on the server, the
   `privatelink.postgres.database.azure.com` zone and a vnet link; the four API hosts and Functions
@@ -122,11 +124,14 @@ ADR 0023 §7 target, and the runbook that covers it.
   primary-region copy is LRS, so losing one West Europe datacenter takes the account offline and the
   only recovery is a lossy customer-initiated unplanned failover. The zone axis is not a live SKU
   update, so the first-ever deploy was the only free moment to choose.
-  - **Operator pre-flight before the first prod deploy** (ARM fails inside the `blob` module if this
-    is wrong, after the plan, App Insights, VNet and Postgres are already created): confirm
-    `Standard_GZRS` is entitled on this subscription in `westeurope`. SKU entitlement is
-    subscription-scoped and this subscription is already offer-restricted for Postgres Flexible Server
-    in that exact region, so it is not assumed. Command in `weu.prod.bicepparam`.
+  - **Entitlement pre-flight is automated** — no operator step. `deploy-production.yml` runs a
+    "Pre-flight — the blob SKU is entitled in this subscription/region" step before the Bicep apply: it
+    reads the SKU and location straight out of `weu.prod.bicepparam` and queries the subscription's
+    `Microsoft.Storage/skus` restrictions, failing in seconds with a named reason instead of ~20 minutes
+    deep inside the `blob` module — which on a first-ever deploy would leave the plan, App Insights, the
+    VNet and a fresh Postgres server behind, with the Key Vault already holding a 90-day name lock.
+    SKU entitlement is subscription-scoped and this subscription is already offer-restricted for
+    Postgres Flexible Server in that exact region, so it is checked rather than assumed.
 - [x] **Blob + container soft-delete 30-day — SHIPPED.** `blob.bicep`'s existing `blobServices/default`
   now carries `deleteRetentionPolicy` **and** `containerDeleteRetentionPolicy`, both 30 days, in every
   environment. Container soft delete is the half that covers the catastrophic case: blob soft delete

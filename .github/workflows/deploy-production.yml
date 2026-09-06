@@ -54,6 +54,48 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Fail in 5 seconds instead of 20 minutes deep. Storage SKU entitlement is
+      # SUBSCRIPTION-scoped, and this subscription is already offer-restricted
+      # for Postgres Flexible Server in westeurope (see weu.prod.bicepparam), so
+      # Standard_GZRS being available here is NOT an assumption we get to make.
+      # Without this check a restriction surfaces inside the `blob` module —
+      # after the App Service Plan, App Insights, the VNet and a fresh Postgres
+      # server have already been created, on a first-ever deploy that cannot be
+      # cleanly torn down because the Key Vault takes a 90-day name lock.
+      - name: Pre-flight — the blob SKU is entitled in this subscription/region
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            # sed, not `grep -oP`: PCRE mode is unavailable on non-UTF-8 locales
+            # and on busybox, and a missing feature here would fail CLOSED and
+            # block every production deploy. Same reasoning as the smoke probe
+            # dropping its jq dependency.
+            pf=infra/bicep/envs/weu.prod.bicepparam
+            sku=$(sed -n "s/^param blobStorageSku = '\([^']*\)'.*/\1/p" "$pf")
+            loc=$(sed -n "s/^param location = '\([^']*\)'.*/\1/p" "$pf")
+            if [ -z "$sku" ] || [ -z "$loc" ]; then
+              echo "::error::could not read blobStorageSku/location out of $pf — the pre-flight cannot verify entitlement, so it is failing closed rather than letting the deploy find out 20 minutes in."
+              exit 1
+            fi
+            echo "checking $sku is available for storage accounts in $loc"
+            # Query the SKU list rather than trusting the docs: `restrictions` is
+            # the authoritative per-subscription answer, and an entitled SKU
+            # returns an empty array.
+            restrictions=$(az rest --method get               --url "https://management.azure.com/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/providers/Microsoft.Storage/skus?api-version=2023-05-01"               --query "value[?name=='$sku' && location=='$loc'] | [0].restrictions" -o json 2>/dev/null || echo 'null')
+            if [ "$restrictions" = "null" ]; then
+              echo "::error::$sku is not offered for storage accounts in $loc on this subscription. Pick a SKU that is (ADR 0023 §7 documents why GZRS was chosen) or request the offer, then update weu.prod.bicepparam."
+              exit 1
+            fi
+            if [ "$restrictions" != "[]" ]; then
+              echo "$restrictions"
+              echo "::error::$sku is RESTRICTED for this subscription in $loc — see the reasonCode above. The deploy would have failed inside the blob module after Postgres and the VNet were created."
+              exit 1
+            fi
+            echo "  $sku entitled in $loc — no restrictions"
+
       - name: Deploy Bicep
         uses: azure/cli@v2
         env:
@@ -491,10 +533,12 @@ jobs:
   # (missing/empty secret, unresolved Key Vault reference) never binds its port
   # and 503s the warmup probe forever — this job turns that into a RED run.
   smoke:
-    name: Post-deploy smoke (/health + a DB-backed read)
+    name: Post-deploy smoke (/health + a DB-backed read + the Functions host)
     runs-on: ubuntu-latest
     needs: [backend, functions, frontend]
-    timeout-minutes: 15
+    # 30, not 15: the Functions probe alone can legitimately wait ~10 minutes
+    # for managed-identity role propagation on a first-ever deploy.
+    timeout-minutes: 30
     steps:
       - name: Probe /health on every API host
         run: |
@@ -562,3 +606,33 @@ jobs:
           done
           echo "::error::frontend never returned 200"
           exit 1
+      # The Functions host has NO other externally observable surface — every
+      # other trigger is a timer or a queue trigger — so before this step a host
+      # that never started deployed GREEN. That failure is completely silent:
+      # the isolated worker exits before indexing a single function, so
+      # ProcessOutboxTimer never fires, the outbox never drains and NO
+      # transactional email is ever sent, with valid credentials and nothing
+      # wrong on the Web hosts to point at. See FunctionsHostCompositionTests.
+      #
+      # The long window is deliberate, not padding. AzureWebJobsStorage is
+      # identity-based, so the host cannot start until its managed-identity role
+      # assignments have propagated, and Azure documents that as taking up to
+      # ~10 minutes. Before this step that window was an invisible race the
+      # deploy simply won; now it is a condition the gate waits on and reports.
+      - name: Probe /api/health on the Functions host
+        run: |
+          set -euo pipefail
+          url="https://func-makables-weu-prod.azurewebsites.net/api/health"
+          echo "probing $url"
+          for attempt in $(seq 1 20); do
+            code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "$url" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "  Functions host is up and has indexed its functions"
+              exit 0
+            fi
+            echo "  attempt $attempt/20: HTTP $code — waiting 30s (cold start, then RBAC propagation for identity-based host storage)…"
+            sleep 30
+          done
+          echo "::error::func-makables-weu-prod never served /api/health after ~10 minutes. The host is not running, so the outbox will not drain and no email will be sent. Check its Log stream: a 403 on host storage means the managed-identity role assignments (Storage Blob Data Owner + Queue Data Contributor, role-assignments.bicep) did not apply; a worker exit means DI validation failed."
+          exit 1
+
