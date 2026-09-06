@@ -106,14 +106,37 @@ missed callback becomes a cancelled paid order.
 
 ### Production cutover — additional, and strictly ordered
 
+> **Corrected 2026-08-31, and it reorders this lane.** Three facts, each verified:
+> **(a) production has never been deployed** — `gh run list --workflow=deploy-production.yml`
+> returns zero rows, so `pg-makables-weu-prod` does not exist and nothing here is a
+> retrofit onto a locked server; the creation-time networking choice is still fully
+> open. **(b) The repository is public**, so the prod Postgres FQDN is *published*,
+> not guessable — which raises the price of any "allow all Azure services" interim.
+> **(c) `weu.prod.bicepparam` omitted `postgresLocation`**, so prod inherited
+> `westeurope`, which this subscription blocks for Flexible Server
+> (`LocationIsOfferRestricted`, recorded in the dev param file). **The first prod
+> deploy would have failed at server creation, before networking was ever reached.**
+> Fixed in P0 below.
+
 | # | Item | Size | Note |
 |---|---|---|---|
-| P1 | Prod Postgres network path — VNet + delegated subnet + private endpoint | L | Migrations already have a break-glass path; this is App Service runtime only |
+| P0a | Honest deploy gate — a DB-backed smoke probe | S | ✅ **done.** `/health` is dependency-free by design, so it reports 200 on a host whose database is unreachable — every failure mode in this lane presented as a green deploy. Both workflows now also assert a `PagedData` envelope from `GET /api/v1/catalog/makers`. Verified against live dev **and** verified to reject a dependency-free 200 |
+| P0b | Prod Postgres region | S | ✅ **done.** `postgresLocation = 'northeurope'` set explicitly in the prod params. Region is fixed at creation, so this had to be right the first time |
+| P1 | Prod Postgres network path | L | **Decision open — see below.** Private endpoint (not VNet injection: that is creation-time-only and `publicNetworkAccess` cannot be combined with it). PE coexists with public access + firewall rules, which is what keeps the CI temp-firewall migrate job working |
 | P2 | Custom domain + DNS + TLS binding | M | **Must precede the first prod deploy.** `publicWebBaseUrl` and `jwtIssuer` are already `https://makables.cz`, and `PublicAppUrlsOptionsValidator` runs at startup — deploying first mints JWTs with an issuer nothing serves and sends emails linking to a host that does not resolve. Those emails are unrecallable |
 | P3 | First-admin bootstrap | M | `Register.cs` rejects `UserRole.Admin`; the seeder hard-refuses any target containing `prod` |
 | P4 | Gate the public catalog on `Maker.IsVerified` | S | Becomes load-bearing in prod, which has no pre-verified seeded makers |
 | P5 | Go-live data runbook | M | A fresh prod DB has reference data but zero makers/products. Chain: bootstrap admin → maker registers → ARES → admin verifies → maker creates product. Contains an external party; cannot be compressed into a deploy window |
 | P6 | Approved VOP / GDPR legal text | M | **Blocked on counsel** — Q-0030. Scope is `/vop` + `/gdpr` only; `/kontakt` already ships real operator identity |
+
+> **P1 is a decision, not just work.** Two ways to give prod a path to Postgres:
+> enable the existing `allowAllAzureServices` firewall rule (one token, proven code
+> path — but it admits *any Azure resource in any tenant*, and with a published FQDN,
+> no auth lockout on Flexible Server, and the admin credential doubling as the
+> application credential, that is a standing credential-stuffing surface); or ship
+> VNet + private endpoint + private DNS as the *first-ever* prod deploy, ~60 lines of
+> Bicep that CI can lint but nobody can test. Sequencing matters more than either
+> choice: do not remove connectivity and add connectivity in the same change.
 
 ⚠️ **There is no staging environment.** `deploy-staging.yml` deploys *dev*; only two
 bicepparam files exist. Dev differs from prod in exactly the dimensions a launch

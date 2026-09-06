@@ -611,7 +611,7 @@ jobs:
   # and 503s the warmup probe forever — this job turns that into a RED run.
   # /health is the dependency-free liveness endpoint each API host maps.
   smoke:
-    name: Post-deploy smoke (/health)
+    name: Post-deploy smoke (/health + a DB-backed read)
     runs-on: ubuntu-latest
     needs: [backend, functions, frontend]
     timeout-minutes: 15
@@ -634,6 +634,42 @@ jobs:
               exit 1
             fi
           done
+
+      # /health is deliberately dependency-free (see each Program.cs), so a host
+      # whose database is unreachable still answers it with 200. That is the
+      # right call for a liveness probe and the wrong one for a deploy gate:
+      # production has no Postgres firewall rule and no private endpoint, so a
+      # prod deploy would report GREEN while every real request 500s.
+      #
+      # This probe closes that hole. GET /api/v1/catalog/makers is anonymous
+      # (CatalogController) and reads through EF Core, so it exercises
+      # connection-string resolution, the Key Vault reference, network
+      # reachability and the schema in one call. An empty catalog is still a
+      # 200 with a paging envelope, so the assertion is on SHAPE, not content —
+      # a fresh environment with no makers passes.
+      - name: Probe a DB-backed endpoint (the gate /health cannot be)
+        run: |
+          set -euo pipefail
+          url="https://app-makables-public-weu-dev.azurewebsites.net/api/v1/catalog/makers?country=CZ"
+          echo "probing $url"
+          for attempt in $(seq 1 10); do
+            body=$(curl -s --max-time 30 -w '\n%{http_code}' "$url" || printf '\n000')
+            code=$(printf '%s' "$body" | tail -n1)
+            payload=$(printf '%s' "$body" | sed '$d')
+            # grep, not jq: a missing jq on the runner would fail this closed and
+            # block every deploy, and the assertion does not need a JSON parser.
+            # "totalCount" is a PagedData<T> envelope field the controller can only
+            # produce after a successful COUNT against Postgres, so it cannot be
+            # forged by a host that booted without a database.
+            if [ "$code" = "200" ] && printf '%s' "$payload" | grep -q '"totalCount"'; then
+              echo "  database reachable — catalog returned a paging envelope"
+              exit 0
+            fi
+            echo "  attempt $attempt: HTTP $code — waiting 15s…"
+            sleep 15
+          done
+          echo "::error::dev public host never served a DB-backed response. The hosts are up (/health passed) but the database is unreachable or the schema is missing — check the Postgres firewall/private-endpoint path and the ConnectionStrings--Postgres Key Vault reference."
+          exit 1
 
       - name: Probe the frontend
         run: |

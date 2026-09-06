@@ -12,6 +12,23 @@ param envSlug = 'prod'
 param region = 'weu'
 param location = 'westeurope'
 
+// Postgres goes in northeurope, exactly as dev does. This is NOT a style
+// choice: main.bicep defaults `postgresLocation` to `location`, and this
+// subscription is offer-restricted for Postgres Flexible Server in westeurope
+// (LocationIsOfferRestricted) — see the same note in weu.dev.bicepparam, which
+// records westeurope and germanywestcentral as blocked and northeurope and
+// francecentral as open. Omitting this param silently inherits westeurope, so
+// the first production deploy would fail at server creation, before any app
+// setting or networking is ever evaluated.
+//
+// The region is fixed at creation, so this must be right the FIRST time: a
+// Flexible Server cannot be moved between regions, only dumped and restored.
+// It also decides whether a future private endpoint is same-region or
+// cross-region (Private Link supports both, but same-region is the simpler
+// shape), so revisit this together with the VNet work if the restriction is
+// ever lifted on this subscription.
+param postgresLocation = 'northeurope'
+
 // Per ADR 0023 §7: production runs General Purpose D2s_v3 Postgres and
 // P1v3 App Service Plan. Burstable / P0v3 were a draft-time mistake that
 // the T-0016 reviewer caught — both contradict the availability and
