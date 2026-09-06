@@ -81,6 +81,15 @@ public sealed record CatalogFilter(
 /// the city comes from the maker's registered address, the rating from
 /// the maker's denormalized stats.
 /// </summary>
+/// <remarks>
+/// <c>IsVerified</c> on this and the sibling public DTOs is constant-true since
+/// the catalog began filtering on it — every public read is gated, so an
+/// unverified maker never reaches a projection. The fields are kept
+/// deliberately: they are part of a published contract, every consumer renders
+/// nothing in the false branch, and removing them would be a breaking change
+/// that buys nothing. Recorded so the next reader does not have to re-derive
+/// whether they are dead.
+/// </remarks>
 public sealed record MakerListItem(
     string MakerId,
     string Slug,

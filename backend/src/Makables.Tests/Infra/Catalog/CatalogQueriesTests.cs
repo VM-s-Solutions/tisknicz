@@ -33,6 +33,7 @@ public class CatalogQueriesTests
         int totalOrders,
         bool emailConfirmed = true,
         bool userActive = true,
+        bool verified = true,
         string? categoryId = null,
         MakerLegalType? legalType = null)
     {
@@ -57,6 +58,10 @@ public class CatalogQueriesTests
             snapshotFetchedAt: Now, snapshotIsStale: false, countryCode: "CZ",
             slug: $"maker-{suffix}", legalType: legalType);
         maker.SetCatalogStats(ratingBp, ratingCount, totalOrders);
+        // Makers are born unverified; the public catalog only lists verified
+        // ones, so fixtures opt IN to verification the same way they do for
+        // email confirmation. `verified: false` is the unlisted case.
+        if (verified) maker.MarkVerified();
         h.Db.Set<Maker>().Add(maker);
 
         if (categoryId is not null)
@@ -81,6 +86,11 @@ public class CatalogQueriesTests
         SeedMaker(h, "1", "Listable s.r.o.", "Praha", 40000, 10, 5);
         SeedMaker(h, "2", "Unconfirmed s.r.o.", "Praha", 45000, 8, 3, emailConfirmed: false);
         SeedMaker(h, "3", "InactiveUser s.r.o.", "Praha", 50000, 20, 9, userActive: false);
+        // A self-registered maker who confirmed their email but has not been
+        // verified by an admin. Before the verification gate this row WAS
+        // listed and orderable — while CreateOrder rejected it at the last
+        // step. The storefront and the trust model disagreed.
+        SeedMaker(h, "4", "Unverified s.r.o.", "Praha", 50000, 30, 40, verified: false);
         await h.Db.SaveChangesAsync(default);
 
         var sut = new CatalogQueries(h.Db);

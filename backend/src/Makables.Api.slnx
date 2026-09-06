@@ -10,6 +10,7 @@
   <Project Path="Makables.Infra.PdfRendering/Makables.Infra.PdfRendering.csproj" />
   <Project Path="Makables.IntegrationTests/Makables.IntegrationTests.csproj" />
   <Project Path="Makables.Tests/Makables.Tests.csproj" />
+  <Project Path="Makables.Tools.AdminBootstrap/Makables.Tools.AdminBootstrap.csproj" />
   <Project Path="Makables.Tools.Seeder/Makables.Tools.Seeder.csproj" />
   <Project Path="Makables.TestUtilities/Makables.TestUtilities.csproj" />
   <Project Path="Makables.Web.Admin/Makables.Web.Admin.csproj" />
