@@ -45,12 +45,29 @@ yields a *working* app — once the operator does these. Full procedure:
   `rg-makables-weu-dev` / `rg-makables-weu-prod` resource group and the Entra app + federated
   credential bound to the GitHub environment (the workflows use OIDC, no stored
   password). See deploy-runbook §"One-time operator setup".
-- [ ] **Frontend custom domain (optional for dev):** the frontend runs on the
-  `makables-<env>-web` Azure App Service; its `NEXT_PUBLIC_*` settings are
-  injected by Bicep (pointing at the API hosts). To serve it on
-  `dev.makables.cz` / `makables.cz`, map the custom domain on the web App
-  Service + set `NEXT_PUBLIC_SITE_URL` to it. Until then the
-  `*.azurewebsites.net` hostname works.
+- [ ] **Frontend custom domain + TLS (prod, BLOCKING before go-live — not before the deploy):**
+  bind `makables.cz` and `admin.makables.cz` to `web-makables-weu-prod` and issue the free
+  managed certificates. Full procedure: `docs/runbooks/custom-domain-and-tls.md`.
+  - **Only the frontend App Service needs a domain.** The admin console is the `(admin)` route
+    group in the same Next.js app, and the four API hosts are reached through the same-origin
+    `/api-proxy` rewrite, so they need no custom hostname.
+  - **Sequence:** first prod deploy → verify the private DB path → bind the domain → *then* the
+    go-live data chain. The DNS records cannot be created earlier: the apex `A` record needs the
+    app's inbound IP and the `asuid` TXT its verification ID, both of which only exist once the
+    App Service is provisioned. The startup validator only checks the URL is well-formed https, so an
+    unbound domain does not block the deploy — it blocks anything that emails a user, because
+    delivered mail cannot be recalled.
+  - **Replace, do not add, the apex `A` record.** `makables.cz` already resolves to two
+    IPs, one of which is the shared VIP behind the *dev* app. Adding a third leaves DNS
+    round-robining into dead targets and can fail certificate issuance.
+  - **Re-register the OAuth redirect URIs in the same session** (Google + Apple). They are
+    built from `window.location.origin` at click time, so the cutover changes them and
+    every social sign-in fails with `redirect_uri_mismatch` until updated. See
+    `docs/deployment/oauth-providers.md`.
+  - Two constraints that break certificate **renewal** silently, months later: the `admin`
+    CNAME must point directly at `web-makables-weu-prod.azurewebsites.net` (no intermediate
+    CNAME), and the app must carry no IP restrictions (apex renewal requires public
+    reachability). Neither is set today; keep it that way.
 - [x] **Prod migration connectivity (RESOLVED — by design, not by exception):**
   the prod `migrate` job runs on a GitHub-hosted runner and opens a temporary
   runner-IP firewall rule for the migration window, then deletes it. That is

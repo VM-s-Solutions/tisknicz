@@ -109,6 +109,16 @@ customer. Change it after first sign-in.
 intentional. A platform with only soft-deleted admins has no reachable console,
 which is the situation this tool exists to resolve.
 
+> **Bind the custom domain before Step 2 — not before Step 1.** The placement of
+> this callout is deliberate: `AdminBootstrap` above only writes to the database
+> and sends no email, so it is safe to run first. Everything from Step 2 onward
+> sends user-facing email containing `https://makables.cz/...` links, and
+> delivered email cannot be recalled. See
+> [custom-domain-and-tls.md](./custom-domain-and-tls.md) — it runs after the
+> App Service is provisioned (both DNS records are derived from it) and before
+> Step 2. It also re-registers the OAuth redirect URIs, which the domain cutover
+> silently breaks.
+
 ## Step 2 — A real maker registers
 
 Self-service, through the **public** host — `RegisterMakerController` lives in

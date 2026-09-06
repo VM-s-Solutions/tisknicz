@@ -28,23 +28,38 @@ frontend) — the callback routes live on the shared `AuthController`.
 Only the customer and maker audiences use OAuth (admin is rejected
 server-side), so register the customer + maker hosts per environment:
 
+> **The redirect URI is on the FRONTEND origin, not the API host.**
+> `startGoogleOAuth` builds it as `apiHostBaseUrl(host) + '/api/v1/auth/...'`,
+> and since T-0153 `NEXT_PUBLIC_API_<HOST>_BASE_URL` is the relative
+> `/api-proxy/<host>`, so `apiHostBaseUrl` resolves it against
+> `window.location.origin`. Register the proxied form below — a bare
+> `app-makables-*.azurewebsites.net/api/v1/...` URI (what this doc listed before)
+> is never sent by the browser and will not match.
+
 **dev**
 
 ```
-https://app-makables-customer-weu-dev.azurewebsites.net/api/v1/auth/google/callback
-https://app-makables-maker-weu-dev.azurewebsites.net/api/v1/auth/google/callback
-https://app-makables-customer-weu-dev.azurewebsites.net/api/v1/auth/apple/callback
-https://app-makables-maker-weu-dev.azurewebsites.net/api/v1/auth/apple/callback
+https://web-makables-weu-dev.azurewebsites.net/api-proxy/customer/api/v1/auth/google/callback
+https://web-makables-weu-dev.azurewebsites.net/api-proxy/maker/api/v1/auth/google/callback
+https://web-makables-weu-dev.azurewebsites.net/api-proxy/customer/api/v1/auth/apple/callback
+https://web-makables-weu-dev.azurewebsites.net/api-proxy/maker/api/v1/auth/apple/callback
 ```
 
-**production** (once the prod RG exists; adjust if custom API domains are mapped)
+**production** — after the domain cutover in
+[custom-domain-and-tls.md](../runbooks/custom-domain-and-tls.md). Register the
+`azurewebsites.net` forms too while the cutover is being proven, then drop them.
 
 ```
-https://app-makables-customer-weu-prod.azurewebsites.net/api/v1/auth/google/callback
-https://app-makables-maker-weu-prod.azurewebsites.net/api/v1/auth/google/callback
-https://app-makables-customer-weu-prod.azurewebsites.net/api/v1/auth/apple/callback
-https://app-makables-maker-weu-prod.azurewebsites.net/api/v1/auth/apple/callback
+https://makables.cz/api-proxy/customer/api/v1/auth/google/callback
+https://makables.cz/api-proxy/maker/api/v1/auth/google/callback
+https://makables.cz/api-proxy/customer/api/v1/auth/apple/callback
+https://makables.cz/api-proxy/maker/api/v1/auth/apple/callback
 ```
+
+`admin.makables.cz` serves the same login pages (nothing routes on the Host
+header), so a sign-in started there yields
+`https://admin.makables.cz/api-proxy/customer/...`. Register that origin too, or
+accept that social sign-in fails on the admin hostname.
 
 Never point Google and Apple at the SAME redirect URL — the OAuth state
 signer's replay containment relies on the two providers keeping
@@ -129,7 +144,10 @@ Google" must land on Google's account chooser and come back logged in
 - Both providers' callbacks currently end on the backend's JSON
   response with session cookies set; the redirect back to the frontend
   is a known shared follow-up (PR #88 notes).
-- The consent screens show the `azurewebsites.net` hostnames until
-  custom API domains are mapped; map `api.makables.cz`-style domains
-  before launch for a trustworthy consent screen, and update the
-  registered URLs then.
+- The consent screens show the host of the `redirect_uri`. Because that URI is
+  now on the frontend origin (see the note above), binding `makables.cz` per
+  [custom-domain-and-tls.md](../runbooks/custom-domain-and-tls.md) is what makes
+  the consent screen trustworthy — **no `api.makables.cz`-style API domain is
+  needed**, and an earlier version of this section wrongly said one was. The
+  registered URIs must be updated as part of that cutover, or every social
+  sign-in breaks with `redirect_uri_mismatch`.
