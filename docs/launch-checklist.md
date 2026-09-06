@@ -100,12 +100,21 @@ ADR 0023 §7 target, and the runbook that covers it.
   host storage account (required for identity-based host storage) plus Blob Data Contributor and Queue
   Data Contributor. The app is on a Dedicated plan with `alwaysOn`, so there is no Azure Files
   dependency and therefore no `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` key to remove.
-  - **Both residuals are now closed in-pipeline.** The Functions app has an anonymous, dependency-free
-    `GET /api/health` (`HealthFunction`), and the smoke job in both deploy workflows probes it and fails
-    the deploy if it never answers. That also absorbs the RBAC-propagation window: identity-based host
-    storage means the host 403s until its role assignments propagate (~10 min), so the probe retries for
-    ~10 minutes before failing. What used to be an invisible race the deploy silently won is now a
-    condition the gate waits on and reports.
+  - **Both residuals are now closed in-pipeline**, by two steps, because one is not enough:
+    - `GET /api/health` (`HealthFunction`, anonymous, dependency-free) proves the site is up, the worker
+      is running and every `ValidateOnStart` options check passed. It also absorbs the RBAC-propagation
+      window — identity-based host storage 403s until role assignments propagate (~10 min), so the probe
+      waits that long. What was an invisible race the deploy won by luck is now a reported condition.
+    - It is **not sufficient on its own**, and the checklist should not pretend otherwise: container
+      validation only runs when `IsDevelopment()` and the deployed host runs as Production, so a broken
+      DI graph surfaces at first invocation, not startup — and a trigger whose `%Setting%` binding does
+      not resolve is reported "in error" while the host keeps serving `/api/health`. That is precisely
+      the outbox-never-drains failure. So a second step reads `/admin/host/status` and asserts
+      `state == Running` **with an empty `errors[]`**. Verified against stubbed host responses:
+      a function-in-error payload fails the gate.
+    - `HealthFunction` is anonymous by necessity (a keyed probe would need a host key, which lives in the
+      very storage the probe tests). That is a **named exception to ADR 0020**, amended in the same PR,
+      with HTTP concurrency caps in `host.json` as the compensating control.
 - [x] **Postgres Private Endpoint (prod) — SHIPPED in `infra/bicep/modules/network.bicep`.**
   Production gets a VNet, a private endpoint on the server, the
   `privatelink.postgres.database.azure.com` zone and a vnet link; the four API hosts and Functions

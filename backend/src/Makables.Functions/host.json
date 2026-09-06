@@ -8,7 +8,12 @@
             "batchSize": 16,
             "maxDequeueCount": 5,
             "newBatchThreshold": 8
+        },
+        "http": {
+            "maxConcurrentRequests": 25,
+            "maxOutstandingRequests": 50
         }
     },
-    "_comment_visibilityTimeout": "5 min covers SendGridOptions.PerSendTimeoutSeconds * RetryCount + DB SaveChanges + comfortable buffer. T-0029 sec reviewer M-10: too-tight a window risked a second worker dequeuing while worker A was mid-SaveChanges, defeating the idempotency guard for a slow send."
+    "_comment_visibilityTimeout": "5 min covers SendGridOptions.PerSendTimeoutSeconds * RetryCount + DB SaveChanges + comfortable buffer. T-0029 sec reviewer M-10: too-tight a window risked a second worker dequeuing while worker A was mid-SaveChanges, defeating the idempotency guard for a slow send.",
+    "_comment_http": "Concurrency limits exist because HealthFunction is the first UNAUTHENTICATED path into this worker process. Dedicated-plan defaults are unbounded (maxConcurrentRequests -1, maxOutstandingRequests -1, dynamicThrottlesEnabled false) and Program.cs deliberately registers no rate limiting, while main.bicep puts all six apps -- four API hosts, the frontend and Functions -- on ONE P1v3 plan at capacity 1. Unbounded anonymous requests would therefore contend for invocation slots with ProcessOutboxTimer in this same worker and for CPU with makables.cz on the same instance. These caps are far above real load (the only HTTP triggers are a health probe and two admin-initiated POSTs) and bound the blast radius. Excess requests get 429, which the smoke probe retries."
 }
