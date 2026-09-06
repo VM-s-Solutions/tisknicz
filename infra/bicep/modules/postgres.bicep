@@ -92,11 +92,13 @@ resource requireSsl 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@20
   }
 }
 
-// Staging-only: open to any Azure tenant. Production runs WITHOUT this
-// rule; T-0134 runbook covers the VNet integration that replaces it.
-// Without a connectivity rule, prod App Services cannot reach Postgres
-// over a vanilla deploy — the operator wires a Private Endpoint as part
-// of the pre-launch checklist.
+// Dev-only: open to any Azure tenant — which means any Azure resource in any
+// customer's subscription, so it is emphatically not a production posture.
+// Production runs WITHOUT this rule and reaches the server over the private
+// endpoint created by modules/network.bicep. That endpoint attaches alongside
+// public access (the two coexist by design); this module's network block is
+// deliberately never touched, because Flexible Server's networking mode is
+// fixed at creation.
 resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = if (allowAllAzureServices) {
   parent: server
   name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
@@ -115,6 +117,9 @@ resource entraAdmins 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2
     tenantId: subscription().tenantId
   }
 }]
+
+@description('Resource id — consumed by modules/network.bicep to attach a private endpoint. Exposing it changes nothing about the server itself; the network block above is deliberately never touched, because Flexible Server networking mode is fixed at creation.')
+output serverId string = server.id
 
 output serverFqdn string = server.properties.fullyQualifiedDomainName
 output serverName string = server.name

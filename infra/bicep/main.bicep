@@ -87,6 +87,9 @@ param jwtIssuer string
 @description('Ops email for metric alerts. Empty skips the alerts module entirely.')
 param alertEmail string = ''
 
+@description('Give the App Services a PRIVATE path to Postgres: a VNet, a private endpoint on the server, and the privatelink DNS zone. Production only. Dev keeps the "allow all Azure services" firewall rule instead — its plan is Basic and, more importantly, dev is live and there is no reason to re-plumb a working environment. This never touches the server\'s own network block: Flexible Server networking mode is fixed at creation, and a private endpoint attaches alongside public access rather than replacing it.')
+param enablePrivateNetworking bool = false
+
 @description('Comgate API base URL (Comgate:BaseUrl). Empty keeps the code default, which is the LIVE gateway (https://payments.comgate.cz) — so a non-production environment that will actually transact against Comgate must set this to the sandbox host. Dev normally never reaches Comgate at all: envSlug dev enables the DevPaymentProvider bypass below, which mints a synthetic session and never calls the gateway.')
 param comgateBaseUrl string = ''
 
@@ -108,6 +111,7 @@ var postgresServerName = 'pg-makables-${suffix}'
 var keyVaultName = 'kv-makables-${suffix}'
 var blobStorageName = 'stmakables${region}${envSlug}'
 var functionsStorageName = 'stmakablesfn${region}${envSlug}'
+var vnetName = 'vnet-makables-${suffix}'
 var appInsightsName = 'appi-makables-${suffix}'
 var workspaceName = 'log-makables-${suffix}'
 
@@ -150,12 +154,31 @@ module postgres 'modules/postgres.bicep' = {
     storageGb: postgresStorageGb
     administratorLogin: postgresAdminUser
     administratorLoginPassword: postgresAdminPassword
-    // Dev gets the "any Azure service" firewall rule for convenience;
-    // production goes through a Private Endpoint that the operator wires
-    // out-of-band per T-0134's runbook.
+    // Dev gets the "any Azure service" firewall rule for convenience.
+    // Production gets NO firewall rule at all and reaches Postgres over the
+    // private endpoint in modules/network.bicep — wired by this template, not
+    // out of band. With zero rules the server has no public path in.
     allowAllAzureServices: envSlug == 'dev'
   }
 }
+
+// Private path to Postgres. Depends on the server existing (for its id), so it
+// sits after the postgres module. The apps consume network.outputs only through
+// a ternary — referencing a conditional module's output unconditionally is a
+// compile error even when the condition is false.
+module network 'modules/network.bicep' = if (enablePrivateNetworking) {
+  name: 'network'
+  params: {
+    vnetName: vnetName
+    // Co-regional with the App Services, NOT with Postgres. Regional VNet
+    // integration requires the former; Private Link is global-reach, so the
+    // northeurope database is reached cross-region.
+    location: location
+    postgresServerId: postgres.outputs.serverId
+  }
+}
+
+var appSubnetId = enablePrivateNetworking ? network.outputs.integrationSubnetId : ''
 
 module blob 'modules/blob.bicep' = {
   name: 'blob'
@@ -362,6 +385,7 @@ module customerApp 'modules/app-service.bicep' = {
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
     extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
+    virtualNetworkSubnetId: appSubnetId
   }
 }
 
@@ -379,6 +403,7 @@ module makerApp 'modules/app-service.bicep' = {
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
     extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
+    virtualNetworkSubnetId: appSubnetId
   }
 }
 
@@ -396,6 +421,7 @@ module adminApp 'modules/app-service.bicep' = {
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
     extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
+    virtualNetworkSubnetId: appSubnetId
   }
 }
 
@@ -413,6 +439,7 @@ module publicApp 'modules/app-service.bicep' = {
     secretAppSettings: apiSecretSettings
     healthCheckPath: '/health'
     extraAppSettings: concat(devPaymentAppSettings, comgateBaseUrlSetting, comgateAllowlistSettings)
+    virtualNetworkSubnetId: appSubnetId
   }
 }
 
@@ -425,6 +452,12 @@ module functions 'modules/functions.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     secretAppSettings: functionsSecretSettings
     location: location
+    // The Functions host reaches Postgres for the outbox, so it needs the same
+    // private path as the API hosts. The frontend web app deliberately does NOT
+    // integrate: it holds no database setting and only proxies to the API hosts
+    // over the public internet, so putting it in the VNet would add a hop and
+    // consume subnet addresses for nothing.
+    virtualNetworkSubnetId: appSubnetId
   }
 }
 

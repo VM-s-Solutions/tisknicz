@@ -59,6 +59,9 @@ param dataRetentionCleanupSchedule string = '0 0 3 * * 0'
 
 param location string = resourceGroup().location
 
+@description('Delegated subnet for regional VNet integration. Empty = no integration (dev). The Functions host reaches Postgres for the outbox, so in production it needs the same private path the API hosts use. vnetRouteAllEnabled stays OFF: the queue triggers and the email/payment providers are all internet-bound and must keep going direct.')
+param virtualNetworkSubnetId string = ''
+
 resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   name: storageAccountName
   location: location
@@ -157,6 +160,7 @@ resource functionsApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: appServicePlanId
     httpsOnly: true
+    virtualNetworkSubnetId: empty(virtualNetworkSubnetId) ? null : virtualNetworkSubnetId
     siteConfig: {
       linuxFxVersion: 'DOTNET-ISOLATED|10.0'
       alwaysOn: true

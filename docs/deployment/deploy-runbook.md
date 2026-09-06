@@ -84,12 +84,21 @@ and is **not** an "Azure service", so the staging `allowAllAzureServices` rule
 does not admit it. The job therefore opens a **temporary firewall rule for the
 runner's IP**, applies the script, and removes the rule on exit (trap).
 
-**Production** has no public firewall opening (Private Endpoint per the
-launch-checklist). Options for the prod `migrate` job: (a) run it on a
-**self-hosted runner inside the VNet**, or (b) a deliberate break-glass temp
-firewall rule for the migration window. The prod workflow's `migrate` job uses
-the temp-rule approach and is commented accordingly; switch to a self-hosted
-runner once the VNet is wired.
+**Production** has no standing public firewall rule. The apps reach Postgres
+over a **private endpoint**, created by `infra/bicep/modules/network.bicep` as
+part of the normal deploy — not an out-of-band operator step.
+
+The prod `migrate` job still runs on a GitHub-hosted runner and still uses the
+break-glass temp firewall rule, and that is **the intended design, not a
+stopgap**: `publicNetworkAccess` stays `Enabled` on the server precisely so the
+rule can be opened for the migration window and deleted again. A private
+endpoint and public firewall rules coexist by design, and with zero standing
+rules the server has no public path in between migrations.
+
+Do **not** "switch to a self-hosted runner once the VNet is wired" — that
+advice predates the private endpoint and would buy nothing. If the temp-rule
+delete step ever fails the job now fails loudly; treat that as an incident and
+remove the rule by hand.
 
 ## Deploy
 
@@ -140,6 +149,7 @@ blue-green rollback is a launch-checklist hardening item (not yet wired).
 
 ## Still out of scope (launch-checklist hardening)
 
-Secrets → Key Vault references, `AzureWebJobsStorage` identity-based, Postgres
-Private Endpoint, Blob GRS + 30-day soft-delete, App Service deployment slots.
-See `docs/launch-checklist.md`.
+Blob GRS + 30-day soft-delete, App Service deployment slots. See
+`docs/launch-checklist.md`. (Secrets → Key Vault references and
+`AzureWebJobsStorage` identity-based both shipped in T-0134; the Postgres
+private endpoint ships with `modules/network.bicep`.)

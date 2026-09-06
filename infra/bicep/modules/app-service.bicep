@@ -48,6 +48,9 @@ param secretAppSettings array = []
 @description('App Service health-check path (Cleansia pattern). The platform pings it per instance; repeated non-2xx marks the instance unhealthy (and with >1 instance pulls it from rotation / restarts it). The API hosts expose a dependency-free liveness endpoint at /health (see each Program.cs). Empty disables the health check.')
 param healthCheckPath string = ''
 
+@description('Delegated subnet for regional VNet integration. Empty = no integration, which is how dev runs. When set, the app routes RFC1918 traffic through the VNet so it reaches the Postgres private endpoint; vnetRouteAllEnabled is deliberately left OFF so internet-bound calls (Key Vault references, Blob, Comgate, Packeta, Resend) keep going direct and do not need a NAT gateway.')
+param virtualNetworkSubnetId string = ''
+
 @description('Non-secret per-environment app settings as { name, value } pairs, appended after the base/secret/CORS sets. Used for switches that exist only in some environments — e.g. the dev payment bypass (Payments__Dev__*), which main.bicep passes ONLY when envSlug is dev.')
 param extraAppSettings array = []
 
@@ -116,6 +119,9 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: appServicePlanId
     httpsOnly: true
+    // Empty string would be an invalid resource id, so omit the property
+    // entirely when integration is off rather than sending a blank.
+    virtualNetworkSubnetId: empty(virtualNetworkSubnetId) ? null : virtualNetworkSubnetId
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
       alwaysOn: true
