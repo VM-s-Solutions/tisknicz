@@ -64,7 +64,7 @@ public static class BlobContainer
     /// <c>allowBlobPublicAccess: false</c>, so nothing is public-read at the
     /// storage layer. What these two are is anonymously *proxied*, which is a
     /// different claim — the bytes are equally reachable, but only through a
-    /// door the platform can rate-limit, cache, log and (once Q-0040 lands)
+    /// door the platform can rate-limit, cache, log and (once Q-0042 lands)
     /// revoke.
     /// </para>
     /// </summary>

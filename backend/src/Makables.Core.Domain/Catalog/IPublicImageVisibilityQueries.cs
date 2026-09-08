@@ -5,7 +5,7 @@ namespace Makables.Core.Domain.Catalog;
 /// (<c>ProductImageController</c>, <c>ProfileImageController</c>).
 ///
 /// <para>
-/// <b>Why this exists (Q-0040).</b> Those routes streamed by blob path alone —
+/// <b>Why this exists (Q-0042).</b> Those routes streamed by blob path alone —
 /// no product lookup, no soft-delete check, no maker-verification check. That
 /// made <see cref="Makables.Core.Domain.Makers.Maker"/>'s verification gate
 /// bypassable for image BYTES: every public read in <c>CatalogQueries</c> is
@@ -60,7 +60,7 @@ public interface IPublicImageVisibilityQueries
     /// The active check is what carries the weight here: self-service "Smazat
     /// účet" calls <c>MarkDeactivated</c>, which the global soft-delete filter
     /// then excludes, so an account deletion stops serving the photograph even
-    /// though the blob itself survives (Q-0041).
+    /// though the blob itself survives (Q-0043).
     /// </para>
     /// </summary>
     Task<bool> IsUserAvatarVisibleAsync(string userId, CancellationToken cancellationToken);

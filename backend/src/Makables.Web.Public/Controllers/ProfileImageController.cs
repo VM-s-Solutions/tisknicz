@@ -32,7 +32,7 @@ public sealed class ProfileImageController(
     IBlobStorageClient blobs,
     IPublicImageVisibilityQueries visibility) : MakablesApiController
 {
-    // Both routes gate before streaming (Q-0040). 404 rather than 403 so a
+    // Both routes gate before streaming (Q-0042). 404 rather than 403 so a
     // hidden subject is not probeable by id, matching the catalog's own reads.
     [HttpGet("makers/{country}/{makerId}/{filename}")]
     public async Task<IActionResult> GetMakerLogo(string country, string makerId, string filename, CancellationToken ct)
@@ -44,7 +44,7 @@ public sealed class ProfileImageController(
     // deletion take effect on the photograph: "Smazat účet" calls
     // MarkDeactivated, the global soft-delete filter then excludes the user, and
     // the avatar stops being served — even though the blob itself survives,
-    // which remains open as Q-0041.
+    // which remains open as Q-0043.
     [HttpGet("avatars/{country}/{userId}/{filename}")]
     public async Task<IActionResult> GetAvatar(string country, string userId, string filename, CancellationToken ct)
         => await visibility.IsUserAvatarVisibleAsync(userId, ct)

@@ -122,8 +122,9 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
   }
 }
 
-// Container map per ADR 0011: product-images + profile-images public read,
-// the rest private.
+// Container map per ADR 0011 — ALL SIX PRIVATE. (This line used to read
+// "product-images + profile-images public read"; that stopped being true when
+// the anonymous ACLs were closed above.)
 // MUST stay in sync with BlobContainer.All in
 // backend/src/Makables.Core.Domain/Storage/BlobContainer.cs — the client does
 // NOT auto-create containers, so a name in code but not here is a runtime 404
@@ -136,7 +137,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
 // changes is that there is now exactly one way in, which can be rate-limited,
 // cached, logged and revoked. Revocation is currently only POSSIBLE, not
 // implemented: neither image controller checks whether the product is still
-// visible or its maker still verified (see docs/questions/open.md Q-0040).
+// visible or its maker still verified (see docs/questions/open.md Q-0042).
 var containers = [
   { name: 'product-images', publicAccess: 'None' }
   { name: 'order-attachments', publicAccess: 'None' }

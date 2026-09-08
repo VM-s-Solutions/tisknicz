@@ -11,7 +11,7 @@ namespace Makables.Tests.Infra.Catalog;
 
 /// <summary>
 /// The gate the anonymous image routes consult before streaming a blob
-/// (Q-0040). These tests are the reason the maker-verification gate is no
+/// (Q-0042). These tests are the reason the maker-verification gate is no
 /// longer bypassable for image bytes, so each one pins a way in which the
 /// asset layer used to disagree with the catalog:
 ///
@@ -200,7 +200,7 @@ public class PublicImageVisibilityQueriesTests
     }
 
     /// <summary>
-    /// The Q-0041 mitigation. Self-service "Smazat účet" calls
+    /// The Q-0043 mitigation. Self-service "Smazat účet" calls
     /// <c>MarkDeactivated</c>; the global soft-delete filter then excludes the
     /// row, so the photograph stops being served even though the blob itself
     /// survives in storage.

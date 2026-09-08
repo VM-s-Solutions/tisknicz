@@ -431,7 +431,7 @@ same edit.
 - **Answer (filled by user):** All four — groomed as **T-0127** (admin-read-gaps bundle, 2026-06-15), one cross-stack PR. **(1 PRIORITY) GetCountryConfiguration GET** `GET /api/v1/country-configurations/{code}` returns the **exact** `UpdateCountryConfiguration` Response field set (`StandardVatRateBp, ReducedVatRateBp, InvoicingMode, PlatformFeeRateBp, DefaultShippingPriceMinor, DefaultPaymentProvider, DefaultShippingCarrier, DefaultRegistry, DefaultEmailProvider`) via `ICountryConfigurationRepository.GetByCodeAsync`; 404 reuses `CountryConfigurationNotFound` (no new code) — **removes the PR-2 full-replace fence**: the T-0118c form pre-fills SSR, the warning banner downgrades to an info note, and the provider retype modal gates on an **actual provider-code diff** (T-0118c AC-4/AC-5 now met). **(2) GetAdminOrderDetail** `GET /api/v1/admin-orders/{orderId}` → privileged `AdminOrderDetailDto` (see Q-0024) over `GetByIdUnscopedAsync`; plus a `customerUserId`/`makerId` filter on the admin-orders read = the per-user in-flight signal driving the delete-user proactive pre-disable. **(3) Stalled-outbox LIST** `GET /api/v1/outbox-events/stalled` (paged) reusing the **exact** T-0126/T-0109 predicate `ProcessedAt==null && NextRetryAt==null && LastErrorKind!=None`. **(4) Payout-batch LIST** `GET /api/v1/payout-batches` (paged, Unscoped — the GET on the existing CreatePayoutBatch POST route). All four mirror the T-0111 `IAdminQueries` precedent (AsNoTracking, Unscoped, globally-unique Response, `[Authorize]` admin); the form/order-detail/delete-user/outbox/payout surfaces re-wire in the same PR. NSwag regen admin host (4 methods); zero new codes / migrations / unique indexes.
 
 ## Q-0030 — Approved legal text for /vop (obchodní podmínky) + /gdpr (privacy/cookie)
-- **Added requirement 2026-09-08 (from Q-0041):** the approved text must state the **two-tier
+- **Added requirement 2026-09-08 (from Q-0043):** the approved text must state the **two-tier
   deletion model** — that self-service "Smazat účet" deactivates the account and does not erase
   personal data, that erasure is available on request to the operator address, and which records are
   retained regardless (invoices, and a maker's IČO under `IsRetainedForLegal`). The UI already says
@@ -666,7 +666,10 @@ same edit.
 
 ---
 
-## Q-0040 — the anonymous image proxy has no visibility gate
+## Q-0042 — the anonymous image proxy has no visibility gate
+
+> Filed as *Q-0040* in the first commits on this branch and renumbered: Q-0040 was already taken by
+> the reactivation-policy question. Earlier commit messages on this branch still say Q-0040.
 
 - **Status: RESOLVED 2026-09-08 — gated, in the same PR.** Both Public-host image controllers now
   consult `IPublicImageVisibilityQueries` before touching storage and return **404** (not 403, so a
@@ -685,7 +688,7 @@ same edit.
   If measurement ever justifies one it belongs behind the interface.
 - **Known and accepted:** revocation is not instant. A client or CDN holding a copy keeps it for up
   to 24h regardless of this gate. The gate stops *new* fetches, which is what was missing.
-- **Still open:** nothing in this question. The residue moved to Q-0041.
+- **Still open:** nothing in this question. The residue moved to Q-0043.
 
 <details><summary>Original write-up (kept for the reasoning)</summary>
 
@@ -741,7 +744,10 @@ default to be invented.
 
 ---
 
-## Q-0041 — self-service "Smazat účet" leaves the avatar blob in place
+## Q-0043 — self-service "Smazat účet" leaves the avatar blob in place
+
+> Filed as *Q-0041* on this branch and renumbered — Q-0041 was already the order-escape-hatches
+> question. Earlier commit messages on this branch still say Q-0041.
 
 - **Status: PARTIALLY RESOLVED 2026-09-08.** Two of the three sub-items are fixed; the policy
   question is still yours.

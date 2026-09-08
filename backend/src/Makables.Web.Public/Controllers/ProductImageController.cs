@@ -33,7 +33,7 @@ public sealed class ProductImageController(
     [HttpGet("{country}/{productId}/{filename}")]
     public async Task<IActionResult> Get(string country, string productId, string filename, CancellationToken ct)
     {
-        // Q-0040: gate BEFORE the storage round-trip. Streaming by path alone
+        // Q-0042: gate BEFORE the storage round-trip. Streaming by path alone
         // made the maker-verification gate bypassable for image bytes — every
         // public read in CatalogQueries is gated on m.IsVerified, so an
         // unverified maker's products are invisible in the catalog, but their

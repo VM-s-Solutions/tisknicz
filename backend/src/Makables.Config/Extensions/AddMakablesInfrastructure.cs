@@ -285,7 +285,7 @@ public static class MakablesInfrastructureExtensions
         services.AddScoped<ICatalogQueries, CatalogQueries>();
 
         // The gate the anonymous image routes on the Public host consult before
-        // streaming a blob (Q-0040). Registered here rather than only on the
+        // streaming a blob (Q-0042). Registered here rather than only on the
         // Public host because the interface lives in Core.Domain and the two
         // controllers that use it resolve it from the shared container.
         services.AddScoped<IPublicImageVisibilityQueries, PublicImageVisibilityQueries>();

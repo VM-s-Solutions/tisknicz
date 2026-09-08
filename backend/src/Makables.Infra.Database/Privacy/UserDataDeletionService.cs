@@ -180,7 +180,7 @@ public sealed class UserDataDeletionService(
         // links the residue back to the subject). See the class remarks
         // for why this runs pre-commit.
         //
-        // Q-0041: the result used to be DISCARDED, and that made a transient
+        // Q-0043: the result used to be DISCARDED, and that made a transient
         // failure unrecoverable. DeleteAsync does not throw — it catches and
         // returns BusinessResult.Failure — while the pointer holding the path
         // (User.AvatarBlobPath / Maker.LogoBlobPath) is nulled in the very same

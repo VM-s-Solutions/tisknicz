@@ -14,7 +14,7 @@ namespace Makables.Tests.Infra.Privacy;
 /// <summary>
 /// Covers the GDPR erasure step that deletes profile imagery — the one action
 /// that makes storing user photographs defensible at all, and which had ZERO
-/// coverage before this class (Q-0041). No test anywhere seeded an
+/// coverage before this class (Q-0043). No test anywhere seeded an
 /// <c>AvatarBlobPath</c> or a <c>LogoBlobPath</c>, so the
 /// <c>if (!string.IsNullOrEmpty(path))</c> guard was always false and the
 /// delete loop never executed in CI.
@@ -96,7 +96,7 @@ public class UserDataDeletionServiceBlobTests
     }
 
     /// <summary>
-    /// The Q-0041 defect. <c>DeleteAsync</c> does not throw — it returns
+    /// The Q-0043 defect. <c>DeleteAsync</c> does not throw — it returns
     /// <c>BusinessResult.Failure</c> — and the pointer holding the path is
     /// nulled in the same transaction, so a discarded failure orphaned a
     /// photograph of the subject with nothing recording where it was. The
