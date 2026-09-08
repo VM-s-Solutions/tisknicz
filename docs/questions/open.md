@@ -431,6 +431,11 @@ same edit.
 - **Answer (filled by user):** All four — groomed as **T-0127** (admin-read-gaps bundle, 2026-06-15), one cross-stack PR. **(1 PRIORITY) GetCountryConfiguration GET** `GET /api/v1/country-configurations/{code}` returns the **exact** `UpdateCountryConfiguration` Response field set (`StandardVatRateBp, ReducedVatRateBp, InvoicingMode, PlatformFeeRateBp, DefaultShippingPriceMinor, DefaultPaymentProvider, DefaultShippingCarrier, DefaultRegistry, DefaultEmailProvider`) via `ICountryConfigurationRepository.GetByCodeAsync`; 404 reuses `CountryConfigurationNotFound` (no new code) — **removes the PR-2 full-replace fence**: the T-0118c form pre-fills SSR, the warning banner downgrades to an info note, and the provider retype modal gates on an **actual provider-code diff** (T-0118c AC-4/AC-5 now met). **(2) GetAdminOrderDetail** `GET /api/v1/admin-orders/{orderId}` → privileged `AdminOrderDetailDto` (see Q-0024) over `GetByIdUnscopedAsync`; plus a `customerUserId`/`makerId` filter on the admin-orders read = the per-user in-flight signal driving the delete-user proactive pre-disable. **(3) Stalled-outbox LIST** `GET /api/v1/outbox-events/stalled` (paged) reusing the **exact** T-0126/T-0109 predicate `ProcessedAt==null && NextRetryAt==null && LastErrorKind!=None`. **(4) Payout-batch LIST** `GET /api/v1/payout-batches` (paged, Unscoped — the GET on the existing CreatePayoutBatch POST route). All four mirror the T-0111 `IAdminQueries` precedent (AsNoTracking, Unscoped, globally-unique Response, `[Authorize]` admin); the form/order-detail/delete-user/outbox/payout surfaces re-wire in the same PR. NSwag regen admin host (4 methods); zero new codes / migrations / unique indexes.
 
 ## Q-0030 — Approved legal text for /vop (obchodní podmínky) + /gdpr (privacy/cookie)
+- **Added requirement 2026-09-08 (from Q-0041):** the approved text must state the **two-tier
+  deletion model** — that self-service "Smazat účet" deactivates the account and does not erase
+  personal data, that erasure is available on request to the operator address, and which records are
+  retained regardless (invoices, and a maker's IČO under `IsRetainedForLegal`). The UI already says
+  this; until the policy does too, the deletion dialog's link to `/gdpr` resolves to a placeholder.
 - **From:** BA/PM
 - **Ticket / context:** T-0130 (static public pages, public-polish bundle); BLOCKING pre-launch
 - **Asked:** 2026-06-20
@@ -751,12 +756,27 @@ default to be invented.
   - **Fixed — the untested branch.** `UserDataDeletionServiceBlobTests` seeds a user WITH an
     `AvatarBlobPath` and a maker WITH a `LogoBlobPath`; nothing in the suite did before, so the
     delete loop never executed in CI. Three tests, mutation-checked.
-- **STILL OPEN, and it is a policy question, not a code one:** is self-service "Smazat účet"
-  *intended* to satisfy an Art. 17 erasure request, or is erasure explicitly an operator-serviced
-  request? If the former, `DeleteMyAccount` must run the erasure matrix rather than only
-  deactivating. If the latter, the UI copy and the privacy policy must say so — a button labelled
-  "delete account" that keeps the user's photograph is the kind of gap that reads badly in a
-  complaint. **This needs an answer from JVM YORE before launch.**
+- **ANSWERED 2026-09-08 by the user: keep two tiers, fix the disclosure.** Self-service deletion
+  stays a deactivation; GDPR erasure remains an operator-serviced request run through the admin
+  command. Recorded as a decision in ADR 0013 §"Hard delete (GDPR)" — which described the admin
+  command but had never stated what the user's own button does, or why the two differ.
+- **Shipped with that decision:**
+  - `profile.delete_account.description` now states plainly that the account is deactivated and that
+    personal data is **not** thereby erased. The previous copy said "trvale deaktivován" — accurate,
+    but it left the retention unsaid.
+  - `profile.delete_account.erasure_note` gives the operator address (single-sourced from
+    `static.contact.operator_email_value`) so a user who wants erasure finally has somewhere to go.
+    The capability existed; the route to it did not.
+  - `delete-account-section.test.tsx` pins both, so a later copy edit cannot quietly turn the
+    two-tier design back into a promise the system does not keep. Mutation-checked: restoring the old
+    wording fails 3 of 4.
+- **Correction to this question's original framing.** It claimed a button labelled "delete account"
+  that keeps the user's photograph "reads badly in a complaint". The shipped copy already said
+  *deactivated*, not deleted, so the gap was narrower than stated — the real gaps were the unsaid
+  retention and the missing erasure route, both now closed.
+- **Remaining dependency — Q-0030, not this question.** The binding privacy text is still a
+  placeholder pending counsel, and it must carry the same two-tier statement. The UI strings describe
+  system behaviour; they are not a substitute for the policy.
 
 <details><summary>Original write-up</summary>
 

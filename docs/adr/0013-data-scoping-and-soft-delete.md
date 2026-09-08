@@ -83,6 +83,36 @@ A single admin command: `DeleteUserPermanently.Command(userId, reason)` calls a 
 
 This service is the **only** place EF Core hard-delete (`Remove()` + commit) is called for user data. Reviewer enforces.
 
+#### Two tiers, and which one the user's own button reaches (recorded 2026-09-08)
+
+This section always described the admin command; it never said what the **self-service** "Smazat
+účet" does, and the two are deliberately not the same thing:
+
+| | Self-service — `DeleteMyAccount` | Admin — `DeleteUserPermanently` |
+|---|---|---|
+| Who runs it | The account holder, from their profile | An admin, on request |
+| What it does | `MarkDeactivated` on user + maker, revokes every refresh token | The full matrix above |
+| Personal data | **Retained.** Rows are hidden by the soft-delete query filter, not removed | Anonymised or hard-deleted |
+| Reversible | Yes, by an admin | No |
+
+**Why deactivation and not erasure.** Erasure is irreversible and has statutory carve-outs — invoices
+and the maker's IČO are retained under `IsRetainedForLegal` — so it needs a human who can judge what
+must survive. Letting an end user trigger it from a form would make an unrecoverable operation
+self-serve, and an accidental click would destroy review history and order contact data with no
+support path back. Erasure is therefore a **request**, which is exactly what "executed by a dedicated
+admin command" above already implied.
+
+**What that obliges the UI to say.** A two-tier model is only honest while the interface discloses
+it. `profile.delete_account.description` therefore states that the account is deactivated and that
+personal data is *not* thereby erased, and `profile.delete_account.erasure_note` gives the operator
+address to request erasure plus the retention caveat. Those strings are pinned by
+`delete-account-section.test.tsx` precisely so a later copy edit cannot silently turn this back into
+a promise the system does not keep.
+
+**Still open — Q-0030.** The binding privacy-policy text is a placeholder pending counsel. It must
+carry the same two-tier statement; until it does, the dialog's link to `/gdpr` resolves to nothing.
+The UI wording above describes system behaviour and is not a substitute for that text.
+
 ### Defense in depth
 
 Even though we don't use Postgres RLS, we have three layers of authorization:

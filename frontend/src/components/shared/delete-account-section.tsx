@@ -57,6 +57,11 @@ export function DeleteAccountSection({ host }: { host: ApiHost }) {
       {host === 'maker' && (
         <p className="text-sm leading-relaxed text-zinc-400">{t('profile.delete_account.maker_note')}</p>
       )}
+      <p className="text-sm leading-relaxed text-zinc-400">
+        {t('profile.delete_account.erasure_note', {
+          email: t('static.contact.operator_email_value'),
+        })}
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {serverError && <Alert variant="error">{serverError}</Alert>}
         <Input
