@@ -7,6 +7,7 @@ using Makables.Core.Domain.Privacy;
 using Makables.Core.Domain.Reviews;
 using Makables.Core.Domain.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Makables.Infra.Database.Privacy;
 
@@ -35,7 +36,10 @@ namespace Makables.Infra.Database.Privacy;
 /// publicly-fetchable photo of the subject is a GDPR breach.
 /// </para>
 /// </summary>
-public sealed class UserDataDeletionService(MakablesDbContext db, IBlobStorageClient blobs)
+public sealed class UserDataDeletionService(
+    MakablesDbContext db,
+    IBlobStorageClient blobs,
+    ILogger<UserDataDeletionService> logger)
     : IUserDataDeletionService
 {
     private static readonly OrderState[] InFlightStates =
@@ -175,11 +179,28 @@ public sealed class UserDataDeletionService(MakablesDbContext db, IBlobStorageCl
         // lawful erasure (the pointers are gone either way, so nothing
         // links the residue back to the subject). See the class remarks
         // for why this runs pre-commit.
+        //
+        // Q-0041: the result used to be DISCARDED, and that made a transient
+        // failure unrecoverable. DeleteAsync does not throw — it catches and
+        // returns BusinessResult.Failure — while the pointer holding the path
+        // (User.AvatarBlobPath / Maker.LogoBlobPath) is nulled in the very same
+        // transaction. So a failed delete left an orphaned photograph of the
+        // subject with nothing anywhere recording where it was. Logging the
+        // path at Warning is what makes that residue findable afterwards; it is
+        // a blob path, not personal data, so it is safe to log under the
+        // no-PII-in-logs rule.
         foreach (var path in new[] { makerLogoBlobPath, avatarBlobPath })
         {
-            if (!string.IsNullOrEmpty(path))
+            if (string.IsNullOrEmpty(path)) continue;
+
+            var deletion = await blobs.DeleteAsync(BlobContainer.ProfileImages, path, ct);
+            if (!deletion.IsSuccess)
             {
-                await blobs.DeleteAsync(BlobContainer.ProfileImages, path, ct);
+                logger.LogWarning(
+                    "GDPR erasure for user {UserId}: profile image blob delete FAILED for {BlobPath} ({ErrorCode}). "
+                    + "The pointer is being cleared in this transaction, so this log line is the only "
+                    + "remaining record of the orphaned blob — delete it manually.",
+                    userId, path, deletion.Error?.Code);
             }
         }
 

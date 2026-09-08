@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,11 +26,29 @@ namespace Makables.Web.Public.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/files/products")]
 [AllowAnonymous]
-public sealed class ProductImageController(IBlobStorageClient blobs) : MakablesApiController
+public sealed class ProductImageController(
+    IBlobStorageClient blobs,
+    IPublicImageVisibilityQueries visibility) : MakablesApiController
 {
     [HttpGet("{country}/{productId}/{filename}")]
     public async Task<IActionResult> Get(string country, string productId, string filename, CancellationToken ct)
     {
+        // Q-0040: gate BEFORE the storage round-trip. Streaming by path alone
+        // made the maker-verification gate bypassable for image bytes — every
+        // public read in CatalogQueries is gated on m.IsVerified, so an
+        // unverified maker's products are invisible in the catalog, but their
+        // image URLs still returned 200 to anyone holding one.
+        //
+        // 404, not 403: the catalog's own detail read returns null "so it isn't
+        // probeable by id", and a distinguishable 403 would confirm that a
+        // hidden product exists. This also runs ahead of the conditional-GET
+        // branch below, so a client holding a matching ETag stops receiving 304
+        // confirmations once the product is withdrawn.
+        if (!await visibility.IsProductImageVisibleAsync(productId, ct))
+        {
+            return NotFound();
+        }
+
         var blobPath = $"{country.ToLowerInvariant()}/products/{productId}/{filename}";
         var result = await blobs.DownloadAsync(BlobContainer.ProductImages, blobPath, ct);
         if (!result.IsSuccess)

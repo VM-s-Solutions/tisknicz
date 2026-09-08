@@ -663,6 +663,27 @@ same edit.
 
 ## Q-0040 — the anonymous image proxy has no visibility gate
 
+- **Status: RESOLVED 2026-09-08 — gated, in the same PR.** Both Public-host image controllers now
+  consult `IPublicImageVisibilityQueries` before touching storage and return **404** (not 403, so a
+  hidden subject stays unprobeable by id). The predicates mirror `CatalogQueries` exactly: active row
+  + confirmed email + `IsVerified` for products and maker logos; active row + confirmed email for
+  avatars. 14 tests pin it, and two mutations were confirmed to break them — dropping `IsVerified`
+  fails 2, dropping the avatar gate fails 2.
+- **Option taken: (b)-without-the-cache**, not the (c) I first recommended. Rotating blob paths on
+  unverify/delete turned out worse on inspection: unverifying a maker with 200 products means 200+
+  blob copies, and it fights `DeleteProduct`, which deliberately keeps images addressable for
+  undelete. And the per-request lookup I was trying to avoid is not in fact a hot-path cost — the
+  route already performs a network round-trip to Azure Blob Storage, so an indexed local lookup is
+  strictly cheaper than work the endpoint does anyway. No cache was added: the responses carry
+  `Cache-Control: public, max-age=86400`, so repeat views never reach the database, and a cache would
+  trade a correctness surface (a revoked product served from a stale entry) for an unmeasured saving.
+  If measurement ever justifies one it belongs behind the interface.
+- **Known and accepted:** revocation is not instant. A client or CDN holding a copy keeps it for up
+  to 24h regardless of this gate. The gate stops *new* fetches, which is what was missing.
+- **Still open:** nothing in this question. The residue moved to Q-0041.
+
+<details><summary>Original write-up (kept for the reasoning)</summary>
+
 - **blocking:** no (nothing is broken today; this is an exposure, not an outage)
 - **Raised:** 2026-09-06, while investigating why `blob.bicep` shipped two anonymously-readable
   containers against CLAUDE.md PART 6.
@@ -711,9 +732,33 @@ Recommendation: **(c) for products, (a) for profile images**, on the grounds tha
 cost something at write time rather than on every read — but this is an architecture call, not a
 default to be invented.
 
+</details>
+
 ---
 
 ## Q-0041 — self-service "Smazat účet" leaves the avatar blob in place
+
+- **Status: PARTIALLY RESOLVED 2026-09-08.** Two of the three sub-items are fixed; the policy
+  question is still yours.
+  - **Fixed — the photograph stops being served.** Avatars are now gated on the user row being
+    active, and `MarkDeactivated` (what "Smazat účet" calls) takes the row out of the global
+    soft-delete filter. So after a self-service deletion the avatar 404s, even though the blob
+    survives in storage. This does not make the blob *gone*, but it removes the practical exposure.
+  - **Fixed — the discarded blob-delete result.** `UserDataDeletionService` now checks `.IsSuccess`
+    and logs the path at Warning when the delete fails, because the pointer is nulled in the same
+    transaction and that log line is otherwise the only remaining record of the orphan. A blob path
+    is not personal data, so it is safe to log.
+  - **Fixed — the untested branch.** `UserDataDeletionServiceBlobTests` seeds a user WITH an
+    `AvatarBlobPath` and a maker WITH a `LogoBlobPath`; nothing in the suite did before, so the
+    delete loop never executed in CI. Three tests, mutation-checked.
+- **STILL OPEN, and it is a policy question, not a code one:** is self-service "Smazat účet"
+  *intended* to satisfy an Art. 17 erasure request, or is erasure explicitly an operator-serviced
+  request? If the former, `DeleteMyAccount` must run the erasure matrix rather than only
+  deactivating. If the latter, the UI copy and the privacy policy must say so — a button labelled
+  "delete account" that keeps the user's photograph is the kind of gap that reads badly in a
+  complaint. **This needs an answer from JVM YORE before launch.**
+
+<details><summary>Original write-up</summary>
 
 - **blocking:** no
 - **Raised:** 2026-09-06, same investigation.
@@ -746,3 +791,5 @@ Related, and now documented in ADR 0023 §7's amendment: 30-day blob soft delete
 avatar is *recoverable* for 30 days by a holder of the account key. It is **not** readable in that
 window (Microsoft: "You can't read data in a soft-deleted blob or snapshot until the object is
 restored"), so it is a retention-lag question, not an exposure — but a documented one now.
+
+</details>
