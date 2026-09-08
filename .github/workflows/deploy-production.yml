@@ -54,6 +54,32 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Fail in seconds instead of ~20 minutes deep. Storage SKU entitlement is
+      # SUBSCRIPTION-scoped, and this subscription is already offer-restricted
+      # for Postgres Flexible Server in westeurope (see weu.prod.bicepparam), so
+      # Standard_GZRS being available is not an assumption we get to make.
+      # Without this a restriction surfaces inside the `blob` module after the
+      # App Service Plan, App Insights, the VNet and a fresh Postgres server all
+      # exist, on a first-ever deploy that cannot be cleanly torn down because
+      # the Key Vault has already taken a 90-day name lock.
+      #
+      # The logic lives in scripts/ so it is unit-testable against stubbed API
+      # responses, and so deploy-staging.yml runs the IDENTICAL code on every dev
+      # deploy — otherwise this step's first ever execution would be the single
+      # production run it exists to protect. It fails CLOSED on a definite
+      # "restricted"/"not offered" and OPEN on an inability to ask (the deploy
+      # principal is Contributor scoped to the resource group, while this query
+      # needs subscription-scope read). ARM remains the real gate.
+      - name: Pre-flight — the blob SKU is entitled in this subscription/region
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            bash scripts/preflight-storage-sku.sh \
+              infra/bicep/envs/weu.prod.bicepparam \
+              "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
       - name: Deploy Bicep
         uses: azure/cli@v2
         env:
@@ -491,74 +517,84 @@ jobs:
   # (missing/empty secret, unresolved Key Vault reference) never binds its port
   # and 503s the warmup probe forever — this job turns that into a RED run.
   smoke:
-    name: Post-deploy smoke (/health + a DB-backed read)
+    name: Post-deploy smoke (hosts + a DB-backed read + the Functions host)
     runs-on: ubuntu-latest
     needs: [backend, functions, frontend]
-    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+    # Budget is the SUM of the per-step deadlines below (8 + 5 + 5 + 12 = 30 min)
+    # plus headroom for checkout, login and one in-flight request per step. The
+    # steps use wall-clock deadlines rather than attempt counts, so these numbers
+    # are the real worst case. The previous attempt-count loops added up to ~41
+    # minutes inside a 15-minute budget, which meant a genuinely slow deploy was
+    # cancelled by GitHub instead of reporting the error the gate is written for.
+    timeout-minutes: 35
     steps:
+      - uses: actions/checkout@v4
+
+      # All four share one App Service Plan and restart together, so they warm up
+      # together: one 8-minute deadline for the set, not 8 minutes each.
       - name: Probe /health on every API host
         run: |
           set -euo pipefail
-          hosts=(app-makables-customer-weu-prod app-makables-maker-weu-prod app-makables-admin-weu-prod app-makables-public-weu-prod)
-          for h in "${hosts[@]}"; do
-            echo "probing https://$h.azurewebsites.net/health"
-            ok=0
-            for attempt in $(seq 1 12); do
-              code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "https://$h.azurewebsites.net/health" || echo 000)
-              if [ "$code" = "200" ]; then echo "  healthy"; ok=1; break; fi
-              echo "  attempt $attempt: HTTP $code — waiting 15s (cold start / KV reference resolution)…"
-              sleep 15
-            done
-            if [ "$ok" -ne 1 ]; then
-              echo "::error::$h never returned 200 on /health — check its Log stream and the Key Vault reference status on its Environment variables blade."
-              exit 1
-            fi
+          deadline=$(( $(date +%s) + 480 ))
+          for h in app-makables-customer-weu-prod app-makables-maker-weu-prod app-makables-admin-weu-prod app-makables-public-weu-prod; do
+            left=$(( deadline - $(date +%s) ))
+            [ "$left" -lt 30 ] && left=30
+            bash scripts/smoke-probe.sh "https://$h.azurewebsites.net/health" "$left" "" "$h /health"
           done
 
       # /health is deliberately dependency-free (see each Program.cs), so a host
-      # whose database is unreachable still answers it with 200. That is the
-      # right call for a liveness probe and the wrong one for a deploy gate:
-      # production has no Postgres firewall rule and no private endpoint, so a
-      # prod deploy would report GREEN while every real request 500s.
-      #
-      # This probe closes that hole. GET /api/v1/catalog/makers is anonymous
-      # (CatalogController) and reads through EF Core, so it exercises
-      # connection-string resolution, the Key Vault reference, network
-      # reachability and the schema in one call. An empty catalog is still a
-      # 200 with a paging envelope, so the assertion is on SHAPE, not content —
-      # a fresh environment with no makers passes.
+      # whose database is unreachable still answers 200. That is right for a
+      # liveness probe and wrong for a deploy gate. GET /api/v1/catalog/makers is
+      # anonymous and reads through EF Core, so it exercises connection-string
+      # resolution, the Key Vault reference, network reachability and the schema
+      # in one call. The assertion is on SHAPE — "totalCount" is a PagedData<T>
+      # envelope field a host without a database cannot produce — so a fresh
+      # environment with an empty catalog still passes.
       - name: Probe a DB-backed endpoint (the gate /health cannot be)
         run: |
           set -euo pipefail
-          url="https://app-makables-public-weu-prod.azurewebsites.net/api/v1/catalog/makers?country=CZ"
-          echo "probing $url"
-          for attempt in $(seq 1 10); do
-            body=$(curl -s --max-time 30 -w '\n%{http_code}' "$url" || printf '\n000')
-            code=$(printf '%s' "$body" | tail -n1)
-            payload=$(printf '%s' "$body" | sed '$d')
-            # grep, not jq: a missing jq on the runner would fail this closed and
-            # block every deploy, and the assertion does not need a JSON parser.
-            # "totalCount" is a PagedData<T> envelope field the controller can only
-            # produce after a successful COUNT against Postgres, so it cannot be
-            # forged by a host that booted without a database.
-            if [ "$code" = "200" ] && printf '%s' "$payload" | grep -q '"totalCount"'; then
-              echo "  database reachable — catalog returned a paging envelope"
-              exit 0
-            fi
-            echo "  attempt $attempt: HTTP $code — waiting 15s…"
-            sleep 15
-          done
-          echo "::error::prod public host never served a DB-backed response. The hosts are up (/health passed) but the database is unreachable or the schema is missing — check the Postgres firewall/private-endpoint path and the ConnectionStrings--Postgres Key Vault reference."
-          exit 1
+          bash scripts/smoke-probe.sh \
+            "https://app-makables-public-weu-prod.azurewebsites.net/api/v1/catalog/makers?country=CZ" \
+            300 '"totalCount"' "public host, DB-backed catalog read"
 
       - name: Probe the frontend
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 8); do
-            code=$(curl -s -o /dev/null --max-time 30 -w '%{http_code}' "https://web-makables-weu-prod.azurewebsites.net/" || echo 000)
-            if [ "$code" = "200" ]; then echo "frontend healthy"; exit 0; fi
-            echo "attempt $attempt: HTTP $code — waiting 15s…"
-            sleep 15
-          done
-          echo "::error::frontend never returned 200"
-          exit 1
+          bash scripts/smoke-probe.sh "https://web-makables-weu-prod.azurewebsites.net/" 300 "" "frontend"
+
+      # Before this step the Functions host had NO externally observable surface
+      # — every other trigger is a timer or a queue trigger — so a host that
+      # never started deployed GREEN. That failure is silent: the worker exits
+      # before indexing a function, ProcessOutboxTimer never fires, the outbox
+      # never drains and no transactional email is ever sent.
+      #
+      # 12 minutes because AzureWebJobsStorage is identity-based: the host 403s
+      # on host storage until its managed-identity role assignments propagate,
+      # which Azure documents as taking up to ~10 minutes. That window used to be
+      # an invisible race the deploy won by luck.
+      - name: Probe /api/health on the Functions host
+        run: |
+          set -euo pipefail
+          bash scripts/smoke-probe.sh \
+            "https://func-makables-weu-prod.azurewebsites.net/api/health" 720 '"status"' "func-makables-weu-prod /api/health"
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # The probe above proves the site is up, the worker is running and every
+      # ValidateOnStart check passed — but NOT that the other functions indexed
+      # cleanly. Container validation only runs when IsDevelopment(), and the
+      # deployed host runs as Production, so an unresolvable handler dependency
+      # surfaces at first invocation. And a trigger whose %Setting% binding does
+      # not resolve is reported "in error" while the host keeps serving
+      # /api/health — the outbox-never-drains failure, with a green probe.
+      - name: Assert the Functions host is Running with no functions in error
+        run: |
+          set -euo pipefail
+          bash scripts/assert-functions-host-healthy.sh rg-makables-weu-prod func-makables-weu-prod

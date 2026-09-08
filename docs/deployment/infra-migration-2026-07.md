@@ -126,4 +126,5 @@ the frontend.
 Same sequence with `rg-makables-weu-prod` + the `production` GitHub Environment
 secrets, then dispatch `deploy-production.yml` (type `PRODUCTION`). Prod keeps
 its stricter posture: no permanent Postgres firewall opening (break-glass rule
-only during the migrate window), purge protection ON for the vault.
+only during the migrate window), purge protection ON for the vault (prod only — dev stays purgeable
+so it can be torn down and recreated under the same name).

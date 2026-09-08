@@ -155,8 +155,8 @@ public class AzureBlobStorageClientValidationTests
     [InlineData("maker-documents", false)]
     [InlineData("payouts", false)]
     [InlineData("unknown", false)]
-    public void BlobContainer_IsPublicRead_only_true_for_the_public_image_containers(string container, bool expected)
+    public void BlobContainer_IsAnonymouslyProxied_only_true_for_the_two_image_containers(string container, bool expected)
     {
-        BlobContainer.IsPublicRead(container).Should().Be(expected);
+        BlobContainer.IsAnonymouslyProxied(container).Should().Be(expected);
     }
 }

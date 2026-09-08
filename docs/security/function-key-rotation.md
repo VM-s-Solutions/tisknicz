@@ -6,6 +6,15 @@ T-0029 Functions (`ProcessOutboxFunction` HTTP trigger + the
 
 ## ProcessOutbox HTTP trigger
 
+> **The app has one anonymous HTTP trigger.** `GET /api/health` (`HealthFunction`) is
+> `AuthorizationLevel.Anonymous` and is therefore **not** protected by any key in this document —
+> rotating keys does not affect it, and it cannot be locked down without breaking the deploy gate
+> that depends on it. The reasoning and the compensating control (HTTP concurrency caps in
+> `host.json`, since it is the first unauthenticated path into the worker) are recorded in the
+> ADR 0020 amendment of 2026-09-06. It exposes only a status string and the build version.
+
+## Keyed endpoints
+
 - Route: `POST /api/outbox/process`
 - Auth: `AuthorizationLevel.Function` — caller must present `x-functions-key`
   in the request header (or `?code=` query string — prefer header so the

@@ -93,10 +93,28 @@ ADR 0023 §7 target, and the runbook that covers it.
   hosts get the "Key Vault Secrets User" role) **and** ensure the deploy identity has
   `roleAssignments/write` (User Access Administrator / Owner on the RG) — the default Contributor cannot
   create role assignments. Until then the KV is empty and the hosts read secrets as direct app settings.
-- [ ] **`AzureWebJobsStorage` identity-based (BLOCKING):** move the Functions storage connection from
-  an embedded account key to `AzureWebJobsStorage__accountName` + a managed-identity role assignment.
-  Closes the `TODO(T-0134)` in `infra/bicep/modules/functions.bicep`. Procedure:
-  `docs/runbooks/secret-rotation.md` §7 + §C.
+- [x] **`AzureWebJobsStorage` identity-based — ALREADY SHIPPED (this item was stale).**
+  `infra/bicep/modules/functions.bicep` sets `AzureWebJobsStorage__accountName` +
+  `AzureWebJobsStorage__credential = managedidentity`; there is no account key and no `TODO(T-0134)`
+  in that file. `role-assignments.bicep` grants the Functions MI Storage Blob Data **Owner** on its own
+  host storage account (required for identity-based host storage) plus Blob Data Contributor and Queue
+  Data Contributor. The app is on a Dedicated plan with `alwaysOn`, so there is no Azure Files
+  dependency and therefore no `WEBSITE_CONTENTAZUREFILECONNECTIONSTRING` key to remove.
+  - **Both residuals are now closed in-pipeline**, by two steps, because one is not enough:
+    - `GET /api/health` (`HealthFunction`, anonymous, dependency-free) proves the site is up, the worker
+      is running and every `ValidateOnStart` options check passed. It also absorbs the RBAC-propagation
+      window — identity-based host storage 403s until role assignments propagate (~10 min), so the probe
+      waits that long. What was an invisible race the deploy won by luck is now a reported condition.
+    - It is **not sufficient on its own**, and the checklist should not pretend otherwise: container
+      validation only runs when `IsDevelopment()` and the deployed host runs as Production, so a broken
+      DI graph surfaces at first invocation, not startup — and a trigger whose `%Setting%` binding does
+      not resolve is reported "in error" while the host keeps serving `/api/health`. That is precisely
+      the outbox-never-drains failure. So a second step reads `/admin/host/status` and asserts
+      `state == Running` **with an empty `errors[]`**. Verified against stubbed host responses:
+      a function-in-error payload fails the gate.
+    - `HealthFunction` is anonymous by necessity (a keyed probe would need a host key, which lives in the
+      very storage the probe tests). That is a **named exception to ADR 0020**, amended in the same PR,
+      with HTTP concurrency caps in `host.json` as the compensating control.
 - [x] **Postgres Private Endpoint (prod) — SHIPPED in `infra/bicep/modules/network.bicep`.**
   Production gets a VNet, a private endpoint on the server, the
   `privatelink.postgres.database.azure.com` zone and a vnet link; the four API hosts and Functions
@@ -109,15 +127,39 @@ ADR 0023 §7 target, and the runbook that covers it.
   A restored server needs the endpoint re-attached — see `docs/runbooks/backup-restore.md` §1.
   Note the deploy principal needs `Microsoft.Network/virtualNetworks/subnets/join/action` and
   `.../privateEndpointConnectionsApproval/action`; Owner covers both.
-- [ ] **Blob GRS (prod, BLOCKING):** `blob.bicep` ships `Standard_LRS`; ADR 0023 §7 wants
-  `Standard_GRS` in production. Until then, blob data has no geo-failover. Procedure:
-  `docs/runbooks/backup-restore.md` §2b + §C.
-- [ ] **Blob soft-delete 30-day (BLOCKING):** `blob.bicep` configures no soft-delete / versioning
-  policy; ADR 0023 §7 wants 30-day soft-delete. Until then, accidental blob deletes are NOT
-  recoverable. Procedure: `docs/runbooks/backup-restore.md` §2a + §C.
-- [ ] **Key Vault purge-protection (recommended):** `key-vault.bicep` enables 90-day soft-delete but
-  not purge-protection — consider enabling so secrets can't be hard-purged. Procedure:
-  `docs/runbooks/backup-restore.md` §3.
+- [x] **Blob redundancy (prod) — SHIPPED as `Standard_GZRS`.** `blob.bicep` takes a `skuName` param;
+  `weu.prod.bicepparam` sets `Standard_GZRS`, dev keeps the `Standard_LRS` default. ADR 0023 §7 was
+  **amended** (2026-09-06) from GRS to GZRS rather than silently deviated from: under GRS the
+  primary-region copy is LRS, so losing one West Europe datacenter takes the account offline and the
+  only recovery is a lossy customer-initiated unplanned failover. The zone axis is not a live SKU
+  update, so the first-ever deploy was the only free moment to choose.
+  - **Entitlement pre-flight is automated** — no operator step. `deploy-production.yml` runs a
+    "Pre-flight — the blob SKU is entitled in this subscription/region" step before the Bicep apply: it
+    reads the SKU and location straight out of `weu.prod.bicepparam` and queries the subscription's
+    `Microsoft.Storage/skus` restrictions, failing in seconds with a named reason instead of ~20 minutes
+    deep inside the `blob` module — which on a first-ever deploy would leave the plan, App Insights, the
+    VNet and a fresh Postgres server behind, with the Key Vault already holding a 90-day name lock.
+    SKU entitlement is subscription-scoped and this subscription is already offer-restricted for
+    Postgres Flexible Server in that exact region, so it is checked rather than assumed.
+- [x] **Blob + container soft-delete 30-day — SHIPPED.** `blob.bicep`'s existing `blobServices/default`
+  now carries `deleteRetentionPolicy` **and** `containerDeleteRetentionPolicy`, both 30 days, in every
+  environment. Container soft delete is the half that covers the catastrophic case: blob soft delete
+  alone does not recover a dropped container ("You can't recover blobs in the deleted container").
+  - **Versioning is deliberately NOT enabled**, and this item must not be "completed" by adding it.
+    With versioning on, deleting a blob produces no soft-deleted object, so `az storage blob undelete`
+    silently restores nothing — it would close this blocking item with a setting that breaks the exact
+    recovery command the item exists to deliver. See the ADR 0023 §7 amendment.
+- [x] **Key Vault purge-protection — ALREADY SHIPPED, prod-only (this item was stale).**
+  `key-vault.bicep` ships `enablePurgeProtection: endsWith(keyVaultName, '-prod') ? true : null`
+  alongside 90-day soft-delete. The name is not operator-supplied (`main.bicep` composes it from an
+  `@allowed(['dev','prod'])` slug), so prod is gated structurally on every deploy path while dev stays
+  purgeable and re-creatable. Deliberately left as a name-derived gate rather than a param: a param
+  would default to `false` and make silent omission the failure mode.
+  - **Know the consequence before the first prod deploy:** purge protection cannot be disabled by
+    anyone, including Microsoft, and the vault name stays reserved for 90 days. Deleting the resource
+    group and retrying a botched first prod deploy is therefore **off the table** once the vault is
+    created. Confirm `kv-makables-weu-prod` is globally free first (`az keyvault show` must return
+    NotFound, and `az keyvault list-deleted` must not list it).
 
 ## Security hardening (T-0136 / secops)
 

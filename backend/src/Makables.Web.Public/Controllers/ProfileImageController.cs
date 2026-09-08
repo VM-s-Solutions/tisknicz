@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Makables.Config.Controllers;
+using Makables.Core.Domain.Catalog;
 using Makables.Core.Domain.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,15 +28,28 @@ namespace Makables.Web.Public.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/files")]
 [AllowAnonymous]
-public sealed class ProfileImageController(IBlobStorageClient blobs) : MakablesApiController
+public sealed class ProfileImageController(
+    IBlobStorageClient blobs,
+    IPublicImageVisibilityQueries visibility) : MakablesApiController
 {
+    // Both routes gate before streaming (Q-0042). 404 rather than 403 so a
+    // hidden subject is not probeable by id, matching the catalog's own reads.
     [HttpGet("makers/{country}/{makerId}/{filename}")]
-    public Task<IActionResult> GetMakerLogo(string country, string makerId, string filename, CancellationToken ct) =>
-        StreamAsync($"{country.ToLowerInvariant()}/makers/{makerId}/{filename}", ct);
+    public async Task<IActionResult> GetMakerLogo(string country, string makerId, string filename, CancellationToken ct)
+        => await visibility.IsMakerImageVisibleAsync(makerId, ct)
+            ? await StreamAsync($"{country.ToLowerInvariant()}/makers/{makerId}/{filename}", ct)
+            : NotFound();
 
+    // The active-row half of this gate is what makes self-service account
+    // deletion take effect on the photograph: "Smazat účet" calls
+    // MarkDeactivated, the global soft-delete filter then excludes the user, and
+    // the avatar stops being served — even though the blob itself survives,
+    // which remains open as Q-0043.
     [HttpGet("avatars/{country}/{userId}/{filename}")]
-    public Task<IActionResult> GetAvatar(string country, string userId, string filename, CancellationToken ct) =>
-        StreamAsync($"{country.ToLowerInvariant()}/avatars/{userId}/{filename}", ct);
+    public async Task<IActionResult> GetAvatar(string country, string userId, string filename, CancellationToken ct)
+        => await visibility.IsUserAvatarVisibleAsync(userId, ct)
+            ? await StreamAsync($"{country.ToLowerInvariant()}/avatars/{userId}/{filename}", ct)
+            : NotFound();
 
     /// <summary>
     /// Stream a blob from the <c>profile-images</c> container with the

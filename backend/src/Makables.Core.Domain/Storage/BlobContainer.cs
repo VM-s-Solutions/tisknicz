@@ -51,7 +51,23 @@ public static class BlobContainer
         ProfileImages,
     };
 
-    /// <summary>True for the two public-read containers; false for the private three.</summary>
-    public static bool IsPublicRead(string container) =>
+    /// <summary>
+    /// True for the two containers whose contents the backend serves to
+    /// ANONYMOUS callers, via the <c>[AllowAnonymous]</c> image controllers on
+    /// the Public host; false for the four that always require an authenticated,
+    /// ownership-scoped route.
+    ///
+    /// <para>
+    /// Renamed from <c>IsPublicRead</c>, which became actively misleading once
+    /// the container ACLs were closed: <b>every</b> container is now
+    /// <c>publicAccess: 'None'</c> and the storage account sets
+    /// <c>allowBlobPublicAccess: false</c>, so nothing is public-read at the
+    /// storage layer. What these two are is anonymously *proxied*, which is a
+    /// different claim — the bytes are equally reachable, but only through a
+    /// door the platform can rate-limit, cache, log and (once Q-0042 lands)
+    /// revoke.
+    /// </para>
+    /// </summary>
+    public static bool IsAnonymouslyProxied(string container) =>
         container is ProductImages or ProfileImages;
 }

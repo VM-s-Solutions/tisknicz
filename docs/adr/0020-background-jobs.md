@@ -151,7 +151,38 @@ Functions run locally via `func start` (Azure Functions Core Tools). Postgres co
 - Reviewer: Functions are thin wrappers; Mediator does the work. No business logic in `Makables.Functions/*.cs`.
 - Reviewer: outbox-routing code in `ProcessOutbox` is the single switch; new event types must be added there.
 - Reviewer: any new outbox `event_type` has a documented retry classification.
-- SecOps: Function HTTP triggers require an `x-functions-key` or a custom auth header.
+- SecOps: Function HTTP triggers require an `x-functions-key` or a custom auth header — with one
+  named exception, below.
+
+### Amendment 2026-09-06 — one anonymous HTTP trigger: the health probe
+
+`HealthFunction` (`GET /api/health`) is `AuthorizationLevel.Anonymous`. This is a deliberate,
+bounded exception to the rule above, not an oversight.
+
+**Why the rule cannot hold here.** The endpoint exists so the deploy pipeline can tell whether the
+Functions host is alive; every other trigger in this app is a timer or a queue trigger, so before it
+the host had no observable surface and a host that never started deployed green — which means the
+outbox silently never drains and no transactional email is ever sent. Requiring `x-functions-key`
+would force the gate to obtain a host key *before* it could ask whether the host was up, and host
+keys live in the host's own storage account. That inverts the exact dependency the probe exists to
+test: when identity-based `AzureWebJobsStorage` is broken, key retrieval is broken too, so the gate
+would report an infrastructure failure as an inconclusive one.
+
+**Why the exposure is acceptable.** The response carries no state, configuration or identity — only
+`status` and the assembly's informational version. It takes no parameters, so there is nothing to
+enumerate, and no cryptography, so there is no timing oracle. `authLevel` is per-function metadata,
+so the two existing `AuthorizationLevel.Function` triggers (`outbox/process`, `payouts/run-batch`)
+are unaffected, and no key is created or exposed. The `/admin` surface remains master-key gated. The
+four Web hosts already expose an anonymous `/health` on the same terms.
+
+**The compensating control.** This is nevertheless the first unauthenticated path into the worker
+process, and all six apps share one P1v3 plan at capacity 1, so unbounded anonymous traffic would
+contend for invocation slots with `ProcessOutboxTimer` and for CPU with the storefront. `host.json`
+therefore sets `extensions.http.maxConcurrentRequests` and `maxOutstandingRequests` — the
+Dedicated-plan defaults are unbounded and `Program.cs` deliberately registers no rate limiting.
+
+**Scope.** This exception covers health/liveness probes only. Any new anonymous HTTP trigger that
+reads or mutates state needs its own decision recorded here.
 - Integration test: a failing SendEmail leaves `retry_count` incremented and `next_retry_at` set per schedule.
 - Integration test: an outbox event with `last_error_type = Permanent` is not retried again.
 

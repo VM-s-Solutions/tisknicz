@@ -16,12 +16,14 @@
 |---|---|---|---|
 | Postgres | Azure-managed automatic backups (PITR) | **14 days** (`postgres.bicep` `backupRetentionDays: 14`) | 7-day PITR (prod), 1-day (staging) |
 | Postgres geo | `geoRedundantBackup: Disabled` | none | (not required at MVP) |
-| Blob storage | soft-delete + redundancy | ⚠ **none configured** | 30-day soft-delete + **GRS** (prod) |
+| Blob storage | blob + container soft-delete | **30 days, both**, every env (`blob.bicep`) | 30-day soft-delete |
+| Blob storage | redundancy | **`Standard_GZRS`** (prod) / `Standard_LRS` (dev) | GZRS (prod) — ADR 0023 §7 as amended 2026-09-06 |
 | Key Vault secrets | soft-delete | 90 days (`key-vault.bicep`) | — |
 
-**Honesty note (gaps, named — see §C):** the shipped Postgres backup window (14 days) **exceeds**
-the §7 7-day floor — fine. But `blob.bicep` ships `Standard_LRS` with **no soft-delete policy and no
-GRS**, which **does not meet** the §7 prod target (GRS + 30-day soft-delete). Recovery procedures
+**Honesty note:** the shipped Postgres backup window (14 days) **exceeds** the §7 7-day floor — fine.
+The blob gaps that used to sit here are now closed in `blob.bicep`. One caveat stays honest: the
+redundancy and data-protection settings are **configured but never yet exercised**, because production
+has not been deployed. Nothing below has been run against a live prod account. Recovery procedures
 below assume the §7 target; where the shipped infra can't deliver it yet, the step is flagged.
 
 ---
@@ -85,22 +87,46 @@ az storage blob undelete \
 ```
 Or, with blob **versioning** on, promote a prior version to current.
 
-⚠ **confirm against the live environment / GAP:** `blob.bicep` does **not** configure a soft-delete
-policy or versioning today. **Until the §7 cut-over lands, `az storage blob undelete` will fail —
-there is nothing to undelete.** Enabling blob soft-delete (`az storage account blob-service-properties
-update --enable-delete-retention true --delete-retention-days 30`) is a launch-checklist item (§C).
-Treat current blob data as **not recoverable from accidental delete** until then.
+**Shipped.** `blob.bicep` sets both `deleteRetentionPolicy` and `containerDeleteRetentionPolicy` to
+30 days on the `blobServices/default` resource, in every environment. Read it back with
+`az storage account blob-service-properties show -n <account> -g <rg>`.
 
-### 2b. GRS / geo-failover (target: GRS in prod, §7)
+Restore a deleted blob:
 
-GRS replicates the account to a paired region; on a regional outage you can initiate an
-account failover.
+```bash
+az storage blob list -c <container> --account-name <account> --auth-mode login --include d
+az storage blob undelete -c <container> -n <blob> --account-name <account> --auth-mode login
+```
 
-⚠ **GAP:** `blob.bicep` ships `Standard_LRS` (local-redundant only) — **no geo-redundancy.** A
-region loss in West Europe means blob data is unavailable until the region recovers; there is no
-GRS failover target. Moving prod to `Standard_GRS` is a launch-checklist item (§C). At MVP scale
-(≤ 50 GB, ADR 0023 §2) the re-upload-from-source cost of LRS is bounded but real for invoices/labels
-that have no other source of truth.
+**A deleted CONTAINER is a different procedure** — blob soft delete does not cover it ("You can't
+recover blobs in the deleted container"). Use `az storage container restore`, and restore it under its
+**original name**: once that name has been re-created the soft-deleted container can no longer be
+restored. That matters on dev specifically, where `deploy-staging.yml` runs on every non-docs push to
+master and `blob.bicep` re-creates all six container names — so on dev the real restore window is
+"until the next merge", not 30 days.
+
+**Why `undelete` works here and would not with versioning on:** versioning is deliberately disabled
+(ADR 0023 §7 amendment). With it enabled, a delete produces no soft-deleted object at all, so
+`--include d` lists nothing and `undelete` is a silent no-op.
+
+### 2b. GZRS / zone + geo failure (shipped: `Standard_GZRS` in prod, §7 as amended)
+
+Prod is `Standard_GZRS`: synchronously replicated across West Europe availability zones **and**
+asynchronously to North Europe.
+
+- **A single datacenter / availability zone is lost** — nothing to do. This is the case GZRS was
+  chosen for and the reason §7 was amended away from GRS, whose primary-region copy is LRS and which
+  would have needed a lossy manual failover for the same event.
+- **The whole West Europe region is lost** — this requires a customer-initiated **unplanned** account
+  failover, which Microsoft warns "usually involves some amount of data loss" (writes after the last
+  sync point), converts the account to **LRS** in the new primary and deletes the original primary.
+  So it is a real decision, not a button: check the account's last-sync-time first, and expect to
+  restore redundancy afterwards as a separate step.
+- **Do not expect geo-failover on day one.** "Even though enabling geo-redundancy appears to occur
+  instantaneously, failover to the secondary region can't be initiated until data synchronization
+  between the two regions is complete."
+
+Dev stays `Standard_LRS` — its data is disposable.
 
 ### 2c. Re-generable vs. irreplaceable blobs
 
@@ -117,7 +143,11 @@ Deleted secrets are recoverable for 90 days (`key-vault.bicep` `softDeleteRetent
 az keyvault secret recover --vault-name kv-makables-weu-prod --name <secret-name>
 ```
 A purged secret within the window is also recoverable unless purge-protection forced a hard purge.
-⚠ **confirm:** purge-protection is **not** enabled in `key-vault.bicep` — consider enabling it
+**Purge protection IS enabled — in production only.** `key-vault.bicep` ships
+`enablePurgeProtection: endsWith(keyVaultName, '-prod') ? true : null`, so a prod secret cannot be
+hard-purged by anyone (including Microsoft) inside the 90-day window, and the prod vault NAME stays
+reserved for 90 days after a delete. Dev is deliberately left purgeable so throwaway environments can
+be torn down and recreated under the same name.
 pre-launch so an attacker with vault rights can't hard-delete secrets.
 
 ---
@@ -175,14 +205,18 @@ whether to acknowledge them rather than let them re-send (use the admin Acknowle
 
 ## C. ADR-divergence gaps (named, not papered over)
 
-Per ADR 0023 §7 the production backup posture is 7-day PITR (met: 14 days shipped), **GRS blob**, and
-**30-day blob soft-delete**. The shipped Bicep diverges on blob:
+Per ADR 0023 §7 the production backup posture is 7-day PITR (met: 14 days shipped), geo-redundant
+blob, and 30-day blob soft-delete. As of 2026-09-06 the shipped Bicep **meets all three** — the
+divergences below are recorded as closed rather than deleted, so the history stays auditable:
 
-1. **Blob `Standard_LRS` → `Standard_GRS`** (`blob.bicep`). Closes via `docs/launch-checklist.md` →
-   "Blob GRS (prod)".
-2. **Blob soft-delete + versioning (30-day)** — not configured in `blob.bicep`. Closes via
-   `docs/launch-checklist.md` → "Blob soft-delete 30-day".
-3. **Key Vault purge-protection** — not enabled in `key-vault.bicep`. Recommended pre-launch.
+1. **Blob redundancy** — CLOSED. Prod is `Standard_GZRS` (dev `Standard_LRS`). ADR 0023 §7 was
+   amended from GRS to GZRS with its reasoning recorded, rather than deviated from silently.
+2. **Blob soft-delete (30-day)** — CLOSED, and widened to blob **and container** retention. Blob
+   versioning was evaluated and deliberately **rejected**: it breaks `az storage blob undelete`.
+3. **Key Vault purge-protection** — DONE for prod (`key-vault.bicep`, gated on the `-prod` name
+   suffix); intentionally off for dev. Nothing to do pre-launch beyond confirming the prod vault name
+   is globally free before the first deploy, since the 90-day name reservation makes a delete-and-retry
+   impossible afterwards.
 
 Until (1)+(2) land, blob data is **LRS-only with no undelete** — flag this loudly in any incident.
 

@@ -39,6 +39,26 @@ param postgresStorageGb = 64
 
 param appServicePlanSku = 'P1v3'
 
+// Blob durability, ADR 0023 §7. GZRS, not the GRS the ADR originally named:
+// under GRS the primary-region copy is LRS, so losing one West Europe
+// datacenter takes the account offline and the only recovery is a lossy,
+// customer-initiated unplanned failover. GZRS survives it untouched.
+// The zone axis is NOT a live sku update (LRS -> GZRS later means LRS -> GRS,
+// then a separate zone conversion with a 72-hour wait and no SLA), and prod has
+// never been deployed — so this is the one deploy where the choice is free.
+//
+// BEFORE THE FIRST PROD DEPLOY: confirm Standard_GZRS is actually entitled on
+// this subscription in westeurope. SKU entitlement is subscription-scoped, and
+// this subscription is ALREADY offer-restricted for Postgres Flexible Server in
+// exactly this region, so it is not assumed. If it is restricted, the deploy
+// fails inside the blob module — after the plan, App Insights, the VNet and a
+// fresh Postgres server have been created. One line, all on one line:
+//   az storage account list-skus --location westeurope --query "[?name=='Standard_GZRS'].restrictions"
+// An empty [] means unrestricted. (Fallback if that command is unavailable in
+// your az version: GET the Microsoft.Storage/skus ARM endpoint for the
+// subscription and read the same restrictions array.)
+param blobStorageSku = 'Standard_GZRS'
+
 // POSTGRES_ADMIN_USER / POSTGRES_ADMIN_PASSWORD come from GitHub Actions
 // secrets at deploy time. There is intentionally NO fallback default for
 // the password — readEnvironmentVariable without a default fails the

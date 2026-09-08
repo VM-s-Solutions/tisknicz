@@ -24,6 +24,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using AddressEntity = Makables.Core.Domain.Addresses.Address;
 using MakerEntity = Makables.Core.Domain.Makers.Maker;
@@ -404,7 +405,8 @@ public sealed class DeleteUserPermanentlyIntegrationTests : IAsyncLifetime
                     new ThrowingDeletionDecorator(
                         new UserDataDeletionService(
                             sp.GetRequiredService<MakablesDbContext>(),
-                            sp.GetRequiredService<IBlobStorageClient>())));
+                            sp.GetRequiredService<IBlobStorageClient>(),
+                            sp.GetRequiredService<ILogger<UserDataDeletionService>>())));
             }));
 
         var client = factory.CreateClient();

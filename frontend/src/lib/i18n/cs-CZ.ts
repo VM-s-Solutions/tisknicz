@@ -267,7 +267,16 @@ export const messages = {
   // are admin-worded (T-0118) and stay untouched.
   'profile.delete_account.title': 'Smazání účtu',
   'profile.delete_account.description':
-    'Smazáním bude váš účet trvale deaktivován a budete odhlášeni ze všech zařízení. Osobní údaje zpracováváme podle zásad ochrany osobních údajů.',
+    'Váš účet bude trvale deaktivován, budete odhlášeni ze všech zařízení a nebude možné se znovu přihlásit. Vaše osobní údaje tím nejsou vymazány — zůstávají uložené a zpracováváme je podle zásad ochrany osobních údajů.',
+  // Surfaces the second tier. ADR 0013 reserves hard delete for erasure
+  // requests executed by an admin command, so deactivation is deliberately NOT
+  // erasure — and a user who wants erasure previously had nowhere to be sent.
+  // {email} is filled from static.contact.operator_email_value so the address
+  // has one source of truth. The retention clause reuses the wording already
+  // shipped in profile.delete_account.maker_note rather than inventing a new
+  // legal claim; the binding privacy text is still Q-0030 (blocked on counsel).
+  'profile.delete_account.erasure_note':
+    'Chcete-li požádat o úplný výmaz osobních údajů, napište nám na {email}. Některé doklady, například vystavené faktury, zůstávají zachovány podle zákonných povinností.',
   'profile.delete_account.gdpr_link': 'Ochrana osobních údajů',
   'profile.delete_account.maker_note':
     'Deaktivací účtu výrobce se vaše produkty skryjí z katalogu. Již dokončené objednávky a vystavené doklady zůstávají zachovány podle zákonných povinností.',

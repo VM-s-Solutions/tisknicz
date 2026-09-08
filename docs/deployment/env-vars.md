@@ -13,7 +13,7 @@ Dev-parity values for everything below live in `backend/src/Makables.Functions/l
 
 | Key | Source |
 |---|---|
-| `AzureWebJobsStorage` | Dedicated storage account connection string (TODO(T-0134): identity-based) |
+| `AzureWebJobsStorage__accountName` + `__credential` | Identity-based host storage — account name plus `managedidentity`. **No account key.** Needs Storage Blob Data Owner + Queue Data Contributor on the Functions storage account (`role-assignments.bicep`) |
 | `FUNCTIONS_EXTENSION_VERSION` | `~4` |
 | `FUNCTIONS_WORKER_RUNTIME` | `dotnet-isolated` |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | App Insights module output |

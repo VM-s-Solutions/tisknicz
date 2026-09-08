@@ -431,6 +431,11 @@ same edit.
 - **Answer (filled by user):** All four — groomed as **T-0127** (admin-read-gaps bundle, 2026-06-15), one cross-stack PR. **(1 PRIORITY) GetCountryConfiguration GET** `GET /api/v1/country-configurations/{code}` returns the **exact** `UpdateCountryConfiguration` Response field set (`StandardVatRateBp, ReducedVatRateBp, InvoicingMode, PlatformFeeRateBp, DefaultShippingPriceMinor, DefaultPaymentProvider, DefaultShippingCarrier, DefaultRegistry, DefaultEmailProvider`) via `ICountryConfigurationRepository.GetByCodeAsync`; 404 reuses `CountryConfigurationNotFound` (no new code) — **removes the PR-2 full-replace fence**: the T-0118c form pre-fills SSR, the warning banner downgrades to an info note, and the provider retype modal gates on an **actual provider-code diff** (T-0118c AC-4/AC-5 now met). **(2) GetAdminOrderDetail** `GET /api/v1/admin-orders/{orderId}` → privileged `AdminOrderDetailDto` (see Q-0024) over `GetByIdUnscopedAsync`; plus a `customerUserId`/`makerId` filter on the admin-orders read = the per-user in-flight signal driving the delete-user proactive pre-disable. **(3) Stalled-outbox LIST** `GET /api/v1/outbox-events/stalled` (paged) reusing the **exact** T-0126/T-0109 predicate `ProcessedAt==null && NextRetryAt==null && LastErrorKind!=None`. **(4) Payout-batch LIST** `GET /api/v1/payout-batches` (paged, Unscoped — the GET on the existing CreatePayoutBatch POST route). All four mirror the T-0111 `IAdminQueries` precedent (AsNoTracking, Unscoped, globally-unique Response, `[Authorize]` admin); the form/order-detail/delete-user/outbox/payout surfaces re-wire in the same PR. NSwag regen admin host (4 methods); zero new codes / migrations / unique indexes.
 
 ## Q-0030 — Approved legal text for /vop (obchodní podmínky) + /gdpr (privacy/cookie)
+- **Added requirement 2026-09-08 (from Q-0043):** the approved text must state the **two-tier
+  deletion model** — that self-service "Smazat účet" deactivates the account and does not erase
+  personal data, that erasure is available on request to the operator address, and which records are
+  retained regardless (invoices, and a maker's IČO under `IsRetainedForLegal`). The UI already says
+  this; until the policy does too, the deletion dialog's link to `/gdpr` resolves to a placeholder.
 - **From:** BA/PM
 - **Ticket / context:** T-0130 (static public pages, public-polish bundle); BLOCKING pre-launch
 - **Asked:** 2026-06-20
@@ -658,3 +663,159 @@ same edit.
 - **NOT granted:** a customer-facing cancellation of a PAID order. Neither answer asks for one, and
   for made-to-order goods it would hand back money after production may have started. If that is
   ever wanted it is a separate decision with a separate refund policy.
+
+---
+
+## Q-0042 — the anonymous image proxy has no visibility gate
+
+> Filed as *Q-0040* in the first commits on this branch and renumbered: Q-0040 was already taken by
+> the reactivation-policy question. Earlier commit messages on this branch still say Q-0040.
+
+- **Status: RESOLVED 2026-09-08 — gated, in the same PR.** Both Public-host image controllers now
+  consult `IPublicImageVisibilityQueries` before touching storage and return **404** (not 403, so a
+  hidden subject stays unprobeable by id). The predicates mirror `CatalogQueries` exactly: active row
+  + confirmed email + `IsVerified` for products and maker logos; active row + confirmed email for
+  avatars. 14 tests pin it, and two mutations were confirmed to break them — dropping `IsVerified`
+  fails 2, dropping the avatar gate fails 2.
+- **Option taken: (b)-without-the-cache**, not the (c) I first recommended. Rotating blob paths on
+  unverify/delete turned out worse on inspection: unverifying a maker with 200 products means 200+
+  blob copies, and it fights `DeleteProduct`, which deliberately keeps images addressable for
+  undelete. And the per-request lookup I was trying to avoid is not in fact a hot-path cost — the
+  route already performs a network round-trip to Azure Blob Storage, so an indexed local lookup is
+  strictly cheaper than work the endpoint does anyway. No cache was added: the responses carry
+  `Cache-Control: public, max-age=86400`, so repeat views never reach the database, and a cache would
+  trade a correctness surface (a revoked product served from a stale entry) for an unmeasured saving.
+  If measurement ever justifies one it belongs behind the interface.
+- **Known and accepted:** revocation is not instant. A client or CDN holding a copy keeps it for up
+  to 24h regardless of this gate. The gate stops *new* fetches, which is what was missing.
+- **Still open:** nothing in this question. The residue moved to Q-0043.
+
+<details><summary>Original write-up (kept for the reasoning)</summary>
+
+- **blocking:** no (nothing is broken today; this is an exposure, not an outage)
+- **Raised:** 2026-09-06, while investigating why `blob.bicep` shipped two anonymously-readable
+  containers against CLAUDE.md PART 6.
+- **Owner:** architect + secops
+- **Resolve by:** before the first real maker onboards in production
+
+**What was found.** Closing the container ACLs (done — every container is now `publicAccess: 'None'`
+and the account sets `allowBlobPublicAccess: false`) removes an unmetered, unlogged bypass. It does
+**not** reduce who can see the images, because the backend's own image routes are `[AllowAnonymous]`
+and stream by path alone:
+
+- [`ProductImageController`](../../backend/src/Makables.Web.Public/Controllers/ProductImageController.cs)
+  concatenates `{country}/products/{productId}/{filename}` and streams it. No product lookup, no
+  soft-delete check, no maker-verification check.
+- [`ProfileImageController`](../../backend/src/Makables.Web.Public/Controllers/ProfileImageController.cs)
+  is the same shape for avatars and maker logos.
+
+Two consequences follow, and both survive the ACL close:
+
+1. **The `Maker.IsVerified` catalog gate is bypassable for image bytes.** `CatalogQueries` gates
+   every public read on `m.IsVerified`, so an unverified maker's products are invisible in the
+   catalog — but their image URLs still stream 200 to anyone who has one. The gate protects the
+   listing, not the asset.
+2. **Deleted products keep serving images, by design.** `DeleteProduct` states the blobs are
+   "intentionally NOT deleted … soft-delete keeps the images addressable". Reasonable for undelete;
+   it does mean a withdrawn product's photos remain fetchable indefinitely.
+
+**The tension.** A visibility check means a database lookup on every image request — the hottest
+read path on the site, on a page whose slowness has already drawn real user complaints (CLAUDE.md
+PART 5), currently served with `Cache-Control: public, max-age=86400` and an ETag/304 path that a
+per-request lookup would undercut. So this is a genuine trade, not an oversight to sweep up.
+
+**Options, for the decision:**
+
+- **(a) Leave it.** Product images of an unverified maker are photographs the maker themselves
+  uploaded and intended to publish; the URL is unguessable (ULID filename) and not enumerable. Cost:
+  zero. Risk: "unverified" stops meaning anything at the asset layer.
+- **(b) Gate on a cached visibility projection.** A small `productId → visible` lookup behind
+  `IMemoryCache` with explicit invalidation on verify/unverify/delete, the pattern CLAUDE.md PART 5
+  already prescribes for hot, stable data. Cost: one cache and its invalidation seam. Keeps the
+  `max-age`/ETag path intact for the hit case.
+- **(c) Move revocation to the path.** Rotate the blob path on unverify/delete so old URLs 404 with
+  no per-request lookup. Cost: a rename/copy on a rare event. No hot-path cost at all.
+
+Recommendation: **(c) for products, (a) for profile images**, on the grounds that revocation should
+cost something at write time rather than on every read — but this is an architecture call, not a
+default to be invented.
+
+</details>
+
+---
+
+## Q-0043 — self-service "Smazat účet" leaves the avatar blob in place
+
+> Filed as *Q-0041* on this branch and renumbered — Q-0041 was already the order-escape-hatches
+> question. Earlier commit messages on this branch still say Q-0041.
+
+- **Status: PARTIALLY RESOLVED 2026-09-08.** Two of the three sub-items are fixed; the policy
+  question is still yours.
+  - **Fixed — the photograph stops being served.** Avatars are now gated on the user row being
+    active, and `MarkDeactivated` (what "Smazat účet" calls) takes the row out of the global
+    soft-delete filter. So after a self-service deletion the avatar 404s, even though the blob
+    survives in storage. This does not make the blob *gone*, but it removes the practical exposure.
+  - **Fixed — the discarded blob-delete result.** `UserDataDeletionService` now checks `.IsSuccess`
+    and logs the path at Warning when the delete fails, because the pointer is nulled in the same
+    transaction and that log line is otherwise the only remaining record of the orphan. A blob path
+    is not personal data, so it is safe to log.
+  - **Fixed — the untested branch.** `UserDataDeletionServiceBlobTests` seeds a user WITH an
+    `AvatarBlobPath` and a maker WITH a `LogoBlobPath`; nothing in the suite did before, so the
+    delete loop never executed in CI. Three tests, mutation-checked.
+- **ANSWERED 2026-09-08 by the user: keep two tiers, fix the disclosure.** Self-service deletion
+  stays a deactivation; GDPR erasure remains an operator-serviced request run through the admin
+  command. Recorded as a decision in ADR 0013 §"Hard delete (GDPR)" — which described the admin
+  command but had never stated what the user's own button does, or why the two differ.
+- **Shipped with that decision:**
+  - `profile.delete_account.description` now states plainly that the account is deactivated and that
+    personal data is **not** thereby erased. The previous copy said "trvale deaktivován" — accurate,
+    but it left the retention unsaid.
+  - `profile.delete_account.erasure_note` gives the operator address (single-sourced from
+    `static.contact.operator_email_value`) so a user who wants erasure finally has somewhere to go.
+    The capability existed; the route to it did not.
+  - `delete-account-section.test.tsx` pins both, so a later copy edit cannot quietly turn the
+    two-tier design back into a promise the system does not keep. Mutation-checked: restoring the old
+    wording fails 3 of 4.
+- **Correction to this question's original framing.** It claimed a button labelled "delete account"
+  that keeps the user's photograph "reads badly in a complaint". The shipped copy already said
+  *deactivated*, not deleted, so the gap was narrower than stated — the real gaps were the unsaid
+  retention and the missing erasure route, both now closed.
+- **Remaining dependency — Q-0030, not this question.** The binding privacy text is still a
+  placeholder pending counsel, and it must carry the same two-tier statement. The UI strings describe
+  system behaviour; they are not a substitute for the policy.
+
+<details><summary>Original write-up</summary>
+
+- **blocking:** no
+- **Raised:** 2026-09-06, same investigation.
+- **Owner:** user (JVM YORE) — this is a policy question before it is a code question
+- **Resolve by:** before launch, because it determines what the privacy policy may promise
+
+`DeleteMyAccount` is deliberately a **deactivation**: it calls `MarkDeactivated` on the user and
+maker and revokes refresh tokens, and its own doc comment says the erasure matrix is reserved for
+the admin-only `DeleteUserPermanently`. Only that admin path runs `UserDataDeletionService`, which
+is the only code that deletes the avatar and maker-logo blobs.
+
+So a user who clicks "Smazat účet" keeps their photograph in storage indefinitely. That is a
+defensible two-tier design — Art. 17 erasure handled as an operator-serviced request — but it is
+only defensible if the UI and the privacy policy say so. A button labelled "delete account" that
+leaves the user's photo behind is the kind of gap that reads badly in a complaint.
+
+Three things to settle:
+
+1. Is self-service deletion **intended** to satisfy an Art. 17 request, or is erasure explicitly an
+   out-of-band request? If the former, `DeleteMyAccount` must run the erasure matrix.
+2. The admin erasure path **discards the blob-delete result**. `AzureBlobStorageClient.DeleteAsync`
+   never throws — it returns `BusinessResult.Failure` — and the caller does not check `.IsSuccess`.
+   Because the pointer is nulled in the same transaction, a transient failure orphans the blob with
+   nothing left recording where it is. This should at minimum log the path at warning level.
+3. That branch is **untested**: no case in `DeleteUserPermanentlyIntegrationTests` seeds a user with
+   an `AvatarBlobPath`, so the delete loop never executes in CI. The one action that makes the
+   design GDPR-defensible has zero coverage.
+
+Related, and now documented in ADR 0023 §7's amendment: 30-day blob soft delete means an erased
+avatar is *recoverable* for 30 days by a holder of the account key. It is **not** readable in that
+window (Microsoft: "You can't read data in a soft-deleted blob or snapshot until the object is
+restored"), so it is a retention-lag question, not an exposure — but a documented one now.
+
+</details>
